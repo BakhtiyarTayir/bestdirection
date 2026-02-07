@@ -3,9 +3,6 @@ import { getCourseById } from "@/actions/course-actions";
 import { getUsers } from "@/actions/user-actions";
 import { CourseForm } from "@/components/course-form";
 import { notFound } from "next/navigation";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
 
 interface EditCoursePageProps {
   params: Promise<{ courseId: string }>;
@@ -47,15 +44,6 @@ export default async function EditCoursePage({ params }: EditCoursePageProps) {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="mb-6">
-        <Link href={`/courses/${courseId}`}>
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Назад к курсу
-          </Button>
-        </Link>
-      </div>
-
       <CourseForm
         course={{
           id: course.id,

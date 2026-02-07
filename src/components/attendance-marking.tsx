@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -65,33 +66,39 @@ export function AttendanceMarking({
   const { toast } = useToast();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"saved" | "unsaved" | "idle">("idle");
 
   // Build initial records from existing data or defaults
   const existingMap = new Map(
     existingRecords.map((r) => [r.studentId, r])
   );
 
-  const [records, setRecords] = useState<StudentRecord[]>(
-    students.map((student) => {
-      const existing = existingMap.get(student.id);
-      return {
-        studentId: student.id,
-        status: existing?.status ?? "PRESENT",
-        note: existing?.note ?? "",
-      };
-    })
-  );
+  const initialRecords = students.map((student) => {
+    const existing = existingMap.get(student.id);
+    return {
+      studentId: student.id,
+      status: existing?.status ?? ("PRESENT" as AttendanceStatus),
+      note: existing?.note ?? "",
+    };
+  });
+
+  const [records, setRecords] = useState<StudentRecord[]>(initialRecords);
+  const savedRecordsRef = useRef<StudentRecord[]>(initialRecords);
 
   const updateRecord = (
     studentId: string,
     field: "status" | "note",
     value: string
   ) => {
-    setRecords((prev) =>
-      prev.map((r) =>
+    setRecords((prev) => {
+      const next = prev.map((r) =>
         r.studentId === studentId ? { ...r, [field]: value } : r
-      )
-    );
+      );
+      // Check if changed from saved version
+      const hasChanges = JSON.stringify(next) !== JSON.stringify(savedRecordsRef.current);
+      setSaveStatus(hasChanges ? "unsaved" : "saved");
+      return next;
+    });
   };
 
   const handleSave = async () => {
@@ -107,6 +114,8 @@ export function AttendanceMarking({
       });
 
       if (result.success) {
+        savedRecordsRef.current = records;
+        setSaveStatus("saved");
         toast({
           title: "Сохранено",
           description: "Посещаемость успешно обновлена.",
@@ -131,7 +140,12 @@ export function AttendanceMarking({
   };
 
   const setAllStatus = (status: AttendanceStatus) => {
-    setRecords((prev) => prev.map((r) => ({ ...r, status })));
+    setRecords((prev) => {
+      const next = prev.map((r) => ({ ...r, status }));
+      const hasChanges = JSON.stringify(next) !== JSON.stringify(savedRecordsRef.current);
+      setSaveStatus(hasChanges ? "unsaved" : "saved");
+      return next;
+    });
   };
 
   if (students.length === 0) {
@@ -218,7 +232,17 @@ export function AttendanceMarking({
         </Table>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex items-center justify-end gap-3">
+        {saveStatus === "saved" && (
+          <Badge variant="outline" className="text-green-600 border-green-600">
+            Сохранено
+          </Badge>
+        )}
+        {saveStatus === "unsaved" && (
+          <Badge variant="outline" className="text-orange-600 border-orange-600">
+            Несохранённые изменения
+          </Badge>
+        )}
         <Button onClick={handleSave} disabled={isLoading}>
           <Check className="mr-2 h-4 w-4" />
           {isLoading ? "Сохранение..." : "Сохранить"}

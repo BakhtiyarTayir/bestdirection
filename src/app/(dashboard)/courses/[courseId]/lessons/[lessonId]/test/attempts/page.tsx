@@ -1,8 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, BarChart3, Users } from "lucide-react";
+import { BarChart3, Users } from "lucide-react";
 
 interface AttemptsPageProps {
   params: Promise<{
@@ -94,16 +92,6 @@ export default async function AttemptsPage({ params }: AttemptsPageProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href={`/courses/${courseId}/lessons/${lessonId}/test`}>
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Назад к тесту
-          </Button>
-        </Link>
-      </div>
-
       <div>
         <p className="text-sm text-muted-foreground">
           {test.lesson.course.title} / {test.lesson.title}

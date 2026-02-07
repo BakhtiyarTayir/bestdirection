@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/sidebar";
+import { BreadcrumbNav } from "@/components/breadcrumb-nav";
 
 export default async function DashboardLayout({
   children,
@@ -15,6 +16,7 @@ export default async function DashboardLayout({
       <Sidebar role={session.user.role} userName={session.user.name || ""} />
       <main className="flex-1 overflow-auto">
         <div className="container mx-auto p-6 md:p-8 pt-16 md:pt-8">
+          <BreadcrumbNav />
           {children}
         </div>
       </main>

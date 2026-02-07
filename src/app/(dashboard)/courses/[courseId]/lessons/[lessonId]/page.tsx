@@ -4,7 +4,8 @@ import Link from "next/link";
 import { getLessonById } from "@/actions/lesson-actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Video, FileText } from "lucide-react";
+import { Edit, Video, FileText } from "lucide-react";
+
 import { VideoPlayer } from "@/components/video-player";
 
 interface LessonPageProps {
@@ -21,14 +22,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
   if (!result.success || !result.data) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Link href={`/courses/${courseId}/lessons`}>
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <h1 className="text-2xl font-bold">Урок не найден</h1>
-        </div>
+        <h1 className="text-2xl font-bold">Урок не найден</h1>
         <p className="text-destructive">{result.error}</p>
       </div>
     );
@@ -43,30 +37,23 @@ export default async function LessonPage({ params }: LessonPageProps) {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href={`/courses/${courseId}/lessons`}>
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">{lesson.title}</h1>
-            <div className="flex items-center gap-2">
-              {lesson.type === "VIDEO" ? (
-                <Badge variant="outline" className="flex items-center gap-1">
-                  <Video className="h-3 w-3" />
-                  Видео
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="flex items-center gap-1">
-                  <FileText className="h-3 w-3" />
-                  Текст
-                </Badge>
-              )}
-              {!lesson.isPublished && (
-                <Badge variant="secondary">Черновик</Badge>
-              )}
-            </div>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold">{lesson.title}</h1>
+          <div className="flex items-center gap-2">
+            {lesson.type === "VIDEO" ? (
+              <Badge variant="outline" className="flex items-center gap-1">
+                <Video className="h-3 w-3" />
+                Видео
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="flex items-center gap-1">
+                <FileText className="h-3 w-3" />
+                Текст
+              </Badge>
+            )}
+            {!lesson.isPublished && (
+              <Badge variant="secondary">Черновик</Badge>
+            )}
           </div>
         </div>
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { auth } from "@/lib/auth";
+import { applyRateLimit, uploadLimiter } from "@/lib/rate-limit";
 
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 
@@ -15,6 +16,9 @@ const ALLOWED_MIME_TYPES = [
 const ALLOWED_EXTENSIONS = [".mp4", ".webm", ".ogg", ".mov"];
 
 export async function POST(request: NextRequest) {
+  const rateLimitResponse = await applyRateLimit(uploadLimiter, request);
+  if (rateLimitResponse) return rateLimitResponse;
+
   try {
     const session = await auth();
     if (!session?.user) {

@@ -1,6 +1,7 @@
 import { requireAuth } from "@/lib/auth-guard";
 import { getCourses } from "@/actions/course-actions";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Card,
   CardContent,
@@ -57,7 +58,22 @@ export default async function CoursesPage() {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {courses.map((course) => (
-            <Card key={course.id} className="flex flex-col">
+            <Card key={course.id} className="flex flex-col overflow-hidden">
+              {course.coverImage ? (
+                <div className="relative aspect-video">
+                  <Image
+                    src={course.coverImage}
+                    alt={course.title}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center justify-center aspect-video bg-muted">
+                  <BookOpen className="h-12 w-12 text-muted-foreground/50" />
+                </div>
+              )}
               <CardHeader>
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="text-lg line-clamp-2">

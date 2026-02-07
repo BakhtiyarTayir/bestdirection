@@ -1,14 +1,12 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { getCourseById, getEnrolledStudents } from "@/actions/course-actions";
 import { getAttendanceSessions } from "@/actions/attendance-actions";
 import { AttendanceGrid } from "@/components/attendance-grid";
 import { CreateSessionDialog } from "@/components/create-session-dialog";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Calendar } from "lucide-react";
+import { Calendar } from "lucide-react";
 
 interface AttendancePageProps {
   params: Promise<{ courseId: string }>;
@@ -41,15 +39,6 @@ export default async function AttendancePage({ params }: AttendancePageProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href={`/courses/${courseId}`}>
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Назад к курсу
-          </Button>
-        </Link>
-      </div>
-
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3">

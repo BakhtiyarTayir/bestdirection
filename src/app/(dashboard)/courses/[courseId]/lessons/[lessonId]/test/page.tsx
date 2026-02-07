@@ -12,7 +12,6 @@ import {
   CheckCircle2,
   XCircle,
   BarChart3,
-  ArrowLeft,
   FileText,
 } from "lucide-react";
 import { TestSettingsForm } from "@/components/test-settings-form";
@@ -93,16 +92,6 @@ export default async function TestPage({ params }: TestPageProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href={`/courses/${courseId}`}>
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Назад к курсу
-          </Button>
-        </Link>
-      </div>
-
       <div>
         <p className="text-sm text-muted-foreground">
           {lesson.course.title} / {lesson.title}

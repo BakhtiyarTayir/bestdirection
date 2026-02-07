@@ -3,6 +3,7 @@ import { getCourseById } from "@/actions/course-actions";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -12,7 +13,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  ArrowLeft,
   Edit,
   BookOpen,
   Users,
@@ -57,14 +57,18 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
 
   return (
     <div>
-      <div className="mb-6">
-        <Link href="/courses">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Назад к курсам
-          </Button>
-        </Link>
-      </div>
+      {course.coverImage && (
+        <div className="relative aspect-[3/1] mb-6 rounded-lg overflow-hidden">
+          <Image
+            src={course.coverImage}
+            alt={course.title}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 800px"
+            priority
+          />
+        </div>
+      )}
 
       {/* Course header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between mb-8">

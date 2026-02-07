@@ -6,9 +6,6 @@ import {
 } from "@/actions/course-actions";
 import { StudentEnrollment } from "@/components/student-enrollment";
 import { notFound } from "next/navigation";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
 
 interface StudentsPageProps {
   params: Promise<{ courseId: string }>;
@@ -42,15 +39,6 @@ export default async function StudentsPage({ params }: StudentsPageProps) {
 
   return (
     <div>
-      <div className="mb-6">
-        <Link href={`/courses/${courseId}`}>
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Назад к курсу
-          </Button>
-        </Link>
-      </div>
-
       <div className="mb-4">
         <h1 className="text-3xl font-bold">{course.title}</h1>
         <p className="text-muted-foreground">Управление студентами</p>

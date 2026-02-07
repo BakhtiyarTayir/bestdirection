@@ -1,13 +1,11 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { getEnrolledStudents, getCourseById } from "@/actions/course-actions";
 import { getAttendanceSessions } from "@/actions/attendance-actions";
 import { AttendanceMarking } from "@/components/attendance-marking";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar } from "lucide-react";
+import { Calendar } from "lucide-react";
 import { DeleteSessionButton } from "./delete-session-button";
 
 interface SessionPageProps {
@@ -60,15 +58,6 @@ export default async function SessionPage({ params }: SessionPageProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href={`/courses/${courseId}/attendance`}>
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Назад к журналу
-          </Button>
-        </Link>
-      </div>
-
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3">
