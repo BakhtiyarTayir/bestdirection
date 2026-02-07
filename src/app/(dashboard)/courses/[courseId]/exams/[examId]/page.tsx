@@ -162,9 +162,12 @@ export default async function ExamPage({ params }: ExamPageProps) {
                   <Badge variant={exam.isPublished ? "default" : "secondary"}>
                     {exam.isPublished ? "Опубликован" : "Черновик"}
                   </Badge>
-                  <span className="text-sm text-muted-foreground">
-                    {exam._count.attempts} попыток
-                  </span>
+                  <Link href={`/courses/${courseId}/exams/${examId}/attempts`}>
+                    <Button variant="outline" size="sm">
+                      <BarChart3 className="h-4 w-4 mr-2" />
+                      Результаты ({exam._count.attempts})
+                    </Button>
+                  </Link>
                 </div>
               </div>
             </CardHeader>
