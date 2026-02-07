@@ -19,6 +19,7 @@ import { QuestionForm } from "@/components/question-form";
 import { TestTaking } from "@/components/test-taking";
 import { TestResults } from "@/components/test-results";
 import { DeleteQuestionButton, DeleteTestButton } from "@/components/test-management-buttons";
+import { ExportButton, ImportButton } from "@/components/export-import-buttons";
 
 interface TestPageProps {
   params: Promise<{
@@ -113,9 +114,12 @@ export default async function TestPage({ params }: TestPageProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground mb-4">
-                  Для этого урока еще не создан тест. Заполните форму ниже, чтобы создать его.
-                </p>
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-muted-foreground">
+                    Для этого урока еще не создан тест. Заполните форму ниже или импортируйте из файла.
+                  </p>
+                  <ImportButton type="test" targetId={lessonId} />
+                </div>
                 <TestSettingsForm lessonId={lessonId} courseId={courseId} />
               </CardContent>
             </Card>
@@ -139,6 +143,7 @@ export default async function TestPage({ params }: TestPageProps) {
                           Результаты ({test._count.testAttempts})
                         </Button>
                       </Link>
+                      <ExportButton type="test" id={lessonId} />
                       <DeleteTestButton testId={test.id} courseId={courseId} />
                     </div>
                   </div>
