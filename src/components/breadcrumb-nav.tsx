@@ -20,6 +20,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   test: "Тест",
   attempts: "Результаты",
   attendance: "Посещаемость",
+  exams: "Экзамены",
   students: "Студенты",
   users: "Пользователи",
   new: "Создание",

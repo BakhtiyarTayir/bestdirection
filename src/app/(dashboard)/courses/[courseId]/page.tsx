@@ -18,6 +18,9 @@ import {
   Users,
   ClipboardCheck,
   FileText,
+  GraduationCap,
+  Lock,
+  CheckCircle2,
 } from "lucide-react";
 
 interface CourseDetailPageProps {
@@ -53,6 +56,14 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
   // Fetch enrolled count
   const enrolledCount = await prisma.enrollment.count({
     where: { courseId },
+  });
+
+  // Fetch exams count
+  const examsCount = await prisma.exam.count({
+    where: {
+      courseId,
+      ...(role === "STUDENT" ? { isPublished: true } : {}),
+    },
   });
 
   return (
@@ -138,7 +149,7 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
 
       {/* Navigation links for admin/teacher */}
       {isOwnerOrAdmin && (
-        <div className="grid gap-4 md:grid-cols-3 mb-8">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
           <Link href={`/courses/${courseId}/lessons`}>
             <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
               <CardHeader className="flex flex-row items-center gap-3">
@@ -147,6 +158,19 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
                   <CardTitle className="text-base">Уроки</CardTitle>
                   <p className="text-sm text-muted-foreground">
                     Управление уроками курса
+                  </p>
+                </div>
+              </CardHeader>
+            </Card>
+          </Link>
+          <Link href={`/courses/${courseId}/exams`}>
+            <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
+              <CardHeader className="flex flex-row items-center gap-3">
+                <GraduationCap className="h-5 w-5 text-primary" />
+                <div>
+                  <CardTitle className="text-base">Экзамены</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Управление экзаменами
                   </p>
                 </div>
               </CardHeader>
@@ -236,6 +260,33 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
           </div>
         )}
       </div>
+
+      {/* Exams section */}
+      {examsCount > 0 && (
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold mb-4">Экзамены</h2>
+          <Link href={`/courses/${courseId}/exams`}>
+            <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
+              <CardHeader className="flex flex-row items-center gap-3">
+                <GraduationCap className="h-5 w-5 text-primary" />
+                <div>
+                  <CardTitle className="text-base">
+                    {examsCount}{" "}
+                    {examsCount === 1
+                      ? "экзамен"
+                      : examsCount < 5
+                      ? "экзамена"
+                      : "экзаменов"}
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Перейти к экзаменам курса
+                  </p>
+                </div>
+              </CardHeader>
+            </Card>
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

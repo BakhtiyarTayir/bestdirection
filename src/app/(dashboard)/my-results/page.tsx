@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FileText, Trophy, CheckCircle2, XCircle } from "lucide-react";
+import { FileText, Trophy, CheckCircle2, XCircle, GraduationCap } from "lucide-react";
 
 export default async function MyResultsPage() {
   const session = await auth();
@@ -49,13 +49,34 @@ export default async function MyResultsPage() {
     orderBy: { startedAt: "desc" },
   });
 
-  // Stats
-  const totalAttempts = attempts.length;
-  const passedAttempts = attempts.filter((a) => a.isPassed).length;
+  const examAttempts = await prisma.examAttempt.findMany({
+    where: { studentId: session.user.id },
+    include: {
+      exam: {
+        select: {
+          id: true,
+          title: true,
+          passingScore: true,
+          course: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: { startedAt: "desc" },
+  });
+
+  // Stats (combined)
+  const allAttempts = [...attempts, ...examAttempts];
+  const totalAttempts = allAttempts.length;
+  const passedAttempts = allAttempts.filter((a) => a.isPassed).length;
   const avgPercentage =
     totalAttempts > 0
       ? Math.round(
-          attempts.reduce((sum, a) => sum + a.percentage, 0) / totalAttempts
+          allAttempts.reduce((sum, a) => sum + a.percentage, 0) / totalAttempts
         )
       : 0;
 
@@ -112,7 +133,7 @@ export default async function MyResultsPage() {
         </Card>
       </div>
 
-      {/* Results Table */}
+      {/* Test Results Table */}
       <Card>
         <CardHeader>
           <CardTitle>История тестов</CardTitle>
@@ -168,6 +189,76 @@ export default async function MyResultsPage() {
                       <TableCell>
                         <Link
                           href={`/courses/${attempt.test.lesson.course.id}/lessons/${attempt.test.lesson.id}/test`}
+                        >
+                          <Button variant="ghost" size="sm">
+                            Подробнее
+                          </Button>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Exam Results Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <GraduationCap className="h-5 w-5" />
+            История экзаменов
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {examAttempts.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">
+              Вы еще не проходили ни одного экзамена.
+            </p>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Курс</TableHead>
+                    <TableHead>Экзамен</TableHead>
+                    <TableHead className="text-center">Баллы</TableHead>
+                    <TableHead className="text-center">Процент</TableHead>
+                    <TableHead className="text-center">Статус</TableHead>
+                    <TableHead>Дата</TableHead>
+                    <TableHead></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {examAttempts.map((attempt) => (
+                    <TableRow key={attempt.id}>
+                      <TableCell className="font-medium">
+                        {attempt.exam.course.title}
+                      </TableCell>
+                      <TableCell>{attempt.exam.title}</TableCell>
+                      <TableCell className="text-center">
+                        {attempt.score} / {attempt.maxScore}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {attempt.percentage}%
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge
+                          variant={
+                            attempt.isPassed ? "default" : "destructive"
+                          }
+                        >
+                          {attempt.isPassed ? "Зачтено" : "Не зачтено"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {formatDate(attempt.startedAt)}
+                      </TableCell>
+                      <TableCell>
+                        <Link
+                          href={`/courses/${attempt.exam.course.id}/exams/${attempt.exam.id}`}
                         >
                           <Button variant="ghost" size="sm">
                             Подробнее

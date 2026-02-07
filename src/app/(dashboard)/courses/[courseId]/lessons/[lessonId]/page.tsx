@@ -4,7 +4,7 @@ import Link from "next/link";
 import { getLessonById } from "@/actions/lesson-actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Video, FileText } from "lucide-react";
+import { Edit, Video, FileText, ClipboardList } from "lucide-react";
 
 import { VideoPlayer } from "@/components/video-player";
 
@@ -99,7 +99,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
       </div>
 
       {/* Test section */}
-      {lesson.test && (
+      {lesson.test ? (
         <div className="max-w-4xl">
           <div className="rounded-lg border p-6 bg-card">
             <h2 className="text-lg font-semibold mb-2">
@@ -126,7 +126,19 @@ export default async function LessonPage({ params }: LessonPageProps) {
             )}
           </div>
         </div>
-      )}
+      ) : isTeacherOrAdmin ? (
+        <div className="max-w-4xl">
+          <div className="rounded-lg border border-dashed p-6 text-center">
+            <ClipboardList className="mx-auto h-10 w-10 text-muted-foreground mb-2" />
+            <p className="text-muted-foreground mb-4">
+              К этому уроку ещё не добавлен тест
+            </p>
+            <Link href={`/courses/${courseId}/lessons/${lessonId}/test`}>
+              <Button>Создать тест</Button>
+            </Link>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

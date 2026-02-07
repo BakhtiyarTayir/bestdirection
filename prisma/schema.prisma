@@ -51,6 +51,7 @@ model User {
   courses           Course[]
   enrollments       Enrollment[]
   testAttempts      TestAttempt[]
+  examAttempts      ExamAttempt[]
   attendanceRecords AttendanceRecord[]
 
   @@index([role])
@@ -72,6 +73,7 @@ model Course {
 
   lessons            Lesson[]
   enrollments        Enrollment[]
+  exams              Exam[]
   attendanceSessions AttendanceSession[]
 
   @@index([teacherId])
@@ -215,4 +217,85 @@ model AttendanceRecord {
 
   @@unique([sessionId, studentId])
   @@index([studentId])
+}
+
+model Exam {
+  id           String   @id @default(cuid())
+  title        String
+  description  String?
+  passingScore Int      @default(60)
+  timeLimitMin Int?
+  maxAttempts  Int      @default(1)
+  sortOrder    Int      @default(0)
+  isPublished  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  courseId String
+  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  questions ExamQuestion[]
+  attempts  ExamAttempt[]
+
+  @@index([courseId])
+}
+
+model ExamQuestion {
+  id        String       @id @default(cuid())
+  text      String
+  type      QuestionType
+  points    Int          @default(1)
+  sortOrder Int          @default(0)
+
+  examId String
+  exam   Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  options        ExamAnswerOption[]
+  attemptAnswers ExamAttemptAnswer[]
+
+  @@index([examId])
+}
+
+model ExamAnswerOption {
+  id        String  @id @default(cuid())
+  text      String
+  isCorrect Boolean @default(false)
+  sortOrder Int     @default(0)
+
+  questionId String
+  question   ExamQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model ExamAttempt {
+  id          String    @id @default(cuid())
+  score       Int       @default(0)
+  maxScore    Int       @default(0)
+  percentage  Float     @default(0)
+  isPassed    Boolean   @default(false)
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  studentId String
+  student   User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  examId String
+  exam   Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  answers ExamAttemptAnswer[]
+
+  @@index([studentId])
+  @@index([examId])
+}
+
+model ExamAttemptAnswer {
+  id                String   @id @default(cuid())
+  selectedOptionIds String[]
+  isCorrect         Boolean  @default(false)
+  pointsEarned      Int      @default(0)
+
+  attemptId String
+  attempt   ExamAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  questionId String
+  question   ExamQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
 }
