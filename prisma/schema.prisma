@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -51,6 +52,9 @@ model User {
   enrollments       Enrollment[]
   testAttempts      TestAttempt[]
   attendanceRecords AttendanceRecord[]
+
+  @@index([role])
+  @@index([isActive])
 }
 
 model Course {
@@ -69,6 +73,9 @@ model Course {
   lessons            Lesson[]
   enrollments        Enrollment[]
   attendanceSessions AttendanceSession[]
+
+  @@index([teacherId])
+  @@index([isPublished])
 }
 
 model Enrollment {
@@ -80,6 +87,7 @@ model Enrollment {
   course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@id([studentId, courseId])
+  @@index([courseId])
 }
 
 model Lesson {
@@ -98,6 +106,9 @@ model Lesson {
   course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   test Test?
+
+  @@index([courseId])
+  @@index([sortOrder])
 }
 
 model Test {
@@ -129,6 +140,8 @@ model Question {
 
   options        AnswerOption[]
   attemptAnswers AttemptAnswer[]
+
+  @@index([testId])
 }
 
 model AnswerOption {
@@ -157,6 +170,9 @@ model TestAttempt {
   test   Test   @relation(fields: [testId], references: [id], onDelete: Cascade)
 
   answers AttemptAnswer[]
+
+  @@index([studentId])
+  @@index([testId])
 }
 
 model AttemptAnswer {
@@ -183,6 +199,7 @@ model AttendanceSession {
   records AttendanceRecord[]
 
   @@unique([courseId, date])
+  @@index([courseId])
 }
 
 model AttendanceRecord {
@@ -197,4 +214,5 @@ model AttendanceRecord {
   student   User @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([sessionId, studentId])
+  @@index([studentId])
 }

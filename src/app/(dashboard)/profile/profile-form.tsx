@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,18 +16,9 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { updateProfile, changePassword } from "@/actions/user-actions";
-import { changePasswordSchema } from "@/validators/user";
-import type { ChangePasswordInput } from "@/validators/user";
+import { profileSchema, changePasswordSchema, type ProfileInput, type ChangePasswordInput } from "@/validators/profile";
 import type { User } from "@/generated/prisma";
 import { Loader2 } from "lucide-react";
-
-const profileSchema = z.object({
-  firstName: z.string().min(1, "Имя обязательно"),
-  lastName: z.string().min(1, "Фамилия обязательна"),
-  phone: z.string().optional(),
-});
-
-type ProfileInput = z.infer<typeof profileSchema>;
 
 interface ProfileFormProps {
   user: User;
@@ -228,7 +218,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
               <Input
                 id="newPassword"
                 type="password"
-                placeholder="Минимум 6 символов"
+                placeholder="Минимум 8 символов"
                 {...passwordForm.register("newPassword")}
               />
               {passwordForm.formState.errors.newPassword && (

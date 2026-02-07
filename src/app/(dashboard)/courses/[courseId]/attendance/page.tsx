@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCourseById, getEnrolledStudents } from "@/actions/course-actions";
-import { getAttendanceReport } from "@/actions/attendance-actions";
+import { getAttendanceSessions } from "@/actions/attendance-actions";
 import { AttendanceGrid } from "@/components/attendance-grid";
 import { CreateSessionDialog } from "@/components/create-session-dialog";
 import { Button } from "@/components/ui/button";
@@ -25,10 +25,10 @@ export default async function AttendancePage({ params }: AttendancePageProps) {
     redirect("/dashboard");
   }
 
-  const [courseResult, studentsResult, reportResult] = await Promise.all([
+  const [courseResult, studentsResult, sessionsResult] = await Promise.all([
     getCourseById(courseId),
     getEnrolledStudents(courseId),
-    getAttendanceReport(courseId),
+    getAttendanceSessions(courseId),
   ]);
 
   if (!courseResult.success || !courseResult.data) {
@@ -37,7 +37,7 @@ export default async function AttendancePage({ params }: AttendancePageProps) {
 
   const course = courseResult.data;
   const students = studentsResult.success ? studentsResult.data ?? [] : [];
-  const sessions = reportResult.success ? reportResult.data ?? [] : [];
+  const sessions = sessionsResult.success && sessionsResult.data ? sessionsResult.data : [];
 
   return (
     <div className="space-y-6">

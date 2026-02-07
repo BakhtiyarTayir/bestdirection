@@ -29,7 +29,8 @@ const roleLabels: Record<string, string> = {
 export default async function UsersPage() {
   await requireRole(["ADMIN"]);
 
-  const users = await getUsers();
+  const result = await getUsers();
+  const users = result.success && result.data ? result.data : [];
 
   return (
     <div>

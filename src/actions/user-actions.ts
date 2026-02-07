@@ -1,46 +1,39 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/action-utils";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { Role } from "@/generated/prisma";
 
 // ---------- getUsers ----------
 export async function getUsers() {
-  try {
-    const session = await auth();
-    if (!session?.user) return { success: false, error: "Unauthorized" };
-    if (session.user.role !== "ADMIN") return { success: false, error: "Forbidden" };
+  return withAuth(
+    async () => {
+      const users = await prisma.user.findMany({
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          role: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
 
-    const users = await prisma.user.findMany({
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-
-    return { success: true, data: users };
-  } catch (error) {
-    console.error("getUsers error:", error);
-    return { success: false, error: "Failed to fetch users" };
-  }
+      return { success: true, data: users };
+    },
+    { roles: ["ADMIN"] }
+  );
 }
 
 // ---------- getUserById ----------
 export async function getUserById(id: string) {
-  try {
-    const session = await auth();
-    if (!session?.user) return { success: false, error: "Unauthorized" };
-
+  return withAuth(async () => {
     const user = await prisma.user.findUnique({
       where: { id },
       select: {
@@ -59,10 +52,7 @@ export async function getUserById(id: string) {
     if (!user) return { success: false, error: "User not found" };
 
     return { success: true, data: user };
-  } catch (error) {
-    console.error("getUserById error:", error);
-    return { success: false, error: "Failed to fetch user" };
-  }
+  });
 }
 
 // ---------- createUser ----------
@@ -74,48 +64,44 @@ export async function createUser(data: {
   phone?: string;
   role: Role;
 }) {
-  try {
-    const session = await auth();
-    if (!session?.user) return { success: false, error: "Unauthorized" };
-    if (session.user.role !== "ADMIN") return { success: false, error: "Forbidden" };
+  return withAuth(
+    async () => {
+      const existingUser = await prisma.user.findUnique({
+        where: { email: data.email },
+      });
 
-    const existingUser = await prisma.user.findUnique({
-      where: { email: data.email },
-    });
+      if (existingUser) {
+        return { success: false, error: "User with this email already exists" };
+      }
 
-    if (existingUser) {
-      return { success: false, error: "User with this email already exists" };
-    }
+      const passwordHash = await bcrypt.hash(data.password, 10);
 
-    const passwordHash = await bcrypt.hash(data.password, 10);
+      const user = await prisma.user.create({
+        data: {
+          email: data.email,
+          passwordHash,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone,
+          role: data.role,
+        },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          role: true,
+          isActive: true,
+          createdAt: true,
+        },
+      });
 
-    const user = await prisma.user.create({
-      data: {
-        email: data.email,
-        passwordHash,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        phone: data.phone,
-        role: data.role,
-      },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-      },
-    });
-
-    revalidatePath("/dashboard/users");
-    return { success: true, data: user };
-  } catch (error) {
-    console.error("createUser error:", error);
-    return { success: false, error: "Failed to create user" };
-  }
+      revalidatePath("/dashboard/users");
+      return { success: true, data: user };
+    },
+    { roles: ["ADMIN"] }
+  );
 }
 
 // ---------- updateUser ----------
@@ -130,75 +116,67 @@ export async function updateUser(
     isActive?: boolean;
   }
 ) {
-  try {
-    const session = await auth();
-    if (!session?.user) return { success: false, error: "Unauthorized" };
-    if (session.user.role !== "ADMIN") return { success: false, error: "Forbidden" };
+  return withAuth(
+    async () => {
+      if (data.email) {
+        const existingUser = await prisma.user.findUnique({
+          where: { email: data.email },
+        });
 
-    if (data.email) {
-      const existingUser = await prisma.user.findUnique({
-        where: { email: data.email },
+        if (existingUser && existingUser.id !== id) {
+          return { success: false, error: "Email is already in use" };
+        }
+      }
+
+      const user = await prisma.user.update({
+        where: { id },
+        data: {
+          ...(data.email !== undefined && { email: data.email }),
+          ...(data.firstName !== undefined && { firstName: data.firstName }),
+          ...(data.lastName !== undefined && { lastName: data.lastName }),
+          ...(data.phone !== undefined && { phone: data.phone }),
+          ...(data.role !== undefined && { role: data.role }),
+          ...(data.isActive !== undefined && { isActive: data.isActive }),
+        },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          role: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+        },
       });
 
-      if (existingUser && existingUser.id !== id) {
-        return { success: false, error: "Email is already in use" };
-      }
-    }
-
-    const user = await prisma.user.update({
-      where: { id },
-      data: {
-        ...(data.email !== undefined && { email: data.email }),
-        ...(data.firstName !== undefined && { firstName: data.firstName }),
-        ...(data.lastName !== undefined && { lastName: data.lastName }),
-        ...(data.phone !== undefined && { phone: data.phone }),
-        ...(data.role !== undefined && { role: data.role }),
-        ...(data.isActive !== undefined && { isActive: data.isActive }),
-      },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-
-    revalidatePath("/dashboard/users");
-    revalidatePath(`/dashboard/users/${id}`);
-    return { success: true, data: user };
-  } catch (error) {
-    console.error("updateUser error:", error);
-    return { success: false, error: "Failed to update user" };
-  }
+      revalidatePath("/dashboard/users");
+      revalidatePath(`/dashboard/users/${id}`);
+      return { success: true, data: user };
+    },
+    { roles: ["ADMIN"] }
+  );
 }
 
 // ---------- deleteUser (soft delete) ----------
 export async function deleteUser(id: string) {
-  try {
-    const session = await auth();
-    if (!session?.user) return { success: false, error: "Unauthorized" };
-    if (session.user.role !== "ADMIN") return { success: false, error: "Forbidden" };
+  return withAuth(
+    async (session) => {
+      if (session.user.id === id) {
+        return { success: false, error: "Cannot deactivate your own account" };
+      }
 
-    if (session.user.id === id) {
-      return { success: false, error: "Cannot deactivate your own account" };
-    }
+      await prisma.user.update({
+        where: { id },
+        data: { isActive: false },
+      });
 
-    await prisma.user.update({
-      where: { id },
-      data: { isActive: false },
-    });
-
-    revalidatePath("/dashboard/users");
-    return { success: true };
-  } catch (error) {
-    console.error("deleteUser error:", error);
-    return { success: false, error: "Failed to delete user" };
-  }
+      revalidatePath("/dashboard/users");
+      return { success: true };
+    },
+    { roles: ["ADMIN"] }
+  );
 }
 
 // ---------- updateProfile ----------
@@ -207,10 +185,7 @@ export async function updateProfile(data: {
   lastName: string;
   phone?: string;
 }) {
-  try {
-    const session = await auth();
-    if (!session?.user) return { success: false, error: "Unauthorized" };
-
+  return withAuth(async (session) => {
     const user = await prisma.user.update({
       where: { id: session.user.id },
       data: {
@@ -230,10 +205,7 @@ export async function updateProfile(data: {
 
     revalidatePath("/dashboard/profile");
     return { success: true, data: user };
-  } catch (error) {
-    console.error("updateProfile error:", error);
-    return { success: false, error: "Failed to update profile" };
-  }
+  });
 }
 
 // ---------- changePassword ----------
@@ -241,10 +213,7 @@ export async function changePassword(data: {
   currentPassword: string;
   newPassword: string;
 }) {
-  try {
-    const session = await auth();
-    if (!session?.user) return { success: false, error: "Unauthorized" };
-
+  return withAuth(async (session) => {
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
     });
@@ -264,8 +233,5 @@ export async function changePassword(data: {
     });
 
     return { success: true };
-  } catch (error) {
-    console.error("changePassword error:", error);
-    return { success: false, error: "Failed to change password" };
-  }
+  });
 }

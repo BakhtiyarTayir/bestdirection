@@ -7,20 +7,20 @@ const videoSourceEnum = z.nativeEnum(VideoSource);
 export const createLessonSchema = z.object({
   title: z
     .string()
-    .min(1, "Title is required"),
+    .min(1, "Название обязательно"),
   type: lessonTypeEnum,
   content: z
     .string()
     .optional(),
   videoUrl: z
     .string()
-    .url("Invalid video URL")
+    .url("Некорректная ссылка на видео")
     .optional(),
   videoSource: videoSourceEnum.optional(),
   sortOrder: z
     .number()
-    .int("Sort order must be an integer")
-    .min(0, "Sort order must be non-negative")
+    .int("Порядок сортировки должен быть целым числом")
+    .min(0, "Порядок сортировки не может быть отрицательным")
     .default(0),
   isPublished: z
     .boolean()
@@ -28,16 +28,16 @@ export const createLessonSchema = z.object({
     .default(false),
   courseId: z
     .string()
-    .min(1, "Course ID is required"),
+    .min(1, "ID курса обязателен"),
 });
 
 export type CreateLessonInput = z.infer<typeof createLessonSchema>;
 
 export const updateLessonSchema = z.object({
-  id: z.string().min(1, "Lesson ID is required"),
+  id: z.string().min(1, "ID урока обязателен"),
   title: z
     .string()
-    .min(1, "Title is required")
+    .min(1, "Название обязательно")
     .optional(),
   type: lessonTypeEnum.optional(),
   content: z
@@ -45,20 +45,20 @@ export const updateLessonSchema = z.object({
     .optional(),
   videoUrl: z
     .string()
-    .url("Invalid video URL")
+    .url("Некорректная ссылка на видео")
     .optional(),
   videoSource: videoSourceEnum.optional(),
   sortOrder: z
     .number()
-    .int("Sort order must be an integer")
-    .min(0, "Sort order must be non-negative")
+    .int("Порядок сортировки должен быть целым числом")
+    .min(0, "Порядок сортировки не может быть отрицательным")
     .optional(),
   isPublished: z
     .boolean()
     .optional(),
   courseId: z
     .string()
-    .min(1, "Course ID is required")
+    .min(1, "ID курса обязателен")
     .optional(),
 });
 

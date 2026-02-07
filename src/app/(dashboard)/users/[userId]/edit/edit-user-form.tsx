@@ -2,16 +2,26 @@
 
 import { UserForm } from "@/components/user-form";
 import { updateUser } from "@/actions/user-actions";
-import type { UpdateUserInput } from "@/validators/user";
-import type { User } from "@/generated/prisma";
+import type { CreateUserInput, UpdateUserInput } from "@/validators/user";
+import type { Role } from "@/generated/prisma";
 
 interface EditUserFormProps {
-  user: User;
+  user: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    phone: string | null;
+    role: Role;
+    isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  };
 }
 
 export function EditUserForm({ user }: EditUserFormProps) {
-  const handleSubmit = async (data: UpdateUserInput) => {
-    return await updateUser(data);
+  const handleSubmit = async (data: CreateUserInput | UpdateUserInput) => {
+    return await updateUser(user.id, data as UpdateUserInput);
   };
 
   return <UserForm user={user} onSubmit={handleSubmit} />;

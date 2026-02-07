@@ -2,9 +2,9 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { createCourseSchema, type CreateCourseInput } from "@/validators/course";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,14 +23,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { createCourse, updateCourse } from "@/actions/course-actions";
 import { Loader2 } from "lucide-react";
 
-const courseFormSchema = z.object({
-  title: z.string().min(1, "Название обязательно"),
-  description: z.string().optional(),
-  teacherId: z.string().min(1, "Преподаватель обязателен"),
-  isPublished: z.boolean().optional(),
-});
+const courseFormSchema = createCourseSchema;
 
-type CourseFormValues = z.infer<typeof courseFormSchema>;
+type CourseFormValues = CreateCourseInput;
 
 interface Teacher {
   id: string;

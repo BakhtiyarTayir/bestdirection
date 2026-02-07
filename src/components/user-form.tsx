@@ -24,12 +24,23 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { createUserSchema, updateUserSchema } from "@/validators/user";
 import type { CreateUserInput, UpdateUserInput } from "@/validators/user";
-import type { User } from "@/generated/prisma";
+import type { Role } from "@/generated/prisma";
 import { Loader2 } from "lucide-react";
 
+interface UserData {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  role: Role;
+  isActive: boolean;
+}
+
 interface UserFormProps {
-  user?: User;
-  onSubmit: (data: CreateUserInput | UpdateUserInput) => Promise<{ success: boolean; error?: string }>;
+  user?: UserData;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onSubmit: (data: CreateUserInput | UpdateUserInput) => Promise<{ success: boolean; error?: string; [key: string]: any }>;
 }
 
 export function UserForm({ user, onSubmit }: UserFormProps) {
@@ -38,8 +49,10 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const isEditing = !!user;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const schema = (isEditing ? updateUserSchema : createUserSchema) as any;
   const form = useForm<CreateUserInput | UpdateUserInput>({
-    resolver: zodResolver(isEditing ? updateUserSchema : createUserSchema),
+    resolver: zodResolver(schema),
     defaultValues: isEditing
       ? {
           id: user.id,

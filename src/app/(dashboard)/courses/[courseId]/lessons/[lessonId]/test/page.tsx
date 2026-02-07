@@ -68,27 +68,26 @@ export default async function TestPage({ params }: TestPageProps) {
   });
 
   // Get student attempts if student
-  let studentAttempts: Awaited<ReturnType<typeof prisma.testAttempt.findMany>> = [];
-  if (role === "STUDENT" && test) {
-    studentAttempts = await prisma.testAttempt.findMany({
-      where: {
-        testId: test.id,
-        studentId: userId,
-      },
-      include: {
-        answers: {
-          include: {
-            question: {
-              include: {
-                options: { orderBy: { sortOrder: "asc" } },
+  const studentAttempts = role === "STUDENT" && test
+    ? await prisma.testAttempt.findMany({
+        where: {
+          testId: test.id,
+          studentId: userId,
+        },
+        include: {
+          answers: {
+            include: {
+              question: {
+                include: {
+                  options: { orderBy: { sortOrder: "asc" } },
+                },
               },
             },
           },
         },
-      },
-      orderBy: { startedAt: "desc" },
-    });
-  }
+        orderBy: { startedAt: "desc" },
+      })
+    : [];
 
   const isTeacherOrAdmin = role === "ADMIN" || role === "TEACHER";
 

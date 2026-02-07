@@ -63,7 +63,7 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@lms.com"
+                placeholder="email@example.com"
                 {...register("email")}
               />
               {errors.email && (
@@ -86,12 +86,6 @@ export default function LoginPage() {
               {loading ? "Вход..." : "Войти"}
             </Button>
           </form>
-          <div className="mt-6 text-center text-xs text-muted-foreground">
-            <p>Тестовые аккаунты:</p>
-            <p>admin@lms.com / admin123</p>
-            <p>teacher@lms.com / teacher123</p>
-            <p>student@lms.com / student123</p>
-          </div>
         </CardContent>
       </Card>
     </div>

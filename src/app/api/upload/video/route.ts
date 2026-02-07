@@ -5,6 +5,15 @@ import { auth } from "@/lib/auth";
 
 const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 
+const ALLOWED_MIME_TYPES = [
+  "video/mp4",
+  "video/webm",
+  "video/ogg",
+  "video/quicktime",
+];
+
+const ALLOWED_EXTENSIONS = [".mp4", ".webm", ".ogg", ".mov"];
+
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
@@ -47,9 +56,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate MIME type
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      return NextResponse.json(
+        { error: "Недопустимый формат файла. Разрешены: MP4, WebM, OGG, MOV" },
+        { status: 400 }
+      );
+    }
+
+    // Validate file extension
     const originalName = file.name;
-    const ext = path.extname(originalName) || ".mp4";
-    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}${ext}`;
+    const ext = path.extname(originalName).toLowerCase();
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      return NextResponse.json(
+        { error: "Недопустимое расширение файла. Разрешены: .mp4, .webm, .ogg, .mov" },
+        { status: 400 }
+      );
+    }
+    const safeExt = ext || ".mp4";
+    const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}${safeExt}`;
 
     const uploadsDir = path.join(process.cwd(), "public", "uploads", "videos");
     await mkdir(uploadsDir, { recursive: true });

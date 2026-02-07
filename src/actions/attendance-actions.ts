@@ -1,31 +1,30 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
+import { withAuth } from "@/lib/action-utils";
 import { revalidatePath } from "next/cache";
 import { AttendanceStatus } from "@/generated/prisma";
 
 // ---------- getAttendanceSessions ----------
 export async function getAttendanceSessions(courseId: string) {
-  try {
-    const session = await auth();
-    if (!session?.user) return { success: false, error: "Unauthorized" };
-
+  return withAuth(async () => {
     const sessions = await prisma.attendanceSession.findMany({
       where: { courseId },
       include: {
-        _count: {
-          select: { records: true },
+        _count: { select: { records: true } },
+        records: {
+          include: {
+            student: {
+              select: { id: true, firstName: true, lastName: true, email: true },
+            },
+          },
         },
       },
       orderBy: { date: "desc" },
     });
 
     return { success: true, data: sessions };
-  } catch (error) {
-    console.error("getAttendanceSessions error:", error);
-    return { success: false, error: "Failed to fetch attendance sessions" };
-  }
+  });
 }
 
 // ---------- createAttendanceSession ----------
@@ -34,49 +33,45 @@ export async function createAttendanceSession(data: {
   date: Date | string;
   note?: string;
 }) {
-  try {
-    const session = await auth();
-    if (!session?.user) return { success: false, error: "Unauthorized" };
+  return withAuth(
+    async (session) => {
+      const role = session.user.role;
 
-    const role = session.user.role;
-    if (role !== "ADMIN" && role !== "TEACHER") {
-      return { success: false, error: "Forbidden" };
-    }
-
-    // Teachers can only create sessions for their own courses
-    if (role === "TEACHER") {
-      const course = await prisma.course.findUnique({
-        where: { id: data.courseId },
-      });
-      if (!course) return { success: false, error: "Course not found" };
-      if (course.teacherId !== session.user.id) {
-        return { success: false, error: "You can only create sessions for your own courses" };
+      if (role === "TEACHER") {
+        const course = await prisma.course.findUnique({
+          where: { id: data.courseId },
+        });
+        if (!course) return { success: false, error: "Course not found" };
+        if (course.teacherId !== session.user.id) {
+          return { success: false, error: "You can only create sessions for your own courses" };
+        }
       }
-    }
 
-    const dateValue = new Date(data.date);
+      const dateValue = new Date(data.date);
 
-    const attendanceSession = await prisma.attendanceSession.create({
-      data: {
-        courseId: data.courseId,
-        date: dateValue,
-        note: data.note,
-      },
-    });
+      try {
+        const attendanceSession = await prisma.attendanceSession.create({
+          data: {
+            courseId: data.courseId,
+            date: dateValue,
+            note: data.note,
+          },
+        });
 
-    revalidatePath(`/dashboard/courses/${data.courseId}/attendance`);
-    return { success: true, data: attendanceSession };
-  } catch (error) {
-    console.error("createAttendanceSession error:", error);
-    // Check for unique constraint violation (same course + date)
-    if (
-      error instanceof Error &&
-      error.message.includes("Unique constraint")
-    ) {
-      return { success: false, error: "An attendance session already exists for this date" };
-    }
-    return { success: false, error: "Failed to create attendance session" };
-  }
+        revalidatePath(`/dashboard/courses/${data.courseId}/attendance`);
+        return { success: true, data: attendanceSession };
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          error.message.includes("Unique constraint")
+        ) {
+          return { success: false, error: "An attendance session already exists for this date" };
+        }
+        throw error;
+      }
+    },
+    { roles: ["ADMIN", "TEACHER"] }
+  );
 }
 
 // ---------- updateAttendanceRecords ----------
@@ -84,82 +79,65 @@ export async function updateAttendanceRecords(data: {
   sessionId: string;
   records: { studentId: string; status: AttendanceStatus; note?: string }[];
 }) {
-  try {
-    const session = await auth();
-    if (!session?.user) return { success: false, error: "Unauthorized" };
+  return withAuth(
+    async (session) => {
+      const role = session.user.role;
 
-    const role = session.user.role;
-    if (role !== "ADMIN" && role !== "TEACHER") {
-      return { success: false, error: "Forbidden" };
-    }
+      const attendanceSession = await prisma.attendanceSession.findUnique({
+        where: { id: data.sessionId },
+        include: {
+          course: { select: { id: true, teacherId: true } },
+        },
+      });
 
-    // Verify session exists and check ownership
-    const attendanceSession = await prisma.attendanceSession.findUnique({
-      where: { id: data.sessionId },
-      include: {
-        course: { select: { id: true, teacherId: true } },
-      },
-    });
+      if (!attendanceSession) {
+        return { success: false, error: "Attendance session not found" };
+      }
 
-    if (!attendanceSession) {
-      return { success: false, error: "Attendance session not found" };
-    }
+      if (role === "TEACHER" && attendanceSession.course.teacherId !== session.user.id) {
+        return { success: false, error: "You can only update attendance for your own courses" };
+      }
 
-    if (role === "TEACHER" && attendanceSession.course.teacherId !== session.user.id) {
-      return { success: false, error: "You can only update attendance for your own courses" };
-    }
-
-    // Upsert each record in a transaction
-    await prisma.$transaction(
-      data.records.map((record) =>
-        prisma.attendanceRecord.upsert({
-          where: {
-            sessionId_studentId: {
+      await prisma.$transaction(
+        data.records.map((record) =>
+          prisma.attendanceRecord.upsert({
+            where: {
+              sessionId_studentId: {
+                sessionId: data.sessionId,
+                studentId: record.studentId,
+              },
+            },
+            create: {
               sessionId: data.sessionId,
               studentId: record.studentId,
+              status: record.status,
+              note: record.note,
             },
-          },
-          create: {
-            sessionId: data.sessionId,
-            studentId: record.studentId,
-            status: record.status,
-            note: record.note,
-          },
-          update: {
-            status: record.status,
-            note: record.note,
-          },
-        })
-      )
-    );
+            update: {
+              status: record.status,
+              note: record.note,
+            },
+          })
+        )
+      );
 
-    revalidatePath(`/dashboard/courses/${attendanceSession.course.id}/attendance`);
-    return { success: true };
-  } catch (error) {
-    console.error("updateAttendanceRecords error:", error);
-    return { success: false, error: "Failed to update attendance records" };
-  }
+      revalidatePath(`/dashboard/courses/${attendanceSession.course.id}/attendance`);
+      return { success: true };
+    },
+    { roles: ["ADMIN", "TEACHER"] }
+  );
 }
 
 // ---------- getAttendanceReport ----------
 export async function getAttendanceReport(courseId: string) {
-  try {
-    const session = await auth();
-    if (!session?.user) return { success: false, error: "Unauthorized" };
-
-    // Get all sessions for the course
+  return withAuth(async () => {
     const sessions = await prisma.attendanceSession.findMany({
       where: { courseId },
       include: {
         records: {
           include: {
             student: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
+              select: { id: true, firstName: true, lastName: true, email: true },
             },
           },
         },
@@ -167,17 +145,11 @@ export async function getAttendanceReport(courseId: string) {
       orderBy: { date: "asc" },
     });
 
-    // Get all enrolled students
     const enrollments = await prisma.enrollment.findMany({
       where: { courseId },
       include: {
         student: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
+          select: { id: true, firstName: true, lastName: true, email: true },
         },
       },
       orderBy: { student: { firstName: "asc" } },
@@ -185,7 +157,6 @@ export async function getAttendanceReport(courseId: string) {
 
     const students = enrollments.map((e) => e.student);
 
-    // Build the attendance matrix: for each student, map sessionId -> status
     const matrix = students.map((student) => {
       const attendance: Record<
         string,
@@ -202,10 +173,7 @@ export async function getAttendanceReport(courseId: string) {
         }
       }
 
-      return {
-        student,
-        attendance,
-      };
+      return { student, attendance };
     });
 
     const sessionsSummary = sessions.map((s) => ({
@@ -216,30 +184,19 @@ export async function getAttendanceReport(courseId: string) {
 
     return {
       success: true,
-      data: {
-        sessions: sessionsSummary,
-        students: matrix,
-      },
+      data: { sessions: sessionsSummary, students: matrix },
     };
-  } catch (error) {
-    console.error("getAttendanceReport error:", error);
-    return { success: false, error: "Failed to fetch attendance report" };
-  }
+  });
 }
 
 // ---------- getStudentAttendance ----------
 export async function getStudentAttendance(studentId?: string) {
-  try {
-    const session = await auth();
-    if (!session?.user) return { success: false, error: "Unauthorized" };
-
+  return withAuth(async (session) => {
     const role = session.user.role;
 
-    // Determine which student's attendance to fetch
     let targetStudentId: string;
 
     if (role === "STUDENT") {
-      // Students can only see their own attendance
       targetStudentId = session.user.id;
     } else if (studentId) {
       targetStudentId = studentId;
@@ -247,25 +204,18 @@ export async function getStudentAttendance(studentId?: string) {
       return { success: false, error: "Student ID is required" };
     }
 
-    // Get all attendance records for the student, grouped by course
     const records = await prisma.attendanceRecord.findMany({
       where: { studentId: targetStudentId },
       include: {
         session: {
           include: {
-            course: {
-              select: {
-                id: true,
-                title: true,
-              },
-            },
+            course: { select: { id: true, title: true } },
           },
         },
       },
       orderBy: { session: { date: "desc" } },
     });
 
-    // Group by course
     const courseMap = new Map<
       string,
       {
@@ -298,43 +248,33 @@ export async function getStudentAttendance(studentId?: string) {
     const data = Array.from(courseMap.values());
 
     return { success: true, data };
-  } catch (error) {
-    console.error("getStudentAttendance error:", error);
-    return { success: false, error: "Failed to fetch student attendance" };
-  }
+  });
 }
 
 // ---------- deleteAttendanceSession ----------
 export async function deleteAttendanceSession(id: string) {
-  try {
-    const session = await auth();
-    if (!session?.user) return { success: false, error: "Unauthorized" };
+  return withAuth(
+    async (session) => {
+      const role = session.user.role;
 
-    const role = session.user.role;
-    if (role !== "ADMIN" && role !== "TEACHER") {
-      return { success: false, error: "Forbidden" };
-    }
+      const existing = await prisma.attendanceSession.findUnique({
+        where: { id },
+        include: {
+          course: { select: { id: true, teacherId: true } },
+        },
+      });
 
-    const existing = await prisma.attendanceSession.findUnique({
-      where: { id },
-      include: {
-        course: { select: { id: true, teacherId: true } },
-      },
-    });
+      if (!existing) return { success: false, error: "Attendance session not found" };
 
-    if (!existing) return { success: false, error: "Attendance session not found" };
+      if (role === "TEACHER" && existing.course.teacherId !== session.user.id) {
+        return { success: false, error: "You can only delete sessions for your own courses" };
+      }
 
-    if (role === "TEACHER" && existing.course.teacherId !== session.user.id) {
-      return { success: false, error: "You can only delete sessions for your own courses" };
-    }
+      await prisma.attendanceSession.delete({ where: { id } });
 
-    // Cascade delete will remove associated records
-    await prisma.attendanceSession.delete({ where: { id } });
-
-    revalidatePath(`/dashboard/courses/${existing.course.id}/attendance`);
-    return { success: true };
-  } catch (error) {
-    console.error("deleteAttendanceSession error:", error);
-    return { success: false, error: "Failed to delete attendance session" };
-  }
+      revalidatePath(`/dashboard/courses/${existing.course.id}/attendance`);
+      return { success: true };
+    },
+    { roles: ["ADMIN", "TEACHER"] }
+  );
 }

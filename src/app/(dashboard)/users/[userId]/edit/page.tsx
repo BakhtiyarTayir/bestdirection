@@ -11,11 +11,13 @@ export default async function EditUserPage({ params }: EditUserPageProps) {
   await requireRole(["ADMIN"]);
 
   const { userId } = await params;
-  const user = await getUserById(userId);
+  const result = await getUserById(userId);
 
-  if (!user) {
+  if (!result.success || !result.data) {
     notFound();
   }
+
+  const user = result.data;
 
   return (
     <div>

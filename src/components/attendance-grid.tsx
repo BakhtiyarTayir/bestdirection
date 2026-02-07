@@ -12,7 +12,7 @@ import {
   TableFooter,
 } from "@/components/ui/table";
 import { Check, X, Clock, AlertCircle } from "lucide-react";
-import type { AttendanceStatus } from "@prisma/client";
+import type { AttendanceStatus } from "@/generated/prisma";
 
 const STATUS_LABELS: Record<AttendanceStatus, string> = {
   PRESENT: "Присутствует",

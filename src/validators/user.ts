@@ -1,22 +1,21 @@
 import { z } from "zod";
-import { Role } from "@/generated/prisma";
 
-const roleEnum = z.nativeEnum(Role);
+const roleEnum = z.enum(["ADMIN", "TEACHER", "STUDENT"]);
 
 export const createUserSchema = z.object({
   email: z
     .string()
-    .min(1, "Email is required")
-    .email("Invalid email address"),
+    .min(1, "Email обязателен")
+    .email("Некорректный email адрес"),
   password: z
     .string()
-    .min(6, "Password must be at least 6 characters"),
+    .min(8, "Пароль должен содержать минимум 8 символов"),
   firstName: z
     .string()
-    .min(1, "First name is required"),
+    .min(1, "Имя обязательно"),
   lastName: z
     .string()
-    .min(1, "Last name is required"),
+    .min(1, "Фамилия обязательна"),
   phone: z
     .string()
     .optional(),
@@ -26,22 +25,22 @@ export const createUserSchema = z.object({
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 
 export const updateUserSchema = z.object({
-  id: z.string().min(1, "User ID is required"),
+  id: z.string().min(1, "ID пользователя обязателен"),
   email: z
     .string()
-    .email("Invalid email address")
+    .email("Некорректный email адрес")
     .optional(),
   password: z
     .string()
-    .min(6, "Password must be at least 6 characters")
+    .min(8, "Пароль должен содержать минимум 8 символов")
     .optional(),
   firstName: z
     .string()
-    .min(1, "First name is required")
+    .min(1, "Имя обязательно")
     .optional(),
   lastName: z
     .string()
-    .min(1, "Last name is required")
+    .min(1, "Фамилия обязательна")
     .optional(),
   phone: z
     .string()
@@ -54,15 +53,15 @@ export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 export const changePasswordSchema = z.object({
   currentPassword: z
     .string()
-    .min(1, "Current password is required"),
+    .min(1, "Текущий пароль обязателен"),
   newPassword: z
     .string()
-    .min(6, "New password must be at least 6 characters"),
+    .min(8, "Новый пароль должен содержать минимум 8 символов"),
   confirmPassword: z
     .string()
-    .min(1, "Password confirmation is required"),
+    .min(1, "Подтверждение пароля обязательно"),
 }).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "Passwords do not match",
+  message: "Пароли не совпадают",
   path: ["confirmPassword"],
 });
 

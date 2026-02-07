@@ -23,7 +23,22 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { addQuestion, updateQuestion } from "@/actions/test-actions";
-import { Loader2, Plus, Pencil, Trash2, GripVertical } from "lucide-react";
+import { z } from "zod";
+import { Loader2, Plus, Pencil, Trash2 } from "lucide-react";
+
+// Client-side question schema (mirrors @/validators/test createQuestionSchema without Prisma imports)
+const clientQuestionSchema = z.object({
+  text: z.string().min(1, "Текст вопроса обязателен"),
+  type: z.enum(["SINGLE_CHOICE", "MULTIPLE_CHOICE"]),
+  points: z.number().int("Баллы должны быть целым числом").min(1, "Минимум 1 балл"),
+  sortOrder: z.number().int().min(0),
+  testId: z.string().min(1, "ID теста обязателен"),
+  options: z.array(z.object({
+    text: z.string().min(1, "Текст варианта ответа обязателен"),
+    isCorrect: z.boolean(),
+    sortOrder: z.number().int().min(0),
+  })).min(2, "Минимум 2 варианта ответа"),
+});
 
 interface OptionInput {
   id?: string;
@@ -124,19 +139,27 @@ export function QuestionForm({ testId, question }: QuestionFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!text.trim()) {
-      toast({
-        title: "Ошибка",
-        description: "Введите текст вопроса",
-        variant: "destructive",
-      });
-      return;
-    }
+    const formattedOptions = options.map((o, i) => ({
+      text: o.text.trim(),
+      isCorrect: o.isCorrect,
+      sortOrder: i,
+    }));
 
-    if (options.some((o) => !o.text.trim())) {
+    // Validate with Zod schema
+    const validationResult = clientQuestionSchema.safeParse({
+      text: text.trim(),
+      type,
+      points,
+      sortOrder: question?.sortOrder ?? 0,
+      testId,
+      options: formattedOptions,
+    });
+
+    if (!validationResult.success) {
+      const firstError = validationResult.error.errors[0];
       toast({
         title: "Ошибка",
-        description: "Заполните текст всех вариантов ответа",
+        description: firstError.message,
         variant: "destructive",
       });
       return;
@@ -153,11 +176,6 @@ export function QuestionForm({ testId, question }: QuestionFormProps) {
 
     startTransition(async () => {
       try {
-        const formattedOptions = options.map((o, i) => ({
-          text: o.text.trim(),
-          isCorrect: o.isCorrect,
-          sortOrder: i,
-        }));
 
         if (question) {
           const result = await updateQuestion(question.id, {

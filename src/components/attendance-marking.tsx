@@ -22,7 +22,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { updateAttendanceRecords } from "@/actions/attendance-actions";
 import { Check } from "lucide-react";
-import type { AttendanceStatus } from "@prisma/client";
+import type { AttendanceStatus } from "@/generated/prisma";
 
 const STATUS_OPTIONS: { value: AttendanceStatus; label: string }[] = [
   { value: "PRESENT", label: "Присутствует" },
