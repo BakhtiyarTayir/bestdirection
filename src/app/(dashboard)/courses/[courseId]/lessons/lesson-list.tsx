@@ -21,7 +21,7 @@ import { Video, FileText, Edit, Trash2, Eye, GripVertical } from "lucide-react";
 interface Lesson {
   id: string;
   title: string;
-  type: string;
+  videoUrl?: string | null;
   isPublished: boolean;
   sortOrder: number;
   assessment?: { id: string } | null;
@@ -105,7 +105,7 @@ export function LessonList({ initialLessons, courseId, isTeacherOrAdmin }: Lesso
               </div>
 
               <div className="flex items-center gap-2">
-                {lesson.type === "VIDEO" ? (
+                {lesson.videoUrl ? (
                   <Video className="h-5 w-5 text-blue-500" />
                 ) : (
                   <FileText className="h-5 w-5 text-green-500" />

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
 import { revalidatePath } from "next/cache";
 import { createAuditLog, computeChanges } from "@/lib/audit";
-import type { LessonType, VideoSource } from "@/validators/lesson";
+import type { VideoSource } from "@/validators/lesson";
 
 // ---------- getLessons ----------
 export async function getLessons(courseId: string) {
@@ -65,8 +65,7 @@ export async function getLessonById(id: string) {
 // ---------- createLesson ----------
 export async function createLesson(data: {
   title: string;
-  type: LessonType;
-  content?: string;
+  content: string;
   videoUrl?: string;
   videoSource?: VideoSource;
   sortOrder: number;
@@ -90,7 +89,6 @@ export async function createLesson(data: {
       const lesson = await prisma.lesson.create({
         data: {
           title: data.title,
-          type: data.type,
           content: data.content,
           videoUrl: data.videoUrl,
           videoSource: data.videoSource,
@@ -120,7 +118,6 @@ export async function updateLesson(
   id: string,
   data: {
     title?: string;
-    type?: LessonType;
     content?: string;
     videoUrl?: string;
     videoSource?: VideoSource;
@@ -147,7 +144,6 @@ export async function updateLesson(
         where: { id },
         data: {
           ...(data.title !== undefined && { title: data.title }),
-          ...(data.type !== undefined && { type: data.type }),
           ...(data.content !== undefined && { content: data.content }),
           ...(data.videoUrl !== undefined && { videoUrl: data.videoUrl }),
           ...(data.videoSource !== undefined && { videoSource: data.videoSource }),
@@ -157,7 +153,7 @@ export async function updateLesson(
       });
 
       const changes = computeChanges(
-        { title: existing.title, type: existing.type, content: existing.content, isPublished: existing.isPublished, sortOrder: existing.sortOrder },
+        { title: existing.title, content: existing.content, isPublished: existing.isPublished, sortOrder: existing.sortOrder },
         data
       );
       if (changes) {

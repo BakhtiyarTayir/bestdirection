@@ -14,11 +14,6 @@ enum Role {
   STUDENT
 }
 
-enum LessonType {
-  VIDEO
-  TEXT
-}
-
 enum VideoSource {
   YOUTUBE
   UPLOAD
@@ -105,8 +100,7 @@ model Enrollment {
 model Lesson {
   id          String       @id @default(cuid())
   title       String
-  type        LessonType
-  content     String?
+  content     String       @default("")
   videoUrl    String?
   videoSource VideoSource?
   sortOrder   Int          @default(0)

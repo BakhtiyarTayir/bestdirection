@@ -18,6 +18,7 @@ import {
   Users,
   ClipboardCheck,
   FileText,
+  Video,
   GraduationCap,
   CheckCircle2,
 } from "lucide-react";
@@ -47,7 +48,7 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
     select: {
       id: true,
       title: true,
-      type: true,
+      videoUrl: true,
       isPublished: true,
       sortOrder: true,
     },
@@ -271,8 +272,12 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
                         </span>
                         <div>
                           <p className="font-medium">{lesson.title}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {lesson.type === "VIDEO" ? "Видео" : "Текст"}
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            {lesson.videoUrl ? (
+                              <><Video className="h-3 w-3" /> Видео + Конспект</>
+                            ) : (
+                              <><FileText className="h-3 w-3" /> Конспект</>
+                            )}
                           </p>
                         </div>
                       </div>

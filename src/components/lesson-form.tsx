@@ -15,13 +15,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/components/ui/use-toast";
 import { Upload, Youtube } from "lucide-react";
 
-type LessonType = "VIDEO" | "TEXT";
 type VideoSource = "YOUTUBE" | "UPLOAD";
 
 const formSchema = z.object({
   title: z.string().min(1, "Название обязательно"),
-  type: z.enum(["VIDEO", "TEXT"]),
-  content: z.string().optional(),
+  content: z.string().min(1, "Конспект урока обязателен"),
+  hasVideo: z.boolean(),
   videoUrl: z.string().optional(),
   videoSource: z.enum(["YOUTUBE", "UPLOAD"]).optional(),
   sortOrder: z.coerce.number().int().min(0, "Порядок не может быть отрицательным"),
@@ -30,11 +29,19 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
+export interface LessonFormSubmitData {
+  title: string;
+  content: string;
+  videoUrl?: string;
+  videoSource?: VideoSource;
+  sortOrder: number;
+  isPublished: boolean;
+}
+
 interface LessonFormProps {
   lesson?: {
     id: string;
     title: string;
-    type: LessonType;
     content?: string | null;
     videoUrl?: string | null;
     videoSource?: VideoSource | null;
@@ -42,7 +49,7 @@ interface LessonFormProps {
     isPublished: boolean;
   };
   courseId: string;
-  onSubmit: (data: FormData) => Promise<{ success: boolean; error?: string }>;
+  onSubmit: (data: LessonFormSubmitData) => Promise<{ success: boolean; error?: string }>;
 }
 
 export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
@@ -55,6 +62,8 @@ export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const hasExistingVideo = !!(lesson?.videoUrl);
+
   const {
     register,
     handleSubmit,
@@ -65,8 +74,8 @@ export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: lesson?.title ?? "",
-      type: lesson?.type ?? "VIDEO",
       content: lesson?.content ?? "",
+      hasVideo: hasExistingVideo,
       videoUrl: lesson?.videoUrl ?? "",
       videoSource: lesson?.videoSource ?? "YOUTUBE",
       sortOrder: lesson?.sortOrder ?? 0,
@@ -74,7 +83,7 @@ export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
     },
   });
 
-  const lessonType = watch("type");
+  const hasVideo = watch("hasVideo");
   const videoSource = watch("videoSource");
   const isPublished = watch("isPublished");
 
@@ -143,7 +152,19 @@ export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
   async function onFormSubmit(data: FormData) {
     setIsSubmitting(true);
     try {
-      const result = await onSubmit(data);
+      const submitData: LessonFormSubmitData = {
+        title: data.title,
+        content: data.content,
+        sortOrder: data.sortOrder,
+        isPublished: data.isPublished,
+      };
+
+      if (data.hasVideo && data.videoUrl) {
+        submitData.videoUrl = data.videoUrl;
+        submitData.videoSource = data.videoSource;
+      }
+
+      const result = await onSubmit(submitData);
       if (result.success) {
         toast({
           title: "Успешно",
@@ -184,133 +205,128 @@ export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
         )}
       </div>
 
-      {/* Тип урока */}
-      <div className="space-y-2">
-        <Label>Тип урока</Label>
-        <RadioGroup
-          value={lessonType}
-          onValueChange={(value: string) => setValue("type", value as LessonType)}
-        >
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="VIDEO" id="type-video" />
-            <Label htmlFor="type-video" className="cursor-pointer">
-              Видео
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="TEXT" id="type-text" />
-            <Label htmlFor="type-text" className="cursor-pointer">
-              Текст
-            </Label>
-          </div>
-        </RadioGroup>
-      </div>
-
-      {/* Видео настройки */}
-      {lessonType === "VIDEO" && (
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Источник видео</Label>
-            <RadioGroup
-              value={videoSource}
-              onValueChange={(value: string) =>
-                setValue("videoSource", value as VideoSource)
+      {/* Видео (опционально) */}
+      <div className="space-y-4">
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="hasVideo"
+            checked={hasVideo}
+            onCheckedChange={(checked: boolean) => {
+              setValue("hasVideo", checked);
+              if (!checked) {
+                setValue("videoUrl", "");
+                setValue("videoSource", "YOUTUBE");
               }
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="YOUTUBE" id="source-youtube" />
-                <Label htmlFor="source-youtube" className="cursor-pointer flex items-center gap-1">
-                  <Youtube className="h-4 w-4" />
-                  YouTube
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="UPLOAD" id="source-upload" />
-                <Label htmlFor="source-upload" className="cursor-pointer flex items-center gap-1">
-                  <Upload className="h-4 w-4" />
-                  Загрузка файла
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
+            }}
+          />
+          <Label htmlFor="hasVideo" className="cursor-pointer">
+            Добавить видео
+          </Label>
+        </div>
 
-          {videoSource === "YOUTUBE" && (
+        {hasVideo && (
+          <div className="space-y-4 pl-4 border-l-2 border-muted">
             <div className="space-y-2">
-              <Label htmlFor="videoUrl">Ссылка на YouTube</Label>
-              <Input
-                id="videoUrl"
-                placeholder="https://www.youtube.com/watch?v=..."
-                {...register("videoUrl")}
-              />
-              {errors.videoUrl && (
-                <p className="text-sm text-destructive">
-                  {errors.videoUrl.message}
-                </p>
-              )}
+              <Label>Источник видео</Label>
+              <RadioGroup
+                value={videoSource}
+                onValueChange={(value: string) =>
+                  setValue("videoSource", value as VideoSource)
+                }
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="YOUTUBE" id="source-youtube" />
+                  <Label htmlFor="source-youtube" className="cursor-pointer flex items-center gap-1">
+                    <Youtube className="h-4 w-4" />
+                    YouTube
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="UPLOAD" id="source-upload" />
+                  <Label htmlFor="source-upload" className="cursor-pointer flex items-center gap-1">
+                    <Upload className="h-4 w-4" />
+                    Загрузка файла
+                  </Label>
+                </div>
+              </RadioGroup>
             </div>
-          )}
 
-          {videoSource === "UPLOAD" && (
-            <div className="space-y-2">
-              <Label>Загрузить видео</Label>
-              <div className="flex items-center gap-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadProgress !== null}
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  {uploadProgress !== null
-                    ? `Загрузка... ${uploadProgress}%`
-                    : "Выбрать файл"}
-                </Button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="video/*"
-                  className="hidden"
-                  onChange={handleVideoUpload}
+            {videoSource === "YOUTUBE" && (
+              <div className="space-y-2">
+                <Label htmlFor="videoUrl">Ссылка на YouTube</Label>
+                <Input
+                  id="videoUrl"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  {...register("videoUrl")}
                 />
+                {errors.videoUrl && (
+                  <p className="text-sm text-destructive">
+                    {errors.videoUrl.message}
+                  </p>
+                )}
               </div>
-              {uploadProgress !== null && (
-                <div className="w-full bg-muted rounded-full h-2">
-                  <div
-                    className="bg-primary h-2 rounded-full transition-all"
-                    style={{ width: `${uploadProgress}%` }}
+            )}
+
+            {videoSource === "UPLOAD" && (
+              <div className="space-y-2">
+                <Label>Загрузить видео</Label>
+                <div className="flex items-center gap-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadProgress !== null}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {uploadProgress !== null
+                      ? `Загрузка... ${uploadProgress}%`
+                      : "Выбрать файл"}
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="video/*"
+                    className="hidden"
+                    onChange={handleVideoUpload}
                   />
                 </div>
-              )}
-              {uploadedVideoUrl && (
-                <p className="text-sm text-muted-foreground">
-                  Видео загружено: {uploadedVideoUrl}
-                </p>
-              )}
-              {errors.videoUrl && (
-                <p className="text-sm text-destructive">
-                  {errors.videoUrl.message}
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+                {uploadProgress !== null && (
+                  <div className="w-full bg-muted rounded-full h-2">
+                    <div
+                      className="bg-primary h-2 rounded-full transition-all"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                )}
+                {uploadedVideoUrl && (
+                  <p className="text-sm text-muted-foreground">
+                    Видео загружено: {uploadedVideoUrl}
+                  </p>
+                )}
+                {errors.videoUrl && (
+                  <p className="text-sm text-destructive">
+                    {errors.videoUrl.message}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
-      {/* Текстовое содержимое */}
-      {lessonType === "TEXT" && (
-        <div className="space-y-2">
-          <Label htmlFor="content">Содержимое урока</Label>
-          <Textarea
-            id="content"
-            placeholder="Введите текст урока..."
-            rows={15}
-            {...register("content")}
-          />
-          {errors.content && (
-            <p className="text-sm text-destructive">{errors.content.message}</p>
-          )}
-        </div>
-      )}
+      {/* Конспект урока (обязательно) */}
+      <div className="space-y-2">
+        <Label htmlFor="content">Конспект урока</Label>
+        <Textarea
+          id="content"
+          placeholder="Введите текст конспекта..."
+          rows={15}
+          {...register("content")}
+        />
+        {errors.content && (
+          <p className="text-sm text-destructive">{errors.content.message}</p>
+        )}
+      </div>
 
       {/* Порядок сортировки */}
       <div className="space-y-2">

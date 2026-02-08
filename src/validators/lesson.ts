@@ -1,19 +1,16 @@
 import { z } from "zod";
 
-export const LessonTypeEnum = z.enum(["VIDEO", "TEXT"]);
 export const VideoSourceEnum = z.enum(["YOUTUBE", "UPLOAD"]);
 
-export type LessonType = z.infer<typeof LessonTypeEnum>;
 export type VideoSource = z.infer<typeof VideoSourceEnum>;
 
 export const createLessonSchema = z.object({
   title: z
     .string()
     .min(1, "Название обязательно"),
-  type: LessonTypeEnum,
   content: z
     .string()
-    .optional(),
+    .min(1, "Конспект урока обязателен"),
   videoUrl: z
     .string()
     .url("Некорректная ссылка на видео")
@@ -41,7 +38,6 @@ export const updateLessonSchema = z.object({
     .string()
     .min(1, "Название обязательно")
     .optional(),
-  type: LessonTypeEnum.optional(),
   content: z
     .string()
     .optional(),

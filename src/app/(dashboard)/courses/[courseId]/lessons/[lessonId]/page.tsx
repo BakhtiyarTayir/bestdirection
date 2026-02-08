@@ -5,7 +5,7 @@ import { getLessonById } from "@/actions/lesson-actions";
 import { getLessonProgress } from "@/actions/progress-actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Video, FileText, ClipboardList } from "lucide-react";
+import { Edit, FileText, ClipboardList } from "lucide-react";
 import { VideoPlayer } from "@/components/video-player";
 import { MarkCompleteButton } from "@/components/mark-complete-button";
 
@@ -51,22 +51,9 @@ export default async function LessonPage({ params }: LessonPageProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold">{lesson.title}</h1>
-          <div className="flex items-center gap-2">
-            {lesson.type === "VIDEO" ? (
-              <Badge variant="outline" className="flex items-center gap-1">
-                <Video className="h-3 w-3" />
-                Видео
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="flex items-center gap-1">
-                <FileText className="h-3 w-3" />
-                Текст
-              </Badge>
-            )}
-            {!lesson.isPublished && (
-              <Badge variant="secondary">Черновик</Badge>
-            )}
-          </div>
+          {!lesson.isPublished && (
+            <Badge variant="secondary">Черновик</Badge>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
@@ -85,8 +72,9 @@ export default async function LessonPage({ params }: LessonPageProps) {
       </div>
 
       {/* Content */}
-      <div className="max-w-4xl">
-        {lesson.type === "VIDEO" && lesson.videoUrl && lesson.videoSource && (
+      <div className="max-w-4xl space-y-6">
+        {/* Video (if available) */}
+        {lesson.videoUrl && lesson.videoSource && (
           <div className="rounded-lg overflow-hidden border bg-black">
             <VideoPlayer
               url={lesson.videoUrl}
@@ -97,25 +85,17 @@ export default async function LessonPage({ params }: LessonPageProps) {
           </div>
         )}
 
-        {lesson.type === "VIDEO" && !lesson.videoUrl && (
-          <div className="rounded-lg border p-12 text-center text-muted-foreground">
-            <Video className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Видео не добавлено</p>
-          </div>
-        )}
-
-        {lesson.type === "TEXT" && lesson.content && (
+        {/* Text content (always shown) */}
+        {lesson.content ? (
           <div className="prose prose-sm max-w-none dark:prose-invert">
             <div className="whitespace-pre-wrap rounded-lg border p-6 bg-card">
               {lesson.content}
             </div>
           </div>
-        )}
-
-        {lesson.type === "TEXT" && !lesson.content && (
+        ) : (
           <div className="rounded-lg border p-12 text-center text-muted-foreground">
             <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Содержимое не добавлено</p>
+            <p>Конспект не добавлен</p>
           </div>
         )}
       </div>
