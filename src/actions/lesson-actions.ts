@@ -3,7 +3,8 @@
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
 import { revalidatePath } from "next/cache";
-import { LessonType, VideoSource } from "@/generated/prisma";
+import { createAuditLog, computeChanges } from "@/lib/audit";
+import type { LessonType, VideoSource } from "@/validators/lesson";
 
 // ---------- getLessons ----------
 export async function getLessons(courseId: string) {
@@ -18,7 +19,7 @@ export async function getLessons(courseId: string) {
     const lessons = await prisma.lesson.findMany({
       where,
       include: {
-        test: {
+        assessment: {
           select: { id: true, title: true, isPublished: true },
         },
       },
@@ -38,7 +39,7 @@ export async function getLessonById(id: string) {
         course: {
           select: { id: true, title: true, teacherId: true },
         },
-        test: {
+        assessment: {
           select: {
             id: true,
             title: true,
@@ -99,6 +100,14 @@ export async function createLesson(data: {
         },
       });
 
+      await createAuditLog({
+        userId: session.user.id,
+        entityType: "Lesson",
+        entityId: lesson.id,
+        action: "CREATE",
+        metadata: { title: lesson.title, courseId: data.courseId },
+      });
+
       revalidatePath(`/dashboard/courses/${data.courseId}`);
       return { success: true, data: lesson };
     },
@@ -147,6 +156,20 @@ export async function updateLesson(
         },
       });
 
+      const changes = computeChanges(
+        { title: existing.title, type: existing.type, content: existing.content, isPublished: existing.isPublished, sortOrder: existing.sortOrder },
+        data
+      );
+      if (changes) {
+        await createAuditLog({
+          userId: session.user.id,
+          entityType: "Lesson",
+          entityId: id,
+          action: "UPDATE",
+          changes,
+        });
+      }
+
       revalidatePath(`/dashboard/courses/${existing.courseId}`);
       revalidatePath(`/dashboard/courses/${existing.courseId}/lessons/${id}`);
       return { success: true, data: lesson };
@@ -173,6 +196,14 @@ export async function deleteLesson(id: string) {
       }
 
       await prisma.lesson.delete({ where: { id } });
+
+      await createAuditLog({
+        userId: session.user.id,
+        entityType: "Lesson",
+        entityId: id,
+        action: "DELETE",
+        metadata: { title: existing.title, courseId: existing.course.id },
+      });
 
       revalidatePath(`/dashboard/courses/${existing.course.id}`);
       return { success: true };

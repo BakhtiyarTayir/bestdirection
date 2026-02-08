@@ -14,6 +14,8 @@ import {
   LogOut,
   Menu,
   X,
+  Trash2,
+  ScrollText,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Button } from "./ui/button";
@@ -35,6 +37,8 @@ const navItems: NavItem[] = [
   { href: "/dashboard", label: "Дашборд", icon: LayoutDashboard, roles: ["ADMIN", "TEACHER", "STUDENT"] },
   { href: "/courses", label: "Курсы", icon: BookOpen, roles: ["ADMIN", "TEACHER", "STUDENT"] },
   { href: "/users", label: "Пользователи", icon: Users, roles: ["ADMIN"] },
+  { href: "/trash", label: "Корзина", icon: Trash2, roles: ["ADMIN"] },
+  { href: "/audit", label: "Журнал аудита", icon: ScrollText, roles: ["ADMIN"] },
   { href: "/my-results", label: "Мои результаты", icon: FileText, roles: ["STUDENT"] },
   { href: "/profile", label: "Профиль", icon: User, roles: ["ADMIN", "TEACHER", "STUDENT"] },
 ];

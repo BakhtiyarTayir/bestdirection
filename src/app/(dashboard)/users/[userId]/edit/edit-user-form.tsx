@@ -3,7 +3,7 @@
 import { UserForm } from "@/components/user-form";
 import { updateUser } from "@/actions/user-actions";
 import type { CreateUserInput, UpdateUserInput } from "@/validators/user";
-import type { Role } from "@/generated/prisma";
+import type { Role } from "@/validators/user";
 
 interface EditUserFormProps {
   user: {

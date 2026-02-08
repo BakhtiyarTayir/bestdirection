@@ -58,7 +58,7 @@ async function TeacherDashboard({ userId }: { userId: string }) {
 async function StudentDashboard({ userId }: { userId: string }) {
   const [enrollmentCount, attemptCount] = await Promise.all([
     prisma.enrollment.count({ where: { studentId: userId } }),
-    prisma.testAttempt.count({ where: { studentId: userId } }),
+    prisma.assessmentAttempt.count({ where: { studentId: userId } }),
   ]);
 
   return (

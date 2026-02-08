@@ -1,14 +1,16 @@
 import { z } from "zod";
-import { LessonType, VideoSource } from "@/generated/prisma";
 
-const lessonTypeEnum = z.nativeEnum(LessonType);
-const videoSourceEnum = z.nativeEnum(VideoSource);
+export const LessonTypeEnum = z.enum(["VIDEO", "TEXT"]);
+export const VideoSourceEnum = z.enum(["YOUTUBE", "UPLOAD"]);
+
+export type LessonType = z.infer<typeof LessonTypeEnum>;
+export type VideoSource = z.infer<typeof VideoSourceEnum>;
 
 export const createLessonSchema = z.object({
   title: z
     .string()
     .min(1, "Название обязательно"),
-  type: lessonTypeEnum,
+  type: LessonTypeEnum,
   content: z
     .string()
     .optional(),
@@ -16,7 +18,7 @@ export const createLessonSchema = z.object({
     .string()
     .url("Некорректная ссылка на видео")
     .optional(),
-  videoSource: videoSourceEnum.optional(),
+  videoSource: VideoSourceEnum.optional(),
   sortOrder: z
     .number()
     .int("Порядок сортировки должен быть целым числом")
@@ -39,7 +41,7 @@ export const updateLessonSchema = z.object({
     .string()
     .min(1, "Название обязательно")
     .optional(),
-  type: lessonTypeEnum.optional(),
+  type: LessonTypeEnum.optional(),
   content: z
     .string()
     .optional(),
@@ -47,7 +49,7 @@ export const updateLessonSchema = z.object({
     .string()
     .url("Некорректная ссылка на видео")
     .optional(),
-  videoSource: videoSourceEnum.optional(),
+  videoSource: VideoSourceEnum.optional(),
   sortOrder: z
     .number()
     .int("Порядок сортировки должен быть целым числом")

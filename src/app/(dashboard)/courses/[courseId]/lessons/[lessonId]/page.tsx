@@ -2,11 +2,12 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getLessonById } from "@/actions/lesson-actions";
+import { getLessonProgress } from "@/actions/progress-actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Video, FileText, ClipboardList } from "lucide-react";
-
 import { VideoPlayer } from "@/components/video-player";
+import { MarkCompleteButton } from "@/components/mark-complete-button";
 
 interface LessonPageProps {
   params: Promise<{ courseId: string; lessonId: string }>;
@@ -33,6 +34,17 @@ export default async function LessonPage({ params }: LessonPageProps) {
     session.user.role === "ADMIN" || session.user.role === "TEACHER";
   const isStudent = session.user.role === "STUDENT";
 
+  // Fetch progress for students
+  let initialPosition = 0;
+  let isCompleted = false;
+  if (isStudent) {
+    const progressResult = await getLessonProgress(lessonId);
+    if (progressResult.success && progressResult.data) {
+      initialPosition = progressResult.data.lastPosition;
+      isCompleted = !!progressResult.data.completedAt;
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -57,21 +69,31 @@ export default async function LessonPage({ params }: LessonPageProps) {
           </div>
         </div>
 
-        {isTeacherOrAdmin && (
-          <Link href={`/courses/${courseId}/lessons/${lessonId}/edit`}>
-            <Button variant="outline">
-              <Edit className="h-4 w-4 mr-2" />
-              Редактировать
-            </Button>
-          </Link>
-        )}
+        <div className="flex items-center gap-3">
+          {isStudent && (
+            <MarkCompleteButton lessonId={lessonId} isCompleted={isCompleted} />
+          )}
+          {isTeacherOrAdmin && (
+            <Link href={`/courses/${courseId}/lessons/${lessonId}/edit`}>
+              <Button variant="outline">
+                <Edit className="h-4 w-4 mr-2" />
+                Редактировать
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Content */}
       <div className="max-w-4xl">
         {lesson.type === "VIDEO" && lesson.videoUrl && lesson.videoSource && (
           <div className="rounded-lg overflow-hidden border bg-black">
-            <VideoPlayer url={lesson.videoUrl} source={lesson.videoSource} />
+            <VideoPlayer
+              url={lesson.videoUrl}
+              source={lesson.videoSource}
+              lessonId={isStudent ? lessonId : undefined}
+              initialPosition={isStudent ? initialPosition : undefined}
+            />
           </div>
         )}
 
@@ -98,21 +120,21 @@ export default async function LessonPage({ params }: LessonPageProps) {
         )}
       </div>
 
-      {/* Test section */}
-      {lesson.test ? (
+      {/* Assessment section */}
+      {lesson.assessment ? (
         <div className="max-w-4xl">
           <div className="rounded-lg border p-6 bg-card">
             <h2 className="text-lg font-semibold mb-2">
-              Тест: {lesson.test.title}
+              Тест: {lesson.assessment.title}
             </h2>
-            {isStudent && lesson.test.isPublished && (
+            {isStudent && lesson.assessment.isPublished && (
               <Link
                 href={`/courses/${courseId}/lessons/${lessonId}/test`}
               >
                 <Button>Пройти тест</Button>
               </Link>
             )}
-            {isStudent && !lesson.test.isPublished && (
+            {isStudent && !lesson.assessment.isPublished && (
               <p className="text-sm text-muted-foreground">
                 Тест пока недоступен
               </p>

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GraduationCap } from "lucide-react";
-import { ExamSettingsForm } from "@/components/exam-settings-form";
+import { AssessmentForm } from "@/components/assessment-form";
 
 interface NewExamPageProps {
   params: Promise<{ courseId: string }>;
@@ -44,7 +44,7 @@ export default async function NewExamPage({ params }: NewExamPageProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ExamSettingsForm courseId={courseId} />
+          <AssessmentForm type="EXAM" courseId={courseId} />
         </CardContent>
       </Card>
     </div>

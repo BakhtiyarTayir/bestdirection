@@ -22,17 +22,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { addQuestion, updateQuestion } from "@/actions/test-actions";
+import { addAssessmentQuestion, updateAssessmentQuestion } from "@/actions/assessment-actions";
 import { z } from "zod";
 import { Loader2, Plus, Pencil, Trash2 } from "lucide-react";
 
-// Client-side question schema (mirrors @/validators/test createQuestionSchema without Prisma imports)
 const clientQuestionSchema = z.object({
   text: z.string().min(1, "Текст вопроса обязателен"),
   type: z.enum(["SINGLE_CHOICE", "MULTIPLE_CHOICE"]),
   points: z.number().int("Баллы должны быть целым числом").min(1, "Минимум 1 балл"),
   sortOrder: z.number().int().min(0),
-  testId: z.string().min(1, "ID теста обязателен"),
+  assessmentId: z.string().min(1, "ID мероприятия обязателен"),
   options: z.array(z.object({
     text: z.string().min(1, "Текст варианта ответа обязателен"),
     isCorrect: z.boolean(),
@@ -47,8 +46,8 @@ interface OptionInput {
   sortOrder: number;
 }
 
-interface QuestionFormProps {
-  testId: string;
+interface AssessmentQuestionFormProps {
+  assessmentId: string;
   question?: {
     id: string;
     text: string;
@@ -59,7 +58,7 @@ interface QuestionFormProps {
   };
 }
 
-export function QuestionForm({ testId, question }: QuestionFormProps) {
+export function AssessmentQuestionForm({ assessmentId, question }: AssessmentQuestionFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
@@ -119,7 +118,6 @@ export function QuestionForm({ testId, question }: QuestionFormProps) {
 
   const toggleOptionCorrect = (index: number) => {
     if (type === "SINGLE_CHOICE") {
-      // Only one correct answer allowed
       setOptions(
         options.map((o, i) => ({
           ...o,
@@ -127,7 +125,6 @@ export function QuestionForm({ testId, question }: QuestionFormProps) {
         }))
       );
     } else {
-      // Multiple correct answers allowed
       setOptions(
         options.map((o, i) =>
           i === index ? { ...o, isCorrect: !o.isCorrect } : o
@@ -145,13 +142,12 @@ export function QuestionForm({ testId, question }: QuestionFormProps) {
       sortOrder: i,
     }));
 
-    // Validate with Zod schema
     const validationResult = clientQuestionSchema.safeParse({
       text: text.trim(),
       type,
       points,
       sortOrder: question?.sortOrder ?? 0,
-      testId,
+      assessmentId,
       options: formattedOptions,
     });
 
@@ -176,9 +172,8 @@ export function QuestionForm({ testId, question }: QuestionFormProps) {
 
     startTransition(async () => {
       try {
-
         if (question) {
-          const result = await updateQuestion(question.id, {
+          const result = await updateAssessmentQuestion(question.id, {
             text: text.trim(),
             type,
             points,
@@ -187,10 +182,7 @@ export function QuestionForm({ testId, question }: QuestionFormProps) {
           });
 
           if (result.success) {
-            toast({
-              title: "Успешно",
-              description: "Вопрос обновлен",
-            });
+            toast({ title: "Успешно", description: "Вопрос обновлен" });
             setOpen(false);
             router.refresh();
           } else {
@@ -201,20 +193,17 @@ export function QuestionForm({ testId, question }: QuestionFormProps) {
             });
           }
         } else {
-          const result = await addQuestion({
+          const result = await addAssessmentQuestion({
             text: text.trim(),
             type,
             points,
             sortOrder: 0,
-            testId,
+            assessmentId,
             options: formattedOptions,
           });
 
           if (result.success) {
-            toast({
-              title: "Успешно",
-              description: "Вопрос добавлен",
-            });
+            toast({ title: "Успешно", description: "Вопрос добавлен" });
             resetForm();
             setOpen(false);
             router.refresh();
@@ -265,9 +254,9 @@ export function QuestionForm({ testId, question }: QuestionFormProps) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="question-text">Текст вопроса</Label>
+            <Label htmlFor="aq-text">Текст вопроса</Label>
             <Textarea
-              id="question-text"
+              id="aq-text"
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="Введите текст вопроса..."
@@ -283,7 +272,6 @@ export function QuestionForm({ testId, question }: QuestionFormProps) {
                 value={type}
                 onValueChange={(value: "SINGLE_CHOICE" | "MULTIPLE_CHOICE") => {
                   setType(value);
-                  // Reset correct answers when switching type
                   if (value === "SINGLE_CHOICE") {
                     const firstCorrectIdx = options.findIndex((o) => o.isCorrect);
                     setOptions(
@@ -307,9 +295,9 @@ export function QuestionForm({ testId, question }: QuestionFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="question-points">Баллы</Label>
+              <Label htmlFor="aq-points">Баллы</Label>
               <Input
-                id="question-points"
+                id="aq-points"
                 type="number"
                 min={1}
                 value={points}

@@ -14,14 +14,13 @@ import {
   BarChart3,
   FileText,
   GraduationCap,
-  Edit,
   Lock,
 } from "lucide-react";
-import { ExamSettingsForm } from "@/components/exam-settings-form";
-import { ExamQuestionForm } from "@/components/exam-question-form";
-import { ExamTaking } from "@/components/exam-taking";
-import { ExamResults } from "@/components/exam-results";
-import { DeleteExamButton, DeleteExamQuestionButton } from "@/components/exam-management-buttons";
+import { AssessmentForm } from "@/components/assessment-form";
+import { AssessmentQuestionForm } from "@/components/assessment-question-form";
+import { AssessmentTaking } from "@/components/assessment-taking";
+import { AssessmentResults } from "@/components/assessment-results";
+import { DeleteAssessmentButton, DeleteAssessmentQuestionButton } from "@/components/assessment-management-buttons";
 import { ExportButton } from "@/components/export-import-buttons";
 
 interface ExamPageProps {
@@ -48,8 +47,8 @@ export default async function ExamPage({ params }: ExamPageProps) {
 
   if (!course) redirect("/courses");
 
-  // Get exam with questions
-  const exam = await prisma.exam.findUnique({
+  // Get assessment (exam) with questions
+  const assessment = await prisma.assessment.findUnique({
     where: { id: examId },
     include: {
       questions: {
@@ -62,7 +61,7 @@ export default async function ExamPage({ params }: ExamPageProps) {
     },
   });
 
-  if (!exam) redirect(`/courses/${courseId}/exams`);
+  if (!assessment || assessment.type !== "EXAM") redirect(`/courses/${courseId}/exams`);
 
   const isTeacherOrAdmin =
     role === "ADMIN" || (role === "TEACHER" && course.teacherId === userId);
@@ -72,24 +71,24 @@ export default async function ExamPage({ params }: ExamPageProps) {
   let unpassedTests: { lessonTitle: string; testTitle: string }[] = [];
 
   if (role === "STUDENT") {
-    // Check eligibility
-    const lessonsWithTests = await prisma.lesson.findMany({
+    // Check eligibility: all published lesson tests must be passed
+    const lessonTests = await prisma.assessment.findMany({
       where: {
         courseId,
+        type: "TEST",
         isPublished: true,
-        test: { isPublished: true },
+        lessonId: { not: null },
       },
       include: {
-        test: { select: { id: true, title: true } },
+        lesson: { select: { title: true } },
       },
     });
 
     let allPassed = true;
-    for (const lesson of lessonsWithTests) {
-      if (!lesson.test) continue;
-      const passedAttempt = await prisma.testAttempt.findFirst({
+    for (const test of lessonTests) {
+      const passedAttempt = await prisma.assessmentAttempt.findFirst({
         where: {
-          testId: lesson.test.id,
+          assessmentId: test.id,
           studentId: userId,
           isPassed: true,
         },
@@ -97,18 +96,18 @@ export default async function ExamPage({ params }: ExamPageProps) {
       if (!passedAttempt) {
         allPassed = false;
         unpassedTests.push({
-          lessonTitle: lesson.title,
-          testTitle: lesson.test.title,
+          lessonTitle: test.lesson?.title ?? "",
+          testTitle: test.title,
         });
       }
     }
     eligible = allPassed;
   }
 
-  // Get student attempts (separate query so type is inferred correctly)
+  // Get student attempts
   const studentAttempts = role === "STUDENT"
-    ? await prisma.examAttempt.findMany({
-        where: { examId, studentId: userId },
+    ? await prisma.assessmentAttempt.findMany({
+        where: { assessmentId: examId, studentId: userId },
         include: {
           answers: {
             include: {
@@ -131,18 +130,12 @@ export default async function ExamPage({ params }: ExamPageProps) {
           <p className="text-sm text-muted-foreground">
             {course.title} / Экзамены
           </p>
-          <h1 className="text-3xl font-bold mt-1">{exam.title}</h1>
+          <h1 className="text-3xl font-bold mt-1">{assessment.title}</h1>
         </div>
         {isTeacherOrAdmin && (
           <div className="flex items-center gap-2">
-            <Link href={`/courses/${courseId}/exams/${examId}/edit`}>
-              <Button variant="outline" size="sm">
-                <Edit className="h-4 w-4 mr-2" />
-                Редактировать
-              </Button>
-            </Link>
             <ExportButton type="exam" id={examId} />
-            <DeleteExamButton examId={examId} courseId={courseId} />
+            <DeleteAssessmentButton assessmentId={assessment.id} type="EXAM" />
           </div>
         )}
       </div>
@@ -150,65 +143,44 @@ export default async function ExamPage({ params }: ExamPageProps) {
       {/* TEACHER / ADMIN VIEW */}
       {isTeacherOrAdmin && (
         <>
-          {/* Exam Info */}
+          {/* Exam Settings */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <GraduationCap className="h-5 w-5" />
-                  Информация об экзамене
+                  Настройки экзамена
                 </CardTitle>
                 <div className="flex items-center gap-2">
-                  <Badge variant={exam.isPublished ? "default" : "secondary"}>
-                    {exam.isPublished ? "Опубликован" : "Черновик"}
+                  <Badge variant={assessment.isPublished ? "default" : "secondary"}>
+                    {assessment.isPublished ? "Опубликован" : "Черновик"}
                   </Badge>
                   <Link href={`/courses/${courseId}/exams/${examId}/attempts`}>
                     <Button variant="outline" size="sm">
                       <BarChart3 className="h-4 w-4 mr-2" />
-                      Результаты ({exam._count.attempts})
+                      Результаты ({assessment._count.attempts})
                     </Button>
                   </Link>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              {exam.description && (
-                <p className="text-muted-foreground mb-4">{exam.description}</p>
+              {assessment.description && (
+                <p className="text-muted-foreground mb-4">{assessment.description}</p>
               )}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                <div>
-                  <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-                    <Target className="h-4 w-4" />
-                    <span className="text-xs">Проходной балл</span>
-                  </div>
-                  <p className="text-lg font-semibold">{exam.passingScore}%</p>
-                </div>
-                <div>
-                  <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-                    <Clock className="h-4 w-4" />
-                    <span className="text-xs">Ограничение</span>
-                  </div>
-                  <p className="text-lg font-semibold">
-                    {exam.timeLimitMin ? `${exam.timeLimitMin} мин` : "Нет"}
-                  </p>
-                </div>
-                <div>
-                  <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-                    <RotateCcw className="h-4 w-4" />
-                    <span className="text-xs">Попытки</span>
-                  </div>
-                  <p className="text-lg font-semibold">{exam.maxAttempts}</p>
-                </div>
-                <div>
-                  <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-                    <FileText className="h-4 w-4" />
-                    <span className="text-xs">Макс. баллов</span>
-                  </div>
-                  <p className="text-lg font-semibold">
-                    {exam.questions.reduce((sum, q) => sum + q.points, 0)}
-                  </p>
-                </div>
-              </div>
+              <AssessmentForm
+                type="EXAM"
+                courseId={courseId}
+                assessment={{
+                  id: assessment.id,
+                  title: assessment.title,
+                  description: assessment.description,
+                  passingScore: assessment.passingScore,
+                  timeLimitMin: assessment.timeLimitMin,
+                  maxAttempts: assessment.maxAttempts,
+                  isPublished: assessment.isPublished,
+                }}
+              />
             </CardContent>
           </Card>
 
@@ -217,18 +189,18 @@ export default async function ExamPage({ params }: ExamPageProps) {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>
-                  Вопросы ({exam.questions.length})
+                  Вопросы ({assessment.questions.length})
                 </CardTitle>
-                <ExamQuestionForm examId={exam.id} />
+                <AssessmentQuestionForm assessmentId={assessment.id} />
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {exam.questions.length === 0 ? (
+              {assessment.questions.length === 0 ? (
                 <p className="text-muted-foreground text-center py-8">
                   Вопросов пока нет. Добавьте первый вопрос.
                 </p>
               ) : (
-                exam.questions.map((question, index) => (
+                assessment.questions.map((question, index) => (
                   <div key={question.id} className="border rounded-lg p-4 space-y-3">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -248,8 +220,8 @@ export default async function ExamPage({ params }: ExamPageProps) {
                         <p className="font-medium">{question.text}</p>
                       </div>
                       <div className="flex items-center gap-1 ml-4">
-                        <ExamQuestionForm
-                          examId={exam.id}
+                        <AssessmentQuestionForm
+                          assessmentId={assessment.id}
                           question={{
                             id: question.id,
                             text: question.text,
@@ -264,7 +236,7 @@ export default async function ExamPage({ params }: ExamPageProps) {
                             })),
                           }}
                         />
-                        <DeleteExamQuestionButton questionId={question.id} />
+                        <DeleteAssessmentQuestionButton questionId={question.id} />
                       </div>
                     </div>
                     <div className="space-y-1.5 ml-4">
@@ -291,13 +263,53 @@ export default async function ExamPage({ params }: ExamPageProps) {
               )}
             </CardContent>
           </Card>
+
+          {/* Exam Info Summary */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div>
+                  <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
+                    <Target className="h-4 w-4" />
+                    <span className="text-xs">Проходной балл</span>
+                  </div>
+                  <p className="text-lg font-semibold">{assessment.passingScore}%</p>
+                </div>
+                <div>
+                  <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
+                    <Clock className="h-4 w-4" />
+                    <span className="text-xs">Ограничение</span>
+                  </div>
+                  <p className="text-lg font-semibold">
+                    {assessment.timeLimitMin ? `${assessment.timeLimitMin} мин` : "Нет"}
+                  </p>
+                </div>
+                <div>
+                  <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
+                    <RotateCcw className="h-4 w-4" />
+                    <span className="text-xs">Попытки</span>
+                  </div>
+                  <p className="text-lg font-semibold">{assessment.maxAttempts}</p>
+                </div>
+                <div>
+                  <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
+                    <FileText className="h-4 w-4" />
+                    <span className="text-xs">Макс. баллов</span>
+                  </div>
+                  <p className="text-lg font-semibold">
+                    {assessment.questions.reduce((sum, q) => sum + q.points, 0)}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </>
       )}
 
       {/* STUDENT VIEW */}
       {role === "STUDENT" && (
         <>
-          {!exam.isPublished ? (
+          {!assessment.isPublished ? (
             <Card>
               <CardContent className="pt-6">
                 <p className="text-center text-muted-foreground py-8">
@@ -333,8 +345,8 @@ export default async function ExamPage({ params }: ExamPageProps) {
               {/* Exam Info */}
               <Card>
                 <CardContent className="pt-6">
-                  {exam.description && (
-                    <p className="text-muted-foreground mb-4">{exam.description}</p>
+                  {assessment.description && (
+                    <p className="text-muted-foreground mb-4">{assessment.description}</p>
                   )}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                     <div>
@@ -342,7 +354,7 @@ export default async function ExamPage({ params }: ExamPageProps) {
                         <Target className="h-4 w-4" />
                         <span className="text-xs">Проходной балл</span>
                       </div>
-                      <p className="text-lg font-semibold">{exam.passingScore}%</p>
+                      <p className="text-lg font-semibold">{assessment.passingScore}%</p>
                     </div>
                     <div>
                       <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
@@ -350,7 +362,7 @@ export default async function ExamPage({ params }: ExamPageProps) {
                         <span className="text-xs">Ограничение</span>
                       </div>
                       <p className="text-lg font-semibold">
-                        {exam.timeLimitMin ? `${exam.timeLimitMin} мин` : "Нет"}
+                        {assessment.timeLimitMin ? `${assessment.timeLimitMin} мин` : "Нет"}
                       </p>
                     </div>
                     <div>
@@ -359,7 +371,7 @@ export default async function ExamPage({ params }: ExamPageProps) {
                         <span className="text-xs">Попытки</span>
                       </div>
                       <p className="text-lg font-semibold">
-                        {studentAttempts.length} / {exam.maxAttempts}
+                        {studentAttempts.length} / {assessment.maxAttempts}
                       </p>
                     </div>
                     <div>
@@ -367,21 +379,22 @@ export default async function ExamPage({ params }: ExamPageProps) {
                         <FileText className="h-4 w-4" />
                         <span className="text-xs">Вопросов</span>
                       </div>
-                      <p className="text-lg font-semibold">{exam.questions.length}</p>
+                      <p className="text-lg font-semibold">{assessment.questions.length}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               {/* Start Exam or Show Results */}
-              {studentAttempts.length < exam.maxAttempts && exam.questions.length > 0 ? (
-                <ExamTaking
-                  exam={{
-                    id: exam.id,
-                    title: exam.title,
-                    timeLimitMin: exam.timeLimitMin,
-                    passingScore: exam.passingScore,
-                    questions: exam.questions.map((q) => ({
+              {studentAttempts.length < assessment.maxAttempts && assessment.questions.length > 0 ? (
+                <AssessmentTaking
+                  assessment={{
+                    id: assessment.id,
+                    type: "EXAM",
+                    title: assessment.title,
+                    timeLimitMin: assessment.timeLimitMin,
+                    passingScore: assessment.passingScore,
+                    questions: assessment.questions.map((q) => ({
                       id: q.id,
                       text: q.text,
                       type: q.type,
@@ -394,7 +407,7 @@ export default async function ExamPage({ params }: ExamPageProps) {
                   }}
                   courseId={courseId}
                 />
-              ) : exam.questions.length === 0 ? (
+              ) : assessment.questions.length === 0 ? (
                 <Card>
                   <CardContent className="pt-6">
                     <p className="text-center text-muted-foreground py-8">
@@ -406,7 +419,7 @@ export default async function ExamPage({ params }: ExamPageProps) {
                 <Card>
                   <CardContent className="pt-6">
                     <p className="text-center text-muted-foreground py-4">
-                      Вы использовали все доступные попытки ({exam.maxAttempts}).
+                      Вы использовали все доступные попытки ({assessment.maxAttempts}).
                     </p>
                   </CardContent>
                 </Card>
@@ -420,7 +433,7 @@ export default async function ExamPage({ params }: ExamPageProps) {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {studentAttempts.map((attempt, index) => (
-                      <ExamResults
+                      <AssessmentResults
                         key={attempt.id}
                         attempt={{
                           id: attempt.id,

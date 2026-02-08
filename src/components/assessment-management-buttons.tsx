@@ -15,36 +15,38 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { deleteTest, deleteQuestion } from "@/actions/test-actions";
+import { deleteAssessment, deleteAssessmentQuestion } from "@/actions/assessment-actions";
 import { Trash2, Loader2 } from "lucide-react";
 
-// ---------- DeleteTestButton ----------
+// ---------- DeleteAssessmentButton ----------
 
-interface DeleteTestButtonProps {
-  testId: string;
-  courseId: string;
+interface DeleteAssessmentButtonProps {
+  assessmentId: string;
+  type: "TEST" | "EXAM";
 }
 
-export function DeleteTestButton({ testId, courseId }: DeleteTestButtonProps) {
+export function DeleteAssessmentButton({ assessmentId, type }: DeleteAssessmentButtonProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
 
+  const label = type === "TEST" ? "тест" : "экзамен";
+
   const handleDelete = () => {
     startTransition(async () => {
       try {
-        const result = await deleteTest(testId);
+        const result = await deleteAssessment(assessmentId);
 
         if (result.success) {
           toast({
             title: "Успешно",
-            description: "Тест удален",
+            description: `${type === "TEST" ? "Тест" : "Экзамен"} удален`,
           });
           router.refresh();
         } else {
           toast({
             title: "Ошибка",
-            description: result.error || "Не удалось удалить тест",
+            description: result.error || `Не удалось удалить ${label}`,
             variant: "destructive",
           });
         }
@@ -71,9 +73,9 @@ export function DeleteTestButton({ testId, courseId }: DeleteTestButtonProps) {
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Удалить тест?</AlertDialogTitle>
+          <AlertDialogTitle>Удалить {label}?</AlertDialogTitle>
           <AlertDialogDescription>
-            Это действие необратимо. Будут удалены все вопросы и попытки прохождения теста.
+            Это действие необратимо. Будут удалены все вопросы и попытки прохождения.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -87,13 +89,13 @@ export function DeleteTestButton({ testId, courseId }: DeleteTestButtonProps) {
   );
 }
 
-// ---------- DeleteQuestionButton ----------
+// ---------- DeleteAssessmentQuestionButton ----------
 
-interface DeleteQuestionButtonProps {
+interface DeleteAssessmentQuestionButtonProps {
   questionId: string;
 }
 
-export function DeleteQuestionButton({ questionId }: DeleteQuestionButtonProps) {
+export function DeleteAssessmentQuestionButton({ questionId }: DeleteAssessmentQuestionButtonProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
@@ -101,7 +103,7 @@ export function DeleteQuestionButton({ questionId }: DeleteQuestionButtonProps) 
   const handleDelete = () => {
     startTransition(async () => {
       try {
-        const result = await deleteQuestion(questionId);
+        const result = await deleteAssessmentQuestion(questionId);
 
         if (result.success) {
           toast({

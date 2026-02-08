@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
 import { revalidatePath } from "next/cache";
-import { AttendanceStatus } from "@/generated/prisma";
+import type { AttendanceStatus } from "@/validators/attendance";
 
 // ---------- getAttendanceSessions ----------
 export async function getAttendanceSessions(courseId: string) {

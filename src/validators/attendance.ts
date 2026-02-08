@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { AttendanceStatus } from "@/generated/prisma";
 
-const attendanceStatusEnum = z.nativeEnum(AttendanceStatus);
+export const AttendanceStatusEnum = z.enum(["PRESENT", "ABSENT", "LATE", "EXCUSED"]);
+
+export type AttendanceStatus = z.infer<typeof AttendanceStatusEnum>;
 
 // --- Attendance session schemas ---
 
@@ -25,7 +26,7 @@ const attendanceRecordSchema = z.object({
   studentId: z
     .string()
     .min(1, "ID студента обязателен"),
-  status: attendanceStatusEnum,
+  status: AttendanceStatusEnum,
   note: z
     .string()
     .optional(),

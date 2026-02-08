@@ -17,11 +17,18 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { updateProfile, changePassword } from "@/actions/user-actions";
 import { profileSchema, changePasswordSchema, type ProfileInput, type ChangePasswordInput } from "@/validators/profile";
-import type { User } from "@/generated/prisma";
 import { Loader2 } from "lucide-react";
 
+interface ProfileUser {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+}
+
 interface ProfileFormProps {
-  user: User;
+  user: ProfileUser;
 }
 
 export function ProfileForm({ user }: ProfileFormProps) {

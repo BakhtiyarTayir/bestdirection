@@ -19,9 +19,9 @@ import {
   ClipboardCheck,
   FileText,
   GraduationCap,
-  Lock,
   CheckCircle2,
 } from "lucide-react";
+import { CourseProgress } from "@/components/course-progress";
 
 interface CourseDetailPageProps {
   params: Promise<{ courseId: string }>;
@@ -59,12 +59,38 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
   });
 
   // Fetch exams count
-  const examsCount = await prisma.exam.count({
+  const examsCount = await prisma.assessment.count({
     where: {
       courseId,
+      type: "EXAM",
       ...(role === "STUDENT" ? { isPublished: true } : {}),
     },
   });
+
+  // Fetch progress for students
+  let courseProgress = { total: 0, completed: 0, percentage: 0 };
+  const completedLessonIds = new Set<string>();
+  if (role === "STUDENT") {
+    const publishedLessons = lessons.filter((l) => l.isPublished);
+    if (publishedLessons.length > 0) {
+      const progressRecords = await prisma.lessonProgress.findMany({
+        where: {
+          studentId: session.user.id,
+          lessonId: { in: publishedLessons.map((l) => l.id) },
+          completedAt: { not: null },
+        },
+        select: { lessonId: true },
+      });
+      for (const p of progressRecords) {
+        completedLessonIds.add(p.lessonId);
+      }
+      courseProgress = {
+        total: publishedLessons.length,
+        completed: completedLessonIds.size,
+        percentage: Math.round((completedLessonIds.size / publishedLessons.length) * 100),
+      };
+    }
+  }
 
   return (
     <div>
@@ -205,6 +231,13 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
         </div>
       )}
 
+      {/* Course progress for students */}
+      {role === "STUDENT" && courseProgress.total > 0 && (
+        <div className="mb-8">
+          <CourseProgress {...courseProgress} />
+        </div>
+      )}
+
       {/* Lesson list */}
       <div>
         <h2 className="text-xl font-semibold mb-4">Уроки</h2>
@@ -251,6 +284,9 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
                             <Badge variant="secondary">Черновик</Badge>
                           )}
                         </>
+                      )}
+                      {role === "STUDENT" && completedLessonIds.has(lesson.id) && (
+                        <CheckCircle2 className="h-5 w-5 text-green-600" />
                       )}
                     </div>
                   </CardHeader>

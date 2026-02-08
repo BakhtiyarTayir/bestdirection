@@ -118,7 +118,7 @@ export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
         });
 
         xhr.addEventListener("error", () => reject(new Error("Ошибка сети")));
-        xhr.open("POST", "/api/upload/video");
+        xhr.open("POST", "/api/v1/upload/video");
         xhr.send(formData);
       });
 

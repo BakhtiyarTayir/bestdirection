@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
 import { revalidatePath } from "next/cache";
+import { createAuditLog, computeChanges } from "@/lib/audit";
 
 // ---------- getCourses ----------
 export async function getCourses() {
@@ -99,6 +100,14 @@ export async function createCourse(data: {
         },
       });
 
+      await createAuditLog({
+        userId: session.user.id,
+        entityType: "Course",
+        entityId: course.id,
+        action: "CREATE",
+        metadata: { title: course.title },
+      });
+
       revalidatePath("/dashboard/courses");
       return { success: true, data: course };
     },
@@ -120,12 +129,11 @@ export async function updateCourse(
     async (session) => {
       const role = session.user.role;
 
-      if (role === "TEACHER") {
-        const existing = await prisma.course.findUnique({ where: { id } });
-        if (!existing) return { success: false, error: "Course not found" };
-        if (existing.teacherId !== session.user.id) {
-          return { success: false, error: "You can only update your own courses" };
-        }
+      const existing = await prisma.course.findUnique({ where: { id } });
+      if (!existing) return { success: false, error: "Course not found" };
+
+      if (role === "TEACHER" && existing.teacherId !== session.user.id) {
+        return { success: false, error: "You can only update your own courses" };
       }
 
       const course = await prisma.course.update({
@@ -143,6 +151,20 @@ export async function updateCourse(
         },
       });
 
+      const changes = computeChanges(
+        { title: existing.title, description: existing.description, isPublished: existing.isPublished, sortOrder: existing.sortOrder },
+        data
+      );
+      if (changes) {
+        await createAuditLog({
+          userId: session.user.id,
+          entityType: "Course",
+          entityId: id,
+          action: "UPDATE",
+          changes,
+        });
+      }
+
       revalidatePath("/dashboard/courses");
       revalidatePath(`/dashboard/courses/${id}`);
       return { success: true, data: course };
@@ -154,8 +176,18 @@ export async function updateCourse(
 // ---------- deleteCourse ----------
 export async function deleteCourse(id: string) {
   return withAuth(
-    async () => {
+    async (session) => {
+      const existing = await prisma.course.findUnique({ where: { id }, select: { title: true } });
       await prisma.course.delete({ where: { id } });
+
+      await createAuditLog({
+        userId: session.user.id,
+        entityType: "Course",
+        entityId: id,
+        action: "DELETE",
+        metadata: { title: existing?.title },
+      });
+
       revalidatePath("/dashboard/courses");
       return { success: true };
     },

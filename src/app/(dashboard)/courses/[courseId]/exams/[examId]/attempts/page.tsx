@@ -30,7 +30,7 @@ export default async function ExamAttemptsPage({ params }: ExamAttemptsPageProps
     redirect(`/courses/${courseId}/exams/${examId}`);
   }
 
-  const exam = await prisma.exam.findUnique({
+  const assessment = await prisma.assessment.findUnique({
     where: { id: examId },
     include: {
       course: {
@@ -39,14 +39,14 @@ export default async function ExamAttemptsPage({ params }: ExamAttemptsPageProps
     },
   });
 
-  if (!exam) redirect(`/courses/${courseId}/exams`);
+  if (!assessment || assessment.type !== "EXAM") redirect(`/courses/${courseId}/exams`);
 
-  if (role === "TEACHER" && exam.course.teacherId !== session.user.id) {
+  if (role === "TEACHER" && assessment.course.teacherId !== session.user.id) {
     redirect(`/courses/${courseId}`);
   }
 
-  const attempts = await prisma.examAttempt.findMany({
-    where: { examId },
+  const attempts = await prisma.assessmentAttempt.findMany({
+    where: { assessmentId: examId },
     include: {
       student: {
         select: {
@@ -93,10 +93,10 @@ export default async function ExamAttemptsPage({ params }: ExamAttemptsPageProps
     <div className="space-y-6">
       <div>
         <p className="text-sm text-muted-foreground">
-          {exam.course.title} / Экзамены
+          {assessment.course.title} / Экзамены
         </p>
         <h1 className="text-3xl font-bold mt-1">
-          Результаты: {exam.title}
+          Результаты: {assessment.title}
         </h1>
       </div>
 

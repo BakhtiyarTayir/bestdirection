@@ -21,7 +21,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { submitTestAttempt } from "@/actions/test-actions";
+import { submitAssessmentAttempt } from "@/actions/assessment-actions";
 import {
   Clock,
   CheckCircle2,
@@ -31,8 +31,9 @@ import {
   Loader2,
   AlertTriangle,
 } from "lucide-react";
+import type { AssessmentType } from "@/validators/assessment";
 
-interface TestQuestion {
+interface AssessmentQuestion {
   id: string;
   text: string;
   type: "SINGLE_CHOICE" | "MULTIPLE_CHOICE";
@@ -43,19 +44,19 @@ interface TestQuestion {
   }[];
 }
 
-interface TestTakingProps {
-  test: {
+interface AssessmentTakingProps {
+  assessment: {
     id: string;
+    type: AssessmentType;
     title: string;
     timeLimitMin: number | null;
     passingScore: number;
-    questions: TestQuestion[];
+    questions: AssessmentQuestion[];
   };
   courseId: string;
-  lessonId: string;
 }
 
-type TestState = "idle" | "taking" | "submitting" | "completed";
+type TakingState = "idle" | "taking" | "submitting" | "completed";
 
 interface AttemptResult {
   score: number;
@@ -64,32 +65,38 @@ interface AttemptResult {
   isPassed: boolean;
 }
 
-export function TestTaking({ test, courseId, lessonId }: TestTakingProps) {
+export function AssessmentTaking({ assessment, courseId }: AssessmentTakingProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const [testState, setTestState] = useState<TestState>("idle");
+  const [state, setState] = useState<TakingState>("idle");
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [result, setResult] = useState<AttemptResult | null>(null);
+  const [isStarting, setIsStarting] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const hasAutoSubmittedRef = useRef(false);
+
+  const isTest = assessment.type === "TEST";
+  const label = isTest ? "тест" : "экзамен";
+  const labelCapital = isTest ? "Тест" : "Экзамен";
+  const idPrefix = isTest ? "q" : "eq";
 
   const answeredCount = Object.keys(answers).filter(
     (qId) => answers[qId] && answers[qId].length > 0
   ).length;
 
   const handleSubmit = useCallback(async () => {
-    if (testState !== "taking") return;
-    setTestState("submitting");
+    if (state !== "taking") return;
+    setState("submitting");
 
     try {
-      const formattedAnswers = test.questions.map((q) => ({
+      const formattedAnswers = assessment.questions.map((q) => ({
         questionId: q.id,
         selectedOptionIds: answers[q.id] || [],
       }));
 
-      const res = await submitTestAttempt({
-        testId: test.id,
+      const res = await submitAssessmentAttempt({
+        assessmentId: assessment.id,
         answers: formattedAnswers,
       });
 
@@ -100,7 +107,7 @@ export function TestTaking({ test, courseId, lessonId }: TestTakingProps) {
           percentage: res.data.percentage,
           isPassed: res.data.isPassed,
         });
-        setTestState("completed");
+        setState("completed");
         router.refresh();
       } else {
         toast({
@@ -108,7 +115,7 @@ export function TestTaking({ test, courseId, lessonId }: TestTakingProps) {
           description: res.error || "Не удалось отправить ответы",
           variant: "destructive",
         });
-        setTestState("taking");
+        setState("taking");
       }
     } catch {
       toast({
@@ -116,18 +123,18 @@ export function TestTaking({ test, courseId, lessonId }: TestTakingProps) {
         description: "Произошла непредвиденная ошибка",
         variant: "destructive",
       });
-      setTestState("taking");
+      setState("taking");
     }
-  }, [testState, test, answers, router, toast]);
+  }, [state, assessment, answers, router, toast]);
 
   // Timer
   useEffect(() => {
-    if (testState === "taking" && test.timeLimitMin && timeLeft !== null) {
+    if (state === "taking" && assessment.timeLimitMin && timeLeft !== null) {
       if (timeLeft <= 0 && !hasAutoSubmittedRef.current) {
         hasAutoSubmittedRef.current = true;
         toast({
           title: "Время вышло!",
-          description: "Тест автоматически отправлен.",
+          description: `${labelCapital} автоматически отправлен.`,
           variant: "destructive",
         });
         handleSubmit();
@@ -145,14 +152,16 @@ export function TestTaking({ test, courseId, lessonId }: TestTakingProps) {
         if (timerRef.current) clearInterval(timerRef.current);
       };
     }
-  }, [testState, test.timeLimitMin, timeLeft, handleSubmit, toast]);
+  }, [state, assessment.timeLimitMin, timeLeft, handleSubmit, toast, labelCapital]);
 
-  const startTest = () => {
-    setTestState("taking");
+  const startAssessment = () => {
+    if (isStarting) return;
+    setIsStarting(true);
+    setState("taking");
     setAnswers({});
     hasAutoSubmittedRef.current = false;
-    if (test.timeLimitMin) {
-      setTimeLeft(test.timeLimitMin * 60);
+    if (assessment.timeLimitMin) {
+      setTimeLeft(assessment.timeLimitMin * 60);
     }
   };
 
@@ -189,25 +198,25 @@ export function TestTaking({ test, courseId, lessonId }: TestTakingProps) {
       .padStart(2, "0")}`;
   };
 
-  // IDLE state - show start button
-  if (testState === "idle") {
+  // IDLE state
+  if (state === "idle") {
     return (
       <Card>
         <CardContent className="pt-6">
           <div className="text-center space-y-4">
-            <h2 className="text-xl font-semibold">{test.title}</h2>
+            <h2 className="text-xl font-semibold">{assessment.title}</h2>
             <p className="text-muted-foreground">
-              {test.questions.length}{" "}
-              {test.questions.length === 1
+              {assessment.questions.length}{" "}
+              {assessment.questions.length === 1
                 ? "вопрос"
-                : test.questions.length < 5
+                : assessment.questions.length < 5
                 ? "вопроса"
                 : "вопросов"}
-              {test.timeLimitMin && ` / ${test.timeLimitMin} мин`}
+              {assessment.timeLimitMin && ` / ${assessment.timeLimitMin} мин`}
             </p>
-            <Button onClick={startTest} size="lg">
+            <Button onClick={startAssessment} size="lg" disabled={isStarting}>
               <Play className="h-5 w-5 mr-2" />
-              Начать тест
+              Начать {label}
             </Button>
           </div>
         </CardContent>
@@ -215,8 +224,8 @@ export function TestTaking({ test, courseId, lessonId }: TestTakingProps) {
     );
   }
 
-  // COMPLETED state - show result
-  if (testState === "completed" && result) {
+  // COMPLETED state
+  if (state === "completed" && result) {
     return (
       <Card>
         <CardContent className="pt-6">
@@ -227,7 +236,9 @@ export function TestTaking({ test, courseId, lessonId }: TestTakingProps) {
               <XCircle className="h-16 w-16 text-red-500 mx-auto" />
             )}
             <h2 className="text-2xl font-bold">
-              {result.isPassed ? "Тест пройден!" : "Тест не пройден"}
+              {result.isPassed
+                ? `${labelCapital} ${isTest ? "пройден" : "сдан"}!`
+                : `${labelCapital} не ${isTest ? "пройден" : "сдан"}`}
             </h2>
             <div className="space-y-2">
               <p className="text-lg">
@@ -240,13 +251,10 @@ export function TestTaking({ test, courseId, lessonId }: TestTakingProps) {
                 {result.isPassed ? "Зачтено" : "Не зачтено"}
               </Badge>
               <p className="text-sm text-muted-foreground">
-                Проходной балл: {test.passingScore}%
+                Проходной балл: {assessment.passingScore}%
               </p>
             </div>
-            <Button
-              onClick={() => router.refresh()}
-              variant="outline"
-            >
+            <Button onClick={() => router.refresh()} variant="outline">
               Посмотреть детали
             </Button>
           </div>
@@ -256,7 +264,7 @@ export function TestTaking({ test, courseId, lessonId }: TestTakingProps) {
   }
 
   // SUBMITTING state
-  if (testState === "submitting") {
+  if (state === "submitting") {
     return (
       <Card>
         <CardContent className="pt-6">
@@ -269,7 +277,7 @@ export function TestTaking({ test, courseId, lessonId }: TestTakingProps) {
     );
   }
 
-  // TAKING state - show questions
+  // TAKING state
   return (
     <div className="space-y-4">
       {/* Timer and progress bar */}
@@ -278,7 +286,7 @@ export function TestTaking({ test, courseId, lessonId }: TestTakingProps) {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
-                Отвечено: {answeredCount} / {test.questions.length}
+                Отвечено: {answeredCount} / {assessment.questions.length}
               </span>
             </div>
             {timeLeft !== null && (
@@ -297,7 +305,7 @@ export function TestTaking({ test, courseId, lessonId }: TestTakingProps) {
             )}
           </div>
           <Progress
-            value={(answeredCount / test.questions.length) * 100}
+            value={(answeredCount / assessment.questions.length) * 100}
           />
         </CardContent>
       </Card>
@@ -306,13 +314,13 @@ export function TestTaking({ test, courseId, lessonId }: TestTakingProps) {
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-wrap gap-2">
-            {test.questions.map((q, index) => {
+            {assessment.questions.map((q, index) => {
               const isAnswered =
                 answers[q.id] && answers[q.id].length > 0;
               return (
                 <a
                   key={q.id}
-                  href={`#question-${index}`}
+                  href={`#${idPrefix}-${index}`}
                   className={`inline-flex items-center justify-center w-9 h-9 rounded-md text-sm font-medium border transition-colors ${
                     isAnswered
                       ? "bg-primary text-primary-foreground border-primary"
@@ -328,8 +336,8 @@ export function TestTaking({ test, courseId, lessonId }: TestTakingProps) {
       </Card>
 
       {/* Questions */}
-      {test.questions.map((question, index) => (
-        <Card key={question.id} id={`question-${index}`}>
+      {assessment.questions.map((question, index) => (
+        <Card key={question.id} id={`${idPrefix}-${index}`}>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">
@@ -371,10 +379,10 @@ export function TestTaking({ test, courseId, lessonId }: TestTakingProps) {
                   >
                     <RadioGroupItem
                       value={option.id}
-                      id={`opt-${option.id}`}
+                      id={`${idPrefix}-opt-${option.id}`}
                     />
                     <Label
-                      htmlFor={`opt-${option.id}`}
+                      htmlFor={`${idPrefix}-opt-${option.id}`}
                       className="flex-1 cursor-pointer font-normal"
                     >
                       {option.text}
@@ -393,7 +401,7 @@ export function TestTaking({ test, courseId, lessonId }: TestTakingProps) {
                       className="flex items-center space-x-3 rounded-md border p-3 hover:bg-muted/50 transition-colors"
                     >
                       <Checkbox
-                        id={`opt-${option.id}`}
+                        id={`${idPrefix}-opt-${option.id}`}
                         checked={isChecked}
                         onCheckedChange={(checked) =>
                           handleMultipleChoice(
@@ -404,7 +412,7 @@ export function TestTaking({ test, courseId, lessonId }: TestTakingProps) {
                         }
                       />
                       <Label
-                        htmlFor={`opt-${option.id}`}
+                        htmlFor={`${idPrefix}-opt-${option.id}`}
                         className="flex-1 cursor-pointer font-normal"
                       >
                         {option.text}
@@ -423,11 +431,11 @@ export function TestTaking({ test, courseId, lessonId }: TestTakingProps) {
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">
-              {answeredCount < test.questions.length && (
+              {answeredCount < assessment.questions.length && (
                 <div className="flex items-center gap-2 text-orange-500">
                   <AlertTriangle className="h-4 w-4" />
                   Вы ответили не на все вопросы ({answeredCount} из{" "}
-                  {test.questions.length})
+                  {assessment.questions.length})
                 </div>
               )}
             </div>
@@ -436,19 +444,21 @@ export function TestTaking({ test, courseId, lessonId }: TestTakingProps) {
               <AlertDialogTrigger asChild>
                 <Button size="lg">
                   <Send className="h-4 w-4 mr-2" />
-                  Завершить тест
+                  Завершить {label}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Завершить тест?</AlertDialogTitle>
+                  <AlertDialogTitle>Завершить {label}?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Вы ответили на {answeredCount} из {test.questions.length}{" "}
+                    Вы ответили на {answeredCount} из {assessment.questions.length}{" "}
                     вопросов. После отправки изменить ответы будет невозможно.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Вернуться к тесту</AlertDialogCancel>
+                  <AlertDialogCancel>
+                    Вернуться к {isTest ? "тесту" : "экзамену"}
+                  </AlertDialogCancel>
                   <AlertDialogAction onClick={handleSubmit}>
                     Отправить ответы
                   </AlertDialogAction>

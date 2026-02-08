@@ -3,8 +3,9 @@
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
 import { revalidatePath } from "next/cache";
+import { createAuditLog, computeChanges } from "@/lib/audit";
 import bcrypt from "bcryptjs";
-import { Role } from "@/generated/prisma";
+import type { Role } from "@/validators/user";
 
 // ---------- getUsers ----------
 export async function getUsers() {
@@ -65,7 +66,7 @@ export async function createUser(data: {
   role: Role;
 }) {
   return withAuth(
-    async () => {
+    async (session) => {
       const existingUser = await prisma.user.findUnique({
         where: { email: data.email },
       });
@@ -97,6 +98,14 @@ export async function createUser(data: {
         },
       });
 
+      await createAuditLog({
+        userId: session.user.id,
+        entityType: "User",
+        entityId: user.id,
+        action: "CREATE",
+        metadata: { email: user.email, role: user.role },
+      });
+
       revalidatePath("/dashboard/users");
       return { success: true, data: user };
     },
@@ -117,7 +126,13 @@ export async function updateUser(
   }
 ) {
   return withAuth(
-    async () => {
+    async (session) => {
+      const existing = await prisma.user.findUnique({
+        where: { id },
+        select: { email: true, firstName: true, lastName: true, phone: true, role: true, isActive: true },
+      });
+      if (!existing) return { success: false, error: "User not found" };
+
       if (data.email) {
         const existingUser = await prisma.user.findUnique({
           where: { email: data.email },
@@ -151,6 +166,17 @@ export async function updateUser(
         },
       });
 
+      const changes = computeChanges(existing, data);
+      if (changes) {
+        await createAuditLog({
+          userId: session.user.id,
+          entityType: "User",
+          entityId: id,
+          action: "UPDATE",
+          changes,
+        });
+      }
+
       revalidatePath("/dashboard/users");
       revalidatePath(`/dashboard/users/${id}`);
       return { success: true, data: user };
@@ -170,6 +196,14 @@ export async function deleteUser(id: string) {
       await prisma.user.update({
         where: { id },
         data: { isActive: false },
+      });
+
+      await createAuditLog({
+        userId: session.user.id,
+        entityType: "User",
+        entityId: id,
+        action: "DELETE",
+        metadata: { softDelete: true },
       });
 
       revalidatePath("/dashboard/users");

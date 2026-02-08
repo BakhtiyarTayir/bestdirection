@@ -24,7 +24,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { createUserSchema, updateUserSchema } from "@/validators/user";
 import type { CreateUserInput, UpdateUserInput } from "@/validators/user";
-import type { Role } from "@/generated/prisma";
+import type { Role } from "@/validators/user";
 import { Loader2 } from "lucide-react";
 
 interface UserData {

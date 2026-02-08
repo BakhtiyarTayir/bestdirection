@@ -40,9 +40,10 @@ export default async function ExamsPage({ params }: ExamsPageProps) {
   const isTeacherOrAdmin =
     role === "ADMIN" || (role === "TEACHER" && course.teacherId === userId);
 
-  const exams = await prisma.exam.findMany({
+  const exams = await prisma.assessment.findMany({
     where: {
       courseId,
+      type: "EXAM",
       ...(role === "STUDENT" ? { isPublished: true } : {}),
     },
     include: {
@@ -55,23 +56,21 @@ export default async function ExamsPage({ params }: ExamsPageProps) {
   let eligible = false;
   let unpassedCount = 0;
   if (role === "STUDENT") {
-    const lessonsWithTests = await prisma.lesson.findMany({
+    const lessonTests = await prisma.assessment.findMany({
       where: {
         courseId,
+        type: "TEST",
         isPublished: true,
-        test: { isPublished: true },
+        lessonId: { not: null },
       },
-      include: {
-        test: { select: { id: true } },
-      },
+      select: { id: true },
     });
 
     let allPassed = true;
-    for (const lesson of lessonsWithTests) {
-      if (!lesson.test) continue;
-      const passedAttempt = await prisma.testAttempt.findFirst({
+    for (const test of lessonTests) {
+      const passedAttempt = await prisma.assessmentAttempt.findFirst({
         where: {
-          testId: lesson.test.id,
+          assessmentId: test.id,
           studentId: userId,
           isPassed: true,
         },

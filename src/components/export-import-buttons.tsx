@@ -35,8 +35,8 @@ export function ExportButton({ type, id }: ExportButtonProps) {
     try {
       const url =
         type === "test"
-          ? `/api/export/test/${id}?format=${format}`
-          : `/api/export/exam/${id}?format=${format}`;
+          ? `/api/v1/export/test/${id}?format=${format}`
+          : `/api/v1/export/exam/${id}?format=${format}`;
 
       const res = await fetch(url);
       if (!res.ok) {

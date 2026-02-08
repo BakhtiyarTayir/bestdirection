@@ -13,7 +13,7 @@ import {
   Trophy,
 } from "lucide-react";
 
-interface ExamAttemptAnswer {
+interface AttemptAnswer {
   id: string;
   questionId: string;
   selectedOptionIds: string[];
@@ -32,7 +32,7 @@ interface ExamAttemptAnswer {
   };
 }
 
-interface ExamResultsProps {
+interface AssessmentResultsProps {
   attempt: {
     id: string;
     score: number;
@@ -41,12 +41,12 @@ interface ExamResultsProps {
     isPassed: boolean;
     startedAt: string;
     completedAt: string | null;
-    answers: ExamAttemptAnswer[];
+    answers: AttemptAnswer[];
   };
   attemptNumber?: number;
 }
 
-export function ExamResults({ attempt, attemptNumber }: ExamResultsProps) {
+export function AssessmentResults({ attempt, attemptNumber }: AssessmentResultsProps) {
   const [expanded, setExpanded] = useState(false);
 
   const startedAt = new Date(attempt.startedAt);

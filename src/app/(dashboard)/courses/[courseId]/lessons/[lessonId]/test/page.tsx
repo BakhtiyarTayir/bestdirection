@@ -14,11 +14,11 @@ import {
   BarChart3,
   FileText,
 } from "lucide-react";
-import { TestSettingsForm } from "@/components/test-settings-form";
-import { QuestionForm } from "@/components/question-form";
-import { TestTaking } from "@/components/test-taking";
-import { TestResults } from "@/components/test-results";
-import { DeleteQuestionButton, DeleteTestButton } from "@/components/test-management-buttons";
+import { AssessmentForm } from "@/components/assessment-form";
+import { AssessmentQuestionForm } from "@/components/assessment-question-form";
+import { AssessmentTaking } from "@/components/assessment-taking";
+import { AssessmentResults } from "@/components/assessment-results";
+import { DeleteAssessmentButton, DeleteAssessmentQuestionButton } from "@/components/assessment-management-buttons";
 import { ExportButton, ImportButton } from "@/components/export-import-buttons";
 
 interface TestPageProps {
@@ -37,7 +37,6 @@ export default async function TestPage({ params }: TestPageProps) {
   const role = session.user.role;
   const userId = session.user.id;
 
-  // Get lesson info
   const lesson = await prisma.lesson.findUnique({
     where: { id: lessonId },
     include: {
@@ -49,8 +48,8 @@ export default async function TestPage({ params }: TestPageProps) {
 
   if (!lesson) redirect(`/courses/${courseId}`);
 
-  // Get test with questions
-  const test = await prisma.test.findUnique({
+  // Use Assessment model
+  const assessment = await prisma.assessment.findUnique({
     where: { lessonId },
     include: {
       questions: {
@@ -62,16 +61,15 @@ export default async function TestPage({ params }: TestPageProps) {
         orderBy: { sortOrder: "asc" },
       },
       _count: {
-        select: { testAttempts: true },
+        select: { attempts: true },
       },
     },
   });
 
-  // Get student attempts if student
-  const studentAttempts = role === "STUDENT" && test
-    ? await prisma.testAttempt.findMany({
+  const studentAttempts = role === "STUDENT" && assessment
+    ? await prisma.assessmentAttempt.findMany({
         where: {
-          testId: test.id,
+          assessmentId: assessment.id,
           studentId: userId,
         },
         include: {
@@ -98,14 +96,14 @@ export default async function TestPage({ params }: TestPageProps) {
           {lesson.course.title} / {lesson.title}
         </p>
         <h1 className="text-3xl font-bold mt-1">
-          {test ? test.title : "Тест"}
+          {assessment ? assessment.title : "Тест"}
         </h1>
       </div>
 
       {/* TEACHER / ADMIN VIEW */}
       {isTeacherOrAdmin && (
         <>
-          {!test ? (
+          {!assessment ? (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -120,12 +118,12 @@ export default async function TestPage({ params }: TestPageProps) {
                   </p>
                   <ImportButton type="test" targetId={lessonId} />
                 </div>
-                <TestSettingsForm lessonId={lessonId} courseId={courseId} />
+                <AssessmentForm type="TEST" courseId={courseId} lessonId={lessonId} />
               </CardContent>
             </Card>
           ) : (
             <>
-              {/* Test Settings */}
+              {/* Assessment Settings */}
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -134,32 +132,34 @@ export default async function TestPage({ params }: TestPageProps) {
                       Настройки теста
                     </CardTitle>
                     <div className="flex items-center gap-2">
-                      <Badge variant={test.isPublished ? "default" : "secondary"}>
-                        {test.isPublished ? "Опубликован" : "Черновик"}
+                      <Badge variant={assessment.isPublished ? "default" : "secondary"}>
+                        {assessment.isPublished ? "Опубликован" : "Черновик"}
                       </Badge>
                       <Link href={`/courses/${courseId}/lessons/${lessonId}/test/attempts`}>
                         <Button variant="outline" size="sm">
                           <BarChart3 className="h-4 w-4 mr-2" />
-                          Результаты ({test._count.testAttempts})
+                          Результаты ({assessment._count.attempts})
                         </Button>
                       </Link>
                       <ExportButton type="test" id={lessonId} />
-                      <DeleteTestButton testId={test.id} courseId={courseId} />
+                      <DeleteAssessmentButton assessmentId={assessment.id} type="TEST" />
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <TestSettingsForm
-                    test={{
-                      id: test.id,
-                      title: test.title,
-                      passingScore: test.passingScore,
-                      timeLimitMin: test.timeLimitMin,
-                      maxAttempts: test.maxAttempts,
-                      isPublished: test.isPublished,
-                    }}
-                    lessonId={lessonId}
+                  <AssessmentForm
+                    type="TEST"
                     courseId={courseId}
+                    lessonId={lessonId}
+                    assessment={{
+                      id: assessment.id,
+                      title: assessment.title,
+                      description: assessment.description,
+                      passingScore: assessment.passingScore,
+                      timeLimitMin: assessment.timeLimitMin,
+                      maxAttempts: assessment.maxAttempts,
+                      isPublished: assessment.isPublished,
+                    }}
                   />
                 </CardContent>
               </Card>
@@ -169,18 +169,18 @@ export default async function TestPage({ params }: TestPageProps) {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>
-                      Вопросы ({test.questions.length})
+                      Вопросы ({assessment.questions.length})
                     </CardTitle>
-                    <QuestionForm testId={test.id} />
+                    <AssessmentQuestionForm assessmentId={assessment.id} />
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {test.questions.length === 0 ? (
+                  {assessment.questions.length === 0 ? (
                     <p className="text-muted-foreground text-center py-8">
                       Вопросов пока нет. Добавьте первый вопрос.
                     </p>
                   ) : (
-                    test.questions.map((question, index) => (
+                    assessment.questions.map((question, index) => (
                       <div key={question.id} className="border rounded-lg p-4 space-y-3">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
@@ -200,8 +200,8 @@ export default async function TestPage({ params }: TestPageProps) {
                             <p className="font-medium">{question.text}</p>
                           </div>
                           <div className="flex items-center gap-1 ml-4">
-                            <QuestionForm
-                              testId={test.id}
+                            <AssessmentQuestionForm
+                              assessmentId={assessment.id}
                               question={{
                                 id: question.id,
                                 text: question.text,
@@ -216,7 +216,7 @@ export default async function TestPage({ params }: TestPageProps) {
                                 })),
                               }}
                             />
-                            <DeleteQuestionButton questionId={question.id} />
+                            <DeleteAssessmentQuestionButton questionId={question.id} />
                           </div>
                         </div>
                         <div className="space-y-1.5 ml-4">
@@ -253,7 +253,7 @@ export default async function TestPage({ params }: TestPageProps) {
                         <Target className="h-4 w-4" />
                         <span className="text-xs">Проходной балл</span>
                       </div>
-                      <p className="text-lg font-semibold">{test.passingScore}%</p>
+                      <p className="text-lg font-semibold">{assessment.passingScore}%</p>
                     </div>
                     <div>
                       <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
@@ -261,7 +261,7 @@ export default async function TestPage({ params }: TestPageProps) {
                         <span className="text-xs">Ограничение</span>
                       </div>
                       <p className="text-lg font-semibold">
-                        {test.timeLimitMin ? `${test.timeLimitMin} мин` : "Нет"}
+                        {assessment.timeLimitMin ? `${assessment.timeLimitMin} мин` : "Нет"}
                       </p>
                     </div>
                     <div>
@@ -269,7 +269,7 @@ export default async function TestPage({ params }: TestPageProps) {
                         <RotateCcw className="h-4 w-4" />
                         <span className="text-xs">Попытки</span>
                       </div>
-                      <p className="text-lg font-semibold">{test.maxAttempts}</p>
+                      <p className="text-lg font-semibold">{assessment.maxAttempts}</p>
                     </div>
                     <div>
                       <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
@@ -277,7 +277,7 @@ export default async function TestPage({ params }: TestPageProps) {
                         <span className="text-xs">Макс. баллов</span>
                       </div>
                       <p className="text-lg font-semibold">
-                        {test.questions.reduce((sum, q) => sum + q.points, 0)}
+                        {assessment.questions.reduce((sum, q) => sum + q.points, 0)}
                       </p>
                     </div>
                   </div>
@@ -291,7 +291,7 @@ export default async function TestPage({ params }: TestPageProps) {
       {/* STUDENT VIEW */}
       {role === "STUDENT" && (
         <>
-          {!test || !test.isPublished ? (
+          {!assessment || !assessment.isPublished ? (
             <Card>
               <CardContent className="pt-6">
                 <p className="text-center text-muted-foreground py-8">
@@ -310,7 +310,7 @@ export default async function TestPage({ params }: TestPageProps) {
                         <Target className="h-4 w-4" />
                         <span className="text-xs">Проходной балл</span>
                       </div>
-                      <p className="text-lg font-semibold">{test.passingScore}%</p>
+                      <p className="text-lg font-semibold">{assessment.passingScore}%</p>
                     </div>
                     <div>
                       <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
@@ -318,7 +318,7 @@ export default async function TestPage({ params }: TestPageProps) {
                         <span className="text-xs">Ограничение</span>
                       </div>
                       <p className="text-lg font-semibold">
-                        {test.timeLimitMin ? `${test.timeLimitMin} мин` : "Нет"}
+                        {assessment.timeLimitMin ? `${assessment.timeLimitMin} мин` : "Нет"}
                       </p>
                     </div>
                     <div>
@@ -327,7 +327,7 @@ export default async function TestPage({ params }: TestPageProps) {
                         <span className="text-xs">Попытки</span>
                       </div>
                       <p className="text-lg font-semibold">
-                        {studentAttempts.length} / {test.maxAttempts}
+                        {studentAttempts.length} / {assessment.maxAttempts}
                       </p>
                     </div>
                     <div>
@@ -335,21 +335,22 @@ export default async function TestPage({ params }: TestPageProps) {
                         <FileText className="h-4 w-4" />
                         <span className="text-xs">Вопросов</span>
                       </div>
-                      <p className="text-lg font-semibold">{test.questions.length}</p>
+                      <p className="text-lg font-semibold">{assessment.questions.length}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               {/* Start Test or Show Results */}
-              {studentAttempts.length < test.maxAttempts && test.questions.length > 0 ? (
-                <TestTaking
-                  test={{
-                    id: test.id,
-                    title: test.title,
-                    timeLimitMin: test.timeLimitMin,
-                    passingScore: test.passingScore,
-                    questions: test.questions.map((q) => ({
+              {studentAttempts.length < assessment.maxAttempts && assessment.questions.length > 0 ? (
+                <AssessmentTaking
+                  assessment={{
+                    id: assessment.id,
+                    type: "TEST",
+                    title: assessment.title,
+                    timeLimitMin: assessment.timeLimitMin,
+                    passingScore: assessment.passingScore,
+                    questions: assessment.questions.map((q) => ({
                       id: q.id,
                       text: q.text,
                       type: q.type,
@@ -361,9 +362,8 @@ export default async function TestPage({ params }: TestPageProps) {
                     })),
                   }}
                   courseId={courseId}
-                  lessonId={lessonId}
                 />
-              ) : test.questions.length === 0 ? (
+              ) : assessment.questions.length === 0 ? (
                 <Card>
                   <CardContent className="pt-6">
                     <p className="text-center text-muted-foreground py-8">
@@ -375,7 +375,7 @@ export default async function TestPage({ params }: TestPageProps) {
                 <Card>
                   <CardContent className="pt-6">
                     <p className="text-center text-muted-foreground py-4">
-                      Вы использовали все доступные попытки ({test.maxAttempts}).
+                      Вы использовали все доступные попытки ({assessment.maxAttempts}).
                     </p>
                   </CardContent>
                 </Card>
@@ -389,7 +389,7 @@ export default async function TestPage({ params }: TestPageProps) {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {studentAttempts.map((attempt, index) => (
-                      <TestResults
+                      <AssessmentResults
                         key={attempt.id}
                         attempt={{
                           id: attempt.id,

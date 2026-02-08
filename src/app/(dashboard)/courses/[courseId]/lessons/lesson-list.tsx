@@ -24,7 +24,7 @@ interface Lesson {
   type: string;
   isPublished: boolean;
   sortOrder: number;
-  test?: { id: string } | null;
+  assessment?: { id: string } | null;
 }
 
 interface LessonListProps {
@@ -126,7 +126,7 @@ export function LessonList({ initialLessons, courseId, isTeacherOrAdmin }: Lesso
                   <Badge variant="secondary">Черновик</Badge>
                 )}
 
-                {lesson.test && (
+                {lesson.assessment && (
                   <Badge variant="outline">Тест</Badge>
                 )}
               </div>

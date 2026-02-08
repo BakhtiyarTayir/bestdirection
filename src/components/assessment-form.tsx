@@ -8,11 +8,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
-import { createExam, updateExam } from "@/actions/exam-actions";
+import { createAssessment, updateAssessment } from "@/actions/assessment-actions";
 import { Loader2, Save } from "lucide-react";
+import type { AssessmentType } from "@/validators/assessment";
 
-interface ExamSettingsFormProps {
-  exam?: {
+interface AssessmentFormProps {
+  type: AssessmentType;
+  courseId: string;
+  lessonId?: string;
+  assessment?: {
     id: string;
     title: string;
     description: string | null;
@@ -21,22 +25,24 @@ interface ExamSettingsFormProps {
     maxAttempts: number;
     isPublished: boolean;
   };
-  courseId: string;
 }
 
-export function ExamSettingsForm({ exam, courseId }: ExamSettingsFormProps) {
+export function AssessmentForm({ type, courseId, lessonId, assessment }: AssessmentFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
 
-  const [title, setTitle] = useState(exam?.title || "");
-  const [description, setDescription] = useState(exam?.description || "");
-  const [passingScore, setPassingScore] = useState(exam?.passingScore ?? 60);
+  const isTest = type === "TEST";
+  const label = isTest ? "тест" : "экзамен";
+
+  const [title, setTitle] = useState(assessment?.title || "");
+  const [description, setDescription] = useState(assessment?.description || "");
+  const [passingScore, setPassingScore] = useState(assessment?.passingScore ?? 60);
   const [timeLimitMin, setTimeLimitMin] = useState<string>(
-    exam?.timeLimitMin?.toString() || ""
+    assessment?.timeLimitMin?.toString() || ""
   );
-  const [maxAttempts, setMaxAttempts] = useState(exam?.maxAttempts ?? 1);
-  const [isPublished, setIsPublished] = useState(exam?.isPublished ?? false);
+  const [maxAttempts, setMaxAttempts] = useState(assessment?.maxAttempts ?? 1);
+  const [isPublished, setIsPublished] = useState(assessment?.isPublished ?? false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +50,7 @@ export function ExamSettingsForm({ exam, courseId }: ExamSettingsFormProps) {
     if (!title.trim()) {
       toast({
         title: "Ошибка",
-        description: "Введите название экзамена",
+        description: `Введите название ${isTest ? "теста" : "экзамена"}`,
         variant: "destructive",
       });
       return;
@@ -52,8 +58,8 @@ export function ExamSettingsForm({ exam, courseId }: ExamSettingsFormProps) {
 
     startTransition(async () => {
       try {
-        if (exam) {
-          const result = await updateExam(exam.id, {
+        if (assessment) {
+          const result = await updateAssessment(assessment.id, {
             title: title.trim(),
             description: description.trim() || null,
             passingScore,
@@ -65,18 +71,19 @@ export function ExamSettingsForm({ exam, courseId }: ExamSettingsFormProps) {
           if (result.success) {
             toast({
               title: "Успешно",
-              description: "Настройки экзамена обновлены",
+              description: `Настройки ${isTest ? "теста" : "экзамена"} обновлены`,
             });
             router.refresh();
           } else {
             toast({
               title: "Ошибка",
-              description: result.error || "Не удалось обновить экзамен",
+              description: result.error || `Не удалось обновить ${label}`,
               variant: "destructive",
             });
           }
         } else {
-          const result = await createExam({
+          const result = await createAssessment({
+            type,
             title: title.trim(),
             description: description.trim() || undefined,
             passingScore,
@@ -84,19 +91,24 @@ export function ExamSettingsForm({ exam, courseId }: ExamSettingsFormProps) {
             maxAttempts,
             isPublished,
             courseId,
+            lessonId: isTest ? lessonId : undefined,
           });
 
           if (result.success) {
             toast({
               title: "Успешно",
-              description: "Экзамен создан",
+              description: `${isTest ? "Тест" : "Экзамен"} создан`,
             });
-            router.push(`/courses/${courseId}/exams`);
-            router.refresh();
+            if (isTest) {
+              router.refresh();
+            } else {
+              router.push(`/courses/${courseId}/exams`);
+              router.refresh();
+            }
           } else {
             toast({
               title: "Ошибка",
-              description: result.error || "Не удалось создать экзамен",
+              description: result.error || `Не удалось создать ${label}`,
               variant: "destructive",
             });
           }
@@ -115,32 +127,36 @@ export function ExamSettingsForm({ exam, courseId }: ExamSettingsFormProps) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="exam-title">Название экзамена</Label>
+          <Label htmlFor="assessment-title">
+            Название {isTest ? "теста" : "экзамена"}
+          </Label>
           <Input
-            id="exam-title"
+            id="assessment-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Например: Финальный экзамен"
+            placeholder={isTest ? "Например: Тест по теме 1" : "Например: Финальный экзамен"}
             disabled={isPending}
           />
         </div>
 
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="exam-description">Описание (необязательно)</Label>
-          <Textarea
-            id="exam-description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Описание экзамена..."
-            rows={3}
-            disabled={isPending}
-          />
-        </div>
+        {!isTest && (
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="assessment-description">Описание (необязательно)</Label>
+            <Textarea
+              id="assessment-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Описание экзамена..."
+              rows={3}
+              disabled={isPending}
+            />
+          </div>
+        )}
 
         <div className="space-y-2">
-          <Label htmlFor="exam-passingScore">Проходной балл (%)</Label>
+          <Label htmlFor="assessment-passingScore">Проходной балл (%)</Label>
           <Input
-            id="exam-passingScore"
+            id="assessment-passingScore"
             type="number"
             min={0}
             max={100}
@@ -151,11 +167,11 @@ export function ExamSettingsForm({ exam, courseId }: ExamSettingsFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="exam-timeLimitMin">
+          <Label htmlFor="assessment-timeLimitMin">
             Ограничение по времени (мин)
           </Label>
           <Input
-            id="exam-timeLimitMin"
+            id="assessment-timeLimitMin"
             type="number"
             min={1}
             value={timeLimitMin}
@@ -166,9 +182,9 @@ export function ExamSettingsForm({ exam, courseId }: ExamSettingsFormProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="exam-maxAttempts">Количество попыток</Label>
+          <Label htmlFor="assessment-maxAttempts">Количество попыток</Label>
           <Input
-            id="exam-maxAttempts"
+            id="assessment-maxAttempts"
             type="number"
             min={1}
             value={maxAttempts}
@@ -179,12 +195,12 @@ export function ExamSettingsForm({ exam, courseId }: ExamSettingsFormProps) {
 
         <div className="flex items-center space-x-3 pt-6">
           <Switch
-            id="exam-isPublished"
+            id="assessment-isPublished"
             checked={isPublished}
             onCheckedChange={setIsPublished}
             disabled={isPending}
           />
-          <Label htmlFor="exam-isPublished">Опубликован</Label>
+          <Label htmlFor="assessment-isPublished">Опубликован</Label>
         </div>
       </div>
 
@@ -195,7 +211,7 @@ export function ExamSettingsForm({ exam, courseId }: ExamSettingsFormProps) {
           ) : (
             <Save className="h-4 w-4 mr-2" />
           )}
-          {exam ? "Сохранить изменения" : "Создать экзамен"}
+          {assessment ? "Сохранить изменения" : `Создать ${label}`}
         </Button>
       </div>
     </form>

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
 import { revalidatePath } from "next/cache";
 import { bufferToData, jsonToData, validateSpreadsheetData } from "@/lib/spreadsheet-utils";
-import { QuestionType } from "@/generated/prisma";
+import type { QuestionType } from "@/validators/assessment";
 
 // ---------- importTestFromFile ----------
 export async function importTestFromFile(formData: FormData) {
@@ -30,7 +30,7 @@ export async function importTestFromFile(formData: FormData) {
         return { success: false, error: "Вы можете импортировать тесты только для своих курсов" };
       }
 
-      const existingTest = await prisma.test.findUnique({
+      const existingTest = await prisma.assessment.findUnique({
         where: { lessonId },
       });
 
@@ -60,13 +60,15 @@ export async function importTestFromFile(formData: FormData) {
         return { success: false, error: errors.join("; ") };
       }
 
-      const test = await prisma.test.create({
+      const assessment = await prisma.assessment.create({
         data: {
+          type: "TEST",
           title: data.title,
           passingScore: data.passingScore,
           timeLimitMin: data.timeLimitMin,
           maxAttempts: data.maxAttempts,
           isPublished: false,
+          courseId: lesson.course.id,
           lessonId,
           questions: {
             create: data.questions.map((q, qIdx) => ({
@@ -87,7 +89,7 @@ export async function importTestFromFile(formData: FormData) {
       });
 
       revalidatePath(`/courses/${lesson.course.id}`);
-      return { success: true, data: test };
+      return { success: true, data: assessment };
     },
     { roles: ["ADMIN", "TEACHER"] }
   );
@@ -139,8 +141,9 @@ export async function importExamFromFile(formData: FormData) {
         return { success: false, error: errors.join("; ") };
       }
 
-      const exam = await prisma.exam.create({
+      const assessment = await prisma.assessment.create({
         data: {
+          type: "EXAM",
           title: data.title,
           description: data.description,
           passingScore: data.passingScore,
@@ -167,7 +170,7 @@ export async function importExamFromFile(formData: FormData) {
       });
 
       revalidatePath(`/courses/${courseId}`);
-      return { success: true, data: exam };
+      return { success: true, data: assessment };
     },
     { roles: ["ADMIN", "TEACHER"] }
   );

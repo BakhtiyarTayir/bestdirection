@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FileText, Trophy, CheckCircle2, XCircle, GraduationCap } from "lucide-react";
+import { FileText, Trophy, CheckCircle2, GraduationCap } from "lucide-react";
 
 export default async function MyResultsPage() {
   const session = await auth();
@@ -23,40 +23,23 @@ export default async function MyResultsPage() {
     redirect("/dashboard");
   }
 
-  const attempts = await prisma.testAttempt.findMany({
+  const allAttempts = await prisma.assessmentAttempt.findMany({
     where: { studentId: session.user.id },
     include: {
-      test: {
+      assessment: {
         select: {
           id: true,
           title: true,
+          type: true,
           passingScore: true,
+          courseId: true,
+          lessonId: true,
           lesson: {
             select: {
               id: true,
               title: true,
-              course: {
-                select: {
-                  id: true,
-                  title: true,
-                },
-              },
             },
           },
-        },
-      },
-    },
-    orderBy: { startedAt: "desc" },
-  });
-
-  const examAttempts = await prisma.examAttempt.findMany({
-    where: { studentId: session.user.id },
-    include: {
-      exam: {
-        select: {
-          id: true,
-          title: true,
-          passingScore: true,
           course: {
             select: {
               id: true,
@@ -69,8 +52,10 @@ export default async function MyResultsPage() {
     orderBy: { startedAt: "desc" },
   });
 
+  const testAttempts = allAttempts.filter((a) => a.assessment.type === "TEST");
+  const examAttempts = allAttempts.filter((a) => a.assessment.type === "EXAM");
+
   // Stats (combined)
-  const allAttempts = [...attempts, ...examAttempts];
   const totalAttempts = allAttempts.length;
   const passedAttempts = allAttempts.filter((a) => a.isPassed).length;
   const avgPercentage =
@@ -139,7 +124,7 @@ export default async function MyResultsPage() {
           <CardTitle>История тестов</CardTitle>
         </CardHeader>
         <CardContent>
-          {attempts.length === 0 ? (
+          {testAttempts.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
               Вы еще не проходили ни одного теста.
             </p>
@@ -159,15 +144,15 @@ export default async function MyResultsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {attempts.map((attempt) => (
+                  {testAttempts.map((attempt) => (
                     <TableRow key={attempt.id}>
                       <TableCell className="font-medium">
-                        {attempt.test.lesson.course.title}
+                        {attempt.assessment.course.title}
                       </TableCell>
                       <TableCell>
-                        {attempt.test.lesson.title}
+                        {attempt.assessment.lesson?.title ?? "—"}
                       </TableCell>
-                      <TableCell>{attempt.test.title}</TableCell>
+                      <TableCell>{attempt.assessment.title}</TableCell>
                       <TableCell className="text-center">
                         {attempt.score} / {attempt.maxScore}
                       </TableCell>
@@ -187,13 +172,15 @@ export default async function MyResultsPage() {
                         {formatDate(attempt.startedAt)}
                       </TableCell>
                       <TableCell>
-                        <Link
-                          href={`/courses/${attempt.test.lesson.course.id}/lessons/${attempt.test.lesson.id}/test`}
-                        >
-                          <Button variant="ghost" size="sm">
-                            Подробнее
-                          </Button>
-                        </Link>
+                        {attempt.assessment.lessonId && (
+                          <Link
+                            href={`/courses/${attempt.assessment.course.id}/lessons/${attempt.assessment.lessonId}/test`}
+                          >
+                            <Button variant="ghost" size="sm">
+                              Подробнее
+                            </Button>
+                          </Link>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -235,9 +222,9 @@ export default async function MyResultsPage() {
                   {examAttempts.map((attempt) => (
                     <TableRow key={attempt.id}>
                       <TableCell className="font-medium">
-                        {attempt.exam.course.title}
+                        {attempt.assessment.course.title}
                       </TableCell>
-                      <TableCell>{attempt.exam.title}</TableCell>
+                      <TableCell>{attempt.assessment.title}</TableCell>
                       <TableCell className="text-center">
                         {attempt.score} / {attempt.maxScore}
                       </TableCell>
@@ -258,7 +245,7 @@ export default async function MyResultsPage() {
                       </TableCell>
                       <TableCell>
                         <Link
-                          href={`/courses/${attempt.exam.course.id}/exams/${attempt.exam.id}`}
+                          href={`/courses/${attempt.assessment.course.id}/exams/${attempt.assessment.id}`}
                         >
                           <Button variant="ghost" size="sm">
                             Подробнее

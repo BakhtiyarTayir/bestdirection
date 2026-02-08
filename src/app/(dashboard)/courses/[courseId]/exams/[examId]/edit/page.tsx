@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GraduationCap } from "lucide-react";
-import { ExamSettingsForm } from "@/components/exam-settings-form";
+import { AssessmentForm } from "@/components/assessment-form";
 
 interface EditExamPageProps {
   params: Promise<{ courseId: string; examId: string }>;
@@ -28,11 +28,11 @@ export default async function EditExamPage({ params }: EditExamPageProps) {
     redirect(`/courses/${courseId}`);
   }
 
-  const exam = await prisma.exam.findUnique({
+  const assessment = await prisma.assessment.findUnique({
     where: { id: examId },
   });
 
-  if (!exam) redirect(`/courses/${courseId}/exams`);
+  if (!assessment || assessment.type !== "EXAM") redirect(`/courses/${courseId}/exams`);
 
   return (
     <div className="space-y-6">
@@ -51,17 +51,18 @@ export default async function EditExamPage({ params }: EditExamPageProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ExamSettingsForm
-            exam={{
-              id: exam.id,
-              title: exam.title,
-              description: exam.description,
-              passingScore: exam.passingScore,
-              timeLimitMin: exam.timeLimitMin,
-              maxAttempts: exam.maxAttempts,
-              isPublished: exam.isPublished,
-            }}
+          <AssessmentForm
+            type="EXAM"
             courseId={courseId}
+            assessment={{
+              id: assessment.id,
+              title: assessment.title,
+              description: assessment.description,
+              passingScore: assessment.passingScore,
+              timeLimitMin: assessment.timeLimitMin,
+              maxAttempts: assessment.maxAttempts,
+              isPublished: assessment.isPublished,
+            }}
           />
         </CardContent>
       </Card>

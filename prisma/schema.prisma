@@ -29,6 +29,11 @@ enum QuestionType {
   MULTIPLE_CHOICE
 }
 
+enum AssessmentType {
+  TEST
+  EXAM
+}
+
 enum AttendanceStatus {
   PRESENT
   ABSENT
@@ -37,47 +42,52 @@ enum AttendanceStatus {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String    @id @default(cuid())
+  email        String    @unique
   passwordHash String
   firstName    String
   lastName     String
   phone        String?
-  role         Role     @default(STUDENT)
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  role         Role      @default(STUDENT)
+  isActive     Boolean   @default(true)
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  courses           Course[]
-  enrollments       Enrollment[]
-  testAttempts      TestAttempt[]
-  examAttempts      ExamAttempt[]
-  attendanceRecords AttendanceRecord[]
+  courses              Course[]
+  enrollments          Enrollment[]
+  assessmentAttempts   AssessmentAttempt[]
+  attendanceRecords    AttendanceRecord[]
+  lessonProgress       LessonProgress[]
+  auditLogs            AuditLog[]
 
   @@index([role])
   @@index([isActive])
+  @@index([deletedAt])
 }
 
 model Course {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   title       String
   description String?
   coverImage  String?
-  isPublished Boolean  @default(false)
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isPublished Boolean   @default(false)
+  sortOrder   Int       @default(0)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   teacherId String
   teacher   User   @relation(fields: [teacherId], references: [id])
 
   lessons            Lesson[]
   enrollments        Enrollment[]
-  exams              Exam[]
+  assessments        Assessment[]
   attendanceSessions AttendanceSession[]
 
   @@index([teacherId])
   @@index([isPublished])
+  @@index([deletedAt])
 }
 
 model Enrollment {
@@ -101,93 +111,19 @@ model Lesson {
   videoSource VideoSource?
   sortOrder   Int          @default(0)
   isPublished Boolean      @default(false)
+  deletedAt   DateTime?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
   courseId String
   course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
-  test Test?
+  assessment Assessment?
+  progress   LessonProgress[]
 
   @@index([courseId])
   @@index([sortOrder])
-}
-
-model Test {
-  id           String   @id @default(cuid())
-  title        String
-  passingScore Int      @default(60)
-  timeLimitMin Int?
-  maxAttempts  Int      @default(1)
-  isPublished  Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  lessonId String @unique
-  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-
-  questions    Question[]
-  testAttempts TestAttempt[]
-}
-
-model Question {
-  id        String       @id @default(cuid())
-  text      String
-  type      QuestionType
-  points    Int          @default(1)
-  sortOrder Int          @default(0)
-
-  testId String
-  test   Test   @relation(fields: [testId], references: [id], onDelete: Cascade)
-
-  options        AnswerOption[]
-  attemptAnswers AttemptAnswer[]
-
-  @@index([testId])
-}
-
-model AnswerOption {
-  id        String  @id @default(cuid())
-  text      String
-  isCorrect Boolean @default(false)
-  sortOrder Int     @default(0)
-
-  questionId String
-  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
-}
-
-model TestAttempt {
-  id          String    @id @default(cuid())
-  score       Int       @default(0)
-  maxScore    Int       @default(0)
-  percentage  Float     @default(0)
-  isPassed    Boolean   @default(false)
-  startedAt   DateTime  @default(now())
-  completedAt DateTime?
-
-  studentId String
-  student   User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-
-  testId String
-  test   Test   @relation(fields: [testId], references: [id], onDelete: Cascade)
-
-  answers AttemptAnswer[]
-
-  @@index([studentId])
-  @@index([testId])
-}
-
-model AttemptAnswer {
-  id                String   @id @default(cuid())
-  selectedOptionIds String[]
-  isCorrect         Boolean  @default(false)
-  pointsEarned      Int      @default(0)
-
-  attemptId String
-  attempt   TestAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-
-  questionId String
-  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  @@index([deletedAt])
 }
 
 model AttendanceSession {
@@ -219,54 +155,82 @@ model AttendanceRecord {
   @@index([studentId])
 }
 
-model Exam {
-  id           String   @id @default(cuid())
+model LessonProgress {
+  id           String    @id @default(cuid())
+  completedAt  DateTime?
+  watchTime    Int       @default(0)
+  lastPosition Float     @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  studentId String
+  student   User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  lessonId String
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, lessonId])
+  @@index([studentId])
+  @@index([lessonId])
+}
+
+// =============================================
+// Unified Assessment models
+// =============================================
+
+model Assessment {
+  id           String         @id @default(cuid())
+  type         AssessmentType
   title        String
   description  String?
-  passingScore Int      @default(60)
+  passingScore Int            @default(60)
   timeLimitMin Int?
-  maxAttempts  Int      @default(1)
-  sortOrder    Int      @default(0)
-  isPublished  Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  maxAttempts  Int            @default(1)
+  sortOrder    Int            @default(0)
+  isPublished  Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
   courseId String
   course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
-  questions ExamQuestion[]
-  attempts  ExamAttempt[]
+  lessonId String? @unique
+  lesson   Lesson? @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  questions AssessmentQuestion[]
+  attempts  AssessmentAttempt[]
 
   @@index([courseId])
+  @@index([type])
 }
 
-model ExamQuestion {
+model AssessmentQuestion {
   id        String       @id @default(cuid())
   text      String
   type      QuestionType
   points    Int          @default(1)
   sortOrder Int          @default(0)
 
-  examId String
-  exam   Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  assessmentId String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
 
-  options        ExamAnswerOption[]
-  attemptAnswers ExamAttemptAnswer[]
+  options        AssessmentAnswerOption[]
+  attemptAnswers AssessmentAttemptAnswer[]
 
-  @@index([examId])
+  @@index([assessmentId])
 }
 
-model ExamAnswerOption {
+model AssessmentAnswerOption {
   id        String  @id @default(cuid())
   text      String
   isCorrect Boolean @default(false)
   sortOrder Int     @default(0)
 
   questionId String
-  question   ExamQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  question   AssessmentQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
 }
 
-model ExamAttempt {
+model AssessmentAttempt {
   id          String    @id @default(cuid())
   score       Int       @default(0)
   maxScore    Int       @default(0)
@@ -278,24 +242,46 @@ model ExamAttempt {
   studentId String
   student   User @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-  examId String
-  exam   Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  assessmentId String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
 
-  answers ExamAttemptAnswer[]
+  answers AssessmentAttemptAnswer[]
 
   @@index([studentId])
-  @@index([examId])
+  @@index([assessmentId])
 }
 
-model ExamAttemptAnswer {
+model AssessmentAttemptAnswer {
   id                String   @id @default(cuid())
   selectedOptionIds String[]
   isCorrect         Boolean  @default(false)
   pointsEarned      Int      @default(0)
 
   attemptId String
-  attempt   ExamAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  attempt   AssessmentAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
 
   questionId String
-  question   ExamQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  question   AssessmentQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+// =============================================
+// Audit Log
+// =============================================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  action     String
+  changes    Json?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([action])
 }
