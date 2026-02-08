@@ -2,16 +2,15 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import { Users } from "lucide-react";
+import { AttemptDetailRow } from "@/components/attempt-detail-row";
 
 interface ExamAttemptsPageProps {
   params: Promise<{
@@ -55,6 +54,15 @@ export default async function ExamAttemptsPage({ params }: ExamAttemptsPageProps
           firstName: true,
           lastName: true,
           email: true,
+        },
+      },
+      answers: {
+        include: {
+          question: {
+            include: {
+              options: { orderBy: { sortOrder: "asc" } },
+            },
+          },
         },
       },
     },
@@ -129,6 +137,9 @@ export default async function ExamAttemptsPage({ params }: ExamAttemptsPageProps
             <Users className="h-5 w-5" />
             Попытки студентов
           </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Нажмите на строку, чтобы увидеть ответы на вопросы
+          </p>
         </CardHeader>
         <CardContent>
           {attempts.length === 0 ? (
@@ -150,32 +161,36 @@ export default async function ExamAttemptsPage({ params }: ExamAttemptsPageProps
                 </TableHeader>
                 <TableBody>
                   {attempts.map((attempt) => (
-                    <TableRow key={attempt.id}>
-                      <TableCell className="font-medium">
-                        {attempt.student.lastName} {attempt.student.firstName}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {attempt.student.email}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {attempt.score} / {attempt.maxScore}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {attempt.percentage}%
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge
-                          variant={
-                            attempt.isPassed ? "default" : "destructive"
-                          }
-                        >
-                          {attempt.isPassed ? "Зачтено" : "Не зачтено"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {formatDate(attempt.startedAt)}
-                      </TableCell>
-                    </TableRow>
+                    <AttemptDetailRow
+                      key={attempt.id}
+                      colSpan={6}
+                      attempt={{
+                        id: attempt.id,
+                        score: attempt.score,
+                        maxScore: attempt.maxScore,
+                        percentage: attempt.percentage,
+                        isPassed: attempt.isPassed,
+                        startedAt: formatDate(attempt.startedAt),
+                        studentName: `${attempt.student.lastName} ${attempt.student.firstName}`,
+                        studentEmail: attempt.student.email,
+                        answers: attempt.answers.map((a) => ({
+                          id: a.id,
+                          selectedOptionIds: a.selectedOptionIds,
+                          isCorrect: a.isCorrect,
+                          pointsEarned: a.pointsEarned,
+                          question: {
+                            id: a.question.id,
+                            text: a.question.text,
+                            points: a.question.points,
+                            options: a.question.options.map((o) => ({
+                              id: o.id,
+                              text: o.text,
+                              isCorrect: o.isCorrect,
+                            })),
+                          },
+                        })),
+                      }}
+                    />
                   ))}
                 </TableBody>
               </Table>
