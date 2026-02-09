@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@import "highlight.js/styles/github.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -68,4 +70,18 @@
 body {
   @apply bg-background text-foreground;
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Markdown prose overrides for shadcn/ui */
+.prose table {
+  @apply border-border;
+}
+.prose th {
+  @apply bg-muted;
+}
+.prose pre {
+  @apply bg-muted border border-border;
+}
+.prose code:not(pre code) {
+  @apply bg-muted px-1.5 py-0.5 rounded-md text-sm font-mono;
 }

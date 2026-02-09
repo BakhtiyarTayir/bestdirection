@@ -9,8 +9,8 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { MarkdownEditor } from "@/components/markdown-editor";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/components/ui/use-toast";
 import { Upload, Youtube } from "lucide-react";
@@ -317,11 +317,12 @@ export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
       {/* Конспект урока (обязательно) */}
       <div className="space-y-2">
         <Label htmlFor="content">Конспект урока</Label>
-        <Textarea
+        <MarkdownEditor
           id="content"
-          placeholder="Введите текст конспекта..."
+          value={watch("content")}
+          onChange={(val) => setValue("content", val, { shouldValidate: true })}
+          placeholder="Введите текст конспекта в формате Markdown..."
           rows={15}
-          {...register("content")}
         />
         {errors.content && (
           <p className="text-sm text-destructive">{errors.content.message}</p>

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Edit, FileText, ClipboardList } from "lucide-react";
 import { VideoPlayer } from "@/components/video-player";
 import { MarkCompleteButton } from "@/components/mark-complete-button";
+import { MarkdownRenderer } from "@/components/markdown-renderer";
 
 interface LessonPageProps {
   params: Promise<{ courseId: string; lessonId: string }>;
@@ -87,10 +88,8 @@ export default async function LessonPage({ params }: LessonPageProps) {
 
         {/* Text content (always shown) */}
         {lesson.content ? (
-          <div className="prose prose-sm max-w-none dark:prose-invert">
-            <div className="whitespace-pre-wrap rounded-lg border p-6 bg-card">
-              {lesson.content}
-            </div>
+          <div className="rounded-lg border p-6 bg-card">
+            <MarkdownRenderer content={lesson.content} />
           </div>
         ) : (
           <div className="rounded-lg border p-12 text-center text-muted-foreground">
