@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, type LoginInput } from "@/validators/auth";
@@ -86,6 +87,12 @@ export default function LoginPage() {
               {loading ? "Вход..." : "Войти"}
             </Button>
           </form>
+          <p className="mt-4 text-center text-sm text-muted-foreground">
+            Нет аккаунта?{" "}
+            <Link href="/register" className="text-primary hover:underline">
+              Зарегистрироваться
+            </Link>
+          </p>
         </CardContent>
       </Card>
     </div>
