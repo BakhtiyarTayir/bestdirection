@@ -2,7 +2,10 @@
 
 import { LessonForm } from "@/components/lesson-form";
 import type { LessonFormSubmitData } from "@/components/lesson-form";
+import { LessonTestTab } from "@/components/lesson-test-tab";
+import type { LessonTestTabAssessment } from "@/components/lesson-test-tab";
 import { updateLesson } from "@/actions/lesson-actions";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface EditLessonClientProps {
   courseId: string;
@@ -15,9 +18,10 @@ interface EditLessonClientProps {
     sortOrder: number;
     isPublished: boolean;
   };
+  assessment: LessonTestTabAssessment | null;
 }
 
-export function EditLessonClient({ courseId, lesson }: EditLessonClientProps) {
+export function EditLessonClient({ courseId, lesson, assessment }: EditLessonClientProps) {
   async function handleSubmit(data: LessonFormSubmitData) {
     const result = await updateLesson(lesson.id, {
       title: data.title,
@@ -30,5 +34,18 @@ export function EditLessonClient({ courseId, lesson }: EditLessonClientProps) {
     return result;
   }
 
-  return <LessonForm courseId={courseId} lesson={lesson} onSubmit={handleSubmit} />;
+  return (
+    <Tabs defaultValue="lesson">
+      <TabsList>
+        <TabsTrigger value="lesson">Редактировать урок</TabsTrigger>
+        <TabsTrigger value="test">Тесты</TabsTrigger>
+      </TabsList>
+      <TabsContent value="lesson" className="mt-6">
+        <LessonForm courseId={courseId} lesson={lesson} onSubmit={handleSubmit} />
+      </TabsContent>
+      <TabsContent value="test" className="mt-6">
+        <LessonTestTab courseId={courseId} lessonId={lesson.id} assessment={assessment} />
+      </TabsContent>
+    </Tabs>
+  );
 }

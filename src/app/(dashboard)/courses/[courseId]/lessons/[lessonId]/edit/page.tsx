@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getLessonById } from "@/actions/lesson-actions";
+import { prisma } from "@/lib/prisma";
 import { EditLessonClient } from "./edit-lesson-client";
 
 interface EditLessonPageProps {
@@ -29,11 +30,26 @@ export default async function EditLessonPage({ params }: EditLessonPageProps) {
 
   const lesson = result.data;
 
+  const assessment = await prisma.assessment.findUnique({
+    where: { lessonId },
+    include: {
+      questions: {
+        include: {
+          options: {
+            orderBy: { sortOrder: "asc" },
+          },
+        },
+        orderBy: { sortOrder: "asc" },
+      },
+      _count: {
+        select: { attempts: true },
+      },
+    },
+  });
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Редактировать урок</h1>
-
-      <EditLessonClient courseId={courseId} lesson={lesson} />
+      <EditLessonClient courseId={courseId} lesson={lesson} assessment={assessment} />
     </div>
   );
 }
