@@ -9,6 +9,7 @@ import { Edit, FileText, ClipboardList } from "lucide-react";
 import { VideoPlayer } from "@/components/video-player";
 import { MarkCompleteButton } from "@/components/mark-complete-button";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
+import { LessonTOC } from "@/components/lesson-toc";
 
 interface LessonPageProps {
   params: Promise<{ courseId: string; lessonId: string }>;
@@ -73,29 +74,38 @@ export default async function LessonPage({ params }: LessonPageProps) {
       </div>
 
       {/* Content */}
-      <div className="max-w-4xl space-y-6">
-        {/* Video (if available) */}
-        {lesson.videoUrl && lesson.videoSource && (
-          <div className="rounded-lg overflow-hidden border bg-black">
-            <VideoPlayer
-              url={lesson.videoUrl}
-              source={lesson.videoSource}
-              lessonId={isStudent ? lessonId : undefined}
-              initialPosition={isStudent ? initialPosition : undefined}
-            />
-          </div>
-        )}
+      <div className="flex gap-8">
+        <div className="flex-1 min-w-0 max-w-4xl space-y-6">
+          {/* Video (if available) */}
+          {lesson.videoUrl && lesson.videoSource && (
+            <div className="rounded-lg overflow-hidden border bg-black">
+              <VideoPlayer
+                url={lesson.videoUrl}
+                source={lesson.videoSource}
+                lessonId={isStudent ? lessonId : undefined}
+                initialPosition={isStudent ? initialPosition : undefined}
+              />
+            </div>
+          )}
 
-        {/* Text content (always shown) */}
-        {lesson.content ? (
-          <div className="rounded-lg border p-6 bg-card">
-            <MarkdownRenderer content={lesson.content} />
-          </div>
-        ) : (
-          <div className="rounded-lg border p-12 text-center text-muted-foreground">
-            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Конспект не добавлен</p>
-          </div>
+          {/* Text content (always shown) */}
+          {lesson.content ? (
+            <div className="rounded-lg border p-6 bg-card">
+              <MarkdownRenderer content={lesson.content} />
+            </div>
+          ) : (
+            <div className="rounded-lg border p-12 text-center text-muted-foreground">
+              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Конспект не добавлен</p>
+            </div>
+          )}
+        </div>
+
+        {/* Table of Contents */}
+        {lesson.content && (
+          <aside className="hidden lg:block w-64 shrink-0">
+            <LessonTOC content={lesson.content} />
+          </aside>
         )}
       </div>
 

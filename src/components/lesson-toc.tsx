@@ -1,0 +1,99 @@
+"use client";
+
+import { useEffect, useState, useRef } from "react";
+import { slugify } from "@/lib/slugify";
+import { cn } from "@/lib/utils";
+import { List } from "lucide-react";
+
+interface TocItem {
+  level: number;
+  text: string;
+  id: string;
+}
+
+function parseHeadings(content: string): TocItem[] {
+  const regex = /^(#{2,3})\s+(.+)$/gm;
+  const items: TocItem[] = [];
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    const text = match[2].trim();
+    items.push({
+      level: match[1].length,
+      text,
+      id: slugify(text),
+    });
+  }
+  return items;
+}
+
+interface LessonTOCProps {
+  content: string;
+}
+
+export function LessonTOC({ content }: LessonTOCProps) {
+  const headings = parseHeadings(content);
+  const [activeId, setActiveId] = useState<string>("");
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  useEffect(() => {
+    const elements = headings
+      .map((h) => document.getElementById(h.id))
+      .filter(Boolean) as HTMLElement[];
+
+    if (elements.length === 0) return;
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActiveId(entry.target.id);
+          }
+        }
+      },
+      { rootMargin: "0px 0px -80% 0px", threshold: 0 }
+    );
+
+    for (const el of elements) {
+      observerRef.current.observe(el);
+    }
+
+    return () => {
+      observerRef.current?.disconnect();
+    };
+  }, [headings]);
+
+  if (headings.length < 2) return null;
+
+  return (
+    <nav className="sticky top-6">
+      <div className="flex items-center gap-2 mb-3 text-sm font-medium text-muted-foreground">
+        <List className="h-4 w-4" />
+        Содержание
+      </div>
+      <ul className="space-y-1 text-sm border-l">
+        {headings.map((heading) => (
+          <li key={heading.id}>
+            <a
+              href={`#${heading.id}`}
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById(heading.id)?.scrollIntoView({
+                  behavior: "smooth",
+                });
+              }}
+              className={cn(
+                "block py-1 border-l-2 -ml-px transition-colors",
+                heading.level === 3 ? "pl-6" : "pl-4",
+                activeId === heading.id
+                  ? "border-primary text-foreground font-medium"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground"
+              )}
+            >
+              {heading.text}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
