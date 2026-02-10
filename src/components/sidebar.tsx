@@ -16,6 +16,8 @@ import {
   X,
   Trash2,
   ScrollText,
+  Copy,
+  GitCompare,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Button } from "./ui/button";
@@ -37,6 +39,8 @@ const navItems: NavItem[] = [
   { href: "/dashboard", label: "Дашборд", icon: LayoutDashboard, roles: ["ADMIN", "TEACHER", "STUDENT"] },
   { href: "/courses", label: "Курсы", icon: BookOpen, roles: ["ADMIN", "TEACHER", "STUDENT"] },
   { href: "/users", label: "Пользователи", icon: Users, roles: ["ADMIN"] },
+  { href: "/courses/catalog", label: "Каталог курсов", icon: Copy, roles: ["ADMIN", "TEACHER"] },
+  { href: "/admin/compare", label: "Сравнение курсов", icon: GitCompare, roles: ["ADMIN"] },
   { href: "/trash", label: "Корзина", icon: Trash2, roles: ["ADMIN"] },
   { href: "/audit", label: "Журнал аудита", icon: ScrollText, roles: ["ADMIN"] },
   { href: "/my-results", label: "Мои результаты", icon: FileText, roles: ["STUDENT"] },

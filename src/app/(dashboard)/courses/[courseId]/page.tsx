@@ -21,6 +21,7 @@ import {
   Video,
   GraduationCap,
   CheckCircle2,
+  Copy,
 } from "lucide-react";
 import { CourseProgress } from "@/components/course-progress";
 
@@ -122,6 +123,23 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
           <p className="text-muted-foreground">
             Преподаватель: {course.teacher.firstName} {course.teacher.lastName}
           </p>
+          {course.copiedFrom && (
+            <p className="text-sm text-muted-foreground flex items-center gap-1">
+              <Copy className="h-3.5 w-3.5" />
+              Скопирован из:{" "}
+              <Link
+                href={`/courses/${course.copiedFrom.id}`}
+                className="text-primary hover:underline"
+              >
+                {course.copiedFrom.title}
+              </Link>
+              {course.copiedFrom.teacher && (
+                <span>
+                  ({course.copiedFrom.teacher.firstName} {course.copiedFrom.teacher.lastName})
+                </span>
+              )}
+            </p>
+          )}
           {course.description && (
             <p className="text-sm text-muted-foreground max-w-2xl">
               {course.description}

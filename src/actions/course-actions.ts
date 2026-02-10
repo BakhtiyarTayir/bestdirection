@@ -63,7 +63,14 @@ export async function getCourseById(id: string) {
         teacher: {
           select: { id: true, firstName: true, lastName: true, email: true },
         },
-        _count: { select: { enrollments: true, lessons: true } },
+        copiedFrom: {
+          select: {
+            id: true,
+            title: true,
+            teacher: { select: { firstName: true, lastName: true } },
+          },
+        },
+        _count: { select: { enrollments: true, lessons: true, copies: true } },
       },
     });
 

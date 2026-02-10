@@ -67,6 +67,7 @@ model Course {
   description String?
   coverImage  String?
   isPublished Boolean   @default(false)
+  isTemplate  Boolean   @default(false)
   sortOrder   Int       @default(0)
   deletedAt   DateTime?
   createdAt   DateTime  @default(now())
@@ -75,6 +76,11 @@ model Course {
   teacherId String
   teacher   User   @relation(fields: [teacherId], references: [id])
 
+  copiedFromId String?
+  copiedFrom   Course?   @relation("CourseCopies", fields: [copiedFromId], references: [id], onDelete: SetNull)
+  copies       Course[]  @relation("CourseCopies")
+  copiedAt     DateTime?
+
   lessons            Lesson[]
   enrollments        Enrollment[]
   assessments        Assessment[]
@@ -82,6 +88,8 @@ model Course {
 
   @@index([teacherId])
   @@index([isPublished])
+  @@index([isTemplate])
+  @@index([copiedFromId])
   @@index([deletedAt])
 }
 
