@@ -101,7 +101,7 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
             src={course.coverImage}
             alt={course.title}
             fill
-            className="object-cover"
+            className="object-contain"
             sizes="(max-width: 768px) 100vw, 800px"
             priority
           />
