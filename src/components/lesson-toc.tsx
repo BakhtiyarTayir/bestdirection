@@ -16,7 +16,7 @@ function parseHeadings(content: string): TocItem[] {
   const items: TocItem[] = [];
   let match;
   while ((match = regex.exec(content)) !== null) {
-    const text = match[2].trim();
+    const text = match[2].trim().replace(/\*+/g, "").replace(/_+/g, "").replace(/`/g, "").trim();
     items.push({
       level: match[1].length,
       text,
