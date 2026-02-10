@@ -3,7 +3,8 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
+import Image from "next/image";
 import { createCourseSchema, type CreateCourseInput } from "@/validators/course";
 
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { createCourse, updateCourse } from "@/actions/course-actions";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload, X, ImageIcon } from "lucide-react";
 
 const courseFormSchema = createCourseSchema;
 
@@ -38,6 +39,7 @@ interface CourseData {
   id: string;
   title: string;
   description: string | null;
+  coverImage: string | null;
   teacherId: string;
   isPublished: boolean;
 }
@@ -61,6 +63,10 @@ export function CourseForm({
   const isEditing = !!course;
   const isAdmin = currentUserRole === "ADMIN";
 
+  const [coverImage, setCoverImage] = useState<string | null>(course?.coverImage || null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const {
     register,
     handleSubmit,
@@ -80,6 +86,44 @@ export function CourseForm({
   const selectedTeacherId = watch("teacherId");
   const isPublished = watch("isPublished");
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const res = await fetch("/api/v1/upload/image", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast({
+          title: "Ошибка загрузки",
+          description: data.error || "Не удалось загрузить изображение",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setCoverImage(data.url);
+    } catch {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить изображение",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const onSubmit = (data: CourseFormValues) => {
     startTransition(async () => {
       try {
@@ -87,6 +131,7 @@ export function CourseForm({
           const result = await updateCourse(course.id, {
             title: data.title,
             description: data.description,
+            coverImage: coverImage,
             isPublished: data.isPublished,
           });
           if (result.success) {
@@ -104,6 +149,7 @@ export function CourseForm({
           const result = await createCourse({
             title: data.title,
             description: data.description,
+            coverImage: coverImage || undefined,
             teacherId: data.teacherId,
           });
           if (result.success) {
@@ -164,6 +210,74 @@ export function CourseForm({
             )}
           </div>
 
+          {/* Cover Image */}
+          <div className="space-y-2">
+            <Label>Обложка курса</Label>
+            {coverImage ? (
+              <div className="relative aspect-video w-full max-w-md rounded-lg overflow-hidden border">
+                <Image
+                  src={coverImage}
+                  alt="Обложка курса"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 448px) 100vw, 448px"
+                />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  className="absolute top-2 right-2 h-8 w-8"
+                  onClick={() => setCoverImage(null)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div
+                className="flex flex-col items-center justify-center aspect-video w-full max-w-md rounded-lg border-2 border-dashed border-muted-foreground/25 cursor-pointer hover:border-muted-foreground/50 transition-colors"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <ImageIcon className="h-10 w-10 text-muted-foreground/50 mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  Нажмите для загрузки изображения
+                </p>
+                <p className="text-xs text-muted-foreground/70 mt-1">
+                  JPG, PNG или WebP, до 5 МБ
+                </p>
+              </div>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".jpg,.jpeg,.png,.webp"
+              className="hidden"
+              onChange={handleImageUpload}
+              disabled={uploading}
+            />
+            {coverImage && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+              >
+                {uploading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-2" />
+                )}
+                Заменить обложку
+              </Button>
+            )}
+            {uploading && (
+              <p className="text-sm text-muted-foreground flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Загрузка...
+              </p>
+            )}
+          </div>
+
           {isAdmin && (
             <div className="space-y-2">
               <Label>Преподаватель</Label>
@@ -202,7 +316,7 @@ export function CourseForm({
           )}
 
           <div className="flex gap-4">
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" disabled={isPending || uploading}>
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEditing ? "Сохранить" : "Создать"}
             </Button>

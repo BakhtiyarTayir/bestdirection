@@ -77,6 +77,7 @@ export async function getCourseById(id: string) {
 export async function createCourse(data: {
   title: string;
   description?: string;
+  coverImage?: string;
   teacherId: string;
 }) {
   return withAuth(
@@ -91,6 +92,7 @@ export async function createCourse(data: {
         data: {
           title: data.title,
           description: data.description,
+          coverImage: data.coverImage,
           teacherId: data.teacherId,
         },
         include: {
@@ -121,6 +123,7 @@ export async function updateCourse(
   data: {
     title?: string;
     description?: string;
+    coverImage?: string | null;
     isPublished?: boolean;
     sortOrder?: number;
   }
@@ -141,6 +144,7 @@ export async function updateCourse(
         data: {
           ...(data.title !== undefined && { title: data.title }),
           ...(data.description !== undefined && { description: data.description }),
+          ...(data.coverImage !== undefined && { coverImage: data.coverImage }),
           ...(data.isPublished !== undefined && { isPublished: data.isPublished }),
           ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
         },
@@ -152,7 +156,7 @@ export async function updateCourse(
       });
 
       const changes = computeChanges(
-        { title: existing.title, description: existing.description, isPublished: existing.isPublished, sortOrder: existing.sortOrder },
+        { title: existing.title, description: existing.description, coverImage: existing.coverImage, isPublished: existing.isPublished, sortOrder: existing.sortOrder },
         data
       );
       if (changes) {

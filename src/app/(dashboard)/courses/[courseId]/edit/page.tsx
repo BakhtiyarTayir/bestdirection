@@ -49,6 +49,7 @@ export default async function EditCoursePage({ params }: EditCoursePageProps) {
           id: course.id,
           title: course.title,
           description: course.description,
+          coverImage: course.coverImage,
           teacherId: course.teacherId,
           isPublished: course.isPublished,
         }}
