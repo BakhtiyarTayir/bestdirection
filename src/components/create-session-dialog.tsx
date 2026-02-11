@@ -103,6 +103,7 @@ export function CreateSessionDialog({
             <Input
               id="session-date"
               type="date"
+              lang="ru"
               value={date}
               onChange={(e) => setDate(e.target.value)}
               required

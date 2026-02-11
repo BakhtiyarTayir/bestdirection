@@ -31,6 +31,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { enrollStudent, unenrollStudent } from "@/actions/course-actions";
 import { UserPlus, UserMinus, Loader2 } from "lucide-react";
+import { formatDate } from "@/lib/format-date";
 
 interface Student {
   id: string;
@@ -191,7 +192,7 @@ export function StudentEnrollment({
                   <TableCell>{student.email}</TableCell>
                   <TableCell>{student.phone || "---"}</TableCell>
                   <TableCell>
-                    {new Date(student.enrolledAt).toLocaleDateString("ru-RU")}
+                    {formatDate(student.enrolledAt)}
                   </TableCell>
                   <TableCell>
                     <Button

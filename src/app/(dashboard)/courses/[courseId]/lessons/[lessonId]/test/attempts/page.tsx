@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Users } from "lucide-react";
 import { AttemptDetailRow } from "@/components/attempt-detail-row";
+import { formatDateTime } from "@/lib/format-date";
 
 interface AttemptsPageProps {
   params: Promise<{
@@ -83,16 +84,6 @@ export default async function AttemptsPage({ params }: AttemptsPageProps) {
           attempts.reduce((sum, a) => sum + a.percentage, 0) / totalAttempts
         )
       : 0;
-
-  const formatDate = (date: Date): string => {
-    return date.toLocaleDateString("ru-RU", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
 
   return (
     <div className="space-y-6">
@@ -175,7 +166,7 @@ export default async function AttemptsPage({ params }: AttemptsPageProps) {
                         maxScore: attempt.maxScore,
                         percentage: attempt.percentage,
                         isPassed: attempt.isPassed,
-                        startedAt: formatDate(attempt.startedAt),
+                        startedAt: formatDateTime(attempt.startedAt),
                         studentName: `${attempt.student.lastName} ${attempt.student.firstName}`,
                         studentEmail: attempt.student.email,
                         answers: attempt.answers.map((a) => ({

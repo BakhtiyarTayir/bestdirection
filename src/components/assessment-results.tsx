@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { formatDateTime } from "@/lib/format-date";
 import {
   CheckCircle2,
   XCircle,
@@ -66,16 +67,6 @@ export function AssessmentResults({ attempt, attemptNumber }: AssessmentResultsP
     return `${mins} мин ${secs} сек`;
   };
 
-  const formatDate = (date: Date): string => {
-    return date.toLocaleDateString("ru-RU", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
   return (
     <div className="border rounded-lg overflow-hidden">
       {/* Summary Header */}
@@ -108,7 +99,7 @@ export function AssessmentResults({ attempt, attemptNumber }: AssessmentResultsP
             </div>
           )}
           <span className="text-xs text-muted-foreground">
-            {formatDate(startedAt)}
+            {formatDateTime(startedAt)}
           </span>
           <Button variant="ghost" size="icon" className="h-8 w-8">
             {expanded ? (

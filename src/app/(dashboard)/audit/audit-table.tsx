@@ -19,6 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { formatDateTime } from "@/lib/format-date";
 
 interface AuditLog {
   id: string;
@@ -171,7 +172,7 @@ export function AuditTable({ logs, currentPage, totalPages, entityType, action }
               logs.map((log) => (
                 <TableRow key={log.id}>
                   <TableCell className="whitespace-nowrap text-sm">
-                    {new Date(log.createdAt).toLocaleString("ru-RU")}
+                    {formatDateTime(log.createdAt)}
                   </TableCell>
                   <TableCell className="text-sm">
                     {log.user.firstName} {log.user.lastName}

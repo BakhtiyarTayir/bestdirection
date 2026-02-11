@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { RotateCcw, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { formatDateTime } from "@/lib/format-date";
 
 interface TrashItem {
   id: string;
@@ -54,15 +55,9 @@ function getItemName(item: TrashItem, type: string): string {
   return (item.title as string) ?? "Без названия";
 }
 
-function formatDate(date: Date | null): string {
+function formatDeletedAt(date: Date | null): string {
   if (!date) return "—";
-  return new Date(date).toLocaleDateString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatDateTime(date);
 }
 
 export function TrashTable({ items, type, onRestore, onHardDelete }: TrashTableProps) {
@@ -118,7 +113,7 @@ export function TrashTable({ items, type, onRestore, onHardDelete }: TrashTableP
               {getItemName(item, type)}
             </TableCell>
             <TableCell className="text-muted-foreground">
-              {formatDate(item.deletedAt)}
+              {formatDeletedAt(item.deletedAt)}
             </TableCell>
             <TableCell className="text-right">
               <div className="flex justify-end gap-2">

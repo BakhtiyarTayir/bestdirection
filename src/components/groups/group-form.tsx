@@ -97,11 +97,11 @@ export function GroupForm({ courseId, group }: GroupFormProps) {
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="startDate">Дата начала</Label>
-          <Input id="startDate" type="date" {...register("startDate")} />
+          <Input id="startDate" type="date" lang="ru" {...register("startDate")} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="endDate">Дата окончания</Label>
-          <Input id="endDate" type="date" {...register("endDate")} />
+          <Input id="endDate" type="date" lang="ru" {...register("endDate")} />
         </div>
       </div>
 

@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { FileText, Trophy, CheckCircle2, GraduationCap } from "lucide-react";
+import { formatDateTime } from "@/lib/format-date";
 
 export default async function MyResultsPage() {
   const session = await auth();
@@ -64,16 +65,6 @@ export default async function MyResultsPage() {
           allAttempts.reduce((sum, a) => sum + a.percentage, 0) / totalAttempts
         )
       : 0;
-
-  const formatDate = (date: Date): string => {
-    return date.toLocaleDateString("ru-RU", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
 
   return (
     <div className="space-y-6">
@@ -169,7 +160,7 @@ export default async function MyResultsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
-                        {formatDate(attempt.startedAt)}
+                        {formatDateTime(attempt.startedAt)}
                       </TableCell>
                       <TableCell>
                         {attempt.assessment.lessonId && (
@@ -241,7 +232,7 @@ export default async function MyResultsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
-                        {formatDate(attempt.startedAt)}
+                        {formatDateTime(attempt.startedAt)}
                       </TableCell>
                       <TableCell>
                         <Link

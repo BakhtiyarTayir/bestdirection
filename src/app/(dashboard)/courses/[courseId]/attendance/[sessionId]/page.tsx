@@ -7,18 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "lucide-react";
 import { DeleteSessionButton } from "./delete-session-button";
+import { formatFullDate } from "@/lib/format-date";
 
 interface SessionPageProps {
   params: Promise<{ courseId: string; sessionId: string }>;
-}
-
-function formatFullDate(date: Date | string): string {
-  const d = new Date(date);
-  return d.toLocaleDateString("ru-RU", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
 }
 
 export default async function SessionPage({ params }: SessionPageProps) {
