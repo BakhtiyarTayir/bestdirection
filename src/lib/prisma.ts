@@ -55,7 +55,7 @@ function createPrismaClient() {
           }
           return query(args);
         },
-        async delete({ model, args }) {
+        async delete({ model, args, query }) {
           if (isSoftDeleteModel(model)) {
             const modelKey = model.charAt(0).toLowerCase() + model.slice(1);
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -64,10 +64,9 @@ function createPrismaClient() {
               data: { deletedAt: new Date() },
             });
           }
-          // Для моделей без soft delete — пробрасываем ошибку (не должно вызываться)
-          throw new Error(`Unexpected delete on ${model}`);
+          return query(args);
         },
-        async deleteMany({ model, args }) {
+        async deleteMany({ model, args, query }) {
           if (isSoftDeleteModel(model)) {
             const modelKey = model.charAt(0).toLowerCase() + model.slice(1);
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -76,7 +75,7 @@ function createPrismaClient() {
               data: { deletedAt: new Date() },
             });
           }
-          throw new Error(`Unexpected deleteMany on ${model}`);
+          return query(args);
         },
       },
     },

@@ -1,12 +1,13 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createGroupSchema, type CreateGroupInput } from "@/validators/group";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/ui/date-picker";
 import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
@@ -33,6 +34,7 @@ export function GroupForm({ courseId, group }: GroupFormProps) {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<CreateGroupInput>({
     resolver: zodResolver(createGroupSchema),
@@ -96,12 +98,32 @@ export function GroupForm({ courseId, group }: GroupFormProps) {
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="startDate">Дата начала</Label>
-          <Input id="startDate" type="date" lang="ru" {...register("startDate")} />
+          <Label>Дата начала</Label>
+          <Controller
+            name="startDate"
+            control={control}
+            render={({ field }) => (
+              <DatePicker
+                value={field.value ? new Date(field.value) : undefined}
+                onChange={(date) => field.onChange(date)}
+                placeholder="Выберите дату"
+              />
+            )}
+          />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="endDate">Дата окончания</Label>
-          <Input id="endDate" type="date" lang="ru" {...register("endDate")} />
+          <Label>Дата окончания</Label>
+          <Controller
+            name="endDate"
+            control={control}
+            render={({ field }) => (
+              <DatePicker
+                value={field.value ? new Date(field.value) : undefined}
+                onChange={(date) => field.onChange(date)}
+                placeholder="Выберите дату"
+              />
+            )}
+          />
         </div>
       </div>
 

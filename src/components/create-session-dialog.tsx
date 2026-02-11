@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +28,7 @@ export function CreateSessionDialog({
   onSuccess,
 }: CreateSessionDialogProps) {
   const [open, setOpen] = useState(false);
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState<Date | undefined>();
   const [note, setNote] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -50,7 +50,7 @@ export function CreateSessionDialog({
     try {
       const result = await createAttendanceSession({
         courseId,
-        date: new Date(date),
+        date,
         note: note.trim() || undefined,
       });
 
@@ -59,7 +59,7 @@ export function CreateSessionDialog({
           title: "Сессия создана",
           description: "Сессия посещаемости успешно создана.",
         });
-        setDate("");
+        setDate(undefined);
         setNote("");
         setOpen(false);
         router.refresh();
@@ -99,14 +99,11 @@ export function CreateSessionDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="session-date">Дата занятия</Label>
-            <Input
-              id="session-date"
-              type="date"
-              lang="ru"
+            <Label>Дата занятия</Label>
+            <DatePicker
               value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
+              onChange={setDate}
+              placeholder="Выберите дату"
             />
           </div>
           <div className="space-y-2">
