@@ -3,7 +3,14 @@
 import { useEffect, useState, useRef } from "react";
 import { slugify } from "@/lib/slugify";
 import { cn } from "@/lib/utils";
-import { List } from "lucide-react";
+import { List, ChevronsRight, ChevronsLeft } from "lucide-react";
+import { Button } from "./ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip";
 
 interface TocItem {
   level: number;
@@ -33,6 +40,7 @@ interface LessonTOCProps {
 export function LessonTOC({ content }: LessonTOCProps) {
   const headings = parseHeadings(content);
   const [activeId, setActiveId] = useState<string>("");
+  const [collapsed, setCollapsed] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
   useEffect(() => {
@@ -64,11 +72,43 @@ export function LessonTOC({ content }: LessonTOCProps) {
 
   if (headings.length < 2) return null;
 
+  if (collapsed) {
+    return (
+      <div className="sticky top-6">
+        <TooltipProvider delayDuration={0}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setCollapsed(false)}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">Показать содержание</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+    );
+  }
+
   return (
-    <nav className="sticky top-6">
-      <div className="flex items-center gap-2 mb-3 text-sm font-medium text-muted-foreground">
-        <List className="h-4 w-4" />
-        Содержание
+    <nav className="sticky top-6 w-64">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <List className="h-4 w-4" />
+          Содержание
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          onClick={() => setCollapsed(true)}
+        >
+          <ChevronsRight className="h-3 w-3" />
+        </Button>
       </div>
       <ul className="space-y-1 text-sm border-l">
         {headings.map((heading) => (

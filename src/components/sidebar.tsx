@@ -18,10 +18,18 @@ import {
   ScrollText,
   Copy,
   GitCompare,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Button } from "./ui/button";
 import { useState } from "react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip";
 
 interface SidebarProps {
   role: string;
@@ -50,6 +58,7 @@ const navItems: NavItem[] = [
 export function Sidebar({ role, userName }: SidebarProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   const filteredItems = navItems.filter((item) => item.roles.includes(role));
 
@@ -61,46 +70,72 @@ export function Sidebar({ role, userName }: SidebarProps) {
 
   const sidebarContent = (
     <div className="flex h-full flex-col">
-      <div className="flex h-16 items-center gap-2 border-b px-6">
-        <GraduationCap className="h-6 w-6 text-primary" />
-        <span className="text-lg font-semibold">LMS</span>
+      <div className={cn("flex h-16 items-center gap-2 border-b", collapsed ? "justify-center px-2" : "px-6")}>
+        <GraduationCap className="h-6 w-6 text-primary shrink-0" />
+        {!collapsed && <span className="text-lg font-semibold">LMS</span>}
       </div>
 
-      <nav className="flex-1 space-y-1 p-4">
-        {filteredItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setMobileOpen(false)}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          );
-        })}
+      <nav className={cn("flex-1 space-y-1", collapsed ? "p-2" : "p-4")}>
+        <TooltipProvider delayDuration={0}>
+          {filteredItems.map((item) => {
+            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+            const link = (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg py-2 text-sm transition-colors",
+                  collapsed ? "justify-center px-2" : "px-3",
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <item.icon className="h-4 w-4 shrink-0" />
+                {!collapsed && item.label}
+              </Link>
+            );
+
+            if (collapsed) {
+              return (
+                <Tooltip key={item.href}>
+                  <TooltipTrigger asChild>{link}</TooltipTrigger>
+                  <TooltipContent side="right">{item.label}</TooltipContent>
+                </Tooltip>
+              );
+            }
+
+            return link;
+          })}
+        </TooltipProvider>
       </nav>
 
-      <div className="border-t p-4">
-        <div className="mb-3 px-3">
-          <p className="text-sm font-medium truncate">{userName}</p>
-          <p className="text-xs text-muted-foreground">{roleLabels[role] || role}</p>
-        </div>
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-3 text-muted-foreground"
-          onClick={() => signOut({ callbackUrl: "/login" })}
-        >
-          <LogOut className="h-4 w-4" />
-          Выйти
-        </Button>
+      <div className={cn("border-t", collapsed ? "p-2" : "p-4")}>
+        {!collapsed && (
+          <div className="mb-3 px-3">
+            <p className="text-sm font-medium truncate">{userName}</p>
+            <p className="text-xs text-muted-foreground">{roleLabels[role] || role}</p>
+          </div>
+        )}
+        <TooltipProvider delayDuration={0}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full text-muted-foreground",
+                  collapsed ? "justify-center px-2" : "justify-start gap-3"
+                )}
+                onClick={() => signOut({ callbackUrl: "/login" })}
+              >
+                <LogOut className="h-4 w-4 shrink-0" />
+                {!collapsed && "Выйти"}
+              </Button>
+            </TooltipTrigger>
+            {collapsed && <TooltipContent side="right">Выйти</TooltipContent>}
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </div>
   );
@@ -128,11 +163,26 @@ export function Sidebar({ role, userName }: SidebarProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 w-64 border-r bg-card transition-transform md:translate-x-0 md:static md:z-auto",
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
+          "fixed inset-y-0 left-0 z-40 border-r bg-card transition-all md:translate-x-0 md:static md:z-auto",
+          collapsed ? "w-16" : "w-64",
+          mobileOpen ? "translate-x-0 w-64" : "-translate-x-full"
         )}
       >
         {sidebarContent}
+
+        {/* Desktop collapse toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute -right-3 top-20 hidden md:flex h-6 w-6 rounded-full border bg-card shadow-sm"
+          onClick={() => setCollapsed(!collapsed)}
+        >
+          {collapsed ? (
+            <ChevronsRight className="h-3 w-3" />
+          ) : (
+            <ChevronsLeft className="h-3 w-3" />
+          )}
+        </Button>
       </aside>
     </>
   );
