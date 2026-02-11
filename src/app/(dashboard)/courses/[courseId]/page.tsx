@@ -22,6 +22,7 @@ import {
   GraduationCap,
   CheckCircle2,
   Copy,
+  UsersRound,
 } from "lucide-react";
 import { CourseProgress } from "@/components/course-progress";
 
@@ -229,6 +230,19 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
                   <CardTitle className="text-base">Студенты</CardTitle>
                   <p className="text-sm text-muted-foreground">
                     Управление записью студентов
+                  </p>
+                </div>
+              </CardHeader>
+            </Card>
+          </Link>
+          <Link href={`/courses/${courseId}/groups`}>
+            <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
+              <CardHeader className="flex flex-row items-center gap-3">
+                <UsersRound className="h-5 w-5 text-primary" />
+                <div>
+                  <CardTitle className="text-base">Группы</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Управление группами студентов
                   </p>
                 </div>
               </CardHeader>

@@ -85,6 +85,7 @@ model Course {
   enrollments        Enrollment[]
   assessments        Assessment[]
   attendanceSessions AttendanceSession[]
+  groups             Group[]
 
   @@index([teacherId])
   @@index([isPublished])
@@ -94,15 +95,46 @@ model Course {
 }
 
 model Enrollment {
-  studentId String
-  courseId   String
+  id        String   @id @default(cuid())
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId String
+  student   User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  courseId String
   course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
-  @@id([studentId, courseId])
+  groupId String?
+  group   Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, courseId])
   @@index([courseId])
+  @@index([groupId])
+}
+
+model Group {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  schedule    String?
+  startDate   DateTime?
+  endDate     DateTime?
+  settings    Json?
+  isActive    Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  courseId String
+  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  enrollments        Enrollment[]
+  attendanceSessions AttendanceSession[]
+
+  @@unique([courseId, name])
+  @@index([courseId])
+  @@index([isActive])
 }
 
 model Lesson {
@@ -136,10 +168,14 @@ model AttendanceSession {
   courseId String
   course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
+  groupId String?
+  group   Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
   records AttendanceRecord[]
 
-  @@unique([courseId, date])
+  @@unique([courseId, date, groupId])
   @@index([courseId])
+  @@index([groupId])
 }
 
 model AttendanceRecord {

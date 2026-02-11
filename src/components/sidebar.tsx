@@ -20,6 +20,7 @@ import {
   GitCompare,
   ChevronsLeft,
   ChevronsRight,
+  UsersRound,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Button } from "./ui/button";
@@ -47,6 +48,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard", label: "Дашборд", icon: LayoutDashboard, roles: ["ADMIN", "TEACHER", "STUDENT"] },
   { href: "/courses", label: "Курсы", icon: BookOpen, roles: ["ADMIN", "TEACHER", "STUDENT"] },
   { href: "/users", label: "Пользователи", icon: Users, roles: ["ADMIN"] },
+  { href: "/groups", label: "Группы", icon: UsersRound, roles: ["ADMIN", "TEACHER"] },
   { href: "/courses/catalog", label: "Каталог курсов", icon: Copy, roles: ["ADMIN", "TEACHER"] },
   { href: "/admin/compare", label: "Сравнение курсов", icon: GitCompare, roles: ["ADMIN"] },
   { href: "/trash", label: "Корзина", icon: Trash2, roles: ["ADMIN"] },
