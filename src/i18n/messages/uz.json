@@ -475,7 +475,13 @@
     "testCaseResult": "Test {number}: {description}",
     "inputLabel": "Kirish: ",
     "expectedLabel": "Kutilgan: ",
-    "actualLabel": "Olingan: "
+    "actualLabel": "Olingan: ",
+    "uploadFile": "Fayl yuklash",
+    "dropFileHere": "Faylni shu yerga tashlang",
+    "fileLoaded": "{filename} fayli yuklandi",
+    "fileTypeError": "Ruxsat etilgan kengaytmalar: {extensions}",
+    "fileTooLarge": "Fayl juda katta (maks. 100 KB)",
+    "error": "Xatolik"
   },
 
   "attendance": {

@@ -3,6 +3,7 @@ import { getUserById } from "@/actions/user-actions";
 import { redirect } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { ProfileForm } from "./profile-form";
+import { TelegramLink } from "@/components/telegram-link";
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -19,9 +20,10 @@ function ProfilePageContent({ user }: { user: { id: string; email: string; first
   const t = useTranslations("profile");
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-6">{t("title")}</h1>
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold">{t("title")}</h1>
       <ProfileForm user={user} />
+      <TelegramLink />
     </div>
   );
 }

@@ -487,7 +487,13 @@
     "testCaseResult": "Тест {number}: {description}",
     "inputLabel": "Вход: ",
     "expectedLabel": "Ожидалось: ",
-    "actualLabel": "Получено: "
+    "actualLabel": "Получено: ",
+    "uploadFile": "Загрузить файл",
+    "dropFileHere": "Перетащите файл сюда",
+    "fileLoaded": "Файл {filename} загружен",
+    "fileTypeError": "Допустимые расширения: {extensions}",
+    "fileTooLarge": "Файл слишком большой (макс. 100 КБ)",
+    "error": "Ошибка"
   },
 
   "attendance": {

@@ -81,6 +81,8 @@ model User {
   lessonProgress       LessonProgress[]
   auditLogs            AuditLog[]
   submissions          Submission[]
+  telegramChatId       String?   @unique
+  telegramUsername     String?
 
   @@index([role])
   @@index([isActive])

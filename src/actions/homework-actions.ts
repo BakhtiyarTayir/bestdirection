@@ -401,152 +401,160 @@ export async function getSubmissions(homeworkId: string) {
   );
 }
 
-// ---------- submitSolution ----------
+// ---------- submitSolutionInternal (shared by web + telegram) ----------
+export async function submitSolutionInternal(homeworkId: string, code: string, studentId: string) {
+  // 1. Get homework with test cases
+  const homework = await prisma.homework.findUnique({
+    where: { id: homeworkId },
+    include: {
+      testCases: { orderBy: { sortOrder: "asc" } },
+      lesson: { select: { courseId: true } },
+    },
+  });
+
+  if (!homework) return { success: false as const, error: "homeworkNotFound" };
+  if (!homework.isPublished) return { success: false as const, error: "homeworkNotPublished" };
+  if (!homework.language) return { success: false as const, error: "languageNotSpecified" };
+
+  // Check enrollment
+  const enrollment = await prisma.enrollment.findUnique({
+    where: {
+      studentId_courseId: { studentId, courseId: homework.lesson.courseId },
+    },
+  });
+  if (!enrollment) return { success: false as const, error: "notEnrolled" };
+
+  // 2. Check attempts limit (inside transaction for race condition protection)
+  const isLate = homework.dueDate ? new Date() > homework.dueDate : false;
+  if (isLate && !homework.allowLate) {
+    return { success: false as const, error: "deadlineExpired" };
+  }
+
+  let submission;
+  try {
+    submission = await prisma.$transaction(async (tx) => {
+      const attemptsCount = await tx.submission.count({
+        where: { homeworkId, studentId },
+      });
+
+      if (attemptsCount >= homework.maxAttempts) {
+        throw new Error("MAX_ATTEMPTS_REACHED");
+      }
+
+      return tx.submission.create({
+        data: {
+          code,
+          status: "RUNNING",
+          studentId,
+          homeworkId,
+          attemptNumber: attemptsCount + 1,
+          isLate,
+          penalty: isLate ? homework.latePenalty : 0,
+        },
+      });
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === "MAX_ATTEMPTS_REACHED") {
+      return { success: false as const, error: "maxAttemptsReached" };
+    }
+    throw error;
+  }
+
+  // 3. Run tests
+  const testResults = await runAllTests(
+    homework.language,
+    code,
+    homework.testCases.map((tc) => ({
+      id: tc.id,
+      input: tc.input,
+      expected: tc.expected,
+      points: tc.points,
+    })),
+    homework.timeLimitSec * 1000
+  );
+
+  // 4. Calculate score
+  const totalPoints = testResults.reduce((sum, r) => sum + r.points, 0);
+  const earnedPoints = testResults
+    .filter((r) => r.passed)
+    .reduce((sum, r) => sum + r.points, 0);
+  const percentage = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
+  const hasError = testResults.some((r) => r.error !== null);
+  const allPassed = testResults.every((r) => r.passed);
+
+  let status: "PASSED" | "PARTIAL" | "FAILED" | "ERROR";
+  if (hasError && earnedPoints === 0) {
+    status = "ERROR";
+  } else if (allPassed) {
+    status = "PASSED";
+  } else if (earnedPoints > 0) {
+    status = "PARTIAL";
+  } else {
+    status = "FAILED";
+  }
+
+  const finalScore = isLate
+    ? Math.round(percentage * (1 - homework.latePenalty / 100))
+    : percentage;
+
+  // 5. Save results
+  await prisma.$transaction([
+    prisma.submission.update({
+      where: { id: submission.id },
+      data: {
+        status,
+        score: earnedPoints,
+        maxScore: totalPoints,
+        percentage,
+        finalScore,
+      },
+    }),
+    prisma.testResult.createMany({
+      data: testResults.map((r) => ({
+        submissionId: submission.id,
+        testCaseId: r.testCaseId,
+        passed: r.passed,
+        actualOutput: r.actualOutput,
+        errorOutput: r.error,
+        executionTime: r.executionTime,
+      })),
+    }),
+  ]);
+
+  return {
+    success: true as const,
+    data: {
+      submissionId: submission.id,
+      courseId: homework.lesson.courseId,
+      status,
+      passed: testResults.filter((r) => r.passed).length,
+      total: testResults.length,
+      percentage,
+      finalScore,
+      testResults: testResults.map((r) => ({
+        testCaseId: r.testCaseId,
+        passed: r.passed,
+        actualOutput: r.actualOutput,
+        error: r.error,
+        executionTime: r.executionTime,
+      })),
+    },
+  };
+}
+
+// ---------- submitSolution (web) ----------
 export async function submitSolution(homeworkId: string, code: string) {
   return withAuth(async (session) => {
     if (session.user.role !== "STUDENT") {
       return { success: false, error: "onlyStudentsCanSubmit" };
     }
 
-    const studentId = session.user.id;
+    const result = await submitSolutionInternal(homeworkId, code, session.user.id);
 
-    // 1. Get homework with test cases
-    const homework = await prisma.homework.findUnique({
-      where: { id: homeworkId },
-      include: {
-        testCases: { orderBy: { sortOrder: "asc" } },
-        lesson: { select: { courseId: true } },
-      },
-    });
-
-    if (!homework) return { success: false, error: "homeworkNotFound" };
-    if (!homework.isPublished) return { success: false, error: "homeworkNotPublished" };
-    if (!homework.language) return { success: false, error: "languageNotSpecified" };
-
-    // Check enrollment
-    const enrollment = await prisma.enrollment.findUnique({
-      where: {
-        studentId_courseId: { studentId, courseId: homework.lesson.courseId },
-      },
-    });
-    if (!enrollment) return { success: false, error: "notEnrolled" };
-
-    // 2. Check attempts limit (inside transaction for race condition protection)
-    const isLate = homework.dueDate ? new Date() > homework.dueDate : false;
-    if (isLate && !homework.allowLate) {
-      return { success: false, error: "deadlineExpired" };
+    if (result.success) {
+      revalidatePath(`/courses/${result.data.courseId}`);
     }
 
-    let submission;
-    try {
-      submission = await prisma.$transaction(async (tx) => {
-        const attemptsCount = await tx.submission.count({
-          where: { homeworkId, studentId },
-        });
-
-        if (attemptsCount >= homework.maxAttempts) {
-          throw new Error("MAX_ATTEMPTS_REACHED");
-        }
-
-        return tx.submission.create({
-          data: {
-            code,
-            status: "RUNNING",
-            studentId,
-            homeworkId,
-            attemptNumber: attemptsCount + 1,
-            isLate,
-            penalty: isLate ? homework.latePenalty : 0,
-          },
-        });
-      });
-    } catch (error) {
-      if (error instanceof Error && error.message === "MAX_ATTEMPTS_REACHED") {
-        return { success: false, error: "maxAttemptsReached" };
-      }
-      throw error;
-    }
-
-    // 3. Run tests
-    const testResults = await runAllTests(
-      homework.language,
-      code,
-      homework.testCases.map((tc) => ({
-        id: tc.id,
-        input: tc.input,
-        expected: tc.expected,
-        points: tc.points,
-      })),
-      homework.timeLimitSec * 1000
-    );
-
-    // 4. Calculate score
-    const totalPoints = testResults.reduce((sum, r) => sum + r.points, 0);
-    const earnedPoints = testResults
-      .filter((r) => r.passed)
-      .reduce((sum, r) => sum + r.points, 0);
-    const percentage = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
-    const hasError = testResults.some((r) => r.error !== null);
-    const allPassed = testResults.every((r) => r.passed);
-
-    let status: "PASSED" | "PARTIAL" | "FAILED" | "ERROR";
-    if (hasError && earnedPoints === 0) {
-      status = "ERROR";
-    } else if (allPassed) {
-      status = "PASSED";
-    } else if (earnedPoints > 0) {
-      status = "PARTIAL";
-    } else {
-      status = "FAILED";
-    }
-
-    const finalScore = isLate
-      ? Math.round(percentage * (1 - homework.latePenalty / 100))
-      : percentage;
-
-    // 5. Save results
-    await prisma.$transaction([
-      prisma.submission.update({
-        where: { id: submission.id },
-        data: {
-          status,
-          score: earnedPoints,
-          maxScore: totalPoints,
-          percentage,
-          finalScore,
-        },
-      }),
-      prisma.testResult.createMany({
-        data: testResults.map((r) => ({
-          submissionId: submission.id,
-          testCaseId: r.testCaseId,
-          passed: r.passed,
-          actualOutput: r.actualOutput,
-          errorOutput: r.error,
-          executionTime: r.executionTime,
-        })),
-      }),
-    ]);
-
-    revalidatePath(`/courses/${homework.lesson.courseId}`);
-
-    return {
-      success: true,
-      data: {
-        submissionId: submission.id,
-        status,
-        passed: testResults.filter((r) => r.passed).length,
-        total: testResults.length,
-        percentage,
-        finalScore,
-        testResults: testResults.map((r) => ({
-          testCaseId: r.testCaseId,
-          passed: r.passed,
-          actualOutput: r.actualOutput,
-          error: r.error,
-          executionTime: r.executionTime,
-        })),
-      },
-    };
+    return result;
   });
 }
