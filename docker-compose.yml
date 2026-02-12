@@ -14,6 +14,21 @@ services:
       timeout: 5s
       retries: 5
 
+  piston:
+    image: ghcr.io/engineer-man/piston
+    restart: unless-stopped
+    privileged: true
+    ports:
+      - "127.0.0.1:2000:2000"
+    environment:
+      PISTON_RUN_TIMEOUT: 30000
+      PISTON_COMPILE_TIMEOUT: 30000
+      PISTON_OUTPUT_MAX_SIZE: 65536
+    volumes:
+      - piston-packages:/piston/packages
+    tmpfs:
+      - /piston/jobs:exec,size=256m
+
   app:
     build: .
     restart: unless-stopped
@@ -24,12 +39,16 @@ services:
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-https://course.uportal.uz}
       AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-true}
+      PISTON_API_URL: http://piston:2000/api/v2
     volumes:
       - uploads:/app/public/uploads
     depends_on:
       db:
         condition: service_healthy
+      piston:
+        condition: service_started
 
 volumes:
   pgdata:
   uploads:
+  piston-packages:

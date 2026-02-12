@@ -97,12 +97,24 @@ export function HomeworkView({
   const { toast } = useToast();
   const [submissions, setSubmissions] = useState(initialSubmissions);
   const [attemptsRemaining, setAttemptsRemaining] = useState(initialAttemptsRemaining);
+  const [activeTab, setActiveTab] = useState("task");
   const [lastResult, setLastResult] = useState<{
     results: { testCaseId: string; passed: boolean; actualOutput: string | null; error: string | null; executionTime: number }[];
     percentage: number;
     finalScore: number;
     status: string;
   } | null>(null);
+
+  // Collect unique error output from test results
+  const errorOutput = lastResult
+    ? [...new Set(
+        lastResult.results
+          .map((r) => r.error)
+          .filter((e): e is string => e !== null)
+      )].join("\n\n") || null
+    : null;
+
+  const hasErrors = lastResult?.status === "ERROR" || lastResult?.status === "FAILED";
 
   const handleSubmit = async (code: string) => {
     const result = await submitSolution(homework.id, code);
@@ -124,6 +136,12 @@ export function HomeworkView({
       status: data.status,
     });
     setAttemptsRemaining((prev) => prev - 1);
+
+    // Auto-switch to "Вывод" tab when there are errors
+    const hasErr = data.testResults.some((r: { error: string | null }) => r.error !== null);
+    if (hasErr && data.status !== "PASSED") {
+      setActiveTab("output");
+    }
 
     if (data.status === "PASSED") {
       toast({ title: "Все тесты пройдены!", description: `Результат: ${data.percentage}%` });
@@ -209,11 +227,14 @@ export function HomeworkView({
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="task">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="task">Задание</TabsTrigger>
+          <TabsTrigger value="task">Редактор</TabsTrigger>
+          <TabsTrigger value="output" className={errorOutput ? "text-red-600" : ""}>
+            Вывод
+          </TabsTrigger>
           <TabsTrigger value="tests">
-            Примеры тестов ({homework.testCases.length})
+            Тесты ({homework.testCases.length})
           </TabsTrigger>
           <TabsTrigger value="history">
             История ({submissions.length})
@@ -246,6 +267,51 @@ export function HomeworkView({
               penalty={homework.latePenalty}
             />
           )}
+        </TabsContent>
+
+        <TabsContent value="output" className="mt-4">
+          <Card>
+            <CardContent className="pt-6">
+              {!lastResult ? (
+                <p className="text-muted-foreground text-center py-8">
+                  Отправьте решение, чтобы увидеть вывод
+                </p>
+              ) : errorOutput ? (
+                <div className="space-y-4">
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-900 dark:bg-yellow-950/50 dark:border-yellow-900 dark:text-yellow-200">
+                    <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm">
+                      В вашем коде есть ошибки. Прочтите внимательно вывод тестов, найдите и попробуйте исправить их.
+                    </p>
+                  </div>
+                  <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm font-mono whitespace-pre-wrap leading-relaxed">
+                    {errorOutput}
+                  </pre>
+                </div>
+              ) : lastResult.status === "PASSED" ? (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-green-800 dark:bg-green-950/50 dark:border-green-900 dark:text-green-200">
+                  <p className="text-sm">Все тесты пройдены успешно! Ошибок нет.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/50 dark:border-red-900 dark:text-red-200">
+                    <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm">
+                      Некоторые тесты не пройдены. Проверьте вкладку «Тесты» для деталей.
+                    </p>
+                  </div>
+                  {lastResult.results
+                    .filter((r) => !r.passed && r.actualOutput)
+                    .map((r, i) => (
+                      <div key={i} className="text-sm">
+                        <span className="text-muted-foreground">Тест {i + 1} — получено:</span>
+                        <pre className="bg-muted p-2 rounded mt-1 text-xs">{r.actualOutput}</pre>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="tests" className="mt-4">
