@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,18 +27,20 @@ import { addAssessmentQuestion, updateAssessmentQuestion } from "@/actions/asses
 import { z } from "zod";
 import { Loader2, Plus, Pencil, Trash2 } from "lucide-react";
 
-const clientQuestionSchema = z.object({
-  text: z.string().min(1, "Текст вопроса обязателен"),
-  type: z.enum(["SINGLE_CHOICE", "MULTIPLE_CHOICE"]),
-  points: z.number().int("Баллы должны быть целым числом").min(1, "Минимум 1 балл"),
-  sortOrder: z.number().int().min(0),
-  assessmentId: z.string().min(1, "ID мероприятия обязателен"),
-  options: z.array(z.object({
-    text: z.string().min(1, "Текст варианта ответа обязателен"),
-    isCorrect: z.boolean(),
+function createQuestionSchema(tValidation: (key: string) => string) {
+  return z.object({
+    text: z.string().min(1, tValidation("questionTextRequired")),
+    type: z.enum(["SINGLE_CHOICE", "MULTIPLE_CHOICE"]),
+    points: z.number().int(tValidation("pointsInteger")).min(1, tValidation("minOnePoint")),
     sortOrder: z.number().int().min(0),
-  })).min(2, "Минимум 2 варианта ответа"),
-});
+    assessmentId: z.string().min(1),
+    options: z.array(z.object({
+      text: z.string().min(1, tValidation("answerOptionRequired")),
+      isCorrect: z.boolean(),
+      sortOrder: z.number().int().min(0),
+    })).min(2, tValidation("minTwoOptions")),
+  });
+}
 
 interface OptionInput {
   id?: string;
@@ -63,6 +66,10 @@ export function AssessmentQuestionForm({ assessmentId, question }: AssessmentQue
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
+  const t = useTranslations("assessments");
+  const tCommon = useTranslations("common");
+  const tErrors = useTranslations("errors");
+  const tValidation = useTranslations("validation");
 
   const [text, setText] = useState(question?.text || "");
   const [type, setType] = useState<"SINGLE_CHOICE" | "MULTIPLE_CHOICE">(
@@ -103,8 +110,8 @@ export function AssessmentQuestionForm({ assessmentId, question }: AssessmentQue
   const removeOption = (index: number) => {
     if (options.length <= 2) {
       toast({
-        title: "Ошибка",
-        description: "Минимум 2 варианта ответа",
+        title: tErrors("error"),
+        description: t("minTwoOptions"),
         variant: "destructive",
       });
       return;
@@ -142,6 +149,7 @@ export function AssessmentQuestionForm({ assessmentId, question }: AssessmentQue
       sortOrder: i,
     }));
 
+    const clientQuestionSchema = createQuestionSchema(tValidation);
     const validationResult = clientQuestionSchema.safeParse({
       text: text.trim(),
       type,
@@ -154,7 +162,7 @@ export function AssessmentQuestionForm({ assessmentId, question }: AssessmentQue
     if (!validationResult.success) {
       const firstError = validationResult.error.errors[0];
       toast({
-        title: "Ошибка",
+        title: tErrors("error"),
         description: firstError.message,
         variant: "destructive",
       });
@@ -163,8 +171,8 @@ export function AssessmentQuestionForm({ assessmentId, question }: AssessmentQue
 
     if (!options.some((o) => o.isCorrect)) {
       toast({
-        title: "Ошибка",
-        description: "Отметьте хотя бы один правильный ответ",
+        title: tErrors("error"),
+        description: t("markCorrectAnswer"),
         variant: "destructive",
       });
       return;
@@ -182,13 +190,13 @@ export function AssessmentQuestionForm({ assessmentId, question }: AssessmentQue
           });
 
           if (result.success) {
-            toast({ title: "Успешно", description: "Вопрос обновлен" });
+            toast({ title: tCommon("save"), description: t("questionUpdated") });
             setOpen(false);
             router.refresh();
           } else {
             toast({
-              title: "Ошибка",
-              description: result.error || "Не удалось обновить вопрос",
+              title: tErrors("error"),
+              description: result.error || t("questionUpdateFailed"),
               variant: "destructive",
             });
           }
@@ -203,22 +211,22 @@ export function AssessmentQuestionForm({ assessmentId, question }: AssessmentQue
           });
 
           if (result.success) {
-            toast({ title: "Успешно", description: "Вопрос добавлен" });
+            toast({ title: tCommon("save"), description: t("questionAdded") });
             resetForm();
             setOpen(false);
             router.refresh();
           } else {
             toast({
-              title: "Ошибка",
-              description: result.error || "Не удалось добавить вопрос",
+              title: tErrors("error"),
+              description: result.error || t("questionAddFailed"),
               variant: "destructive",
             });
           }
         }
       } catch {
         toast({
-          title: "Ошибка",
-          description: "Произошла непредвиденная ошибка",
+          title: tErrors("error"),
+          description: tErrors("unexpected"),
           variant: "destructive",
         });
       }
@@ -241,25 +249,25 @@ export function AssessmentQuestionForm({ assessmentId, question }: AssessmentQue
         ) : (
           <Button size="sm">
             <Plus className="h-4 w-4 mr-2" />
-            Добавить вопрос
+            {t("addQuestion")}
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {question ? "Редактировать вопрос" : "Добавить вопрос"}
+            {question ? t("editQuestion") : t("addQuestion")}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="aq-text">Текст вопроса</Label>
+            <Label htmlFor="aq-text">{t("questionText")}</Label>
             <Textarea
               id="aq-text"
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Введите текст вопроса..."
+              placeholder={t("questionTextPlaceholder")}
               rows={3}
               disabled={isPending}
             />
@@ -267,7 +275,7 @@ export function AssessmentQuestionForm({ assessmentId, question }: AssessmentQue
 
           <div className="grid gap-4 grid-cols-2">
             <div className="space-y-2">
-              <Label>Тип вопроса</Label>
+              <Label>{t("questionType")}</Label>
               <Select
                 value={type}
                 onValueChange={(value: "SINGLE_CHOICE" | "MULTIPLE_CHOICE") => {
@@ -288,14 +296,14 @@ export function AssessmentQuestionForm({ assessmentId, question }: AssessmentQue
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="SINGLE_CHOICE">Один ответ</SelectItem>
-                  <SelectItem value="MULTIPLE_CHOICE">Несколько ответов</SelectItem>
+                  <SelectItem value="SINGLE_CHOICE">{t("singleChoice")}</SelectItem>
+                  <SelectItem value="MULTIPLE_CHOICE">{t("multipleChoice")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="aq-points">Баллы</Label>
+              <Label htmlFor="aq-points">{tCommon("points")}</Label>
               <Input
                 id="aq-points"
                 type="number"
@@ -309,7 +317,7 @@ export function AssessmentQuestionForm({ assessmentId, question }: AssessmentQue
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label>Варианты ответа</Label>
+              <Label>{t("answerOptions")}</Label>
               <Button
                 type="button"
                 variant="outline"
@@ -318,7 +326,7 @@ export function AssessmentQuestionForm({ assessmentId, question }: AssessmentQue
                 disabled={isPending}
               >
                 <Plus className="h-3 w-3 mr-1" />
-                Добавить
+                {t("addOption")}
               </Button>
             </div>
 
@@ -335,7 +343,7 @@ export function AssessmentQuestionForm({ assessmentId, question }: AssessmentQue
                 <Input
                   value={option.text}
                   onChange={(e) => updateOptionText(index, e.target.value)}
-                  placeholder={`Вариант ${index + 1}`}
+                  placeholder={t("optionPlaceholder", { number: index + 1 })}
                   disabled={isPending}
                   className="flex-1"
                 />
@@ -353,10 +361,10 @@ export function AssessmentQuestionForm({ assessmentId, question }: AssessmentQue
             ))}
 
             <p className="text-xs text-muted-foreground">
-              Отметьте правильные варианты ответа галочкой слева.
+              {t("markCorrectHint")}
               {type === "SINGLE_CHOICE"
-                ? " Для вопроса с одним ответом можно выбрать только один правильный вариант."
-                : " Для вопроса с несколькими ответами можно выбрать несколько правильных вариантов."}
+                ? ` ${t("singleCorrectHint")}`
+                : ` ${t("multipleCorrectHint")}`}
             </p>
           </div>
 
@@ -367,13 +375,13 @@ export function AssessmentQuestionForm({ assessmentId, question }: AssessmentQue
               onClick={() => setOpen(false)}
               disabled={isPending}
             >
-              Отмена
+              {tCommon("cancel")}
             </Button>
             <Button type="submit" disabled={isPending}>
               {isPending ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : null}
-              {question ? "Сохранить" : "Добавить"}
+              {question ? tCommon("save") : tCommon("add")}
             </Button>
           </div>
         </form>

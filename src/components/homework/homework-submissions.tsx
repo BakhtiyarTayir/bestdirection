@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime } from "@/lib/format-date";
+import { useTranslations } from "next-intl";
 
 interface Submission {
   id: string;
@@ -46,22 +47,24 @@ const statusColors: Record<string, string> = {
   PENDING: "bg-gray-100 text-gray-800 dark:bg-gray-950 dark:text-gray-200",
 };
 
-const statusLabels: Record<string, string> = {
-  PASSED: "Пройдено",
-  PARTIAL: "Частично",
-  FAILED: "Не пройдено",
-  ERROR: "Ошибка",
-  RUNNING: "Выполняется",
-  PENDING: "В очереди",
-};
-
 export function HomeworkSubmissions({ submissions }: HomeworkSubmissionsProps) {
+  const t = useTranslations("homework");
+
+  const statusLabels: Record<string, string> = {
+    PASSED: t("statusPassed"),
+    PARTIAL: t("statusPartial"),
+    FAILED: t("statusFailed"),
+    ERROR: t("statusError"),
+    RUNNING: t("statusRunning"),
+    PENDING: t("statusPending"),
+  };
+
   if (submissions.length === 0) {
     return (
       <Card>
         <CardContent className="pt-6">
           <p className="text-muted-foreground text-center py-4">
-            Пока нет решений от студентов
+            {t("noSubmissionsFromStudents")}
           </p>
         </CardContent>
       </Card>
@@ -80,7 +83,7 @@ export function HomeworkSubmissions({ submissions }: HomeworkSubmissionsProps) {
     <Card>
       <CardHeader>
         <CardTitle className="text-base">
-          Решения студентов ({byStudent.size} студентов, {submissions.length} попыток)
+          {t("studentSubmissions", { students: byStudent.size, attempts: submissions.length })}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -101,16 +104,15 @@ export function HomeworkSubmissions({ submissions }: HomeworkSubmissionsProps) {
                   </Badge>
                 </div>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <span>Попыток: {subs.length}</span>
+                  <span>{t("attemptsCount", { count: subs.length })}</span>
                   <span>
-                    Лучший результат: {best.percentage}%
-                    {best.isLate ? ` (штраф -${best.penalty}%, итого ${best.finalScore}%)` : ""}
+                    {t("bestResult", { percent: best.percentage })}
+                    {best.isLate ? ` ${t("penaltyDetail", { penalty: best.penalty, finalScore: best.finalScore })}` : ""}
                   </span>
                   <span>
-                    Тесты: {best.testResults.filter((r) => r.passed).length}/
-                    {best.testResults.length}
+                    {t("testsPassedCount", { passed: best.testResults.filter((r) => r.passed).length, total: best.testResults.length })}
                   </span>
-                  <span>Последняя: {formatDateTime(new Date(latest.createdAt))}</span>
+                  <span>{t("lastSubmission", { date: formatDateTime(new Date(latest.createdAt)) })}</span>
                 </div>
               </div>
             );

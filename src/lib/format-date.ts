@@ -1,5 +1,5 @@
 /**
- * Форматирует дату в формат ДД.ММ.ГГГГ
+ * Formats date as DD.MM.YYYY
  */
 export function formatDate(date: Date | string): string {
   const d = new Date(date);
@@ -11,7 +11,7 @@ export function formatDate(date: Date | string): string {
 }
 
 /**
- * Форматирует дату и время в формат ДД.ММ.ГГГГ, ЧЧ:ММ
+ * Formats date and time as DD.MM.YYYY, HH:MM
  */
 export function formatDateTime(date: Date | string): string {
   const d = new Date(date);
@@ -25,7 +25,7 @@ export function formatDateTime(date: Date | string): string {
 }
 
 /**
- * Форматирует дату с полным названием месяца: 14 марта 2026
+ * Formats date with full month name: 14 March 2026
  */
 export function formatFullDate(date: Date | string): string {
   const d = new Date(date);

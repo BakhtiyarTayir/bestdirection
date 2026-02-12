@@ -10,7 +10,7 @@ export type QuestionType = z.infer<typeof QuestionTypeEnum>;
 
 export const createAssessmentSchema = z.object({
   type: AssessmentTypeEnum,
-  title: z.string().min(1, "Название обязательно").max(200),
+  title: z.string().min(1, "titleRequired").max(200),
   description: z.string().max(2000).optional(),
   passingScore: z.number().int().min(0).max(100).default(60),
   timeLimitMin: z.number().int().min(1).max(600).nullable().optional(),
@@ -33,18 +33,18 @@ export type UpdateAssessmentInput = z.infer<typeof updateAssessmentSchema>;
 // ---------- Question ----------
 
 export const assessmentQuestionSchema = z.object({
-  text: z.string().min(1, "Текст вопроса обязателен").max(2000),
+  text: z.string().min(1, "questionTextRequired").max(2000),
   type: QuestionTypeEnum,
   points: z.number().int().min(1).default(1),
   sortOrder: z.number().int().default(0),
   options: z
     .array(
       z.object({
-        text: z.string().min(1, "Текст ответа обязателен").max(1000),
+        text: z.string().min(1, "answerTextRequired").max(1000),
         isCorrect: z.boolean().default(false),
       })
     )
-    .min(2, "Минимум 2 варианта ответа"),
+    .min(2, "minTwoOptions"),
 });
 
 export type AssessmentQuestionInput = z.infer<typeof assessmentQuestionSchema>;

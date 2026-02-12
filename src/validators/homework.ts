@@ -21,8 +21,8 @@ export const testCaseSchema = z.object({
 export type TestCaseInput = z.infer<typeof testCaseSchema>;
 
 export const createHomeworkSchema = z.object({
-  title: z.string().min(1, "Название обязательно").max(200),
-  description: z.string().min(1, "Описание обязательно").max(5000),
+  title: z.string().min(1, "homeworkTitleRequired").max(200),
+  description: z.string().min(1, "homeworkDescriptionRequired").max(5000),
   language: ProgrammingLanguageEnum,
   starterCode: z.string().optional(),
   solutionCode: z.string().optional(),
@@ -32,7 +32,7 @@ export const createHomeworkSchema = z.object({
   dueDate: z.date().nullable().optional(),
   allowLate: z.boolean().default(true),
   latePenalty: z.number().int().min(0).max(100).default(20),
-  testCases: z.array(testCaseSchema).min(1, "Минимум 1 тест-кейс"),
+  testCases: z.array(testCaseSchema).min(1, "minOneTestCase"),
 });
 
 export type CreateHomeworkInput = z.infer<typeof createHomeworkSchema>;

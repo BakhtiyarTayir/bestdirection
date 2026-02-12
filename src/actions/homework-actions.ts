@@ -17,9 +17,9 @@ async function validateLessonOwnership(
     where: { id: lessonId },
     include: { course: { select: { id: true, teacherId: true } } },
   });
-  if (!lesson) return { success: false as const, error: "Урок не найден" };
+  if (!lesson) return { success: false as const, error: "lessonNotFound" };
   if (role === "TEACHER" && lesson.course.teacherId !== userId) {
-    return { success: false as const, error: "Вы можете управлять только своими курсами" };
+    return { success: false as const, error: "onlyOwnCourses" };
   }
   return { success: true as const, lesson };
 }
@@ -38,9 +38,9 @@ async function validateHomeworkOwnership(
       },
     },
   });
-  if (!homework) return { success: false as const, error: "Задание не найдено" };
+  if (!homework) return { success: false as const, error: "homeworkNotFound" };
   if (role === "TEACHER" && homework.lesson.course.teacherId !== userId) {
-    return { success: false as const, error: "Вы можете управлять только своими заданиями" };
+    return { success: false as const, error: "onlyOwnCourses" };
   }
   return { success: true as const, homework };
 }
@@ -312,7 +312,7 @@ export async function getHomeworkForStudent(homeworkId: string) {
       },
     });
 
-    if (!homework) return { success: false, error: "Задание не найдено" };
+    if (!homework) return { success: false, error: "homeworkNotFound" };
 
     const submissions = await prisma.submission.findMany({
       where: { homeworkId, studentId: session.user.id },
@@ -363,7 +363,7 @@ export async function getHomeworkForTeacher(homeworkId: string) {
         },
       });
 
-      if (!homework) return { success: false, error: "Задание не найдено" };
+      if (!homework) return { success: false, error: "homeworkNotFound" };
 
       return { success: true, data: homework };
     },
@@ -405,7 +405,7 @@ export async function getSubmissions(homeworkId: string) {
 export async function submitSolution(homeworkId: string, code: string) {
   return withAuth(async (session) => {
     if (session.user.role !== "STUDENT") {
-      return { success: false, error: "Только студенты могут отправлять решения" };
+      return { success: false, error: "onlyStudentsCanSubmit" };
     }
 
     const studentId = session.user.id;
@@ -419,9 +419,9 @@ export async function submitSolution(homeworkId: string, code: string) {
       },
     });
 
-    if (!homework) return { success: false, error: "Задание не найдено" };
-    if (!homework.isPublished) return { success: false, error: "Задание не опубликовано" };
-    if (!homework.language) return { success: false, error: "Язык программирования не указан" };
+    if (!homework) return { success: false, error: "homeworkNotFound" };
+    if (!homework.isPublished) return { success: false, error: "homeworkNotPublished" };
+    if (!homework.language) return { success: false, error: "languageNotSpecified" };
 
     // Check enrollment
     const enrollment = await prisma.enrollment.findUnique({
@@ -429,12 +429,12 @@ export async function submitSolution(homeworkId: string, code: string) {
         studentId_courseId: { studentId, courseId: homework.lesson.courseId },
       },
     });
-    if (!enrollment) return { success: false, error: "Вы не записаны на этот курс" };
+    if (!enrollment) return { success: false, error: "notEnrolled" };
 
     // 2. Check attempts limit (inside transaction for race condition protection)
     const isLate = homework.dueDate ? new Date() > homework.dueDate : false;
     if (isLate && !homework.allowLate) {
-      return { success: false, error: "Дедлайн истёк" };
+      return { success: false, error: "deadlineExpired" };
     }
 
     let submission;
@@ -462,7 +462,7 @@ export async function submitSolution(homeworkId: string, code: string) {
       });
     } catch (error) {
       if (error instanceof Error && error.message === "MAX_ATTEMPTS_REACHED") {
-        return { success: false, error: "Достигнут лимит попыток" };
+        return { success: false, error: "maxAttemptsReached" };
       }
       throw error;
     }

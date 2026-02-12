@@ -3,6 +3,7 @@
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -23,9 +24,11 @@ interface DatePickerProps {
 export function DatePicker({
   value,
   onChange,
-  placeholder = "Выберите дату",
+  placeholder,
   id,
 }: DatePickerProps) {
+  const t = useTranslations("datePicker");
+  const resolvedPlaceholder = placeholder || t("selectDate");
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -38,7 +41,7 @@ export function DatePicker({
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {value ? format(value, "dd.MM.yyyy", { locale: ru }) : placeholder}
+          {value ? format(value, "dd.MM.yyyy", { locale: ru }) : resolvedPlaceholder}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">

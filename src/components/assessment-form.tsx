@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,9 +32,11 @@ export function AssessmentForm({ type, courseId, lessonId, assessment }: Assessm
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
+  const t = useTranslations("assessments");
+  const tCommon = useTranslations("common");
+  const tErrors = useTranslations("errors");
 
   const isTest = type === "TEST";
-  const label = isTest ? "тест" : "экзамен";
 
   const [title, setTitle] = useState(assessment?.title || "");
   const [description, setDescription] = useState(assessment?.description || "");
@@ -49,8 +52,8 @@ export function AssessmentForm({ type, courseId, lessonId, assessment }: Assessm
 
     if (!title.trim()) {
       toast({
-        title: "Ошибка",
-        description: `Введите название ${isTest ? "теста" : "экзамена"}`,
+        title: tErrors("error"),
+        description: isTest ? t("enterTestTitle") : t("enterExamTitle"),
         variant: "destructive",
       });
       return;
@@ -70,14 +73,14 @@ export function AssessmentForm({ type, courseId, lessonId, assessment }: Assessm
 
           if (result.success) {
             toast({
-              title: "Успешно",
-              description: `Настройки ${isTest ? "теста" : "экзамена"} обновлены`,
+              title: tCommon("save"),
+              description: isTest ? t("testUpdated") : t("examUpdated"),
             });
             router.refresh();
           } else {
             toast({
-              title: "Ошибка",
-              description: result.error || `Не удалось обновить ${label}`,
+              title: tErrors("error"),
+              description: result.error || (isTest ? t("testUpdateFailed") : t("examUpdateFailed")),
               variant: "destructive",
             });
           }
@@ -96,8 +99,8 @@ export function AssessmentForm({ type, courseId, lessonId, assessment }: Assessm
 
           if (result.success) {
             toast({
-              title: "Успешно",
-              description: `${isTest ? "Тест" : "Экзамен"} создан`,
+              title: tCommon("save"),
+              description: isTest ? t("testCreated") : t("examCreated"),
             });
             if (isTest) {
               router.refresh();
@@ -107,16 +110,16 @@ export function AssessmentForm({ type, courseId, lessonId, assessment }: Assessm
             }
           } else {
             toast({
-              title: "Ошибка",
-              description: result.error || `Не удалось создать ${label}`,
+              title: tErrors("error"),
+              description: result.error || (isTest ? t("testCreateFailed") : t("examCreateFailed")),
               variant: "destructive",
             });
           }
         }
       } catch {
         toast({
-          title: "Ошибка",
-          description: "Произошла непредвиденная ошибка",
+          title: tErrors("error"),
+          description: tErrors("unexpected"),
           variant: "destructive",
         });
       }
@@ -128,25 +131,25 @@ export function AssessmentForm({ type, courseId, lessonId, assessment }: Assessm
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="assessment-title">
-            Название {isTest ? "теста" : "экзамена"}
+            {isTest ? t("testTitle") : t("examTitle")}
           </Label>
           <Input
             id="assessment-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder={isTest ? "Например: Тест по теме 1" : "Например: Финальный экзамен"}
+            placeholder={isTest ? t("testTitlePlaceholder") : t("examTitlePlaceholder")}
             disabled={isPending}
           />
         </div>
 
         {!isTest && (
           <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="assessment-description">Описание (необязательно)</Label>
+            <Label htmlFor="assessment-description">{t("descriptionOptional")}</Label>
             <Textarea
               id="assessment-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Описание экзамена..."
+              placeholder={t("descriptionPlaceholder")}
               rows={3}
               disabled={isPending}
             />
@@ -154,7 +157,7 @@ export function AssessmentForm({ type, courseId, lessonId, assessment }: Assessm
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="assessment-passingScore">Проходной балл (%)</Label>
+          <Label htmlFor="assessment-passingScore">{t("passingScore")}</Label>
           <Input
             id="assessment-passingScore"
             type="number"
@@ -168,7 +171,7 @@ export function AssessmentForm({ type, courseId, lessonId, assessment }: Assessm
 
         <div className="space-y-2">
           <Label htmlFor="assessment-timeLimitMin">
-            Ограничение по времени (мин)
+            {t("timeLimit")}
           </Label>
           <Input
             id="assessment-timeLimitMin"
@@ -176,13 +179,13 @@ export function AssessmentForm({ type, courseId, lessonId, assessment }: Assessm
             min={1}
             value={timeLimitMin}
             onChange={(e) => setTimeLimitMin(e.target.value)}
-            placeholder="Без ограничения"
+            placeholder={t("noTimeLimit")}
             disabled={isPending}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="assessment-maxAttempts">Количество попыток</Label>
+          <Label htmlFor="assessment-maxAttempts">{t("maxAttempts")}</Label>
           <Input
             id="assessment-maxAttempts"
             type="number"
@@ -200,7 +203,7 @@ export function AssessmentForm({ type, courseId, lessonId, assessment }: Assessm
             onCheckedChange={setIsPublished}
             disabled={isPending}
           />
-          <Label htmlFor="assessment-isPublished">Опубликован</Label>
+          <Label htmlFor="assessment-isPublished">{tCommon("published")}</Label>
         </div>
       </div>
 
@@ -211,7 +214,7 @@ export function AssessmentForm({ type, courseId, lessonId, assessment }: Assessm
           ) : (
             <Save className="h-4 w-4 mr-2" />
           )}
-          {assessment ? "Сохранить изменения" : `Создать ${label}`}
+          {assessment ? tCommon("saveChanges") : (isTest ? t("createTest") : t("createExam"))}
         </Button>
       </div>
     </form>

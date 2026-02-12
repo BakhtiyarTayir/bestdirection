@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -12,14 +12,8 @@ import {
   TableFooter,
 } from "@/components/ui/table";
 import { Check, X, Clock, AlertCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { AttendanceStatus } from "@/validators/attendance";
-
-const STATUS_LABELS: Record<AttendanceStatus, string> = {
-  PRESENT: "Присутствует",
-  ABSENT: "Отсутствует",
-  LATE: "Опоздал",
-  EXCUSED: "Уважительная",
-};
 
 const STATUS_COLORS: Record<AttendanceStatus, string> = {
   PRESENT: "bg-green-100 text-green-800 hover:bg-green-100",
@@ -74,10 +68,19 @@ export function AttendanceGrid({
   students,
   courseId,
 }: AttendanceGridProps) {
+  const t = useTranslations("attendance");
+
+  const STATUS_LABELS: Record<AttendanceStatus, string> = {
+    PRESENT: t("present"),
+    ABSENT: t("absent"),
+    LATE: t("late"),
+    EXCUSED: t("excused"),
+  };
+
   if (sessions.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        Нет сессий посещаемости. Создайте первую сессию.
+        {t("noSessions")}
       </div>
     );
   }
@@ -85,7 +88,7 @@ export function AttendanceGrid({
   if (students.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        Нет записанных студентов на курс.
+        {t("noStudentsEnrolled")}
       </div>
     );
   }
@@ -123,7 +126,7 @@ export function AttendanceGrid({
         <TableHeader>
           <TableRow>
             <TableHead className="sticky left-0 bg-background z-10 min-w-[200px]">
-              Студент
+              {t("student")}
             </TableHead>
             {sortedSessions.map((session) => (
               <TableHead key={session.id} className="text-center min-w-[80px]">
@@ -170,7 +173,7 @@ export function AttendanceGrid({
         <TableFooter>
           <TableRow>
             <TableCell className="sticky left-0 bg-muted/50 z-10 font-medium">
-              Посещаемость
+              {t("attendanceRate")}
             </TableCell>
             {sessionStats.map((percent, idx) => (
               <TableCell

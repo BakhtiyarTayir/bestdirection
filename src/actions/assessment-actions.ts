@@ -16,9 +16,9 @@ async function validateCourseOwnership(
     where: { id: courseId },
     select: { id: true, teacherId: true },
   });
-  if (!course) return { success: false, error: "Курс не найден" };
+  if (!course) return { success: false, error: "courseNotFound" };
   if (role === "TEACHER" && course.teacherId !== userId) {
-    return { success: false, error: "Вы можете управлять только своими курсами" };
+    return { success: false, error: "onlyOwnCourses" };
   }
   return { success: true, teacherId: course.teacherId };
 }
@@ -40,7 +40,7 @@ export async function getAssessment(assessmentId: string) {
       },
     });
 
-    if (!assessment) return { success: false, error: "Оценочное мероприятие не найдено" };
+    if (!assessment) return { success: false, error: "assessmentNotFound" };
 
     // For students, hide correct answer info
     if (session.user.role === "STUDENT") {
@@ -80,7 +80,7 @@ export async function getTestByLesson(lessonId: string) {
       },
     });
 
-    if (!assessment) return { success: false, error: "Тест не найден" };
+    if (!assessment) return { success: false, error: "testNotFound" };
 
     if (session.user.role === "STUDENT") {
       const sanitized = {
@@ -144,22 +144,22 @@ export async function createAssessment(data: {
       // TEST requires a lesson
       if (data.type === "TEST") {
         if (!data.lessonId) {
-          return { success: false, error: "Тест требует привязки к уроку" };
+          return { success: false, error: "testRequiresLesson" };
         }
         const lesson = await prisma.lesson.findUnique({
           where: { id: data.lessonId },
           select: { id: true, courseId: true },
         });
-        if (!lesson) return { success: false, error: "Урок не найден" };
+        if (!lesson) return { success: false, error: "lessonNotFound" };
         if (lesson.courseId !== data.courseId) {
-          return { success: false, error: "Урок не принадлежит указанному курсу" };
+          return { success: false, error: "lessonNotInCourse" };
         }
         // Check uniqueness: one test per lesson
         const existing = await prisma.assessment.findUnique({
           where: { lessonId: data.lessonId },
         });
         if (existing) {
-          return { success: false, error: "У этого урока уже есть тест" };
+          return { success: false, error: "lessonAlreadyHasTest" };
         }
       }
 
@@ -212,10 +212,10 @@ export async function updateAssessment(
         include: { course: { select: { teacherId: true, id: true } } },
       });
 
-      if (!existing) return { success: false, error: "Оценочное мероприятие не найдено" };
+      if (!existing) return { success: false, error: "assessmentNotFound" };
 
       if (session.user.role === "TEACHER" && existing.course.teacherId !== session.user.id) {
-        return { success: false, error: "Вы можете редактировать только свои мероприятия" };
+        return { success: false, error: "onlyOwnCourses" };
       }
 
       const assessment = await prisma.assessment.update({
@@ -261,10 +261,10 @@ export async function deleteAssessment(id: string) {
         include: { course: { select: { teacherId: true, id: true } } },
       });
 
-      if (!existing) return { success: false, error: "Оценочное мероприятие не найдено" };
+      if (!existing) return { success: false, error: "assessmentNotFound" };
 
       if (session.user.role === "TEACHER" && existing.course.teacherId !== session.user.id) {
-        return { success: false, error: "Вы можете удалять только свои мероприятия" };
+        return { success: false, error: "onlyOwnCourses" };
       }
 
       await prisma.assessment.delete({ where: { id } });
@@ -300,10 +300,10 @@ export async function addAssessmentQuestion(data: {
         include: { course: { select: { teacherId: true, id: true } } },
       });
 
-      if (!assessment) return { success: false, error: "Оценочное мероприятие не найдено" };
+      if (!assessment) return { success: false, error: "assessmentNotFound" };
 
       if (session.user.role === "TEACHER" && assessment.course.teacherId !== session.user.id) {
-        return { success: false, error: "Вы можете добавлять вопросы только в свои мероприятия" };
+        return { success: false, error: "onlyOwnCourses" };
       }
 
       const question = await prisma.assessmentQuestion.create({
@@ -355,10 +355,10 @@ export async function updateAssessmentQuestion(
         },
       });
 
-      if (!existing) return { success: false, error: "Вопрос не найден" };
+      if (!existing) return { success: false, error: "questionNotFound" };
 
       if (session.user.role === "TEACHER" && existing.assessment.course.teacherId !== session.user.id) {
-        return { success: false, error: "Вы можете редактировать только вопросы своих мероприятий" };
+        return { success: false, error: "onlyOwnCourses" };
       }
 
       const question = await prisma.$transaction(async (tx) => {
@@ -407,10 +407,10 @@ export async function deleteAssessmentQuestion(id: string) {
         },
       });
 
-      if (!existing) return { success: false, error: "Вопрос не найден" };
+      if (!existing) return { success: false, error: "questionNotFound" };
 
       if (session.user.role === "TEACHER" && existing.assessment.course.teacherId !== session.user.id) {
-        return { success: false, error: "Вы можете удалять только вопросы своих мероприятий" };
+        return { success: false, error: "onlyOwnCourses" };
       }
 
       await prisma.assessmentQuestion.delete({ where: { id } });
@@ -436,7 +436,7 @@ export async function checkAssessmentEligibility(assessmentId: string) {
       select: { courseId: true, type: true },
     });
 
-    if (!assessment) return { success: false, error: "Оценочное мероприятие не найдено" };
+    if (!assessment) return { success: false, error: "assessmentNotFound" };
 
     // Only exams require eligibility check (all lesson tests must be passed)
     if (assessment.type === "TEST") {
@@ -492,7 +492,7 @@ export async function submitAssessmentAttempt(data: {
 }) {
   return withAuth(async (session) => {
     if (session.user.role !== "STUDENT") {
-      return { success: false, error: "Только студенты могут проходить мероприятия" };
+      return { success: false, error: "onlyStudentsCanTake" };
     }
 
     const studentId = session.user.id;
@@ -505,8 +505,8 @@ export async function submitAssessmentAttempt(data: {
       },
     });
 
-    if (!assessment) return { success: false, error: "Оценочное мероприятие не найдено" };
-    if (!assessment.isPublished) return { success: false, error: "Мероприятие не опубликовано" };
+    if (!assessment) return { success: false, error: "assessmentNotFound" };
+    if (!assessment.isPublished) return { success: false, error: "assessmentNotPublished" };
 
     // Check enrollment
     const enrollment = await prisma.enrollment.findUnique({
@@ -516,17 +516,17 @@ export async function submitAssessmentAttempt(data: {
     });
 
     if (!enrollment) {
-      return { success: false, error: "Вы не записаны на этот курс" };
+      return { success: false, error: "notEnrolled" };
     }
 
     // For exams, check eligibility
     if (assessment.type === "EXAM") {
       const eligibility = await checkAssessmentEligibility(data.assessmentId);
       if (!eligibility.success) {
-        return { success: false, error: eligibility.error || "Ошибка проверки допуска" };
+        return { success: false, error: eligibility.error || "eligibilityCheckError" };
       }
       if (!eligibility.data?.eligible) {
-        return { success: false, error: "Вы должны пройти все тесты уроков перед экзаменом" };
+        return { success: false, error: "mustPassAllTests" };
       }
     }
 
@@ -615,7 +615,7 @@ export async function submitAssessmentAttempt(data: {
       });
     } catch (error) {
       if (error instanceof Error && error.message === "MAX_ATTEMPTS_REACHED") {
-        return { success: false, error: "Достигнуто максимальное количество попыток" };
+        return { success: false, error: "maxAttemptsReached" };
       }
       throw error;
     }
@@ -668,7 +668,7 @@ export async function getStudentAssessmentResults(studentId?: string) {
     } else if (studentId) {
       targetStudentId = studentId;
     } else {
-      return { success: false, error: "ID студента обязателен" };
+      return { success: false, error: "studentIdRequired" };
     }
 
     const attempts = await prisma.assessmentAttempt.findMany({

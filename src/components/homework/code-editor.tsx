@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Loader2, Play, Send } from "lucide-react";
 import { LANGUAGE_CONFIG } from "@/lib/code-runner/config";
+import { useTranslations } from "next-intl";
 
 const Editor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
@@ -25,6 +26,7 @@ export function CodeEditor({
 }: CodeEditorProps) {
   const [code, setCode] = useState(starterCode || "");
   const [isPending, startTransition] = useTransition();
+  const t = useTranslations("homework");
 
   const monacoLanguage = LANGUAGE_CONFIG[language]?.monacoLanguage || "plaintext";
 
@@ -58,7 +60,7 @@ export function CodeEditor({
 
       <div className="flex items-center justify-between">
         <span className="text-sm text-muted-foreground">
-          Осталось попыток: {attemptsRemaining}
+          {t("attemptsLabel")}: {attemptsRemaining}
         </span>
         <Button
           onClick={handleSubmit}
@@ -69,7 +71,7 @@ export function CodeEditor({
           ) : (
             <Send className="h-4 w-4 mr-2" />
           )}
-          {isPending ? "Проверка..." : "Отправить на проверку"}
+          {isPending ? t("statusRunning") : t("submitSolution")}
         </Button>
       </div>
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import Link from "next/link";
+import { usePathname, Link } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { Home } from "lucide-react";
 import {
   Breadcrumb,
@@ -12,20 +12,26 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 
-const SEGMENT_LABELS: Record<string, string> = {
-  dashboard: "Главная",
-  courses: "Курсы",
-  lessons: "Уроки",
-  edit: "Редактирование",
-  test: "Тест",
-  attempts: "Результаты",
-  attendance: "Посещаемость",
-  exams: "Экзамены",
-  students: "Студенты",
-  users: "Пользователи",
-  new: "Создание",
-  profile: "Профиль",
-  "my-results": "Мои результаты",
+const SEGMENT_KEYS: Record<string, string> = {
+  dashboard: "home",
+  courses: "courses",
+  lessons: "lessons",
+  edit: "edit",
+  test: "test",
+  attempts: "attempts",
+  attendance: "attendance",
+  exams: "exams",
+  students: "students",
+  users: "users",
+  new: "new",
+  profile: "profile",
+  "my-results": "myResults",
+  groups: "groups",
+  homework: "homework",
+  catalog: "catalog",
+  compare: "compare",
+  trash: "trash",
+  audit: "audit",
 };
 
 function isDynamicSegment(segment: string): boolean {
@@ -35,6 +41,7 @@ function isDynamicSegment(segment: string): boolean {
 
 export function BreadcrumbNav() {
   const pathname = usePathname();
+  const t = useTranslations("breadcrumb");
 
   // Don't show on dashboard root
   if (pathname === "/dashboard" || pathname === "/") {
@@ -53,13 +60,14 @@ export function BreadcrumbNav() {
     if (isDynamicSegment(segment)) {
       // Skip dynamic segments — the link goes to them but label comes from next segment or "..."
       const nextSegment = segments[i + 1];
-      if (nextSegment && SEGMENT_LABELS[nextSegment]) {
+      if (nextSegment && SEGMENT_KEYS[nextSegment]) {
         // Will be handled by the next iteration
         continue;
       }
       items.push({ label: "...", href });
     } else {
-      const label = SEGMENT_LABELS[segment] ?? segment;
+      const key = SEGMENT_KEYS[segment];
+      const label = key ? t(key) : segment;
       items.push({ label, href });
     }
   }

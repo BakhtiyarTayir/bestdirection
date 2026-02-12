@@ -37,7 +37,7 @@ export async function GET(
     });
 
     if (!assessment) {
-      return NextResponse.json({ error: "Тест не найден" }, { status: 404 });
+      return NextResponse.json({ error: "Test not found" }, { status: 404 });
     }
 
     if (
@@ -103,7 +103,7 @@ export async function GET(
   } catch (error) {
     console.error("Export test error:", error);
     return NextResponse.json(
-      { error: "Не удалось экспортировать тест" },
+      { error: "Failed to export test" },
       { status: 500 }
     );
   }

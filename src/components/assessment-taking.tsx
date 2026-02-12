@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -75,10 +76,10 @@ export function AssessmentTaking({ assessment, courseId }: AssessmentTakingProps
   const [isStarting, setIsStarting] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const hasAutoSubmittedRef = useRef(false);
+  const t = useTranslations("assessments");
+  const tErrors = useTranslations("errors");
 
   const isTest = assessment.type === "TEST";
-  const label = isTest ? "тест" : "экзамен";
-  const labelCapital = isTest ? "Тест" : "Экзамен";
   const idPrefix = isTest ? "q" : "eq";
 
   const answeredCount = Object.keys(answers).filter(
@@ -111,16 +112,16 @@ export function AssessmentTaking({ assessment, courseId }: AssessmentTakingProps
         router.refresh();
       } else {
         toast({
-          title: "Ошибка",
-          description: res.error || "Не удалось отправить ответы",
+          title: tErrors("error"),
+          description: res.error || t("submitFailed"),
           variant: "destructive",
         });
         setState("taking");
       }
     } catch {
       toast({
-        title: "Ошибка",
-        description: "Произошла непредвиденная ошибка",
+        title: tErrors("error"),
+        description: tErrors("unexpected"),
         variant: "destructive",
       });
       setState("taking");
@@ -133,8 +134,8 @@ export function AssessmentTaking({ assessment, courseId }: AssessmentTakingProps
       if (timeLeft <= 0 && !hasAutoSubmittedRef.current) {
         hasAutoSubmittedRef.current = true;
         toast({
-          title: "Время вышло!",
-          description: `${labelCapital} автоматически отправлен.`,
+          title: t("timeUp"),
+          description: isTest ? t("testAutoSubmitted") : t("examAutoSubmitted"),
           variant: "destructive",
         });
         handleSubmit();
@@ -152,7 +153,7 @@ export function AssessmentTaking({ assessment, courseId }: AssessmentTakingProps
         if (timerRef.current) clearInterval(timerRef.current);
       };
     }
-  }, [state, assessment.timeLimitMin, timeLeft, handleSubmit, toast, labelCapital]);
+  }, [state, assessment.timeLimitMin, timeLeft, handleSubmit, toast, isTest, t]);
 
   const startAssessment = () => {
     if (isStarting) return;
@@ -208,15 +209,15 @@ export function AssessmentTaking({ assessment, courseId }: AssessmentTakingProps
             <p className="text-muted-foreground">
               {assessment.questions.length}{" "}
               {assessment.questions.length === 1
-                ? "вопрос"
+                ? t("questionOne")
                 : assessment.questions.length < 5
-                ? "вопроса"
-                : "вопросов"}
-              {assessment.timeLimitMin && ` / ${assessment.timeLimitMin} мин`}
+                ? t("questionFew")
+                : t("questionMany")}
+              {assessment.timeLimitMin && ` / ${assessment.timeLimitMin} ${t("minutesShort")}`}
             </p>
             <Button onClick={startAssessment} size="lg" disabled={isStarting}>
               <Play className="h-5 w-5 mr-2" />
-              Начать {label}
+              {isTest ? t("startTest") : t("startExam")}
             </Button>
           </div>
         </CardContent>
@@ -237,25 +238,25 @@ export function AssessmentTaking({ assessment, courseId }: AssessmentTakingProps
             )}
             <h2 className="text-2xl font-bold">
               {result.isPassed
-                ? `${labelCapital} ${isTest ? "пройден" : "сдан"}!`
-                : `${labelCapital} не ${isTest ? "пройден" : "сдан"}`}
+                ? (isTest ? t("testPassed") : t("examPassed"))
+                : (isTest ? t("testFailed") : t("examFailed"))}
             </h2>
             <div className="space-y-2">
               <p className="text-lg">
-                Результат: {result.score} / {result.maxScore} ({result.percentage}%)
+                {t("result", { score: result.score, maxScore: result.maxScore, percentage: result.percentage })}
               </p>
               <Badge
                 variant={result.isPassed ? "default" : "destructive"}
                 className="text-sm"
               >
-                {result.isPassed ? "Зачтено" : "Не зачтено"}
+                {result.isPassed ? t("passed") : t("failed")}
               </Badge>
               <p className="text-sm text-muted-foreground">
-                Проходной балл: {assessment.passingScore}%
+                {t("passingScoreInfo", { score: assessment.passingScore })}
               </p>
             </div>
             <Button onClick={() => router.refresh()} variant="outline">
-              Посмотреть детали
+              {t("viewDetails")}
             </Button>
           </div>
         </CardContent>
@@ -270,7 +271,7 @@ export function AssessmentTaking({ assessment, courseId }: AssessmentTakingProps
         <CardContent className="pt-6">
           <div className="text-center space-y-4 py-8">
             <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
-            <p className="text-lg">Отправка ответов...</p>
+            <p className="text-lg">{t("submittingAnswers")}</p>
           </div>
         </CardContent>
       </Card>
@@ -286,7 +287,7 @@ export function AssessmentTaking({ assessment, courseId }: AssessmentTakingProps
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
-                Отвечено: {answeredCount} / {assessment.questions.length}
+                {t("answered", { answered: answeredCount, total: assessment.questions.length })}
               </span>
             </div>
             {timeLeft !== null && (
@@ -349,16 +350,16 @@ export function AssessmentTaking({ assessment, courseId }: AssessmentTakingProps
               <div className="flex items-center gap-2 ml-4 flex-shrink-0">
                 <Badge variant="outline" className="text-xs">
                   {question.type === "SINGLE_CHOICE"
-                    ? "Один ответ"
-                    : "Несколько ответов"}
+                    ? t("singleChoice")
+                    : t("multipleChoice")}
                 </Badge>
                 <Badge variant="outline" className="text-xs">
                   {question.points}{" "}
                   {question.points === 1
-                    ? "балл"
+                    ? t("pointOne")
                     : question.points < 5
-                    ? "балла"
-                    : "баллов"}
+                    ? t("pointFew")
+                    : t("pointMany")}
                 </Badge>
               </div>
             </div>
@@ -434,8 +435,7 @@ export function AssessmentTaking({ assessment, courseId }: AssessmentTakingProps
               {answeredCount < assessment.questions.length && (
                 <div className="flex items-center gap-2 text-orange-500">
                   <AlertTriangle className="h-4 w-4" />
-                  Вы ответили не на все вопросы ({answeredCount} из{" "}
-                  {assessment.questions.length})
+                  {t("notAllAnsweredWarning", { answered: answeredCount, total: assessment.questions.length })}
                 </div>
               )}
             </div>
@@ -444,23 +444,22 @@ export function AssessmentTaking({ assessment, courseId }: AssessmentTakingProps
               <AlertDialogTrigger asChild>
                 <Button size="lg">
                   <Send className="h-4 w-4 mr-2" />
-                  Завершить {label}
+                  {isTest ? t("submitTest") : t("submitExam")}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Завершить {label}?</AlertDialogTitle>
+                  <AlertDialogTitle>{isTest ? t("submitConfirmTitle") : t("submitExamConfirmTitle")}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Вы ответили на {answeredCount} из {assessment.questions.length}{" "}
-                    вопросов. После отправки изменить ответы будет невозможно.
+                    {t("submitConfirmDescription", { answered: answeredCount, total: assessment.questions.length })}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>
-                    Вернуться к {isTest ? "тесту" : "экзамену"}
+                    {isTest ? t("backToTest") : t("backToExam")}
                   </AlertDialogCancel>
                   <AlertDialogAction onClick={handleSubmit}>
-                    Отправить ответы
+                    {t("submitAnswers")}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

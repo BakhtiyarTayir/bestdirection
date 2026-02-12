@@ -20,13 +20,14 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/use-toast";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { UserPlus, UserMinus, ArrowRightLeft } from "lucide-react";
 import {
   addStudentsToGroup,
   removeStudentFromGroup,
   moveStudentToGroup,
 } from "@/actions/group-actions";
+import { useTranslations } from "next-intl";
 
 interface Student {
   id: string;
@@ -61,6 +62,9 @@ export function GroupStudentsManager({
   availableStudents,
   otherGroups,
 }: GroupStudentsManagerProps) {
+  const t = useTranslations("groups");
+  const tCommon = useTranslations("common");
+  const tErrors = useTranslations("errors");
   const { toast } = useToast();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -76,9 +80,9 @@ export function GroupStudentsManager({
     startTransition(async () => {
       const result = await addStudentsToGroup(groupId, selectedStudents);
       if (!result.success) {
-        toast({ title: "Ошибка", description: result.error, variant: "destructive" });
+        toast({ title: tErrors("error"), description: result.error, variant: "destructive" });
       } else {
-        toast({ title: `Добавлено студентов: ${selectedStudents.length}` });
+        toast({ title: t("addCount", { count: selectedStudents.length }) });
         setSelectedStudents([]);
         setAddDialogOpen(false);
         router.refresh();
@@ -87,14 +91,14 @@ export function GroupStudentsManager({
   };
 
   const handleRemoveStudent = (studentId: string, name: string) => {
-    if (!confirm(`Убрать "${name}" из группы? Студент останется записан на курс.`)) return;
+    if (!confirm(t("removeFromGroup", { name }))) return;
 
     startTransition(async () => {
       const result = await removeStudentFromGroup(groupId, studentId);
       if (!result.success) {
-        toast({ title: "Ошибка", description: result.error, variant: "destructive" });
+        toast({ title: tErrors("error"), description: result.error, variant: "destructive" });
       } else {
-        toast({ title: "Студент убран из группы" });
+        toast({ title: t("studentRemovedFromGroup") });
         router.refresh();
       }
     });
@@ -106,9 +110,9 @@ export function GroupStudentsManager({
     startTransition(async () => {
       const result = await moveStudentToGroup(moveStudentId, courseId, targetGroupId);
       if (!result.success) {
-        toast({ title: "Ошибка", description: result.error, variant: "destructive" });
+        toast({ title: tErrors("error"), description: result.error, variant: "destructive" });
       } else {
-        toast({ title: "Студент перемещён" });
+        toast({ title: t("moveStudent") });
         setMoveDialogOpen(false);
         setMoveStudentId(null);
         setTargetGroupId("");
@@ -127,22 +131,22 @@ export function GroupStudentsManager({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">
-          Студенты ({students.length})
+          {t("students", { count: students.length })}
         </h2>
         <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <UserPlus className="mr-2 h-4 w-4" />
-              Добавить студентов
+              {t("addStudents")}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Добавить студентов в группу</DialogTitle>
+              <DialogTitle>{t("addStudentsTitle")}</DialogTitle>
             </DialogHeader>
             {availableStudents.length === 0 ? (
               <p className="text-muted-foreground py-4">
-                Все записанные студенты уже в этой группе
+                {t("allStudentsInGroup")}
               </p>
             ) : (
               <div className="space-y-2">
@@ -175,7 +179,7 @@ export function GroupStudentsManager({
                 onClick={handleAddStudents}
                 disabled={selectedStudents.length === 0 || isPending}
               >
-                {isPending ? "Добавление..." : `Добавить (${selectedStudents.length})`}
+                {isPending ? tCommon("adding") : t("addCount", { count: selectedStudents.length })}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -184,7 +188,7 @@ export function GroupStudentsManager({
 
       {students.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-          <p>В этой группе пока нет студентов</p>
+          <p>{t("noStudentsInGroup")}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -237,14 +241,14 @@ export function GroupStudentsManager({
       <Dialog open={moveDialogOpen} onOpenChange={setMoveDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Переместить студента</DialogTitle>
+            <DialogTitle>{t("moveStudent")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <p className="text-sm">Выберите группу:</p>
+              <p className="text-sm">{t("selectGroup")}</p>
               <Select value={targetGroupId} onValueChange={setTargetGroupId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Выберите группу" />
+                  <SelectValue placeholder={t("selectGroupPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {otherGroups.map((g) => (
@@ -258,13 +262,13 @@ export function GroupStudentsManager({
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setMoveDialogOpen(false)}>
-              Отмена
+              {tCommon("cancel")}
             </Button>
             <Button
               onClick={handleMoveStudent}
               disabled={!targetGroupId || isPending}
             >
-              {isPending ? "Перемещение..." : "Переместить"}
+              {isPending ? tCommon("moving") : t("move")}
             </Button>
           </DialogFooter>
         </DialogContent>

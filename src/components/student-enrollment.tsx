@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +32,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { enrollStudent, unenrollStudent } from "@/actions/course-actions";
 import { UserPlus, UserMinus, Loader2 } from "lucide-react";
 import { formatDate } from "@/lib/format-date";
+import { useTranslations } from "next-intl";
 
 interface Student {
   id: string;
@@ -57,6 +58,9 @@ export function StudentEnrollment({
   enrolledStudents,
   availableStudents,
 }: StudentEnrollmentProps) {
+  const t = useTranslations("enrollment");
+  const tCommon = useTranslations("common");
+  const tErrors = useTranslations("errors");
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
@@ -69,13 +73,13 @@ export function StudentEnrollment({
     startTransition(async () => {
       const result = await enrollStudent(courseId, selectedStudentId);
       if (result.success) {
-        toast({ title: "Студент добавлен в курс" });
+        toast({ title: t("studentAdded") });
         setDialogOpen(false);
         setSelectedStudentId("");
         router.refresh();
       } else {
         toast({
-          title: "Ошибка",
+          title: tErrors("error"),
           description: result.error,
           variant: "destructive",
         });
@@ -84,16 +88,16 @@ export function StudentEnrollment({
   };
 
   const handleUnenroll = (studentId: string, studentName: string) => {
-    if (!confirm(`Удалить ${studentName} из курса?`)) return;
+    if (!confirm(t("removeFromCourse"))) return;
 
     startTransition(async () => {
       const result = await unenrollStudent(courseId, studentId);
       if (result.success) {
-        toast({ title: "Студент удален из курса" });
+        toast({ title: t("studentRemoved") });
         router.refresh();
       } else {
         toast({
-          title: "Ошибка",
+          title: tErrors("error"),
           description: result.error,
           variant: "destructive",
         });
@@ -105,25 +109,25 @@ export function StudentEnrollment({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">
-          Студенты курса ({enrolledStudents.length})
+          {t("title", { count: enrolledStudents.length })}
         </h2>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <UserPlus className="mr-2 h-4 w-4" />
-              Добавить студента
+              {t("addStudent")}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Добавить студента в курс</DialogTitle>
+              <DialogTitle>{t("addStudentTitle")}</DialogTitle>
               <DialogDescription>
-                Выберите студента из списка для записи на курс.
+                {t("addStudentDescription")}
               </DialogDescription>
             </DialogHeader>
             {availableStudents.length === 0 ? (
               <p className="text-sm text-muted-foreground py-4">
-                Нет доступных студентов для записи.
+                {t("noAvailableStudents")}
               </p>
             ) : (
               <div className="space-y-4">
@@ -132,7 +136,7 @@ export function StudentEnrollment({
                   onValueChange={setSelectedStudentId}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Выберите студента" />
+                    <SelectValue placeholder={t("selectStudent")} />
                   </SelectTrigger>
                   <SelectContent>
                     {availableStudents.map((student) => (
@@ -149,7 +153,7 @@ export function StudentEnrollment({
                 variant="outline"
                 onClick={() => setDialogOpen(false)}
               >
-                Отмена
+                {tCommon("cancel")}
               </Button>
               <Button
                 onClick={handleEnroll}
@@ -158,7 +162,7 @@ export function StudentEnrollment({
                 {isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Записать
+                {t("enroll")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -168,7 +172,7 @@ export function StudentEnrollment({
       {enrolledStudents.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center">
           <p className="text-muted-foreground">
-            В этот курс пока не записан ни один студент.
+            {t("noStudentsEnrolled")}
           </p>
         </div>
       ) : (
@@ -176,12 +180,12 @@ export function StudentEnrollment({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Имя</TableHead>
-                <TableHead>Фамилия</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Телефон</TableHead>
-                <TableHead>Дата записи</TableHead>
-                <TableHead className="w-[100px]">Действия</TableHead>
+                <TableHead>{tCommon("firstName")}</TableHead>
+                <TableHead>{tCommon("lastName")}</TableHead>
+                <TableHead>{tCommon("email")}</TableHead>
+                <TableHead>{tCommon("phone")}</TableHead>
+                <TableHead>{t("enrollmentDate")}</TableHead>
+                <TableHead className="w-[100px]">{tCommon("actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -205,7 +209,7 @@ export function StudentEnrollment({
                         )
                       }
                       disabled={isPending}
-                      title="Удалить из курса"
+                      title={t("removeFromCourse")}
                     >
                       <UserMinus className="h-4 w-4 text-destructive" />
                     </Button>

@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     const contentLength = request.headers.get("content-length");
     if (contentLength && parseInt(contentLength) > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: "Файл слишком большой. Максимальный размер: 5 МБ" },
+        { error: "File too large. Maximum size: 5 MB" },
         { status: 413 }
       );
     }
@@ -47,21 +47,21 @@ export async function POST(request: NextRequest) {
 
     if (!file) {
       return NextResponse.json(
-        { error: "Изображение не найдено" },
+        { error: "Image not found" },
         { status: 400 }
       );
     }
 
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: "Файл слишком большой. Максимальный размер: 5 МБ" },
+        { error: "File too large. Maximum size: 5 MB" },
         { status: 413 }
       );
     }
 
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
       return NextResponse.json(
-        { error: "Недопустимый формат файла. Разрешены: JPG, PNG, WebP" },
+        { error: "Invalid file format. Allowed: JPG, PNG, WebP" },
         { status: 400 }
       );
     }
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     const ext = path.extname(originalName).toLowerCase();
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
       return NextResponse.json(
-        { error: "Недопустимое расширение файла. Разрешены: .jpg, .jpeg, .png, .webp" },
+        { error: "Invalid file extension. Allowed: .jpg, .jpeg, .png, .webp" },
         { status: 400 }
       );
     }
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Image upload error:", error);
     return NextResponse.json(
-      { error: "Не удалось загрузить изображение" },
+      { error: "Failed to upload image" },
       { status: 500 }
     );
   }

@@ -14,7 +14,7 @@ export async function importTestFromFile(formData: FormData) {
       const file = formData.get("file") as File | null;
 
       if (!lessonId || !file) {
-        return { success: false, error: "Не указан урок или файл" };
+        return { success: false, error: "lessonOrFileRequired" };
       }
 
       const role = session.user.role;
@@ -24,10 +24,10 @@ export async function importTestFromFile(formData: FormData) {
         include: { course: { select: { teacherId: true, id: true } } },
       });
 
-      if (!lesson) return { success: false, error: "Урок не найден" };
+      if (!lesson) return { success: false, error: "lessonNotFound" };
 
       if (role === "TEACHER" && lesson.course.teacherId !== session.user.id) {
-        return { success: false, error: "Вы можете импортировать тесты только для своих курсов" };
+        return { success: false, error: "onlyOwnImportTests" };
       }
 
       const existingTest = await prisma.assessment.findUnique({
@@ -35,7 +35,7 @@ export async function importTestFromFile(formData: FormData) {
       });
 
       if (existingTest) {
-        return { success: false, error: "У этого урока уже есть тест" };
+        return { success: false, error: "lessonAlreadyHasTest" };
       }
 
       let data;
@@ -51,7 +51,7 @@ export async function importTestFromFile(formData: FormData) {
       } catch (e) {
         return {
           success: false,
-          error: `Ошибка чтения файла: ${e instanceof Error ? e.message : "неизвестная ошибка"}`,
+          error: `fileReadError: ${e instanceof Error ? e.message : "unknown error"}`,
         };
       }
 
@@ -103,7 +103,7 @@ export async function importExamFromFile(formData: FormData) {
       const file = formData.get("file") as File | null;
 
       if (!courseId || !file) {
-        return { success: false, error: "Не указан курс или файл" };
+        return { success: false, error: "courseOrFileRequired" };
       }
 
       const role = session.user.role;
@@ -113,10 +113,10 @@ export async function importExamFromFile(formData: FormData) {
         select: { id: true, teacherId: true },
       });
 
-      if (!course) return { success: false, error: "Курс не найден" };
+      if (!course) return { success: false, error: "courseNotFound" };
 
       if (role === "TEACHER" && course.teacherId !== session.user.id) {
-        return { success: false, error: "Вы можете импортировать экзамены только для своих курсов" };
+        return { success: false, error: "onlyOwnImportExams" };
       }
 
       let data;
@@ -132,7 +132,7 @@ export async function importExamFromFile(formData: FormData) {
       } catch (e) {
         return {
           success: false,
-          error: `Ошибка чтения файла: ${e instanceof Error ? e.message : "неизвестная ошибка"}`,
+          error: `fileReadError: ${e instanceof Error ? e.message : "unknown error"}`,
         };
       }
 

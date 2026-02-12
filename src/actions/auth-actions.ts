@@ -14,7 +14,7 @@ export async function registerUser(data: {
   });
 
   if (existing) {
-    return { success: false, error: "Пользователь с таким email уже существует" };
+    return { success: false, error: "emailAlreadyExists" };
   }
 
   const passwordHash = await bcrypt.hash(data.password, 10);

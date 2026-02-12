@@ -1,14 +1,15 @@
 "use client";
 
 import { useTransition } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { Link } from "@/i18n/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { deleteHomework, toggleHomeworkPublished } from "@/actions/homework-actions";
 import { LANGUAGE_LABELS } from "@/lib/code-runner/config";
+import { useTranslations } from "next-intl";
 import {
   Code2,
   Plus,
@@ -45,28 +46,32 @@ export function HomeworkManagement({
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
+  const t = useTranslations("homework");
+  const tCommon = useTranslations("common");
+  const tSuccess = useTranslations("success");
+  const tErrors = useTranslations("errors");
 
   const handleTogglePublished = (homeworkId: string) => {
     startTransition(async () => {
       const result = await toggleHomeworkPublished(homeworkId);
       if (result.success) {
-        toast({ title: "Успешно", description: "Статус публикации обновлён" });
+        toast({ title: tSuccess("success"), description: t("publishStatusUpdated") });
         router.refresh();
       } else {
-        toast({ title: "Ошибка", description: result.error, variant: "destructive" });
+        toast({ title: tErrors("generic"), description: result.error, variant: "destructive" });
       }
     });
   };
 
   const handleDelete = (homeworkId: string) => {
-    if (!confirm("Удалить задание? Все решения студентов будут потеряны.")) return;
+    if (!confirm(t("deleteConfirm"))) return;
     startTransition(async () => {
       const result = await deleteHomework(homeworkId);
       if (result.success) {
-        toast({ title: "Успешно", description: "Задание удалено" });
+        toast({ title: tSuccess("success"), description: t("homeworkDeleted") });
         router.refresh();
       } else {
-        toast({ title: "Ошибка", description: result.error, variant: "destructive" });
+        toast({ title: tErrors("generic"), description: result.error, variant: "destructive" });
       }
     });
   };
@@ -77,17 +82,17 @@ export function HomeworkManagement({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Code2 className="h-5 w-5" />
-            Домашние задания
+            {t("title")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground mb-4">
-            Для этого урока ещё не создано домашних заданий с автопроверкой.
+            {t("noHomework")}
           </p>
           <Link href={`/courses/${courseId}/lessons/${lessonId}/homework/new`}>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
-              Создать задание
+              {t("createHomework")}
             </Button>
           </Link>
         </CardContent>
@@ -100,12 +105,12 @@ export function HomeworkManagement({
       <div className="flex items-center justify-between">
         <h3 className="font-semibold flex items-center gap-2">
           <Code2 className="h-5 w-5" />
-          Домашние задания ({homeworks.length})
+          {t("title")} ({homeworks.length})
         </h3>
         <Link href={`/courses/${courseId}/lessons/${lessonId}/homework/new`}>
           <Button size="sm">
             <Plus className="h-4 w-4 mr-2" />
-            Добавить
+            {tCommon("add")}
           </Button>
         </Link>
       </div>
@@ -118,7 +123,7 @@ export function HomeworkManagement({
                 <div className="flex items-center gap-2 mb-1">
                   <span className="font-medium">{hw.title}</span>
                   <Badge variant={hw.isPublished ? "default" : "secondary"}>
-                    {hw.isPublished ? "Опубликовано" : "Черновик"}
+                    {hw.isPublished ? t("published") : tCommon("draft")}
                   </Badge>
                   {hw.language && (
                     <Badge variant="outline" className="text-xs">
@@ -129,14 +134,14 @@ export function HomeworkManagement({
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <FileText className="h-3.5 w-3.5" />
-                    {hw._count.testCases} тестов
+                    {t("testCasesCount", { count: hw._count.testCases })}
                   </span>
                   <span className="flex items-center gap-1">
                     <Users className="h-3.5 w-3.5" />
-                    {hw._count.submissions} решений
+                    {t("submissionsCount", { count: hw._count.submissions })}
                   </span>
-                  <span>Проходной: {hw.passingScore}%</span>
-                  <span>Попытки: {hw.maxAttempts}</span>
+                  <span>{t("passingScoreInfo", { score: hw.passingScore })}</span>
+                  <span>{t("attemptsInfo", { count: hw.maxAttempts })}</span>
                 </div>
               </div>
               <div className="flex items-center gap-1">
@@ -145,7 +150,7 @@ export function HomeworkManagement({
                   size="sm"
                   onClick={() => handleTogglePublished(hw.id)}
                   disabled={isPending}
-                  title={hw.isPublished ? "Скрыть" : "Опубликовать"}
+                  title={hw.isPublished ? tCommon("draft") : t("published")}
                 >
                   {isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

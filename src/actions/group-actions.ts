@@ -47,7 +47,7 @@ export async function getGroupDetails(groupId: string) {
     });
 
     if (!group) {
-      return { success: false as const, error: "Группа не найдена" };
+      return { success: false as const, error: "groupNotFound" };
     }
 
     return { success: true as const, data: group };
@@ -64,11 +64,11 @@ export async function createGroup(courseId: string, data: CreateGroupInput) {
       });
 
       if (!course) {
-        return { success: false as const, error: "Курс не найден" };
+        return { success: false as const, error: "courseNotFound" };
       }
 
       if (session.user.role === "TEACHER" && course.teacherId !== session.user.id) {
-        return { success: false as const, error: "Нет доступа" };
+        return { success: false as const, error: "noAccess" };
       }
 
       const existing = await prisma.group.findUnique({
@@ -76,7 +76,7 @@ export async function createGroup(courseId: string, data: CreateGroupInput) {
       });
 
       if (existing) {
-        return { success: false as const, error: "Группа с таким названием уже существует" };
+        return { success: false as const, error: "groupNameExists" };
       }
 
       const maxSort = await prisma.group.aggregate({
@@ -117,11 +117,11 @@ export async function updateGroup(groupId: string, data: UpdateGroupInput) {
       });
 
       if (!group) {
-        return { success: false as const, error: "Группа не найдена" };
+        return { success: false as const, error: "groupNotFound" };
       }
 
       if (session.user.role === "TEACHER" && group.course.teacherId !== session.user.id) {
-        return { success: false as const, error: "Нет доступа" };
+        return { success: false as const, error: "noAccess" };
       }
 
       if (data.name && data.name !== group.name) {
@@ -129,7 +129,7 @@ export async function updateGroup(groupId: string, data: UpdateGroupInput) {
           where: { courseId_name: { courseId: group.courseId, name: data.name } },
         });
         if (existing) {
-          return { success: false as const, error: "Группа с таким названием уже существует" };
+          return { success: false as const, error: "groupNameExists" };
         }
       }
 
@@ -164,11 +164,11 @@ export async function deleteGroup(groupId: string) {
       });
 
       if (!group) {
-        return { success: false as const, error: "Группа не найдена" };
+        return { success: false as const, error: "groupNotFound" };
       }
 
       if (session.user.role === "TEACHER" && group.course.teacherId !== session.user.id) {
-        return { success: false as const, error: "Нет доступа" };
+        return { success: false as const, error: "noAccess" };
       }
 
       // Remove group from enrollments (keep enrollments)
@@ -204,11 +204,11 @@ export async function toggleGroupActive(groupId: string) {
       });
 
       if (!group) {
-        return { success: false as const, error: "Группа не найдена" };
+        return { success: false as const, error: "groupNotFound" };
       }
 
       if (session.user.role === "TEACHER" && group.course.teacherId !== session.user.id) {
-        return { success: false as const, error: "Нет доступа" };
+        return { success: false as const, error: "noAccess" };
       }
 
       const updated = await prisma.group.update({
@@ -233,11 +233,11 @@ export async function addStudentsToGroup(groupId: string, studentIds: string[]) 
       });
 
       if (!group) {
-        return { success: false as const, error: "Группа не найдена" };
+        return { success: false as const, error: "groupNotFound" };
       }
 
       if (session.user.role === "TEACHER" && group.course.teacherId !== session.user.id) {
-        return { success: false as const, error: "Нет доступа" };
+        return { success: false as const, error: "noAccess" };
       }
 
       // For each student: upsert enrollment with groupId
@@ -275,11 +275,11 @@ export async function removeStudentFromGroup(groupId: string, studentId: string)
       });
 
       if (!group) {
-        return { success: false as const, error: "Группа не найдена" };
+        return { success: false as const, error: "groupNotFound" };
       }
 
       if (session.user.role === "TEACHER" && group.course.teacherId !== session.user.id) {
-        return { success: false as const, error: "Нет доступа" };
+        return { success: false as const, error: "noAccess" };
       }
 
       await prisma.enrollment.update({
@@ -308,11 +308,11 @@ export async function moveStudentToGroup(
       });
 
       if (!course) {
-        return { success: false as const, error: "Курс не найден" };
+        return { success: false as const, error: "courseNotFound" };
       }
 
       if (session.user.role === "TEACHER" && course.teacherId !== session.user.id) {
-        return { success: false as const, error: "Нет доступа" };
+        return { success: false as const, error: "noAccess" };
       }
 
       await prisma.enrollment.update({
@@ -359,7 +359,7 @@ export async function getAvailableStudentsForGroup(groupId: string) {
     });
 
     if (!group) {
-      return { success: false as const, error: "Группа не найдена" };
+      return { success: false as const, error: "groupNotFound" };
     }
 
     // Get enrolled students NOT in this group

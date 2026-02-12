@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -17,6 +17,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { createAttendanceSession } from "@/actions/attendance-actions";
 import { Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 interface CreateSessionDialogProps {
   courseId: string;
@@ -27,6 +28,9 @@ export function CreateSessionDialog({
   courseId,
   onSuccess,
 }: CreateSessionDialogProps) {
+  const t = useTranslations("attendance");
+  const tCommon = useTranslations("common");
+  const tErrors = useTranslations("errors");
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState<Date | undefined>();
   const [note, setNote] = useState("");
@@ -39,8 +43,8 @@ export function CreateSessionDialog({
 
     if (!date) {
       toast({
-        title: "Ошибка",
-        description: "Выберите дату занятия.",
+        title: tErrors("error"),
+        description: t("selectDateError"),
         variant: "destructive",
       });
       return;
@@ -56,8 +60,8 @@ export function CreateSessionDialog({
 
       if (result.success) {
         toast({
-          title: "Сессия создана",
-          description: "Сессия посещаемости успешно создана.",
+          title: t("sessionCreated"),
+          description: t("sessionCreatedSuccess"),
         });
         setDate(undefined);
         setNote("");
@@ -66,15 +70,15 @@ export function CreateSessionDialog({
         onSuccess?.();
       } else {
         toast({
-          title: "Ошибка",
-          description: result.error ?? "Не удалось создать сессию.",
+          title: tErrors("error"),
+          description: result.error ?? t("sessionCreateFailed"),
           variant: "destructive",
         });
       }
     } catch {
       toast({
-        title: "Ошибка",
-        description: "Произошла непредвиденная ошибка.",
+        title: tErrors("error"),
+        description: tErrors("unexpected"),
         variant: "destructive",
       });
     } finally {
@@ -87,31 +91,31 @@ export function CreateSessionDialog({
       <DialogTrigger asChild>
         <Button>
           <Plus className="mr-2 h-4 w-4" />
-          Создать сессию
+          {t("createSession")}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Новая сессия посещаемости</DialogTitle>
+          <DialogTitle>{t("newSession")}</DialogTitle>
           <DialogDescription>
-            Укажите дату и необязательное примечание для новой сессии.
+            {t("newSessionDescription")}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label>Дата занятия</Label>
+            <Label>{t("sessionDate")}</Label>
             <DatePicker
               value={date}
               onChange={setDate}
-              placeholder="Выберите дату"
+              placeholder={t("selectDate")}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="session-note">Примечание (необязательно)</Label>
+            <Label htmlFor="session-note">{t("noteOptional")}</Label>
             <textarea
               id="session-note"
               className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              placeholder="Например: Лекция, Практика, Лабораторная..."
+              placeholder={t("notePlaceholderExample")}
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />
@@ -123,10 +127,10 @@ export function CreateSessionDialog({
               onClick={() => setOpen(false)}
               disabled={isLoading}
             >
-              Отмена
+              {tCommon("cancel")}
             </Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Создание..." : "Создать"}
+              {isLoading ? tCommon("creating") : tCommon("create")}
             </Button>
           </DialogFooter>
         </form>

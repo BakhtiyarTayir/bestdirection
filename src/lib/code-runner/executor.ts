@@ -17,7 +17,7 @@ export async function executeCode(
     return {
       success: false,
       output: "",
-      error: `Язык ${language} не поддерживается`,
+      error: `Language ${language} is not supported`,
       executionTime: 0,
     };
   }
@@ -40,7 +40,7 @@ export async function executeCode(
       return {
         success: false,
         output: "",
-        error: `Ошибка API: ${response.status}`,
+        error: `API error: ${response.status}`,
         executionTime: Date.now() - startTime,
       };
     }
@@ -53,7 +53,7 @@ export async function executeCode(
       return {
         success: false,
         output: "",
-        error: result.compile.stderr || "Ошибка компиляции",
+        error: result.compile.stderr || "Compilation error",
         executionTime,
       };
     }
@@ -63,7 +63,7 @@ export async function executeCode(
       return {
         success: false,
         output: result.run.stdout || "",
-        error: result.run.stderr || "Ошибка выполнения",
+        error: result.run.stderr || "Runtime error",
         executionTime,
       };
     }
@@ -78,7 +78,7 @@ export async function executeCode(
     return {
       success: false,
       output: "",
-      error: error instanceof Error ? error.message : "Неизвестная ошибка",
+      error: error instanceof Error ? error.message : "Unknown error",
       executionTime: Date.now() - startTime,
     };
   }

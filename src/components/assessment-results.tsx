@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -49,6 +50,7 @@ interface AssessmentResultsProps {
 
 export function AssessmentResults({ attempt, attemptNumber }: AssessmentResultsProps) {
   const [expanded, setExpanded] = useState(false);
+  const t = useTranslations("assessments");
 
   const startedAt = new Date(attempt.startedAt);
   const completedAt = attempt.completedAt
@@ -60,11 +62,11 @@ export function AssessmentResults({ attempt, attemptNumber }: AssessmentResultsP
     : null;
 
   const formatTimeTaken = (seconds: number): string => {
-    if (seconds < 60) return `${seconds} сек`;
+    if (seconds < 60) return `${seconds} ${t("seconds")}`;
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    if (secs === 0) return `${mins} мин`;
-    return `${mins} мин ${secs} сек`;
+    if (secs === 0) return `${mins} ${t("minutesShort")}`;
+    return `${mins} ${t("minutesAndSeconds", { seconds: secs })}`;
   };
 
   return (
@@ -77,7 +79,7 @@ export function AssessmentResults({ attempt, attemptNumber }: AssessmentResultsP
         <div className="flex items-center gap-4">
           {attemptNumber && (
             <span className="text-sm text-muted-foreground font-medium">
-              Попытка {attemptNumber}
+              {t("attemptNumber", { number: attemptNumber })}
             </span>
           )}
           <div className="flex items-center gap-2">
@@ -88,7 +90,7 @@ export function AssessmentResults({ attempt, attemptNumber }: AssessmentResultsP
             <span className="text-muted-foreground">({attempt.percentage}%)</span>
           </div>
           <Badge variant={attempt.isPassed ? "default" : "destructive"}>
-            {attempt.isPassed ? "Зачтено" : "Не зачтено"}
+            {attempt.isPassed ? t("passed") : t("failed")}
           </Badge>
         </div>
         <div className="flex items-center gap-4">
@@ -135,10 +137,10 @@ export function AssessmentResults({ attempt, attemptNumber }: AssessmentResultsP
                       <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">
                         {answer.pointsEarned} / {answer.question.points}{" "}
                         {answer.question.points === 1
-                          ? "балл"
+                          ? t("pointOne")
                           : answer.question.points < 5
-                          ? "балла"
-                          : "баллов"}
+                          ? t("pointFew")
+                          : t("pointMany")}
                       </span>
                     </div>
 
@@ -179,12 +181,12 @@ export function AssessmentResults({ attempt, attemptNumber }: AssessmentResultsP
                             <span>{option.text}</span>
                             {isSelected && (
                               <span className="text-xs opacity-70 ml-1">
-                                (ваш ответ)
+                                {t("yourAnswer")}
                               </span>
                             )}
                             {!isSelected && isCorrect && (
                               <span className="text-xs opacity-70 ml-1">
-                                (правильный ответ)
+                                {t("correctAnswer")}
                               </span>
                             )}
                           </div>

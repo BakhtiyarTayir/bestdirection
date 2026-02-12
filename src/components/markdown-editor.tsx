@@ -19,6 +19,7 @@ import {
   Image,
   FileUp,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 interface MarkdownEditorProps {
   value: string;
@@ -35,6 +36,7 @@ export function MarkdownEditor({
   rows = 15,
   id,
 }: MarkdownEditorProps) {
+  const t = useTranslations("markdown");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -108,30 +110,30 @@ export function MarkdownEditor({
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key === "b") {
         e.preventDefault();
-        insertMarkdown("**", "**", "жирный текст");
+        insertMarkdown("**", "**", t("boldPlaceholder"));
       } else if (mod && e.key === "i") {
         e.preventDefault();
-        insertMarkdown("*", "*", "курсив");
+        insertMarkdown("*", "*", t("italicPlaceholder"));
       }
     },
     [insertMarkdown]
   );
 
   const toolbarButtons = [
-    { icon: Bold, title: "Жирный (Ctrl+B)", action: () => insertMarkdown("**", "**", "жирный текст") },
-    { icon: Italic, title: "Курсив (Ctrl+I)", action: () => insertMarkdown("*", "*", "курсив") },
+    { icon: Bold, title: t("bold"), action: () => insertMarkdown("**", "**", t("boldPlaceholder")) },
+    { icon: Italic, title: t("italic"), action: () => insertMarkdown("*", "*", t("italicPlaceholder")) },
     { type: "separator" as const },
-    { icon: Heading1, title: "Заголовок 1", action: () => insertAtLineStart("# ") },
-    { icon: Heading2, title: "Заголовок 2", action: () => insertAtLineStart("## ") },
-    { icon: Heading3, title: "Заголовок 3", action: () => insertAtLineStart("### ") },
+    { icon: Heading1, title: t("heading1"), action: () => insertAtLineStart("# ") },
+    { icon: Heading2, title: t("heading2"), action: () => insertAtLineStart("## ") },
+    { icon: Heading3, title: t("heading3"), action: () => insertAtLineStart("### ") },
     { type: "separator" as const },
-    { icon: List, title: "Маркированный список", action: () => insertAtLineStart("- ") },
-    { icon: ListOrdered, title: "Нумерованный список", action: () => insertAtLineStart("1. ") },
+    { icon: List, title: t("bulletList"), action: () => insertAtLineStart("- ") },
+    { icon: ListOrdered, title: t("numberedList"), action: () => insertAtLineStart("1. ") },
     { type: "separator" as const },
-    { icon: Code, title: "Блок кода", action: () => insertMarkdown("\n```\n", "\n```\n", "код") },
-    { icon: Table2, title: "Таблица", action: () => insertMarkdown("\n| Заголовок | Заголовок |\n|-----------|----------|\n| ", " | |\n", "ячейка") },
-    { icon: Link, title: "Ссылка", action: () => insertMarkdown("[", "](url)", "текст ссылки") },
-    { icon: Image, title: "Изображение", action: () => insertMarkdown("![", "](url)", "описание") },
+    { icon: Code, title: t("codeBlock"), action: () => insertMarkdown("\n```\n", "\n```\n", t("codePlaceholder")) },
+    { icon: Table2, title: t("table"), action: () => insertMarkdown(`\n| ${t("tableHeader")} | ${t("tableHeader")} |\n|-----------|----------|\n| `, " | |\n", t("tableCell")) },
+    { icon: Link, title: t("link"), action: () => insertMarkdown("[", "](url)", t("linkText")) },
+    { icon: Image, title: t("image"), action: () => insertMarkdown("![", "](url)", t("imageAlt")) },
   ];
 
   return (
@@ -165,7 +167,7 @@ export function MarkdownEditor({
             onClick={() => fileInputRef.current?.click()}
           >
             <FileUp className="h-4 w-4 mr-2" />
-            Загрузить .md
+            {t("uploadMd")}
           </Button>
           <input
             ref={fileInputRef}
@@ -182,10 +184,10 @@ export function MarkdownEditor({
         <div className="border-b px-2">
           <TabsList className="bg-transparent h-9">
             <TabsTrigger value="edit" className="text-xs">
-              Редактирование
+              {t("editTab")}
             </TabsTrigger>
             <TabsTrigger value="preview" className="text-xs">
-              Просмотр
+              {t("previewTab")}
             </TabsTrigger>
           </TabsList>
         </div>
@@ -209,7 +211,7 @@ export function MarkdownEditor({
               <MarkdownRenderer content={value} />
             ) : (
               <p className="text-muted-foreground text-sm">
-                Нет содержимого для предпросмотра
+                {t("noPreview")}
               </p>
             )}
           </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -19,6 +19,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { Download, Upload, FileSpreadsheet, FileText, Braces, Loader2 } from "lucide-react";
 import { importTestFromFile, importExamFromFile } from "@/actions/import-actions";
+import { useTranslations } from "next-intl";
 
 // ---------- ExportButton ----------
 
@@ -28,6 +29,7 @@ interface ExportButtonProps {
 }
 
 export function ExportButton({ type, id }: ExportButtonProps) {
+  const t = useTranslations("exportImport");
   const [loading, setLoading] = useState(false);
 
   const handleExport = async (format: "xlsx" | "csv" | "json") => {
@@ -41,7 +43,7 @@ export function ExportButton({ type, id }: ExportButtonProps) {
       const res = await fetch(url);
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        throw new Error(data?.error || "Ошибка экспорта");
+        throw new Error(data?.error || t("exportError"));
       }
 
       const blob = await res.blob();
@@ -57,7 +59,7 @@ export function ExportButton({ type, id }: ExportButtonProps) {
       a.remove();
       URL.revokeObjectURL(a.href);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Ошибка экспорта");
+      alert(e instanceof Error ? e.message : t("exportError"));
     } finally {
       setLoading(false);
     }
@@ -72,21 +74,21 @@ export function ExportButton({ type, id }: ExportButtonProps) {
           ) : (
             <Download className="h-4 w-4 mr-2" />
           )}
-          Экспорт
+          {t("export")}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         <DropdownMenuItem onClick={() => handleExport("xlsx")}>
           <FileSpreadsheet className="h-4 w-4 mr-2" />
-          Excel (.xlsx)
+          {t("excel")}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => handleExport("csv")}>
           <FileText className="h-4 w-4 mr-2" />
-          CSV (.csv)
+          {t("csv")}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => handleExport("json")}>
           <Braces className="h-4 w-4 mr-2" />
-          JSON (.json)
+          {t("json")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -101,6 +103,8 @@ interface ImportButtonProps {
 }
 
 export function ImportButton({ type, targetId }: ImportButtonProps) {
+  const t = useTranslations("exportImport");
+  const tCommon = useTranslations("common");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,13 +115,13 @@ export function ImportButton({ type, targetId }: ImportButtonProps) {
   const handleImport = async () => {
     const file = fileRef.current?.files?.[0];
     if (!file) {
-      setError("Выберите файл");
+      setError(t("selectFile"));
       return;
     }
 
     const ext = file.name.split(".").pop()?.toLowerCase();
     if (ext !== "xlsx" && ext !== "csv" && ext !== "json") {
-      setError("Поддерживаются только файлы .xlsx, .csv и .json");
+      setError(t("unsupportedFormat"));
       return;
     }
 
@@ -140,18 +144,18 @@ export function ImportButton({ type, targetId }: ImportButtonProps) {
           : await importExamFromFile(formData);
 
       if (!result.success) {
-        setError(result.error || "Ошибка импорта");
+        setError(result.error || t("importError"));
         return;
       }
 
       toast({
-        title: "Импорт завершён",
-        description: `${type === "test" ? "Тест" : "Экзамен"} успешно импортирован (черновик)`,
+        title: t("importSuccess"),
+        description: type === "test" ? t("importTestSuccess") : t("importExamSuccess"),
       });
       setOpen(false);
       router.refresh();
     } catch {
-      setError("Произошла ошибка при импорте");
+      setError(t("importError"));
     } finally {
       setLoading(false);
     }
@@ -162,19 +166,18 @@ export function ImportButton({ type, targetId }: ImportButtonProps) {
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <Upload className="h-4 w-4 mr-2" />
-          Импорт
+          {tCommon("import")}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            Импорт {type === "test" ? "теста" : "экзамена"} из файла
+            {type === "test" ? t("importTestTitle") : t("importExamTitle")}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Загрузите файл в формате Excel (.xlsx), CSV (.csv) или JSON (.json).
-            {type === "test" ? " Тест" : " Экзамен"} будет создан как черновик.
+            {type === "test" ? t("importTestDescription") : t("importExamDescription")}
           </p>
           <input
             ref={fileRef}
@@ -198,7 +201,7 @@ export function ImportButton({ type, targetId }: ImportButtonProps) {
               onClick={() => setOpen(false)}
               disabled={loading}
             >
-              Отмена
+              {tCommon("cancel")}
             </Button>
             <Button onClick={handleImport} disabled={loading}>
               {loading ? (
@@ -206,7 +209,7 @@ export function ImportButton({ type, targetId }: ImportButtonProps) {
               ) : (
                 <Upload className="h-4 w-4 mr-2" />
               )}
-              Импортировать
+              {t("importButton")}
             </Button>
           </div>
         </div>

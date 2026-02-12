@@ -73,8 +73,8 @@ export async function compareCourses(courseAId: string, courseBId: string) {
         loadCourseForComparison(courseBId),
       ]);
 
-      if (!courseA) return { success: false as const, error: "Курс A не найден" };
-      if (!courseB) return { success: false as const, error: "Курс B не найден" };
+      if (!courseA) return { success: false as const, error: "courseNotFound" };
+      if (!courseB) return { success: false as const, error: "courseNotFound" };
 
       const lessonDiffs = compareLessons(courseA.lessons, courseB.lessons);
       const examDiffs = compareAssessments(courseA.assessments, courseB.assessments);
@@ -265,31 +265,31 @@ function compareLessonFields(a: any, b: any): FieldChange[] {
   const changes: FieldChange[] = [];
 
   if (a.title !== b.title) {
-    changes.push({ field: "Название", valueA: a.title, valueB: b.title });
+    changes.push({ field: "title", valueA: a.title, valueB: b.title });
   }
   if (a.content !== b.content) {
     changes.push({
-      field: "Содержимое",
+      field: "content",
       valueA: truncate(a.content || "—", 50),
       valueB: truncate(b.content || "—", 50),
     });
   }
   if (a.videoUrl !== b.videoUrl) {
     changes.push({
-      field: "Видео",
-      valueA: a.videoUrl ? "есть" : "нет",
-      valueB: b.videoUrl ? "есть" : "нет",
+      field: "video",
+      valueA: a.videoUrl ? "yes" : "no",
+      valueB: b.videoUrl ? "yes" : "no",
     });
   }
 
   const hasTestA = !!a.assessment;
   const hasTestB = !!b.assessment;
   if (hasTestA !== hasTestB) {
-    changes.push({ field: "Тест", valueA: hasTestA ? "есть" : "нет", valueB: hasTestB ? "есть" : "нет" });
+    changes.push({ field: "test", valueA: hasTestA ? "yes" : "no", valueB: hasTestB ? "yes" : "no" });
   } else if (hasTestA && hasTestB) {
     if (a.assessment.questions.length !== b.assessment.questions.length) {
       changes.push({
-        field: "Кол-во вопросов",
+        field: "questionCount",
         valueA: `${a.assessment.questions.length}`,
         valueB: `${b.assessment.questions.length}`,
       });
@@ -304,23 +304,23 @@ function compareAssessmentFields(a: any, b: any): FieldChange[] {
   const changes: FieldChange[] = [];
 
   if (a.title !== b.title) {
-    changes.push({ field: "Название", valueA: a.title, valueB: b.title });
+    changes.push({ field: "title", valueA: a.title, valueB: b.title });
   }
   if (a.passingScore !== b.passingScore) {
-    changes.push({ field: "Проходной балл", valueA: `${a.passingScore}%`, valueB: `${b.passingScore}%` });
+    changes.push({ field: "passingScore", valueA: `${a.passingScore}%`, valueB: `${b.passingScore}%` });
   }
   if (a.timeLimitMin !== b.timeLimitMin) {
     changes.push({
-      field: "Время",
-      valueA: a.timeLimitMin ? `${a.timeLimitMin} мин` : "нет",
-      valueB: b.timeLimitMin ? `${b.timeLimitMin} мин` : "нет",
+      field: "time",
+      valueA: a.timeLimitMin ? `${a.timeLimitMin} min` : "no",
+      valueB: b.timeLimitMin ? `${b.timeLimitMin} min` : "no",
     });
   }
   if (a.maxAttempts !== b.maxAttempts) {
-    changes.push({ field: "Попытки", valueA: `${a.maxAttempts}`, valueB: `${b.maxAttempts}` });
+    changes.push({ field: "attempts", valueA: `${a.maxAttempts}`, valueB: `${b.maxAttempts}` });
   }
   if (a.questions.length !== b.questions.length) {
-    changes.push({ field: "Кол-во вопросов", valueA: `${a.questions.length}`, valueB: `${b.questions.length}` });
+    changes.push({ field: "questionCount", valueA: `${a.questions.length}`, valueB: `${b.questions.length}` });
   }
 
   return changes;

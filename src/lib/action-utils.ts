@@ -26,6 +26,6 @@ export async function withAuth<T extends { success: true; [key: string]: any }>(
     return await callback(session as AuthSession);
   } catch (error) {
     console.error("Action error:", error);
-    return { success: false, error: "Произошла непредвиденная ошибка" };
+    return { success: false, error: "somethingWentWrong" };
   }
 }

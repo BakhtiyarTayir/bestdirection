@@ -2,8 +2,9 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,6 +47,10 @@ interface UserFormProps {
 export function UserForm({ user, onSubmit }: UserFormProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslations("users");
+  const tRoles = useTranslations("roles");
+  const tCommon = useTranslations("common");
+  const tErrors = useTranslations("errors");
   const [isLoading, setIsLoading] = useState(false);
   const isEditing = !!user;
 
@@ -83,24 +88,24 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
       const result = await onSubmit(submitData);
       if (result.success) {
         toast({
-          title: isEditing ? "Пользователь обновлен" : "Пользователь создан",
+          title: isEditing ? t("userUpdated") : t("userCreated"),
           description: isEditing
-            ? "Данные пользователя успешно обновлены."
-            : "Новый пользователь успешно создан.",
+            ? t("userUpdatedDescription")
+            : t("userCreatedDescription"),
         });
         router.push("/users");
         router.refresh();
       } else {
         toast({
-          title: "Ошибка",
-          description: result.error ?? "Произошла ошибка при сохранении.",
+          title: tErrors("error"),
+          description: result.error ?? t("saveFailed"),
           variant: "destructive",
         });
       }
     } catch {
       toast({
-        title: "Ошибка",
-        description: "Произошла непредвиденная ошибка.",
+        title: tErrors("error"),
+        description: tErrors("unexpected"),
         variant: "destructive",
       });
     } finally {
@@ -112,17 +117,17 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
     <Card>
       <CardHeader>
         <CardTitle>
-          {isEditing ? "Редактирование пользователя" : "Новый пользователь"}
+          {isEditing ? t("editUser") : t("newUser")}
         </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="firstName">Имя</Label>
+              <Label htmlFor="firstName">{t("firstName")}</Label>
               <Input
                 id="firstName"
-                placeholder="Введите имя"
+                placeholder={t("firstNamePlaceholder")}
                 {...form.register("firstName")}
               />
               {form.formState.errors.firstName && (
@@ -133,10 +138,10 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="lastName">Фамилия</Label>
+              <Label htmlFor="lastName">{t("lastName")}</Label>
               <Input
                 id="lastName"
-                placeholder="Введите фамилию"
+                placeholder={t("lastNamePlaceholder")}
                 {...form.register("lastName")}
               />
               {form.formState.errors.lastName && (
@@ -148,7 +153,7 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t("email")}</Label>
             <Input
               id="email"
               type="email"
@@ -164,11 +169,11 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
 
           {!isEditing && (
             <div className="space-y-2">
-              <Label htmlFor="password">Пароль</Label>
+              <Label htmlFor="password">{t("password")}</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Минимум 6 символов"
+                placeholder={t("passwordPlaceholder")}
                 {...form.register("password")}
               />
               {form.formState.errors.password && (
@@ -180,10 +185,10 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="phone">Телефон</Label>
+            <Label htmlFor="phone">{t("phone")}</Label>
             <Input
               id="phone"
-              placeholder="+7 (XXX) XXX-XX-XX"
+              placeholder={t("phonePlaceholder")}
               {...form.register("phone")}
             />
             {form.formState.errors.phone && (
@@ -194,7 +199,7 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label>Роль</Label>
+            <Label>{t("role")}</Label>
             <Select
               defaultValue={form.getValues("role") ?? "STUDENT"}
               onValueChange={(value) => {
@@ -202,12 +207,12 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
               }}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Выберите роль" />
+                <SelectValue placeholder={t("selectRole")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ADMIN">Администратор</SelectItem>
-                <SelectItem value="TEACHER">Преподаватель</SelectItem>
-                <SelectItem value="STUDENT">Студент</SelectItem>
+                <SelectItem value="ADMIN">{tRoles("ADMIN")}</SelectItem>
+                <SelectItem value="TEACHER">{tRoles("TEACHER")}</SelectItem>
+                <SelectItem value="STUDENT">{tRoles("STUDENT")}</SelectItem>
               </SelectContent>
             </Select>
             {form.formState.errors.role && (
@@ -224,21 +229,21 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
                 checked={isActive}
                 onCheckedChange={setIsActive}
               />
-              <Label htmlFor="isActive">Активен</Label>
+              <Label htmlFor="isActive">{tCommon("active")}</Label>
             </div>
           )}
 
           <div className="flex gap-4 pt-4">
             <Button type="submit" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Сохранить изменения" : "Создать пользователя"}
+              {isEditing ? tCommon("saveChanges") : t("createUser")}
             </Button>
             <Button
               type="button"
               variant="outline"
               onClick={() => router.push("/users")}
             >
-              Отмена
+              {tCommon("cancel")}
             </Button>
           </div>
         </form>

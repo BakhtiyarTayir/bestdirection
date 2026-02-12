@@ -2,7 +2,7 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { createCourseSchema, type CreateCourseInput } from "@/validators/course";
@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { createCourse, updateCourse } from "@/actions/course-actions";
 import { Loader2, Upload, X, ImageIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 const courseFormSchema = createCourseSchema;
 
@@ -57,6 +58,9 @@ export function CourseForm({
   currentUserId,
   currentUserRole,
 }: CourseFormProps) {
+  const t = useTranslations("courses");
+  const tCommon = useTranslations("common");
+  const tErrors = useTranslations("errors");
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
@@ -104,8 +108,8 @@ export function CourseForm({
 
       if (!res.ok) {
         toast({
-          title: "Ошибка загрузки",
-          description: data.error || "Не удалось загрузить изображение",
+          title: t("uploadError"),
+          description: data.error || t("uploadFailed"),
           variant: "destructive",
         });
         return;
@@ -114,8 +118,8 @@ export function CourseForm({
       setCoverImage(data.url);
     } catch {
       toast({
-        title: "Ошибка",
-        description: "Не удалось загрузить изображение",
+        title: tErrors("error"),
+        description: t("uploadFailed"),
         variant: "destructive",
       });
     } finally {
@@ -135,12 +139,12 @@ export function CourseForm({
             isPublished: data.isPublished,
           });
           if (result.success) {
-            toast({ title: "Курс обновлен" });
+            toast({ title: t("courseUpdated") });
             router.push(`/courses/${course.id}`);
             router.refresh();
           } else {
             toast({
-              title: "Ошибка",
+              title: tErrors("error"),
               description: result.error,
               variant: "destructive",
             });
@@ -153,12 +157,12 @@ export function CourseForm({
             teacherId: data.teacherId,
           });
           if (result.success) {
-            toast({ title: "Курс создан" });
+            toast({ title: t("courseCreated") });
             router.push("/courses");
             router.refresh();
           } else {
             toast({
-              title: "Ошибка",
+              title: tErrors("error"),
               description: result.error,
               variant: "destructive",
             });
@@ -166,8 +170,8 @@ export function CourseForm({
         }
       } catch {
         toast({
-          title: "Ошибка",
-          description: "Что-то пошло не так",
+          title: tErrors("error"),
+          description: tErrors("somethingWentWrong"),
           variant: "destructive",
         });
       }
@@ -178,16 +182,16 @@ export function CourseForm({
     <Card>
       <CardHeader>
         <CardTitle>
-          {isEditing ? "Редактирование курса" : "Новый курс"}
+          {isEditing ? t("editCourse") : t("newCourse")}
         </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="title">Название</Label>
+            <Label htmlFor="title">{t("courseTitle")}</Label>
             <Input
               id="title"
-              placeholder="Введите название курса"
+              placeholder={t("courseTitlePlaceholder")}
               {...register("title")}
             />
             {errors.title && (
@@ -196,10 +200,10 @@ export function CourseForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Описание</Label>
+            <Label htmlFor="description">{t("courseDescription")}</Label>
             <Textarea
               id="description"
-              placeholder="Введите описание курса"
+              placeholder={t("courseDescriptionPlaceholder")}
               rows={5}
               {...register("description")}
             />
@@ -212,12 +216,12 @@ export function CourseForm({
 
           {/* Cover Image */}
           <div className="space-y-2">
-            <Label>Обложка курса</Label>
+            <Label>{t("coverImage")}</Label>
             {coverImage ? (
               <div className="relative aspect-video w-full max-w-md rounded-lg overflow-hidden border">
                 <Image
                   src={coverImage}
-                  alt="Обложка курса"
+                  alt={t("coverImageAlt")}
                   fill
                   className="object-cover"
                   sizes="(max-width: 448px) 100vw, 448px"
@@ -239,10 +243,10 @@ export function CourseForm({
               >
                 <ImageIcon className="h-10 w-10 text-muted-foreground/50 mb-2" />
                 <p className="text-sm text-muted-foreground">
-                  Нажмите для загрузки изображения
+                  {t("clickToUpload")}
                 </p>
                 <p className="text-xs text-muted-foreground/70 mt-1">
-                  JPG, PNG или WebP, до 5 МБ
+                  {t("imageFormat")}
                 </p>
               </div>
             )}
@@ -267,26 +271,26 @@ export function CourseForm({
                 ) : (
                   <Upload className="h-4 w-4 mr-2" />
                 )}
-                Заменить обложку
+                {t("replaceCover")}
               </Button>
             )}
             {uploading && (
               <p className="text-sm text-muted-foreground flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Загрузка...
+                {t("uploading")}
               </p>
             )}
           </div>
 
           {isAdmin && (
             <div className="space-y-2">
-              <Label>Преподаватель</Label>
+              <Label>{t("teacherLabel")}</Label>
               <Select
                 value={selectedTeacherId}
                 onValueChange={(value) => setValue("teacherId", value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Выберите преподавателя" />
+                  <SelectValue placeholder={t("selectTeacher")} />
                 </SelectTrigger>
                 <SelectContent>
                   {teachers.map((teacher) => (
@@ -311,21 +315,21 @@ export function CourseForm({
                 checked={isPublished}
                 onCheckedChange={(checked) => setValue("isPublished", checked)}
               />
-              <Label htmlFor="isPublished">Опубликован</Label>
+              <Label htmlFor="isPublished">{tCommon("published")}</Label>
             </div>
           )}
 
           <div className="flex gap-4">
             <Button type="submit" disabled={isPending || uploading}>
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Сохранить" : "Создать"}
+              {isEditing ? tCommon("save") : tCommon("create")}
             </Button>
             <Button
               type="button"
               variant="outline"
               onClick={() => router.back()}
             >
-              Отмена
+              {tCommon("cancel")}
             </Button>
           </div>
         </form>

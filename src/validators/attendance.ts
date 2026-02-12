@@ -9,10 +9,10 @@ export type AttendanceStatus = z.infer<typeof AttendanceStatusEnum>;
 export const createAttendanceSessionSchema = z.object({
   courseId: z
     .string()
-    .min(1, "ID курса обязателен"),
+    .min(1, "courseIdRequired"),
   date: z
     .coerce
-    .date({ message: "Укажите корректную дату" }),
+    .date({ message: "invalidDate" }),
   note: z
     .string()
     .optional(),
@@ -25,7 +25,7 @@ export type CreateAttendanceSessionInput = z.infer<typeof createAttendanceSessio
 const attendanceRecordSchema = z.object({
   studentId: z
     .string()
-    .min(1, "ID студента обязателен"),
+    .min(1, "studentIdRequired"),
   status: AttendanceStatusEnum,
   note: z
     .string()
@@ -37,10 +37,10 @@ export type AttendanceRecordInput = z.infer<typeof attendanceRecordSchema>;
 export const updateAttendanceRecordsSchema = z.object({
   sessionId: z
     .string()
-    .min(1, "ID сессии обязателен"),
+    .min(1, "sessionIdRequired"),
   records: z
     .array(attendanceRecordSchema)
-    .min(1, "Необходима хотя бы одна запись о посещаемости"),
+    .min(1, "atLeastOneRecord"),
 });
 
 export type UpdateAttendanceRecordsInput = z.infer<typeof updateAttendanceRecordsSchema>;

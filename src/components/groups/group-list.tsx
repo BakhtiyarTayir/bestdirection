@@ -19,11 +19,12 @@ import {
   Power,
   UsersRound,
 } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { Link } from "@/i18n/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useTransition } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { deleteGroup, toggleGroupActive } from "@/actions/group-actions";
+import { useTranslations } from "next-intl";
 
 interface GroupData {
   id: string;
@@ -42,21 +43,24 @@ interface GroupListProps {
 }
 
 export function GroupList({ groups, courseId }: GroupListProps) {
+  const t = useTranslations("groups");
+  const tCommon = useTranslations("common");
+  const tErrors = useTranslations("errors");
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
 
   const handleDelete = (groupId: string, groupName: string) => {
-    if (!confirm(`Удалить группу "${groupName}"? Студенты останутся записаны на курс, но будут без группы.`)) {
+    if (!confirm(t("deleteGroupConfirm", { name: groupName }))) {
       return;
     }
 
     startTransition(async () => {
       const result = await deleteGroup(groupId);
       if (!result.success) {
-        toast({ title: "Ошибка", description: result.error, variant: "destructive" });
+        toast({ title: tErrors("error"), description: result.error, variant: "destructive" });
       } else {
-        toast({ title: "Группа удалена" });
+        toast({ title: t("groupDeleted") });
         router.refresh();
       }
     });
@@ -66,7 +70,7 @@ export function GroupList({ groups, courseId }: GroupListProps) {
     startTransition(async () => {
       const result = await toggleGroupActive(groupId);
       if (!result.success) {
-        toast({ title: "Ошибка", description: result.error, variant: "destructive" });
+        toast({ title: tErrors("error"), description: result.error, variant: "destructive" });
       } else {
         router.refresh();
       }
@@ -77,12 +81,12 @@ export function GroupList({ groups, courseId }: GroupListProps) {
     return (
       <div className="rounded-lg border border-dashed p-12 text-center">
         <UsersRound className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-        <h3 className="text-lg font-medium mb-2">Нет групп</h3>
+        <h3 className="text-lg font-medium mb-2">{t("noGroups")}</h3>
         <p className="text-muted-foreground mb-4">
-          Создайте группы для организации студентов
+          {t("createGroupsMessage")}
         </p>
         <Link href={`/courses/${courseId}/groups/new`}>
-          <Button>Создать группу</Button>
+          <Button>{t("createGroup")}</Button>
         </Link>
       </div>
     );
@@ -97,7 +101,7 @@ export function GroupList({ groups, courseId }: GroupListProps) {
               <CardTitle className="text-base flex items-center gap-2">
                 {group.name}
                 {!group.isActive && (
-                  <Badge variant="secondary">Неактивна</Badge>
+                  <Badge variant="secondary">{tCommon("inactive")}</Badge>
                 )}
               </CardTitle>
               {group.description && (
@@ -116,25 +120,25 @@ export function GroupList({ groups, courseId }: GroupListProps) {
                 <DropdownMenuItem asChild>
                   <Link href={`/courses/${courseId}/groups/${group.id}`}>
                     <Edit className="mr-2 h-4 w-4" />
-                    Редактировать
+                    {tCommon("edit")}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href={`/courses/${courseId}/groups/${group.id}/students`}>
                     <UserPlus className="mr-2 h-4 w-4" />
-                    Студенты
+                    {tCommon("details")}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleToggleActive(group.id)}>
                   <Power className="mr-2 h-4 w-4" />
-                  {group.isActive ? "Деактивировать" : "Активировать"}
+                  {group.isActive ? t("deactivate") : t("activate")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="text-destructive"
                   onClick={() => handleDelete(group.id, group.name)}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Удалить
+                  {tCommon("delete")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -143,7 +147,7 @@ export function GroupList({ groups, courseId }: GroupListProps) {
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
                 <Users className="h-4 w-4" />
-                {group._count.enrollments} студентов
+                {t("studentsCount", { count: group._count.enrollments })}
               </div>
               {group.schedule && (
                 <div className="flex items-center gap-1">

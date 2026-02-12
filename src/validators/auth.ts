@@ -3,30 +3,30 @@ import { z } from "zod";
 export const loginSchema = z.object({
   email: z
     .string()
-    .min(1, "Email обязателен")
-    .email("Некорректный email адрес"),
+    .min(1, "emailRequired")
+    .email("emailInvalid"),
   password: z
     .string()
-    .min(8, "Пароль должен содержать минимум 8 символов"),
+    .min(8, "passwordMinLength"),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
 
 export const registerSchema = z
   .object({
-    firstName: z.string().min(1, "Имя обязательно"),
-    lastName: z.string().min(1, "Фамилия обязательна"),
+    firstName: z.string().min(1, "firstNameRequired"),
+    lastName: z.string().min(1, "lastNameRequired"),
     email: z
       .string()
-      .min(1, "Email обязателен")
-      .email("Некорректный email адрес"),
+      .min(1, "emailRequired")
+      .email("emailInvalid"),
     password: z
       .string()
-      .min(8, "Пароль должен содержать минимум 8 символов"),
-    confirmPassword: z.string().min(1, "Подтвердите пароль"),
+      .min(8, "passwordMinLength"),
+    confirmPassword: z.string().min(1, "confirmPasswordRequired"),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Пароли не совпадают",
+    message: "passwordMismatch",
     path: ["confirmPassword"],
   });
 

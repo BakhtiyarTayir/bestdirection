@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 interface TestResultItem {
   testCaseId: string;
@@ -39,6 +40,8 @@ export function TestResultsPanel({
   isLate,
   penalty,
 }: TestResultsPanelProps) {
+  const t = useTranslations("homework");
+
   const passed = results.filter((r) => r.passed).length;
   const total = results.length;
 
@@ -50,28 +53,28 @@ export function TestResultsPanel({
   };
 
   const statusLabels: Record<string, string> = {
-    PASSED: "Все тесты пройдены",
-    PARTIAL: "Частично пройдено",
-    FAILED: "Не пройдено",
-    ERROR: "Ошибка выполнения",
+    PASSED: t("allTestsPassedStatus"),
+    PARTIAL: t("partiallyPassedStatus"),
+    FAILED: t("failedStatus"),
+    ERROR: t("executionErrorStatus"),
   };
 
   return (
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base">Результаты проверки</CardTitle>
+          <CardTitle className="text-base">{t("resultsTitle")}</CardTitle>
           <Badge className={statusColors[status] || ""}>
             {statusLabels[status] || status}
           </Badge>
         </div>
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <span>
-            Пройдено {passed} из {total} тестов ({percentage}%)
+            {t("passedTestsInfo", { passed, total, percent: percentage })}
           </span>
           {isLate && penalty ? (
             <span className="text-orange-600">
-              Штраф за опоздание: -{penalty}% (итого: {finalScore}%)
+              {t("latePenaltyInfo", { penalty, finalScore })}
             </span>
           ) : null}
         </div>
@@ -97,12 +100,11 @@ export function TestResultsPanel({
                   <XCircle className="h-4 w-4 text-red-600" />
                 )}
                 <span className="font-medium text-sm">
-                  Тест {index + 1}
-                  {testCase?.description ? `: ${testCase.description}` : ""}
+                  {t("testCaseResult", { number: index + 1, description: testCase?.description || "" })}
                 </span>
                 {isHidden && (
                   <Badge variant="outline" className="text-xs">
-                    Скрытый
+                    {t("hidden")}
                   </Badge>
                 )}
               </div>
@@ -110,20 +112,20 @@ export function TestResultsPanel({
               {!isHidden && testCase && (
                 <div className="ml-6 space-y-1 text-sm">
                   <div>
-                    <span className="text-muted-foreground">Вход: </span>
+                    <span className="text-muted-foreground">{t("inputLabel")}</span>
                     <code className="bg-muted px-1.5 py-0.5 rounded text-xs">
                       {testCase.input}
                     </code>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Ожидалось: </span>
+                    <span className="text-muted-foreground">{t("expectedLabel")}</span>
                     <code className="bg-muted px-1.5 py-0.5 rounded text-xs">
                       {testCase.expected}
                     </code>
                   </div>
                   {result.actualOutput !== null && (
                     <div>
-                      <span className="text-muted-foreground">Получено: </span>
+                      <span className="text-muted-foreground">{t("actualLabel")}</span>
                       <code
                         className={`px-1.5 py-0.5 rounded text-xs ${
                           result.passed

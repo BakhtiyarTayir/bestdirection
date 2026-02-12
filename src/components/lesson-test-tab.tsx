@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -53,19 +54,22 @@ interface LessonTestTabProps {
 }
 
 export function LessonTestTab({ courseId, lessonId, assessment }: LessonTestTabProps) {
+  const t = useTranslations("assessments");
+  const tCommon = useTranslations("common");
+
   if (!assessment) {
     return (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            Создать тест
+            {t("createTestForLesson")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between mb-4">
             <p className="text-muted-foreground">
-              Для этого урока еще не создан тест. Заполните форму ниже или импортируйте из файла.
+              {t("noTestForLesson")}
             </p>
             <ImportButton type="test" targetId={lessonId} />
           </div>
@@ -83,16 +87,16 @@ export function LessonTestTab({ courseId, lessonId, assessment }: LessonTestTabP
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Настройки теста
+              {t("testSettings")}
             </CardTitle>
             <div className="flex items-center gap-2">
               <Badge variant={assessment.isPublished ? "default" : "secondary"}>
-                {assessment.isPublished ? "Опубликован" : "Черновик"}
+                {assessment.isPublished ? tCommon("published") : tCommon("draft")}
               </Badge>
               <Link href={`/courses/${courseId}/lessons/${lessonId}/test/attempts`}>
                 <Button variant="outline" size="sm">
                   <BarChart3 className="h-4 w-4 mr-2" />
-                  Результаты ({assessment._count.attempts})
+                  {t("results", { count: assessment._count.attempts })}
                 </Button>
               </Link>
               <ExportButton type="test" id={lessonId} />
@@ -123,7 +127,7 @@ export function LessonTestTab({ courseId, lessonId, assessment }: LessonTestTabP
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>
-              Вопросы ({assessment.questions.length})
+              {t("questions", { count: assessment.questions.length })}
             </CardTitle>
             <AssessmentQuestionForm assessmentId={assessment.id} />
           </div>
@@ -131,7 +135,7 @@ export function LessonTestTab({ courseId, lessonId, assessment }: LessonTestTabP
         <CardContent className="space-y-4">
           {assessment.questions.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
-              Вопросов пока нет. Добавьте первый вопрос.
+              {t("noQuestions")}
             </p>
           ) : (
             assessment.questions.map((question, index) => (
@@ -140,15 +144,15 @@ export function LessonTestTab({ courseId, lessonId, assessment }: LessonTestTabP
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm font-medium text-muted-foreground">
-                        Вопрос {index + 1}
+                        {t("questionNumber", { number: index + 1 })}
                       </span>
                       <Badge variant="outline" className="text-xs">
                         {question.type === "SINGLE_CHOICE"
-                          ? "Один ответ"
-                          : "Несколько ответов"}
+                          ? t("singleChoice")
+                          : t("multipleChoice")}
                       </Badge>
                       <Badge variant="outline" className="text-xs">
-                        {question.points} {question.points === 1 ? "балл" : question.points < 5 ? "балла" : "баллов"}
+                        {question.points} {question.points === 1 ? t("pointOne") : question.points < 5 ? t("pointFew") : t("pointMany")}
                       </Badge>
                     </div>
                     <p className="font-medium">{question.text}</p>
@@ -205,30 +209,30 @@ export function LessonTestTab({ courseId, lessonId, assessment }: LessonTestTabP
             <div>
               <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
                 <Target className="h-4 w-4" />
-                <span className="text-xs">Проходной балл</span>
+                <span className="text-xs">{t("passingScoreLabel")}</span>
               </div>
               <p className="text-lg font-semibold">{assessment.passingScore}%</p>
             </div>
             <div>
               <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
                 <Clock className="h-4 w-4" />
-                <span className="text-xs">Ограничение</span>
+                <span className="text-xs">{t("timeLimitLabel")}</span>
               </div>
               <p className="text-lg font-semibold">
-                {assessment.timeLimitMin ? `${assessment.timeLimitMin} мин` : "Нет"}
+                {assessment.timeLimitMin ? `${assessment.timeLimitMin} ${t("minutesShort")}` : t("noTimeLimit")}
               </p>
             </div>
             <div>
               <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
                 <RotateCcw className="h-4 w-4" />
-                <span className="text-xs">Попытки</span>
+                <span className="text-xs">{t("attemptsLabel")}</span>
               </div>
               <p className="text-lg font-semibold">{assessment.maxAttempts}</p>
             </div>
             <div>
               <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
                 <FileText className="h-4 w-4" />
-                <span className="text-xs">Макс. баллов</span>
+                <span className="text-xs">{t("maxPoints")}</span>
               </div>
               <p className="text-lg font-semibold">
                 {assessment.questions.reduce((sum, q) => sum + q.points, 0)}

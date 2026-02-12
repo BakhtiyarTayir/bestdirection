@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -48,6 +49,7 @@ interface AttemptDetailRowProps {
 }
 
 export function AttemptDetailRow({ attempt, colSpan }: AttemptDetailRowProps) {
+  const t = useTranslations("assessments");
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -72,7 +74,7 @@ export function AttemptDetailRow({ attempt, colSpan }: AttemptDetailRowProps) {
           <Badge
             variant={attempt.isPassed ? "default" : "destructive"}
           >
-            {attempt.isPassed ? "Зачтено" : "Не зачтено"}
+            {attempt.isPassed ? t("passed") : t("failed")}
           </Badge>
         </TableCell>
         <TableCell className="text-muted-foreground text-sm">
@@ -94,7 +96,7 @@ export function AttemptDetailRow({ attempt, colSpan }: AttemptDetailRowProps) {
           <TableCell colSpan={colSpan} className="p-0">
             <div className="bg-muted/30 p-4 space-y-3">
               <p className="text-sm font-medium text-muted-foreground">
-                Ответы на вопросы:
+                {t("answersToQuestions")}
               </p>
               {attempt.answers.map((answer, index) => (
                 <div key={answer.id} className="space-y-2">
@@ -113,7 +115,7 @@ export function AttemptDetailRow({ attempt, colSpan }: AttemptDetailRowProps) {
                         </p>
                         <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">
                           {answer.pointsEarned} / {answer.question.points}{" "}
-                          {answer.question.points === 1 ? "балл" : answer.question.points < 5 ? "балла" : "баллов"}
+                          {answer.question.points === 1 ? t("pointOne") : answer.question.points < 5 ? t("pointFew") : t("pointMany")}
                         </span>
                       </div>
                       <div className="space-y-1 ml-2">
@@ -148,10 +150,10 @@ export function AttemptDetailRow({ attempt, colSpan }: AttemptDetailRowProps) {
                               )}
                               <span>{option.text}</span>
                               {isSelected && (
-                                <span className="text-xs opacity-70 ml-1">(ответ студента)</span>
+                                <span className="text-xs opacity-70 ml-1">{t("studentAnswer")}</span>
                               )}
                               {!isSelected && isCorrect && (
-                                <span className="text-xs opacity-70 ml-1">(правильный ответ)</span>
+                                <span className="text-xs opacity-70 ml-1">{t("correctAnswer")}</span>
                               )}
                             </div>
                           );

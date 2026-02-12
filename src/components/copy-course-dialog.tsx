@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { copyCourse } from "@/actions/course-copy-actions";
 import {
   Dialog,
@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Copy, CheckCircle2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 interface CopyCourseDialogProps {
   sourceCourse: {
@@ -40,17 +41,20 @@ export function CopyCourseDialog({
   open,
   onOpenChange,
 }: CopyCourseDialogProps) {
+  const t = useTranslations("copyCourse");
+  const tCommon = useTranslations("common");
+  const tErrors = useTranslations("errors");
   const router = useRouter();
   const { toast } = useToast();
 
-  const [title, setTitle] = useState(`${sourceCourse.title} (моя версия)`);
+  const [title, setTitle] = useState(`${sourceCourse.title} (${t("myVersion")})`);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleCopy = async () => {
     if (!title.trim()) {
       toast({
-        title: "Ошибка",
-        description: "Введите название курса",
+        title: tErrors("error"),
+        description: t("enterTitle"),
         variant: "destructive",
       });
       return;
@@ -63,22 +67,22 @@ export function CopyCourseDialog({
 
       if (result.success) {
         toast({
-          title: "Курс скопирован!",
-          description: `Создан курс "${result.data.title}"`,
+          title: t("courseCopied"),
+          description: t("courseCreated", { title: result.data.title }),
         });
         onOpenChange(false);
         router.push(`/courses/${result.data.id}`);
       } else {
         toast({
-          title: "Ошибка",
+          title: tErrors("error"),
           description: result.error,
           variant: "destructive",
         });
       }
     } catch {
       toast({
-        title: "Ошибка",
-        description: "Не удалось скопировать курс",
+        title: tErrors("error"),
+        description: t("copyFailed"),
         variant: "destructive",
       });
     } finally {
@@ -92,60 +96,60 @@ export function CopyCourseDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Copy className="h-5 w-5" />
-            Копировать курс
+            {t("title")}
           </DialogTitle>
           <DialogDescription>
-            Будет создана полная копия курса с вашим авторством
+            {t("description")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           <div className="rounded-lg border bg-muted/50 p-4">
             <p className="text-sm font-medium text-muted-foreground mb-1">
-              Исходный курс:
+              {t("sourceLabel")}
             </p>
             <p className="font-semibold">{sourceCourse.title}</p>
             <p className="text-sm text-muted-foreground">
-              Автор: {sourceCourse.teacher.firstName} {sourceCourse.teacher.lastName}
+              {t("author", { name: `${sourceCourse.teacher.firstName} ${sourceCourse.teacher.lastName}` })}
             </p>
             <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
-              <span>{sourceCourse._count.lessons} уроков</span>
-              <span>{sourceCourse._count.assessments} экзаменов</span>
+              <span>{t("lessonsCount", { count: sourceCourse._count.lessons })}</span>
+              <span>{t("examsCount", { count: sourceCourse._count.assessments })}</span>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="copy-title">Название вашей копии</Label>
+            <Label htmlFor="copy-title">{t("newTitle")}</Label>
             <Input
               id="copy-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Введите название"
+              placeholder={t("newTitlePlaceholder")}
             />
           </div>
 
           <div className="text-sm space-y-2">
-            <p className="font-medium">Будет скопировано:</p>
+            <p className="font-medium">{t("willBeCopied")}</p>
             <ul className="space-y-1 text-muted-foreground">
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
-                Все уроки с содержимым
+                {t("allLessons")}
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
-                Все тесты с вопросами и ответами
+                {t("allTestsWithAnswers")}
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
-                Все экзамены с вопросами
+                {t("allExamsWithQuestions")}
               </li>
             </ul>
 
-            <p className="font-medium mt-4">Не копируется:</p>
+            <p className="font-medium mt-4">{t("willNotBeCopied")}</p>
             <ul className="space-y-1 text-muted-foreground">
-              <li>- Записанные студенты</li>
-              <li>- Прогресс и результаты</li>
-              <li>- Посещаемость</li>
+              <li>{t("enrolledStudents")}</li>
+              <li>{t("progressAndResults")}</li>
+              <li>{t("attendanceData")}</li>
             </ul>
           </div>
         </div>
@@ -156,18 +160,18 @@ export function CopyCourseDialog({
             onClick={() => onOpenChange(false)}
             disabled={isLoading}
           >
-            Отмена
+            {tCommon("cancel")}
           </Button>
           <Button onClick={handleCopy} disabled={isLoading || !title.trim()}>
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Копирование...
+                {tCommon("copying")}
               </>
             ) : (
               <>
                 <Copy className="mr-2 h-4 w-4" />
-                Создать копию
+                {tCommon("copy")}
               </>
             )}
           </Button>

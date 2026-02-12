@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Link, usePathname } from "@/i18n/navigation";
+import { useTranslations, useLocale } from "next-intl";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -31,6 +31,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "./ui/tooltip";
+import { LanguageSwitcher } from "./language-switcher";
 
 interface SidebarProps {
   role: string;
@@ -39,36 +40,34 @@ interface SidebarProps {
 
 interface NavItem {
   href: string;
-  label: string;
+  labelKey: string;
   icon: React.ElementType;
   roles: string[];
 }
 
 const navItems: NavItem[] = [
-  { href: "/dashboard", label: "Дашборд", icon: LayoutDashboard, roles: ["ADMIN", "TEACHER", "STUDENT"] },
-  { href: "/courses", label: "Курсы", icon: BookOpen, roles: ["ADMIN", "TEACHER", "STUDENT"] },
-  { href: "/users", label: "Пользователи", icon: Users, roles: ["ADMIN"] },
-  { href: "/groups", label: "Группы", icon: UsersRound, roles: ["ADMIN", "TEACHER"] },
-  { href: "/courses/catalog", label: "Каталог курсов", icon: Copy, roles: ["ADMIN", "TEACHER"] },
-  { href: "/admin/compare", label: "Сравнение курсов", icon: GitCompare, roles: ["ADMIN"] },
-  { href: "/trash", label: "Корзина", icon: Trash2, roles: ["ADMIN"] },
-  { href: "/audit", label: "Журнал аудита", icon: ScrollText, roles: ["ADMIN"] },
-  { href: "/my-results", label: "Мои результаты", icon: FileText, roles: ["STUDENT"] },
-  { href: "/profile", label: "Профиль", icon: User, roles: ["ADMIN", "TEACHER", "STUDENT"] },
+  { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard, roles: ["ADMIN", "TEACHER", "STUDENT"] },
+  { href: "/courses", labelKey: "courses", icon: BookOpen, roles: ["ADMIN", "TEACHER", "STUDENT"] },
+  { href: "/users", labelKey: "users", icon: Users, roles: ["ADMIN"] },
+  { href: "/groups", labelKey: "groups", icon: UsersRound, roles: ["ADMIN", "TEACHER"] },
+  { href: "/courses/catalog", labelKey: "catalog", icon: Copy, roles: ["ADMIN", "TEACHER"] },
+  { href: "/admin/compare", labelKey: "compare", icon: GitCompare, roles: ["ADMIN"] },
+  { href: "/trash", labelKey: "trash", icon: Trash2, roles: ["ADMIN"] },
+  { href: "/audit", labelKey: "audit", icon: ScrollText, roles: ["ADMIN"] },
+  { href: "/my-results", labelKey: "myResults", icon: FileText, roles: ["STUDENT"] },
+  { href: "/profile", labelKey: "profile", icon: User, roles: ["ADMIN", "TEACHER", "STUDENT"] },
 ];
 
 export function Sidebar({ role, userName }: SidebarProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const t = useTranslations("nav");
+  const tRoles = useTranslations("roles");
+  const tAuth = useTranslations("auth");
+  const locale = useLocale();
 
   const filteredItems = navItems.filter((item) => item.roles.includes(role));
-
-  const roleLabels: Record<string, string> = {
-    ADMIN: "Администратор",
-    TEACHER: "Преподаватель",
-    STUDENT: "Студент",
-  };
 
   const sidebarContent = (
     <div className="flex h-full flex-col">
@@ -95,7 +94,7 @@ export function Sidebar({ role, userName }: SidebarProps) {
                 )}
               >
                 <item.icon className="h-4 w-4 shrink-0" />
-                {!collapsed && item.label}
+                {!collapsed && t(item.labelKey)}
               </Link>
             );
 
@@ -103,7 +102,7 @@ export function Sidebar({ role, userName }: SidebarProps) {
               return (
                 <Tooltip key={item.href}>
                   <TooltipTrigger asChild>{link}</TooltipTrigger>
-                  <TooltipContent side="right">{item.label}</TooltipContent>
+                  <TooltipContent side="right">{t(item.labelKey)}</TooltipContent>
                 </Tooltip>
               );
             }
@@ -115,9 +114,12 @@ export function Sidebar({ role, userName }: SidebarProps) {
 
       <div className={cn("border-t", collapsed ? "p-2" : "p-4")}>
         {!collapsed && (
-          <div className="mb-3 px-3">
-            <p className="text-sm font-medium truncate">{userName}</p>
-            <p className="text-xs text-muted-foreground">{roleLabels[role] || role}</p>
+          <div className="mb-3 px-3 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium truncate">{userName}</p>
+              <p className="text-xs text-muted-foreground">{tRoles(role)}</p>
+            </div>
+            <LanguageSwitcher />
           </div>
         )}
         <TooltipProvider delayDuration={0}>
@@ -129,13 +131,13 @@ export function Sidebar({ role, userName }: SidebarProps) {
                   "w-full text-muted-foreground",
                   collapsed ? "justify-center px-2" : "justify-start gap-3"
                 )}
-                onClick={() => signOut({ callbackUrl: "/login" })}
+                onClick={() => signOut({ callbackUrl: `/${locale}/login` })}
               >
                 <LogOut className="h-4 w-4 shrink-0" />
-                {!collapsed && "Выйти"}
+                {!collapsed && tAuth("logout")}
               </Button>
             </TooltipTrigger>
-            {collapsed && <TooltipContent side="right">Выйти</TooltipContent>}
+            {collapsed && <TooltipContent side="right">{tAuth("logout")}</TooltipContent>}
           </Tooltip>
         </TooltipProvider>
       </div>

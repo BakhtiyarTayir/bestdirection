@@ -48,7 +48,7 @@ export async function copyCourse(
       });
 
       if (!source) {
-        return { success: false as const, error: "Исходный курс не найден" };
+        return { success: false as const, error: "courseNotFound" };
       }
 
       const canCopy =
@@ -57,13 +57,13 @@ export async function copyCourse(
         source.teacherId === session.user.id;
 
       if (!canCopy) {
-        return { success: false as const, error: "Нет доступа для копирования этого курса" };
+        return { success: false as const, error: "noAccess" };
       }
 
       const newCourse = await prisma.$transaction(async (tx) => {
         const course = await tx.course.create({
           data: {
-            title: options?.newTitle ?? `${source.title} (копия)`,
+            title: options?.newTitle ?? `${source.title} (copy)`,
             description: source.description,
             coverImage: source.coverImage,
             isPublished: false,
@@ -265,7 +265,7 @@ export async function getCourseLineage(courseId: string) {
       });
 
       if (!course) {
-        return { success: false as const, error: "Курс не найден" };
+        return { success: false as const, error: "courseNotFound" };
       }
 
       return { success: true as const, data: course };

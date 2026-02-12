@@ -10,6 +10,7 @@ import { TestResultsPanel } from "./test-results-panel";
 import { submitSolution } from "@/actions/homework-actions";
 import { LANGUAGE_LABELS } from "@/lib/code-runner/config";
 import { formatDateTime } from "@/lib/format-date";
+import { useTranslations } from "next-intl";
 import {
   Clock,
   Target,
@@ -95,6 +96,9 @@ export function HomeworkView({
   attemptsRemaining: initialAttemptsRemaining,
 }: HomeworkViewProps) {
   const { toast } = useToast();
+  const t = useTranslations("homework");
+  const tErrors = useTranslations("errors");
+  const tAssessments = useTranslations("assessments");
   const [submissions, setSubmissions] = useState(initialSubmissions);
   const [attemptsRemaining, setAttemptsRemaining] = useState(initialAttemptsRemaining);
   const [activeTab, setActiveTab] = useState("task");
@@ -121,8 +125,8 @@ export function HomeworkView({
 
     if (!result.success) {
       toast({
-        title: "Ошибка",
-        description: result.error || "Не удалось отправить решение",
+        title: tErrors("generic"),
+        description: result.error || t("submitFailed"),
         variant: "destructive",
       });
       return;
@@ -137,29 +141,38 @@ export function HomeworkView({
     });
     setAttemptsRemaining((prev) => prev - 1);
 
-    // Auto-switch to "Вывод" tab when there are errors
+    // Auto-switch to output tab when there are errors
     const hasErr = data.testResults.some((r: { error: string | null }) => r.error !== null);
     if (hasErr && data.status !== "PASSED") {
       setActiveTab("output");
     }
 
     if (data.status === "PASSED") {
-      toast({ title: "Все тесты пройдены!", description: `Результат: ${data.percentage}%` });
+      toast({ title: t("allTestsPassed"), description: t("resultPercent", { percent: data.percentage }) });
     } else if (data.status === "PARTIAL") {
       toast({
-        title: "Частично пройдено",
-        description: `Пройдено ${data.passed} из ${data.total} тестов`,
+        title: t("partiallyPassed"),
+        description: t("passedOfTotal", { passed: data.passed, total: data.total }),
       });
     } else {
       toast({
-        title: "Тесты не пройдены",
-        description: data.status === "ERROR" ? "Ошибка выполнения кода" : "Попробуйте ещё раз",
+        title: t("testsFailed"),
+        description: data.status === "ERROR" ? t("executionError") : t("tryAgain"),
         variant: "destructive",
       });
     }
   };
 
   const isOverdue = homework.dueDate && new Date(homework.dueDate) < new Date();
+
+  const statusLabels: Record<string, string> = {
+    PASSED: t("statusPassed"),
+    PARTIAL: t("statusPartial"),
+    FAILED: t("statusFailed"),
+    ERROR: t("statusError"),
+    RUNNING: t("statusRunning"),
+    PENDING: t("statusPending"),
+  };
 
   return (
     <div className="space-y-6">
@@ -184,21 +197,21 @@ export function HomeworkView({
             <div>
               <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
                 <Target className="h-4 w-4" />
-                <span className="text-xs">Проходной</span>
+                <span className="text-xs">{t("passingLabel")}</span>
               </div>
               <p className="text-lg font-semibold">{homework.passingScore}%</p>
             </div>
             <div>
               <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
                 <Clock className="h-4 w-4" />
-                <span className="text-xs">Таймаут</span>
+                <span className="text-xs">{t("timeoutLabel")}</span>
               </div>
-              <p className="text-lg font-semibold">{homework.timeLimitSec} сек</p>
+              <p className="text-lg font-semibold">{homework.timeLimitSec} {tAssessments("seconds")}</p>
             </div>
             <div>
               <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
                 <RotateCcw className="h-4 w-4" />
-                <span className="text-xs">Попытки</span>
+                <span className="text-xs">{t("attemptsLabel")}</span>
               </div>
               <p className="text-lg font-semibold">
                 {attemptsRemaining} / {homework.maxAttempts}
@@ -208,7 +221,7 @@ export function HomeworkView({
               <div>
                 <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
                   <Calendar className="h-4 w-4" />
-                  <span className="text-xs">Дедлайн</span>
+                  <span className="text-xs">{t("deadlineLabel")}</span>
                 </div>
                 <p className={`text-sm font-semibold ${isOverdue ? "text-red-600" : ""}`}>
                   {formatDateTime(new Date(homework.dueDate))}
@@ -220,8 +233,8 @@ export function HomeworkView({
             <div className="flex items-center gap-2 mt-3 p-2 rounded bg-orange-50 text-orange-800 dark:bg-orange-950 dark:text-orange-200 text-sm">
               <AlertTriangle className="h-4 w-4" />
               {homework.allowLate
-                ? `Дедлайн истёк. Штраф за опоздание: -${homework.latePenalty}%`
-                : "Дедлайн истёк. Отправка решений закрыта."}
+                ? t("deadlineExpiredPenalty", { penalty: homework.latePenalty })
+                : t("deadlineExpiredClosed")}
             </div>
           )}
         </CardContent>
@@ -229,15 +242,15 @@ export function HomeworkView({
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="task">Редактор</TabsTrigger>
+          <TabsTrigger value="task">{t("editorTab")}</TabsTrigger>
           <TabsTrigger value="output" className={errorOutput ? "text-red-600" : ""}>
-            Вывод
+            {t("outputTab")}
           </TabsTrigger>
           <TabsTrigger value="tests">
-            Тесты ({homework.testCases.length})
+            {t("testsTab", { count: homework.testCases.length })}
           </TabsTrigger>
           <TabsTrigger value="history">
-            История ({submissions.length})
+            {t("historyTab", { count: submissions.length })}
           </TabsTrigger>
         </TabsList>
 
@@ -274,14 +287,14 @@ export function HomeworkView({
             <CardContent className="pt-6">
               {!lastResult ? (
                 <p className="text-muted-foreground text-center py-8">
-                  Отправьте решение, чтобы увидеть вывод
+                  {t("submitToSeeOutput")}
                 </p>
               ) : errorOutput ? (
                 <div className="space-y-4">
                   <div className="flex items-start gap-2 p-3 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-900 dark:bg-yellow-950/50 dark:border-yellow-900 dark:text-yellow-200">
                     <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
                     <p className="text-sm">
-                      В вашем коде есть ошибки. Прочтите внимательно вывод тестов, найдите и попробуйте исправить их.
+                      {t("codeHasErrors")}
                     </p>
                   </div>
                   <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm font-mono whitespace-pre-wrap leading-relaxed">
@@ -290,21 +303,21 @@ export function HomeworkView({
                 </div>
               ) : lastResult.status === "PASSED" ? (
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-green-800 dark:bg-green-950/50 dark:border-green-900 dark:text-green-200">
-                  <p className="text-sm">Все тесты пройдены успешно! Ошибок нет.</p>
+                  <p className="text-sm">{t("allTestsPassedSuccess")}</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/50 dark:border-red-900 dark:text-red-200">
                     <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
                     <p className="text-sm">
-                      Некоторые тесты не пройдены. Проверьте вкладку «Тесты» для деталей.
+                      {t("someTestsFailed")}
                     </p>
                   </div>
                   {lastResult.results
                     .filter((r) => !r.passed && r.actualOutput)
                     .map((r, i) => (
                       <div key={i} className="text-sm">
-                        <span className="text-muted-foreground">Тест {i + 1} — получено:</span>
+                        <span className="text-muted-foreground">{t("testOutput", { number: i + 1 })}</span>
                         <pre className="bg-muted p-2 rounded mt-1 text-xs">{r.actualOutput}</pre>
                       </div>
                     ))}
@@ -317,27 +330,26 @@ export function HomeworkView({
         <TabsContent value="tests" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Примеры тестов</CardTitle>
+              <CardTitle className="text-base">{t("exampleTests")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {homework.testCases.length === 0 ? (
                 <p className="text-muted-foreground text-center py-4">
-                  Нет открытых тестов для просмотра
+                  {t("noVisibleTests")}
                 </p>
               ) : (
                 homework.testCases.map((tc, i) => (
                   <div key={tc.id} className="border rounded-lg p-3">
                     <div className="font-medium text-sm mb-2">
-                      Тест {i + 1}
-                      {tc.description ? `: ${tc.description}` : ""}
+                      {t("testCaseLabel", { number: i + 1, description: tc.description || "" })}
                     </div>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <span className="text-muted-foreground">Вход:</span>
+                        <span className="text-muted-foreground">{t("input")}</span>
                         <pre className="bg-muted p-2 rounded mt-1 text-xs">{tc.input}</pre>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Ожидаемый вывод:</span>
+                        <span className="text-muted-foreground">{t("expectedOutput")}</span>
                         <pre className="bg-muted p-2 rounded mt-1 text-xs">{tc.expected}</pre>
                       </div>
                     </div>
@@ -351,12 +363,12 @@ export function HomeworkView({
         <TabsContent value="history" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">История попыток</CardTitle>
+              <CardTitle className="text-base">{t("attemptHistory")}</CardTitle>
             </CardHeader>
             <CardContent>
               {submissions.length === 0 ? (
                 <p className="text-muted-foreground text-center py-4">
-                  Вы ещё не отправляли решений
+                  {t("noSubmissions")}
                 </p>
               ) : (
                 <div className="space-y-3">
@@ -367,20 +379,12 @@ export function HomeworkView({
                       FAILED: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200",
                       ERROR: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200",
                     };
-                    const statusLabels: Record<string, string> = {
-                      PASSED: "Пройдено",
-                      PARTIAL: "Частично",
-                      FAILED: "Не пройдено",
-                      ERROR: "Ошибка",
-                      RUNNING: "Выполняется",
-                      PENDING: "В очереди",
-                    };
 
                     return (
                       <div key={sub.id} className="border rounded-lg p-3">
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-medium text-sm">
-                            Попытка {sub.attemptNumber}
+                            {t("attemptLabel", { number: sub.attemptNumber })}
                           </span>
                           <div className="flex items-center gap-2">
                             <Badge className={statusColors[sub.status] || ""}>
@@ -393,13 +397,12 @@ export function HomeworkView({
                         </div>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <span>
-                            Тесты: {sub.testResults.filter((r) => r.passed).length}/
-                            {sub.testResults.length}
+                            {t("testsPassedCount", { passed: sub.testResults.filter((r) => r.passed).length, total: sub.testResults.length })}
                           </span>
-                          <span>Результат: {sub.percentage}%</span>
+                          <span>{t("resultScore", { percent: sub.percentage })}</span>
                           {sub.isLate && (
                             <span className="text-orange-600">
-                              Штраф: -{sub.penalty}% (итого: {sub.finalScore}%)
+                              {t("penaltyInfo", { penalty: sub.penalty, finalScore: sub.finalScore })}
                             </span>
                           )}
                         </div>

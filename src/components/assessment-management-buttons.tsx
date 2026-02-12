@@ -1,7 +1,8 @@
 "use client";
 
 import { useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -29,8 +30,11 @@ export function DeleteAssessmentButton({ assessmentId, type }: DeleteAssessmentB
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
+  const t = useTranslations("assessments");
+  const tErrors = useTranslations("errors");
+  const tCommon = useTranslations("common");
 
-  const label = type === "TEST" ? "тест" : "экзамен";
+  const isTest = type === "TEST";
 
   const handleDelete = () => {
     startTransition(async () => {
@@ -39,21 +43,21 @@ export function DeleteAssessmentButton({ assessmentId, type }: DeleteAssessmentB
 
         if (result.success) {
           toast({
-            title: "Успешно",
-            description: `${type === "TEST" ? "Тест" : "Экзамен"} удален`,
+            title: tCommon("delete"),
+            description: isTest ? t("testDeleted") : t("examDeleted"),
           });
           router.refresh();
         } else {
           toast({
-            title: "Ошибка",
-            description: result.error || `Не удалось удалить ${label}`,
+            title: tErrors("error"),
+            description: result.error || (isTest ? t("deleteTestFailed") : t("deleteExamFailed")),
             variant: "destructive",
           });
         }
       } catch {
         toast({
-          title: "Ошибка",
-          description: "Произошла непредвиденная ошибка",
+          title: tErrors("error"),
+          description: tErrors("unexpected"),
           variant: "destructive",
         });
       }
@@ -73,15 +77,15 @@ export function DeleteAssessmentButton({ assessmentId, type }: DeleteAssessmentB
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Удалить {label}?</AlertDialogTitle>
+          <AlertDialogTitle>{isTest ? t("deleteTestConfirm") : t("deleteExamConfirm")}</AlertDialogTitle>
           <AlertDialogDescription>
-            Это действие необратимо. Будут удалены все вопросы и попытки прохождения.
+            {t("deleteTestDescription")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Отмена</AlertDialogCancel>
+          <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
           <AlertDialogAction onClick={handleDelete}>
-            Удалить
+            {tCommon("delete")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -99,6 +103,9 @@ export function DeleteAssessmentQuestionButton({ questionId }: DeleteAssessmentQ
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
+  const t = useTranslations("assessments");
+  const tErrors = useTranslations("errors");
+  const tCommon = useTranslations("common");
 
   const handleDelete = () => {
     startTransition(async () => {
@@ -107,21 +114,21 @@ export function DeleteAssessmentQuestionButton({ questionId }: DeleteAssessmentQ
 
         if (result.success) {
           toast({
-            title: "Успешно",
-            description: "Вопрос удален",
+            title: tCommon("delete"),
+            description: t("questionDeleted"),
           });
           router.refresh();
         } else {
           toast({
-            title: "Ошибка",
-            description: result.error || "Не удалось удалить вопрос",
+            title: tErrors("error"),
+            description: result.error || t("deleteQuestionFailed"),
             variant: "destructive",
           });
         }
       } catch {
         toast({
-          title: "Ошибка",
-          description: "Произошла непредвиденная ошибка",
+          title: tErrors("error"),
+          description: tErrors("unexpected"),
           variant: "destructive",
         });
       }
@@ -141,15 +148,15 @@ export function DeleteAssessmentQuestionButton({ questionId }: DeleteAssessmentQ
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Удалить вопрос?</AlertDialogTitle>
+          <AlertDialogTitle>{t("deleteQuestionConfirm")}</AlertDialogTitle>
           <AlertDialogDescription>
-            Это действие необратимо. Вопрос и все связанные с ним ответы будут удалены.
+            {t("deleteQuestionDescription")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Отмена</AlertDialogCancel>
+          <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
           <AlertDialogAction onClick={handleDelete}>
-            Удалить
+            {tCommon("delete")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

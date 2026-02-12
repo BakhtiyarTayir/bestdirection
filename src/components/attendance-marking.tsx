@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -23,14 +23,8 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { updateAttendanceRecords } from "@/actions/attendance-actions";
 import { Check } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { AttendanceStatus } from "@/validators/attendance";
-
-const STATUS_OPTIONS: { value: AttendanceStatus; label: string }[] = [
-  { value: "PRESENT", label: "Присутствует" },
-  { value: "ABSENT", label: "Отсутствует" },
-  { value: "LATE", label: "Опоздал" },
-  { value: "EXCUSED", label: "Уважительная" },
-];
 
 interface Student {
   id: string;
@@ -63,8 +57,18 @@ export function AttendanceMarking({
   students,
   existingRecords,
 }: AttendanceMarkingProps) {
+  const t = useTranslations("attendance");
+  const tCommon = useTranslations("common");
+  const tErrors = useTranslations("errors");
   const { toast } = useToast();
   const router = useRouter();
+
+  const STATUS_OPTIONS: { value: AttendanceStatus; label: string }[] = [
+    { value: "PRESENT", label: t("present") },
+    { value: "ABSENT", label: t("absent") },
+    { value: "LATE", label: t("late") },
+    { value: "EXCUSED", label: t("excused") },
+  ];
   const [isLoading, setIsLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"saved" | "unsaved" | "idle">("idle");
 
@@ -117,21 +121,21 @@ export function AttendanceMarking({
         savedRecordsRef.current = records;
         setSaveStatus("saved");
         toast({
-          title: "Сохранено",
-          description: "Посещаемость успешно обновлена.",
+          title: t("saved"),
+          description: t("attendanceSaved"),
         });
         router.refresh();
       } else {
         toast({
-          title: "Ошибка",
-          description: result.error ?? "Не удалось сохранить посещаемость.",
+          title: tErrors("error"),
+          description: result.error ?? t("saveFailed"),
           variant: "destructive",
         });
       }
     } catch {
       toast({
-        title: "Ошибка",
-        description: "Произошла непредвиденная ошибка.",
+        title: tErrors("error"),
+        description: tErrors("unexpected"),
         variant: "destructive",
       });
     } finally {
@@ -151,7 +155,7 @@ export function AttendanceMarking({
   if (students.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        Нет записанных студентов на курс.
+        {t("noStudentsEnrolled")}
       </div>
     );
   }
@@ -160,7 +164,7 @@ export function AttendanceMarking({
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
         <span className="text-sm text-muted-foreground self-center mr-2">
-          Отметить всех:
+          {t("markAll")}
         </span>
         {STATUS_OPTIONS.map((opt) => (
           <Button
@@ -179,9 +183,9 @@ export function AttendanceMarking({
           <TableHeader>
             <TableRow>
               <TableHead className="w-8">#</TableHead>
-              <TableHead className="min-w-[200px]">Студент</TableHead>
-              <TableHead className="min-w-[180px]">Статус</TableHead>
-              <TableHead className="min-w-[200px]">Примечание</TableHead>
+              <TableHead className="min-w-[200px]">{t("student")}</TableHead>
+              <TableHead className="min-w-[180px]">{t("statusHeader")}</TableHead>
+              <TableHead className="min-w-[200px]">{t("noteHeader")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -218,7 +222,7 @@ export function AttendanceMarking({
                   </TableCell>
                   <TableCell>
                     <Input
-                      placeholder="Примечание..."
+                      placeholder={t("notePlaceholder")}
                       value={record?.note ?? ""}
                       onChange={(e) =>
                         updateRecord(student.id, "note", e.target.value)
@@ -235,17 +239,17 @@ export function AttendanceMarking({
       <div className="flex items-center justify-end gap-3">
         {saveStatus === "saved" && (
           <Badge variant="outline" className="text-green-600 border-green-600">
-            Сохранено
+            {t("saved")}
           </Badge>
         )}
         {saveStatus === "unsaved" && (
           <Badge variant="outline" className="text-orange-600 border-orange-600">
-            Несохранённые изменения
+            {t("unsavedChanges")}
           </Badge>
         )}
         <Button onClick={handleSave} disabled={isLoading}>
           <Check className="mr-2 h-4 w-4" />
-          {isLoading ? "Сохранение..." : "Сохранить"}
+          {isLoading ? tCommon("saving") : tCommon("save")}
         </Button>
       </div>
     </div>

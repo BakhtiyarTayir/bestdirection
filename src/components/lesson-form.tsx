@@ -3,8 +3,9 @@
 import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { z } from "zod";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,17 +18,19 @@ import { Upload, Youtube } from "lucide-react";
 
 type VideoSource = "YOUTUBE" | "UPLOAD";
 
-const formSchema = z.object({
-  title: z.string().min(1, "Название обязательно"),
-  content: z.string().min(1, "Конспект урока обязателен"),
-  hasVideo: z.boolean(),
-  videoUrl: z.string().optional(),
-  videoSource: z.enum(["YOUTUBE", "UPLOAD"]).optional(),
-  sortOrder: z.coerce.number().int().min(0, "Порядок не может быть отрицательным"),
-  isPublished: z.boolean(),
-});
+function createFormSchema(tValidation: (key: string) => string) {
+  return z.object({
+    title: z.string().min(1, tValidation("titleRequired")),
+    content: z.string().min(1, tValidation("lessonContentRequired")),
+    hasVideo: z.boolean(),
+    videoUrl: z.string().optional(),
+    videoSource: z.enum(["YOUTUBE", "UPLOAD"]).optional(),
+    sortOrder: z.coerce.number().int().min(0, tValidation("sortOrderNonNegative")),
+    isPublished: z.boolean(),
+  });
+}
 
-type FormData = z.infer<typeof formSchema>;
+type FormData = z.infer<ReturnType<typeof createFormSchema>>;
 
 export interface LessonFormSubmitData {
   title: string;
@@ -53,10 +56,16 @@ interface LessonFormProps {
 }
 
 export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
+  const t = useTranslations("lessons");
+  const tCommon = useTranslations("common");
+  const tSuccess = useTranslations("success");
+  const tErrors = useTranslations("errors");
+  const tValidation = useTranslations("validation");
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const formSchema = createFormSchema(tValidation);
   const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string | null>(
     lesson?.videoSource === "UPLOAD" ? lesson?.videoUrl ?? null : null
   );
@@ -94,8 +103,8 @@ export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
     const maxSize = 500 * 1024 * 1024; // 500MB
     if (file.size > maxSize) {
       toast({
-        title: "Ошибка",
-        description: "Размер файла не должен превышать 500 МБ",
+        title: tErrors("error"),
+        description: t("fileSizeError"),
         variant: "destructive",
       });
       return;
@@ -122,11 +131,11 @@ export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
             const response = JSON.parse(xhr.responseText);
             resolve(response.url);
           } else {
-            reject(new Error("Ошибка загрузки"));
+            reject(new Error("Upload error"));
           }
         });
 
-        xhr.addEventListener("error", () => reject(new Error("Ошибка сети")));
+        xhr.addEventListener("error", () => reject(new Error(t("networkError"))));
         xhr.open("POST", "/api/v1/upload/video");
         xhr.send(formData);
       });
@@ -135,13 +144,13 @@ export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
       setUploadedVideoUrl(url);
       setValue("videoUrl", url);
       toast({
-        title: "Успешно",
-        description: "Видео загружено",
+        title: tSuccess("success"),
+        description: t("videoSuccess"),
       });
     } catch {
       toast({
-        title: "Ошибка",
-        description: "Не удалось загрузить видео",
+        title: tErrors("error"),
+        description: t("videoUploadFailed"),
         variant: "destructive",
       });
     } finally {
@@ -167,22 +176,22 @@ export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
       const result = await onSubmit(submitData);
       if (result.success) {
         toast({
-          title: "Успешно",
-          description: lesson ? "Урок обновлен" : "Урок создан",
+          title: tSuccess("success"),
+          description: lesson ? t("lessonUpdated") : t("lessonCreated"),
         });
         router.push(`/courses/${courseId}/lessons`);
         router.refresh();
       } else {
         toast({
-          title: "Ошибка",
-          description: result.error || "Что-то пошло не так",
+          title: tErrors("error"),
+          description: result.error || tErrors("somethingWentWrong"),
           variant: "destructive",
         });
       }
     } catch {
       toast({
-        title: "Ошибка",
-        description: "Что-то пошло не так",
+        title: tErrors("error"),
+        description: tErrors("somethingWentWrong"),
         variant: "destructive",
       });
     } finally {
@@ -192,12 +201,12 @@ export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
 
   return (
     <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6 max-w-2xl">
-      {/* Название */}
+      {/* Title */}
       <div className="space-y-2">
-        <Label htmlFor="title">Название урока</Label>
+        <Label htmlFor="title">{t("lessonTitle")}</Label>
         <Input
           id="title"
-          placeholder="Введите название урока"
+          placeholder={t("lessonTitlePlaceholder")}
           {...register("title")}
         />
         {errors.title && (
@@ -205,7 +214,7 @@ export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
         )}
       </div>
 
-      {/* Видео (опционально) */}
+      {/* Video (optional) */}
       <div className="space-y-4">
         <div className="flex items-center space-x-2">
           <Switch
@@ -220,14 +229,14 @@ export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
             }}
           />
           <Label htmlFor="hasVideo" className="cursor-pointer">
-            Добавить видео
+            {t("addVideo")}
           </Label>
         </div>
 
         {hasVideo && (
           <div className="space-y-4 pl-4 border-l-2 border-muted">
             <div className="space-y-2">
-              <Label>Источник видео</Label>
+              <Label>{t("videoSource")}</Label>
               <RadioGroup
                 value={videoSource}
                 onValueChange={(value: string) =>
@@ -238,14 +247,14 @@ export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
                   <RadioGroupItem value="YOUTUBE" id="source-youtube" />
                   <Label htmlFor="source-youtube" className="cursor-pointer flex items-center gap-1">
                     <Youtube className="h-4 w-4" />
-                    YouTube
+                    {t("youtube")}
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="UPLOAD" id="source-upload" />
                   <Label htmlFor="source-upload" className="cursor-pointer flex items-center gap-1">
                     <Upload className="h-4 w-4" />
-                    Загрузка файла
+                    {t("uploadFile")}
                   </Label>
                 </div>
               </RadioGroup>
@@ -253,7 +262,7 @@ export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
 
             {videoSource === "YOUTUBE" && (
               <div className="space-y-2">
-                <Label htmlFor="videoUrl">Ссылка на YouTube</Label>
+                <Label htmlFor="videoUrl">{t("youtubeLink")}</Label>
                 <Input
                   id="videoUrl"
                   placeholder="https://www.youtube.com/watch?v=..."
@@ -269,7 +278,7 @@ export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
 
             {videoSource === "UPLOAD" && (
               <div className="space-y-2">
-                <Label>Загрузить видео</Label>
+                <Label>{t("uploadVideo")}</Label>
                 <div className="flex items-center gap-4">
                   <Button
                     type="button"
@@ -279,8 +288,8 @@ export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
                   >
                     <Upload className="h-4 w-4 mr-2" />
                     {uploadProgress !== null
-                      ? `Загрузка... ${uploadProgress}%`
-                      : "Выбрать файл"}
+                      ? t("uploadingProgress", { progress: uploadProgress })
+                      : t("selectFile")}
                   </Button>
                   <input
                     ref={fileInputRef}
@@ -300,7 +309,7 @@ export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
                 )}
                 {uploadedVideoUrl && (
                   <p className="text-sm text-muted-foreground">
-                    Видео загружено: {uploadedVideoUrl}
+                    {t("videoUploaded", { url: uploadedVideoUrl })}
                   </p>
                 )}
                 {errors.videoUrl && (
@@ -314,14 +323,14 @@ export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
         )}
       </div>
 
-      {/* Конспект урока (обязательно) */}
+      {/* Lesson content (required) */}
       <div className="space-y-2">
-        <Label htmlFor="content">Конспект урока</Label>
+        <Label htmlFor="content">{t("lessonContent")}</Label>
         <MarkdownEditor
           id="content"
           value={watch("content")}
           onChange={(val) => setValue("content", val, { shouldValidate: true })}
-          placeholder="Введите текст конспекта в формате Markdown..."
+          placeholder={t("contentPlaceholder")}
           rows={15}
         />
         {errors.content && (
@@ -329,9 +338,9 @@ export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
         )}
       </div>
 
-      {/* Порядок сортировки */}
+      {/* Sort order */}
       <div className="space-y-2">
-        <Label htmlFor="sortOrder">Порядок сортировки</Label>
+        <Label htmlFor="sortOrder">{t("sortOrder")}</Label>
         <Input
           id="sortOrder"
           type="number"
@@ -345,7 +354,7 @@ export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
         )}
       </div>
 
-      {/* Опубликован */}
+      {/* Published */}
       <div className="flex items-center space-x-2">
         <Switch
           id="isPublished"
@@ -353,25 +362,25 @@ export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
           onCheckedChange={(checked: boolean) => setValue("isPublished", checked)}
         />
         <Label htmlFor="isPublished" className="cursor-pointer">
-          Опубликовать
+          {t("publish")}
         </Label>
       </div>
 
-      {/* Кнопки */}
+      {/* Buttons */}
       <div className="flex gap-4">
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting
-            ? "Сохранение..."
+            ? t("savingChanges")
             : lesson
-              ? "Сохранить изменения"
-              : "Создать урок"}
+              ? t("saveChanges")
+              : t("createLesson")}
         </Button>
         <Button
           type="button"
           variant="outline"
           onClick={() => router.push(`/courses/${courseId}/lessons`)}
         >
-          Отмена
+          {tCommon("cancel")}
         </Button>
       </div>
     </form>

@@ -24,6 +24,7 @@ import {
 import { RotateCcw, Trash2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { formatDateTime } from "@/lib/format-date";
+import { useTranslations } from "next-intl";
 
 interface TrashItem {
   id: string;
@@ -42,17 +43,13 @@ interface TrashTableProps {
   onHardDelete: (id: string) => Promise<{ success: boolean; error?: string }>;
 }
 
-const typeLabels: Record<string, string> = {
-  course: "курс",
-  user: "пользователя",
-  lesson: "урок",
-};
+// typeLabels moved to component body using translations
 
-function getItemName(item: TrashItem, type: string): string {
+function getItemName(item: TrashItem, type: string, noTitle: string): string {
   if (type === "user") {
     return `${item.firstName ?? ""} ${item.lastName ?? ""} (${item.email ?? ""})`.trim();
   }
-  return (item.title as string) ?? "Без названия";
+  return (item.title as string) ?? noTitle;
 }
 
 function formatDeletedAt(date: Date | null): string {
@@ -61,18 +58,26 @@ function formatDeletedAt(date: Date | null): string {
 }
 
 export function TrashTable({ items, type, onRestore, onHardDelete }: TrashTableProps) {
+  const t = useTranslations("trash");
+  const tCommon = useTranslations("common");
   const [localItems, setLocalItems] = useState(items);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+
+  const typeLabels: Record<string, string> = {
+    course: t("courseType"),
+    user: t("userType"),
+    lesson: t("lessonType"),
+  };
 
   const handleRestore = (id: string) => {
     startTransition(async () => {
       const result = await onRestore(id);
       if (result.success) {
         setLocalItems((prev) => prev.filter((item) => item.id !== id));
-        toast({ title: "Успешно восстановлено" });
+        toast({ title: t("restored") });
       } else {
-        toast({ title: result.error ?? "Ошибка восстановления", variant: "destructive" });
+        toast({ title: result.error ?? t("restoreError"), variant: "destructive" });
       }
     });
   };
@@ -82,9 +87,9 @@ export function TrashTable({ items, type, onRestore, onHardDelete }: TrashTableP
       const result = await onHardDelete(id);
       if (result.success) {
         setLocalItems((prev) => prev.filter((item) => item.id !== id));
-        toast({ title: "Удалено навсегда" });
+        toast({ title: t("deletedPermanently") });
       } else {
-        toast({ title: result.error ?? "Ошибка удаления", variant: "destructive" });
+        toast({ title: result.error ?? t("deleteError"), variant: "destructive" });
       }
     });
   };
@@ -92,7 +97,7 @@ export function TrashTable({ items, type, onRestore, onHardDelete }: TrashTableP
   if (localItems.length === 0) {
     return (
       <p className="text-muted-foreground text-center py-8">
-        Нет удалённых записей
+        {t("noDeletedItems")}
       </p>
     );
   }
@@ -101,16 +106,16 @@ export function TrashTable({ items, type, onRestore, onHardDelete }: TrashTableP
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Название</TableHead>
-          <TableHead>Дата удаления</TableHead>
-          <TableHead className="text-right">Действия</TableHead>
+          <TableHead>{tCommon("name")}</TableHead>
+          <TableHead>{t("deletedAt")}</TableHead>
+          <TableHead className="text-right">{tCommon("actions")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {localItems.map((item) => (
           <TableRow key={item.id}>
             <TableCell className="font-medium">
-              {getItemName(item, type)}
+              {getItemName(item, type, tCommon("noTitle"))}
             </TableCell>
             <TableCell className="text-muted-foreground">
               {formatDeletedAt(item.deletedAt)}
@@ -124,7 +129,7 @@ export function TrashTable({ items, type, onRestore, onHardDelete }: TrashTableP
                   disabled={isPending}
                 >
                   <RotateCcw className="mr-2 h-4 w-4" />
-                  Восстановить
+                  {tCommon("restore")}
                 </Button>
 
                 <AlertDialog>
@@ -135,25 +140,23 @@ export function TrashTable({ items, type, onRestore, onHardDelete }: TrashTableP
                       disabled={isPending}
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
-                      Удалить навсегда
+                      {t("deletePermanently")}
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Удалить навсегда?</AlertDialogTitle>
+                      <AlertDialogTitle>{t("deletePermanentlyConfirm")}</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Вы собираетесь безвозвратно удалить {typeLabels[type]}{" "}
-                        &quot;{getItemName(item, type)}&quot;. Это действие нельзя
-                        отменить.
+                        {t("deletePermanentlyDescription", { type: typeLabels[type], name: getItemName(item, type, tCommon("noTitle")) })}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>Отмена</AlertDialogCancel>
+                      <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
                       <AlertDialogAction
                         onClick={() => handleHardDelete(item.id)}
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                       >
-                        Удалить навсегда
+                        {t("deletePermanently")}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>

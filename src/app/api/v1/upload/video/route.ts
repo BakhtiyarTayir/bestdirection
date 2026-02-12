@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     const contentLength = request.headers.get("content-length");
     if (contentLength && parseInt(contentLength) > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: "Файл слишком большой. Максимальный размер: 500 МБ" },
+        { error: "File too large. Maximum size: 500 MB" },
         { status: 413 }
       );
     }
@@ -48,14 +48,14 @@ export async function POST(request: NextRequest) {
 
     if (!file) {
       return NextResponse.json(
-        { error: "Видеофайл не найден" },
+        { error: "Video file not found" },
         { status: 400 }
       );
     }
 
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: "Файл слишком большой. Максимальный размер: 500 МБ" },
+        { error: "File too large. Maximum size: 500 MB" },
         { status: 413 }
       );
     }
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     // Validate MIME type
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
       return NextResponse.json(
-        { error: "Недопустимый формат файла. Разрешены: MP4, WebM, OGG, MOV" },
+        { error: "Invalid file format. Allowed: MP4, WebM, OGG, MOV" },
         { status: 400 }
       );
     }
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     const ext = path.extname(originalName).toLowerCase();
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
       return NextResponse.json(
-        { error: "Недопустимое расширение файла. Разрешены: .mp4, .webm, .ogg, .mov" },
+        { error: "Invalid file extension. Allowed: .mp4, .webm, .ogg, .mov" },
         { status: 400 }
       );
     }
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Video upload error:", error);
     return NextResponse.json(
-      { error: "Не удалось загрузить видео" },
+      { error: "Failed to upload video" },
       { status: 500 }
     );
   }

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CopyCourseDialog } from "./copy-course-dialog";
 import { Copy, BookOpen, FileText, Users } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 interface Course {
   id: string;
@@ -36,6 +37,8 @@ interface CourseCatalogListProps {
 }
 
 export function CourseCatalogList({ courses }: CourseCatalogListProps) {
+  const tCopy = useTranslations("copyCourse");
+  const tCommon = useTranslations("common");
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
 
   return (
@@ -50,7 +53,7 @@ export function CourseCatalogList({ courses }: CourseCatalogListProps) {
                 </CardTitle>
                 {course.isTemplate && (
                   <Badge variant="secondary" className="shrink-0">
-                    Шаблон
+                    {tCommon("template")}
                   </Badge>
                 )}
               </div>
@@ -69,16 +72,16 @@ export function CourseCatalogList({ courses }: CourseCatalogListProps) {
               <div className="flex flex-wrap gap-3 mt-4 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <BookOpen className="h-4 w-4" />
-                  {course._count.lessons} уроков
+                  {tCopy("lessonsCount", { count: course._count.lessons })}
                 </span>
                 <span className="flex items-center gap-1">
                   <FileText className="h-4 w-4" />
-                  {course._count.assessments} экзаменов
+                  {tCopy("examsCount", { count: course._count.assessments })}
                 </span>
                 {course._count.copies > 0 && (
                   <span className="flex items-center gap-1">
                     <Users className="h-4 w-4" />
-                    {course._count.copies} копий
+                    {tCopy("copiesCount", { count: course._count.copies })}
                   </span>
                 )}
               </div>
@@ -90,7 +93,7 @@ export function CourseCatalogList({ courses }: CourseCatalogListProps) {
                 onClick={() => setSelectedCourse(course)}
               >
                 <Copy className="mr-2 h-4 w-4" />
-                Копировать
+                {tCommon("copy")}
               </Button>
             </CardFooter>
           </Card>

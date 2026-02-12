@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
 
 // ============================================================
-// Получение удалённых записей
+// Get deleted records
 // ============================================================
 
 export async function getDeletedCourses() {
@@ -56,7 +56,7 @@ export async function getDeletedLessons() {
 }
 
 // ============================================================
-// Восстановление записей
+// Restore records
 // ============================================================
 
 export async function restoreCourse(courseId: string) {
@@ -99,7 +99,7 @@ export async function restoreLesson(lessonId: string) {
 }
 
 // ============================================================
-// Полное удаление (hard delete)
+// Hard delete (permanent removal)
 // ============================================================
 
 export async function hardDeleteCourse(courseId: string) {

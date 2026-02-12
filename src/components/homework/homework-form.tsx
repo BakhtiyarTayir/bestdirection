@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import { createHomework, updateHomework } from "@/actions/homework-actions";
 import { LANGUAGE_LABELS } from "@/lib/code-runner/config";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Save, Plus, Trash2, Eye, EyeOff } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { ProgrammingLanguage } from "@/validators/homework";
 
 const Editor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
@@ -63,6 +64,10 @@ export function HomeworkForm({ courseId, lessonId, homework }: HomeworkFormProps
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
+  const t = useTranslations("homework");
+  const tCommon = useTranslations("common");
+  const tErrors = useTranslations("errors");
+  const tSuccess = useTranslations("success");
 
   const [title, setTitle] = useState(homework?.title || "");
   const [description, setDescription] = useState(homework?.description || "");
@@ -107,15 +112,15 @@ export function HomeworkForm({ courseId, lessonId, homework }: HomeworkFormProps
     e.preventDefault();
 
     if (!title.trim()) {
-      toast({ title: "Ошибка", description: "Введите название задания", variant: "destructive" });
+      toast({ title: tErrors("generic"), description: t("enterTitle"), variant: "destructive" });
       return;
     }
     if (!description.trim()) {
-      toast({ title: "Ошибка", description: "Введите описание задания", variant: "destructive" });
+      toast({ title: tErrors("generic"), description: t("enterDescription"), variant: "destructive" });
       return;
     }
     if (testCases.some((tc) => !tc.expected.trim())) {
-      toast({ title: "Ошибка", description: "Заполните ожидаемый результат для всех тест-кейсов", variant: "destructive" });
+      toast({ title: tErrors("generic"), description: t("fillExpected"), variant: "destructive" });
       return;
     }
 
@@ -145,10 +150,10 @@ export function HomeworkForm({ courseId, lessonId, homework }: HomeworkFormProps
           });
 
           if (result.success) {
-            toast({ title: "Успешно", description: "Задание обновлено" });
+            toast({ title: tSuccess("success"), description: t("homeworkUpdated") });
             router.refresh();
           } else {
-            toast({ title: "Ошибка", description: result.error, variant: "destructive" });
+            toast({ title: tErrors("generic"), description: result.error, variant: "destructive" });
           }
         } else {
           const result = await createHomework(lessonId, {
@@ -166,15 +171,15 @@ export function HomeworkForm({ courseId, lessonId, homework }: HomeworkFormProps
           });
 
           if (result.success) {
-            toast({ title: "Успешно", description: "Задание создано" });
+            toast({ title: tSuccess("success"), description: t("homeworkCreated") });
             router.push(`/courses/${courseId}/lessons/${lessonId}/edit`);
             router.refresh();
           } else {
-            toast({ title: "Ошибка", description: result.error, variant: "destructive" });
+            toast({ title: tErrors("generic"), description: result.error, variant: "destructive" });
           }
         }
       } catch {
-        toast({ title: "Ошибка", description: "Произошла непредвиденная ошибка", variant: "destructive" });
+        toast({ title: tErrors("generic"), description: tErrors("unexpected"), variant: "destructive" });
       }
     });
   };
@@ -186,23 +191,23 @@ export function HomeworkForm({ courseId, lessonId, homework }: HomeworkFormProps
       {/* Basic Info */}
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="hw-title">Название задания</Label>
+          <Label htmlFor="hw-title">{t("homeworkTitle")}</Label>
           <Input
             id="hw-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Например: Функция суммирования"
+            placeholder={t("homeworkTitlePlaceholder")}
             disabled={isPending}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="hw-description">Описание задания</Label>
+          <Label htmlFor="hw-description">{t("homeworkDescription")}</Label>
           <Textarea
             id="hw-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Опишите что нужно реализовать..."
+            placeholder={t("homeworkDescriptionPlaceholder")}
             rows={4}
             disabled={isPending}
           />
@@ -210,7 +215,7 @@ export function HomeworkForm({ courseId, lessonId, homework }: HomeworkFormProps
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-2">
-            <Label>Язык программирования</Label>
+            <Label>{t("language")}</Label>
             <Select value={language} onValueChange={setLanguage} disabled={isPending}>
               <SelectTrigger>
                 <SelectValue />
@@ -226,7 +231,7 @@ export function HomeworkForm({ courseId, lessonId, homework }: HomeworkFormProps
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="hw-maxAttempts">Макс. попыток</Label>
+            <Label htmlFor="hw-maxAttempts">{t("maxAttempts")}</Label>
             <Input
               id="hw-maxAttempts"
               type="number"
@@ -239,7 +244,7 @@ export function HomeworkForm({ courseId, lessonId, homework }: HomeworkFormProps
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="hw-timeLimitSec">Таймаут (сек)</Label>
+            <Label htmlFor="hw-timeLimitSec">{t("timeout")}</Label>
             <Input
               id="hw-timeLimitSec"
               type="number"
@@ -252,7 +257,7 @@ export function HomeworkForm({ courseId, lessonId, homework }: HomeworkFormProps
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="hw-passingScore">Проходной балл (%)</Label>
+            <Label htmlFor="hw-passingScore">{t("passingScore")}</Label>
             <Input
               id="hw-passingScore"
               type="number"
@@ -273,12 +278,12 @@ export function HomeworkForm({ courseId, lessonId, homework }: HomeworkFormProps
               onCheckedChange={setAllowLate}
               disabled={isPending}
             />
-            <Label htmlFor="hw-allowLate">Разрешить опоздание</Label>
+            <Label htmlFor="hw-allowLate">{t("allowLate")}</Label>
           </div>
           {allowLate && (
             <div className="flex items-center gap-2">
               <Label htmlFor="hw-latePenalty" className="text-sm whitespace-nowrap">
-                Штраф (%)
+                {t("latePenalty")}
               </Label>
               <Input
                 id="hw-latePenalty"
@@ -297,7 +302,7 @@ export function HomeworkForm({ courseId, lessonId, homework }: HomeworkFormProps
 
       {/* Starter Code */}
       <div className="space-y-2">
-        <Label>Начальный код (шаблон для студента)</Label>
+        <Label>{t("starterCode")}</Label>
         <div className="border rounded-lg overflow-hidden">
           <Editor
             height="200px"
@@ -318,7 +323,7 @@ export function HomeworkForm({ courseId, lessonId, homework }: HomeworkFormProps
 
       {/* Solution Code */}
       <div className="space-y-2">
-        <Label>Эталонное решение (не видно студентам)</Label>
+        <Label>{t("solutionCode")}</Label>
         <div className="border rounded-lg overflow-hidden">
           <Editor
             height="200px"
@@ -340,24 +345,24 @@ export function HomeworkForm({ courseId, lessonId, homework }: HomeworkFormProps
       {/* Test Cases */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <Label className="text-base">Тест-кейсы ({testCases.length})</Label>
+          <Label className="text-base">{t("testCases", { count: testCases.length })}</Label>
           <Button type="button" variant="outline" size="sm" onClick={addTestCase} disabled={isPending}>
             <Plus className="h-4 w-4 mr-1" />
-            Добавить тест
+            {t("addTest")}
           </Button>
         </div>
 
         {testCases.map((tc, index) => (
           <div key={index} className="border rounded-lg p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="font-medium text-sm">Тест {index + 1}</span>
+              <span className="font-medium text-sm">{t("testNumber", { number: index + 1 })}</span>
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   onClick={() => updateTestCase(index, "isHidden", !tc.isHidden)}
-                  title={tc.isHidden ? "Скрытый тест" : "Открытый тест"}
+                  title={tc.isHidden ? t("hiddenTest") : t("visibleTest")}
                 >
                   {tc.isHidden ? (
                     <EyeOff className="h-4 w-4" />
@@ -379,7 +384,7 @@ export function HomeworkForm({ courseId, lessonId, homework }: HomeworkFormProps
 
             <div className="space-y-2">
               <Input
-                placeholder="Описание теста (необязательно)"
+                placeholder={t("testDescription")}
                 value={tc.description}
                 onChange={(e) => updateTestCase(index, "description", e.target.value)}
                 disabled={isPending}
@@ -388,21 +393,21 @@ export function HomeworkForm({ courseId, lessonId, homework }: HomeworkFormProps
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Входные данные</Label>
+                <Label className="text-xs text-muted-foreground">{t("inputData")}</Label>
                 <Textarea
                   value={tc.input}
                   onChange={(e) => updateTestCase(index, "input", e.target.value)}
-                  placeholder='Например: 2, 3'
+                  placeholder={t("inputPlaceholder")}
                   rows={2}
                   disabled={isPending}
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Ожидаемый результат</Label>
+                <Label className="text-xs text-muted-foreground">{t("expectedResult")}</Label>
                 <Textarea
                   value={tc.expected}
                   onChange={(e) => updateTestCase(index, "expected", e.target.value)}
-                  placeholder="Например: 5"
+                  placeholder={t("expectedPlaceholder")}
                   rows={2}
                   disabled={isPending}
                 />
@@ -411,7 +416,7 @@ export function HomeworkForm({ courseId, lessonId, homework }: HomeworkFormProps
 
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <Label className="text-xs text-muted-foreground">Баллы:</Label>
+                <Label className="text-xs text-muted-foreground">{t("pointsLabel")}</Label>
                 <Input
                   type="number"
                   min={1}
@@ -424,7 +429,7 @@ export function HomeworkForm({ courseId, lessonId, homework }: HomeworkFormProps
               {tc.isHidden && (
                 <Badge variant="outline" className="text-xs">
                   <EyeOff className="h-3 w-3 mr-1" />
-                  Скрытый
+                  {t("hidden")}
                 </Badge>
               )}
             </div>
@@ -439,7 +444,7 @@ export function HomeworkForm({ courseId, lessonId, homework }: HomeworkFormProps
           ) : (
             <Save className="h-4 w-4 mr-2" />
           )}
-          {homework ? "Сохранить изменения" : "Создать задание"}
+          {homework ? tCommon("saveChanges") : t("createHomework")}
         </Button>
       </div>
     </form>

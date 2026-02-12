@@ -11,6 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "./ui/tooltip";
+import { useTranslations } from "next-intl";
 
 interface TocItem {
   level: number;
@@ -38,6 +39,7 @@ interface LessonTOCProps {
 }
 
 export function LessonTOC({ content }: LessonTOCProps) {
+  const t = useTranslations("toc");
   const headings = parseHeadings(content);
   const [activeId, setActiveId] = useState<string>("");
   const [collapsed, setCollapsed] = useState(false);
@@ -87,7 +89,7 @@ export function LessonTOC({ content }: LessonTOCProps) {
                 <List className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="left">Показать содержание</TooltipContent>
+            <TooltipContent side="left">{t("showContents")}</TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </div>
@@ -99,7 +101,7 @@ export function LessonTOC({ content }: LessonTOCProps) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
           <List className="h-4 w-4" />
-          Содержание
+          {t("contents")}
         </div>
         <Button
           variant="ghost"

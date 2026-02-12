@@ -107,7 +107,7 @@ export function jsonToData(text: string): SpreadsheetData {
   const raw = JSON.parse(text);
 
   if (!raw || typeof raw !== "object") {
-    throw new Error("Невалидный JSON");
+    throw new Error("Invalid JSON");
   }
 
   return {
@@ -151,7 +151,7 @@ export function bufferToData(
     XLSX.utils.sheet_to_json(ws, { header: 1, defval: undefined });
 
   if (rows.length < 2) {
-    throw new Error("Файл должен содержать минимум 2 строки метаданных");
+    throw new Error("File must contain at least 2 metadata rows");
   }
 
   // --- Parse metadata (rows 0-1) ---
@@ -197,7 +197,7 @@ export function bufferToData(
   }
 
   if (headerRowIdx === -1) {
-    throw new Error("Не найден заголовок таблицы вопросов (# или question_number)");
+    throw new Error("Question table header not found (# or question_number)");
   }
 
   // Detect format: new (option_1/correct_1 pairs) vs old (option_text/is_correct)
@@ -291,39 +291,39 @@ export function validateSpreadsheetData(data: SpreadsheetData): string[] {
   const errors: string[] = [];
 
   if (!data.title.trim()) {
-    errors.push("Название теста не может быть пустым");
+    errors.push("Test title cannot be empty");
   }
 
   if (data.passingScore < 1 || data.passingScore > 100) {
-    errors.push("Проходной балл должен быть от 1 до 100");
+    errors.push("Passing score must be between 1 and 100");
   }
 
   if (data.questions.length === 0) {
-    errors.push("Должен быть хотя бы один вопрос");
+    errors.push("At least one question is required");
   }
 
   data.questions.forEach((q, i) => {
     const num = i + 1;
 
     if (!q.text.trim()) {
-      errors.push(`Вопрос ${num}: текст не может быть пустым`);
+      errors.push(`Question ${num}: text cannot be empty`);
     }
 
     if (q.options.length < 2) {
-      errors.push(`Вопрос ${num}: должно быть минимум 2 варианта ответа`);
+      errors.push(`Question ${num}: at least 2 answer options required`);
     }
 
     const correctCount = q.options.filter((o) => o.isCorrect).length;
 
     if (q.type === "SINGLE_CHOICE" && correctCount !== 1) {
       errors.push(
-        `Вопрос ${num}: для типа SINGLE_CHOICE должен быть ровно 1 правильный ответ (найдено: ${correctCount})`
+        `Question ${num}: SINGLE_CHOICE must have exactly 1 correct answer (found: ${correctCount})`
       );
     }
 
     if (q.type === "MULTIPLE_CHOICE" && correctCount < 1) {
       errors.push(
-        `Вопрос ${num}: для типа MULTIPLE_CHOICE должен быть хотя бы 1 правильный ответ`
+        `Question ${num}: MULTIPLE_CHOICE must have at least 1 correct answer`
       );
     }
   });

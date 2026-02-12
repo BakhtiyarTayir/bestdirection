@@ -33,7 +33,7 @@ export async function GET(
     });
 
     if (!assessment || assessment.type !== "EXAM") {
-      return NextResponse.json({ error: "Экзамен не найден" }, { status: 404 });
+      return NextResponse.json({ error: "Exam not found" }, { status: 404 });
     }
 
     if (
@@ -99,7 +99,7 @@ export async function GET(
   } catch (error) {
     console.error("Export exam error:", error);
     return NextResponse.json(
-      { error: "Не удалось экспортировать экзамен" },
+      { error: "Failed to export exam" },
       { status: 500 }
     );
   }
