@@ -49,6 +49,17 @@ export async function getLessonById(id: string) {
             isPublished: true,
           },
         },
+        homeworks: {
+          where: session.user.role === "STUDENT" ? { isPublished: true } : {},
+          select: {
+            id: true,
+            title: true,
+            language: true,
+            isPublished: true,
+            passingScore: true,
+          },
+          orderBy: { sortOrder: "asc" },
+        },
       },
     });
 

@@ -5,7 +5,8 @@ import { getLessonById } from "@/actions/lesson-actions";
 import { getLessonProgress } from "@/actions/progress-actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, FileText, ClipboardList } from "lucide-react";
+import { Edit, FileText, ClipboardList, Code2 } from "lucide-react";
+import { LANGUAGE_LABELS } from "@/lib/code-runner/config";
 import { VideoPlayer } from "@/components/video-player";
 import { MarkCompleteButton } from "@/components/mark-complete-button";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
@@ -150,6 +151,39 @@ export default async function LessonPage({ params }: LessonPageProps) {
           </div>
         </div>
       ) : null}
+
+      {/* Homework section */}
+      {lesson.homeworks && lesson.homeworks.length > 0 && (
+        <div className="max-w-4xl space-y-3">
+          {lesson.homeworks.map((hw: { id: string; title: string; language: string | null; isPublished: boolean; passingScore: number }) => (
+            <div key={hw.id} className="rounded-lg border p-6 bg-card">
+              <div className="flex items-center gap-2 mb-2">
+                <Code2 className="h-5 w-5" />
+                <h2 className="text-lg font-semibold">{hw.title}</h2>
+                {hw.language && (
+                  <Badge variant="outline" className="text-xs">
+                    {LANGUAGE_LABELS[hw.language] || hw.language}
+                  </Badge>
+                )}
+                {!hw.isPublished && <Badge variant="secondary">Черновик</Badge>}
+              </div>
+              {isStudent && hw.isPublished && (
+                <Link href={`/courses/${courseId}/lessons/${lessonId}/homework/${hw.id}`}>
+                  <Button>Выполнить задание</Button>
+                </Link>
+              )}
+              {isStudent && !hw.isPublished && (
+                <p className="text-sm text-muted-foreground">Задание пока недоступно</p>
+              )}
+              {isTeacherOrAdmin && (
+                <Link href={`/courses/${courseId}/lessons/${lessonId}/homework/${hw.id}`}>
+                  <Button variant="outline">Управление заданием</Button>
+                </Link>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

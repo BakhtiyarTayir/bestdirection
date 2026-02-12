@@ -36,6 +36,31 @@ enum AttendanceStatus {
   EXCUSED
 }
 
+enum HomeworkType {
+  CODE
+  TEXT
+  FILE
+}
+
+enum ProgrammingLanguage {
+  PYTHON
+  JAVASCRIPT
+  TYPESCRIPT
+  PHP
+  JAVA
+  CSHARP
+}
+
+enum SubmissionStatus {
+  PENDING
+  RUNNING
+  PASSED
+  PARTIAL
+  FAILED
+  ERROR
+  TIMEOUT
+}
+
 model User {
   id           String    @id @default(cuid())
   email        String    @unique
@@ -55,6 +80,7 @@ model User {
   attendanceRecords    AttendanceRecord[]
   lessonProgress       LessonProgress[]
   auditLogs            AuditLog[]
+  submissions          Submission[]
 
   @@index([role])
   @@index([isActive])
@@ -153,6 +179,7 @@ model Lesson {
   course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   assessment Assessment?
+  homeworks  Homework[]
   progress   LessonProgress[]
 
   @@index([courseId])
@@ -322,4 +349,94 @@ model AuditLog {
   @@index([userId])
   @@index([createdAt])
   @@index([action])
+}
+
+// =============================================
+// Homework Auto-Check
+// =============================================
+
+model Homework {
+  id            String              @id @default(cuid())
+  title         String
+  description   String
+  type          HomeworkType        @default(CODE)
+  language      ProgrammingLanguage?
+  starterCode   String?
+  solutionCode  String?
+  maxAttempts   Int                 @default(10)
+  timeLimitSec  Int                 @default(5)
+  maxScore      Int                 @default(100)
+  passingScore  Int                 @default(60)
+  dueDate       DateTime?
+  allowLate     Boolean             @default(true)
+  latePenalty   Int                 @default(20)
+  sortOrder     Int                 @default(0)
+  isPublished   Boolean             @default(false)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  lessonId      String
+  lesson        Lesson              @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  testCases     TestCase[]
+  submissions   Submission[]
+
+  @@index([lessonId])
+  @@index([isPublished])
+}
+
+model TestCase {
+  id          String   @id @default(cuid())
+  input       String
+  expected    String
+  isHidden    Boolean  @default(false)
+  points      Int      @default(1)
+  description String?
+  sortOrder   Int      @default(0)
+
+  homeworkId  String
+  homework    Homework @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
+  results     TestResult[]
+
+  @@index([homeworkId])
+}
+
+model Submission {
+  id            String           @id @default(cuid())
+  code          String
+  status        SubmissionStatus @default(PENDING)
+  score         Int              @default(0)
+  maxScore      Int              @default(0)
+  percentage    Float            @default(0)
+  executionTime Int?
+  errorMessage  String?
+  isLate        Boolean          @default(false)
+  penalty       Int              @default(0)
+  finalScore    Float            @default(0)
+  attemptNumber Int              @default(1)
+  createdAt     DateTime         @default(now())
+
+  studentId     String
+  student       User             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  homeworkId    String
+  homework      Homework         @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
+  testResults   TestResult[]
+
+  @@index([studentId])
+  @@index([homeworkId])
+}
+
+model TestResult {
+  id            String   @id @default(cuid())
+  passed        Boolean
+  actualOutput  String?
+  errorOutput   String?
+  executionTime Int?
+
+  submissionId  String
+  submission    Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  testCaseId    String
+  testCase      TestCase   @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
 }

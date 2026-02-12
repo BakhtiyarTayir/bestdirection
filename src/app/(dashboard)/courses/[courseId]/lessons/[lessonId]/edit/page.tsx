@@ -30,26 +30,40 @@ export default async function EditLessonPage({ params }: EditLessonPageProps) {
 
   const lesson = result.data;
 
-  const assessment = await prisma.assessment.findUnique({
-    where: { lessonId },
-    include: {
-      questions: {
-        include: {
-          options: {
-            orderBy: { sortOrder: "asc" },
+  const [assessment, homeworks] = await Promise.all([
+    prisma.assessment.findUnique({
+      where: { lessonId },
+      include: {
+        questions: {
+          include: {
+            options: {
+              orderBy: { sortOrder: "asc" },
+            },
           },
+          orderBy: { sortOrder: "asc" },
         },
-        orderBy: { sortOrder: "asc" },
+        _count: {
+          select: { attempts: true },
+        },
       },
-      _count: {
-        select: { attempts: true },
+    }),
+    prisma.homework.findMany({
+      where: { lessonId },
+      include: {
+        _count: { select: { testCases: true, submissions: true } },
       },
-    },
-  });
+      orderBy: { sortOrder: "asc" },
+    }),
+  ]);
 
   return (
     <div className="space-y-6">
-      <EditLessonClient courseId={courseId} lesson={lesson} assessment={assessment} />
+      <EditLessonClient
+        courseId={courseId}
+        lesson={lesson}
+        assessment={assessment}
+        homeworks={JSON.parse(JSON.stringify(homeworks))}
+      />
     </div>
   );
 }
