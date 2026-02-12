@@ -114,11 +114,9 @@ export function Sidebar({ role, userName }: SidebarProps) {
 
       <div className={cn("border-t", collapsed ? "p-2" : "p-4")}>
         {!collapsed && (
-          <div className="mb-3 px-3 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium truncate">{userName}</p>
-              <p className="text-xs text-muted-foreground">{tRoles(role)}</p>
-            </div>
+          <div className="mb-3 px-3">
+            <p className="text-sm font-medium truncate">{userName}</p>
+            <p className="text-xs text-muted-foreground mb-2">{tRoles(role)}</p>
             <LanguageSwitcher />
           </div>
         )}

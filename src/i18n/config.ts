@@ -10,3 +10,8 @@ export const localeNames: Record<Locale, string> = {
   ru: 'Русский',
   uz: "O'zbek",
 };
+
+export const localeFlags: Record<Locale, string> = {
+  ru: '🇷🇺',
+  uz: '🇺🇿',
+};
