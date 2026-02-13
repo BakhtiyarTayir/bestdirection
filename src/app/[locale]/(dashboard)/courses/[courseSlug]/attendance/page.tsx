@@ -7,7 +7,7 @@ import { CreateSessionDialog } from "@/components/create-session-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Calendar } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import { resolveCourseSlug } from "@/lib/slug-resolvers";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +17,7 @@ interface AttendancePageProps {
 }
 
 export default async function AttendancePage({ params }: AttendancePageProps) {
-  const t = useTranslations("attendance");
+  const t = await getTranslations("attendance");
   const session = await auth();
   if (!session?.user) redirect("/login");
 

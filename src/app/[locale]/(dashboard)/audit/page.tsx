@@ -1,7 +1,7 @@
 import { requireRole } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
 import { AuditTable } from "./audit-table";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ interface AuditPageProps {
 const PAGE_SIZE = 50;
 
 export default async function AuditPage({ searchParams }: AuditPageProps) {
-  const t = useTranslations("audit");
+  const t = await getTranslations("audit");
   await requireRole(["ADMIN"]);
 
   const params = await searchParams;

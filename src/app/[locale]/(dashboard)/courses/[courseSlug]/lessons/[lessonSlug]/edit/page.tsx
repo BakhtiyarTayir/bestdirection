@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getLessonById } from "@/actions/lesson-actions";
 import { prisma } from "@/lib/prisma";
 import { EditLessonClient } from "./edit-lesson-client";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import { resolveFullPath } from "@/lib/slug-resolvers";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +13,7 @@ interface EditLessonPageProps {
 }
 
 export default async function EditLessonPage({ params }: EditLessonPageProps) {
-  const tErrors = useTranslations("errors");
+  const tErrors = await getTranslations("errors");
   const session = await auth();
   if (!session?.user) redirect("/login");
 

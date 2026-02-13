@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/auth-guard";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import {
   getDeletedCourses,
   getDeletedUsers,
@@ -17,7 +17,7 @@ import { TrashTable } from "@/components/trash-table";
 export const dynamic = "force-dynamic";
 
 export default async function TrashPage() {
-  const t = useTranslations("trash");
+  const t = await getTranslations("trash");
   await requireRole(["ADMIN"]);
 
   const [coursesResult, usersResult, lessonsResult] = await Promise.all([

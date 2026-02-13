@@ -3,7 +3,7 @@ import { getCourseById } from "@/actions/course-actions";
 import { getCourseGroups } from "@/actions/group-actions";
 import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { GroupList } from "@/components/groups/group-list";
@@ -16,7 +16,7 @@ interface GroupsPageProps {
 }
 
 export default async function GroupsPage({ params }: GroupsPageProps) {
-  const t = useTranslations("groups");
+  const t = await getTranslations("groups");
   const { courseSlug } = await params;
   const courseId = await resolveCourseSlug(courseSlug);
   await requireAuth();

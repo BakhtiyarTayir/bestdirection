@@ -1,5 +1,5 @@
 import { requireAuth } from "@/lib/auth-guard";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import {
   getGroupDetails,
   getAvailableStudentsForGroup,
@@ -16,7 +16,7 @@ interface GroupStudentsPageProps {
 }
 
 export default async function GroupStudentsPage({ params }: GroupStudentsPageProps) {
-  const t = useTranslations("groups");
+  const t = await getTranslations("groups");
   const { courseSlug, groupId } = await params;
   const courseId = await resolveCourseSlug(courseSlug);
   await requireAuth();

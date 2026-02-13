@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/auth-guard";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import {
   getCourseById,
   getEnrolledStudents,
@@ -16,7 +16,7 @@ interface StudentsPageProps {
 }
 
 export default async function StudentsPage({ params }: StudentsPageProps) {
-  const t = useTranslations("courses");
+  const t = await getTranslations("courses");
   const { courseSlug } = await params;
   const courseId = await resolveCourseSlug(courseSlug);
   const session = await requireRole(["ADMIN", "TEACHER"]);

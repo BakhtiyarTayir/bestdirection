@@ -4,7 +4,7 @@ import { HomeworkForm } from "@/components/homework/homework-form";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { ArrowLeft } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import { resolveFullPath } from "@/lib/slug-resolvers";
 
 export const dynamic = "force-dynamic";
@@ -27,9 +27,9 @@ export default async function NewHomeworkPage({ params }: NewHomeworkPageProps) 
   return <NewHomeworkPageContent courseSlug={courseSlug} lessonSlug={lessonSlug} lessonId={lessonId!} />;
 }
 
-function NewHomeworkPageContent({ courseSlug, lessonSlug, lessonId }: { courseSlug: string; lessonSlug: string; lessonId: string }) {
-  const t = useTranslations("homework");
-  const tCommon = useTranslations("common");
+async function NewHomeworkPageContent({ courseSlug, lessonSlug, lessonId }: { courseSlug: string; lessonSlug: string; lessonId: string }) {
+  const t = await getTranslations("homework");
+  const tCommon = await getTranslations("common");
 
   return (
     <div className="space-y-6">

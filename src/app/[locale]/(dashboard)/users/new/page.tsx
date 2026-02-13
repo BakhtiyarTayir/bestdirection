@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/auth-guard";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import { CreateUserForm } from "./create-user-form";
 
 export const dynamic = "force-dynamic";
@@ -10,8 +10,8 @@ export default async function NewUserPage() {
   return <NewUserPageContent />;
 }
 
-function NewUserPageContent() {
-  const t = useTranslations("users");
+async function NewUserPageContent() {
+  const t = await getTranslations("users");
 
   return (
     <div>

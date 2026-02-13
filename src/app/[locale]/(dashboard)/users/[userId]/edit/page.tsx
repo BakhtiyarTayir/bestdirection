@@ -1,7 +1,7 @@
 import { requireRole } from "@/lib/auth-guard";
 import { getUserById } from "@/actions/user-actions";
 import { notFound } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import { EditUserForm } from "./edit-user-form";
 
 export const dynamic = "force-dynamic";
@@ -26,8 +26,8 @@ export default async function EditUserPage({ params }: EditUserPageProps) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function EditUserPageContent({ user }: { user: any }) {
-  const t = useTranslations("users");
+async function EditUserPageContent({ user }: { user: any }) {
+  const t = await getTranslations("users");
 
   return (
     <div>

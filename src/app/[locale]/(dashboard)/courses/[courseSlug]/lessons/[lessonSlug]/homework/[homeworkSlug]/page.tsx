@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { LANGUAGE_LABELS } from "@/lib/code-runner/config";
 import { Link } from "@/i18n/navigation";
 import { ArrowLeft, Code2, Pencil } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import { resolveFullPath } from "@/lib/slug-resolvers";
 
 export const dynamic = "force-dynamic";
@@ -74,8 +74,8 @@ export default async function HomeworkPage({ params }: HomeworkPageProps) {
   );
 }
 
-function HomeworkNotFound({ error }: { error?: string }) {
-  const tErrors = useTranslations("errors");
+async function HomeworkNotFound({ error }: { error?: string }) {
+  const tErrors = await getTranslations("errors");
 
   return (
     <div className="space-y-6">
@@ -85,7 +85,7 @@ function HomeworkNotFound({ error }: { error?: string }) {
   );
 }
 
-function TeacherView({
+async function TeacherView({
   courseSlug,
   lessonSlug,
   homeworkSlug,
@@ -98,8 +98,8 @@ function TeacherView({
   homework: any;
   submissions: any[];
 }) {
-  const t = useTranslations("homework");
-  const tCommon = useTranslations("common");
+  const t = await getTranslations("homework");
+  const tCommon = await getTranslations("common");
 
   return (
     <div className="space-y-6">
@@ -139,7 +139,7 @@ function TeacherView({
   );
 }
 
-function StudentView({
+async function StudentView({
   courseSlug,
   lessonSlug,
   homework,
@@ -154,7 +154,7 @@ function StudentView({
   attemptsUsed: number;
   attemptsRemaining: number;
 }) {
-  const tLessons = useTranslations("lessons");
+  const tLessons = await getTranslations("lessons");
 
   return (
     <div className="space-y-6">

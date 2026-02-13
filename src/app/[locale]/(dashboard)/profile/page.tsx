@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { getUserById } from "@/actions/user-actions";
 import { redirect } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import { ProfileForm } from "./profile-form";
 import { TelegramLink } from "@/components/telegram-link";
 
@@ -18,8 +18,8 @@ export default async function ProfilePage() {
   return <ProfilePageContent user={user} />;
 }
 
-function ProfilePageContent({ user }: { user: { id: string; email: string; firstName: string; lastName: string; phone: string | null } }) {
-  const t = useTranslations("profile");
+async function ProfilePageContent({ user }: { user: { id: string; email: string; firstName: string; lastName: string; phone: string | null } }) {
+  const t = await getTranslations("profile");
 
   return (
     <div className="space-y-6">

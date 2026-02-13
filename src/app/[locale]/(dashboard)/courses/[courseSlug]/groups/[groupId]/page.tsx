@@ -2,7 +2,7 @@ import { requireAuth } from "@/lib/auth-guard";
 import { getGroupDetails } from "@/actions/group-actions";
 import { notFound } from "next/navigation";
 import { GroupForm } from "@/components/groups/group-form";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import { resolveCourseSlug } from "@/lib/slug-resolvers";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,7 @@ interface GroupDetailPageProps {
 }
 
 export default async function GroupDetailPage({ params }: GroupDetailPageProps) {
-  const t = useTranslations("groups");
+  const t = await getTranslations("groups");
   const { courseSlug, groupId } = await params;
   const courseId = await resolveCourseSlug(courseSlug);
   await requireAuth();

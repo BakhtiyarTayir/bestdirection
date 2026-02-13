@@ -45,3 +45,28 @@ next-env.d.ts
 
 # documentation
 SYSTEM_OVERVIEW.md
+
+1-modul_kirish.md
+COURSE_COPY_AND_COMPARE.md
+DEPLOY.md
+DEVELOPMENT_PLAN.md
+GROUPS_MANAGEMENT.md
+HOMEWORK_AUTO_CHECK.md
+HOMEWORK_SIDEBAR_SECTION.md
+HOMEWORK_SYSTEM.md
+I18N_PLAN.md
+I18N_PLAN_UPDATED.md
+LMS_IMPROVEMENT_PLAN.md
+export-test-2.json
+export.csv
+lms_backup_before_homework.dump
+ozgaruvchilar.md
+ozgaruvchilar_string_sonlar.md
+ozgaruvchilar_string_test.json
+ozgaruvchilar_va_string.md
+ozgaruvchilar_yangi.md
+prisma/seed-test-modul1.ts
+public/uploads/
+sonlar.md
+sonlar_toliq.md
+

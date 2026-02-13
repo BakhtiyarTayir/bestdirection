@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, Users, ClipboardCheck, FileText, GraduationCap } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -18,12 +18,8 @@ export default async function DashboardPage() {
   return <StudentDashboard userId={session.user.id} />;
 }
 
-function AdminDashboard() {
-  const t = useTranslations("dashboard");
-  return <AdminDashboardAsync t={t} />;
-}
-
-async function AdminDashboardAsync({ t }: { t: ReturnType<typeof useTranslations<"dashboard">> }) {
+async function AdminDashboard() {
+  const t = await getTranslations("dashboard");
   const [userCount, courseCount, studentCount, teacherCount] = await Promise.all([
     prisma.user.count(),
     prisma.course.count(),
@@ -44,12 +40,8 @@ async function AdminDashboardAsync({ t }: { t: ReturnType<typeof useTranslations
   );
 }
 
-function TeacherDashboard({ userId }: { userId: string }) {
-  const t = useTranslations("dashboard");
-  return <TeacherDashboardAsync userId={userId} t={t} />;
-}
-
-async function TeacherDashboardAsync({ userId, t }: { userId: string; t: ReturnType<typeof useTranslations<"dashboard">> }) {
+async function TeacherDashboard({ userId }: { userId: string }) {
+  const t = await getTranslations("dashboard");
   const [courseCount, studentCount] = await Promise.all([
     prisma.course.count({ where: { teacherId: userId } }),
     prisma.enrollment.count({
@@ -68,12 +60,8 @@ async function TeacherDashboardAsync({ userId, t }: { userId: string; t: ReturnT
   );
 }
 
-function StudentDashboard({ userId }: { userId: string }) {
-  const t = useTranslations("dashboard");
-  return <StudentDashboardAsync userId={userId} t={t} />;
-}
-
-async function StudentDashboardAsync({ userId, t }: { userId: string; t: ReturnType<typeof useTranslations<"dashboard">> }) {
+async function StudentDashboard({ userId }: { userId: string }) {
+  const t = await getTranslations("dashboard");
   const [enrollmentCount, attemptCount] = await Promise.all([
     prisma.enrollment.count({ where: { studentId: userId } }),
     prisma.assessmentAttempt.count({ where: { studentId: userId } }),

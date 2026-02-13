@@ -4,7 +4,7 @@ import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { UserList } from "./user-list";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -17,8 +17,8 @@ export default async function UsersPage() {
   return <UsersPageContent users={users} />;
 }
 
-function UsersPageContent({ users }: { users: Array<{ id: string; firstName: string; lastName: string; email: string; role: string; isActive: boolean }> }) {
-  const t = useTranslations("users");
+async function UsersPageContent({ users }: { users: Array<{ id: string; firstName: string; lastName: string; email: string; role: string; isActive: boolean }> }) {
+  const t = await getTranslations("users");
 
   return (
     <div>

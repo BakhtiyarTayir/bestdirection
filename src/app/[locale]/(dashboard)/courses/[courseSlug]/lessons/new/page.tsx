@@ -4,7 +4,7 @@ import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { NewLessonClient } from "./new-lesson-client";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import { resolveCourseSlug } from "@/lib/slug-resolvers";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ interface NewLessonPageProps {
 }
 
 export default async function NewLessonPage({ params }: NewLessonPageProps) {
-  const t = useTranslations("lessons");
+  const t = await getTranslations("lessons");
   const session = await auth();
   if (!session?.user) redirect("/login");
 

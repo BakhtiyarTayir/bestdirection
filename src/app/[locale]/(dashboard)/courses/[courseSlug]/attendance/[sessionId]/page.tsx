@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar } from "lucide-react";
 import { DeleteSessionButton } from "./delete-session-button";
 import { formatFullDate } from "@/lib/format-date";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import { resolveCourseSlug } from "@/lib/slug-resolvers";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +18,7 @@ interface SessionPageProps {
 }
 
 export default async function SessionPage({ params }: SessionPageProps) {
-  const t = useTranslations("attendance");
+  const t = await getTranslations("attendance");
   const authSession = await auth();
   if (!authSession?.user) redirect("/login");
 

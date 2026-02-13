@@ -1,6 +1,6 @@
 import { requireAuth } from "@/lib/auth-guard";
 import { GroupForm } from "@/components/groups/group-form";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import { resolveCourseSlug } from "@/lib/slug-resolvers";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +10,7 @@ interface NewGroupPageProps {
 }
 
 export default async function NewGroupPage({ params }: NewGroupPageProps) {
-  const t = useTranslations("groups");
+  const t = await getTranslations("groups");
   const { courseSlug } = await params;
   const courseId = await resolveCourseSlug(courseSlug);
   await requireAuth();
