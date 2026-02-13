@@ -1,0 +1,40 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Sync files to server
+        run: |
+          rsync -avz --delete \
+            --exclude '.next' \
+            --exclude 'node_modules' \
+            --exclude '.env' \
+            --exclude 'public/uploads' \
+            --exclude '.git' \
+            --exclude '.claude' \
+            --exclude '.agents' \
+            --exclude 'hexlet-basics' \
+            --exclude '*.dump' \
+            --exclude '*.md' \
+            --exclude 'export.csv' \
+            --exclude 'prisma/seed-test-modul1.ts' \
+            ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/lms/
+
+      - name: Build and restart containers
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd /opt/lms && docker compose up -d --build"
