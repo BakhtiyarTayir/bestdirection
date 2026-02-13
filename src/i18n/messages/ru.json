@@ -500,7 +500,15 @@
     "uploadFileTitle": "Или отправьте файл",
     "uploadFileDesc": "Если не получается в редакторе — загрузите файл с кодом. Учитель проверит вручную.",
     "uploading": "Загрузка...",
-    "fileSubmitted": "Файл отправлен на проверку"
+    "fileSubmitted": "Файл отправлен на проверку",
+    "homeworkType": "Тип задания",
+    "homeworkTypeCode": "Код с автопроверкой",
+    "homeworkTypeFile": "Загрузка файла (ручная проверка)",
+    "uploadSolutionFile": "Загрузите файл с решением",
+    "uploadSolutionFileDesc": "Отправьте файл с выполненным заданием. Учитель проверит вручную.",
+    "manualReviewPending": "На проверке",
+    "manualReviewApproved": "Принято",
+    "manualReviewRejected": "Отклонено"
   },
 
   "attendance": {

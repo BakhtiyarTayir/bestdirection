@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { createAuditLog, computeChanges } from "@/lib/audit";
 import { runAllTests } from "@/lib/code-runner/test-runner";
 import { slugify, generateUniqueSlug } from "@/lib/slugify";
-import type { ProgrammingLanguage } from "@/validators/homework";
+import type { ProgrammingLanguage, HomeworkType } from "@/validators/homework";
 
 // ---------- Helper: validate lesson ownership ----------
 async function validateLessonOwnership(
@@ -52,7 +52,8 @@ export async function createHomework(
   data: {
     title: string;
     description: string;
-    language: ProgrammingLanguage;
+    type?: HomeworkType;
+    language?: ProgrammingLanguage;
     starterCode?: string;
     solutionCode?: string;
     maxAttempts?: number;
@@ -61,7 +62,7 @@ export async function createHomework(
     dueDate?: Date | null;
     allowLate?: boolean;
     latePenalty?: number;
-    testCases: {
+    testCases?: {
       input: string;
       expected: string;
       isHidden?: boolean;
@@ -80,31 +81,37 @@ export async function createHomework(
         async (s) => !!(await prisma.homework.findFirst({ where: { lessonId, slug: s }, select: { id: true } }))
       );
 
+      const isFile = data.type === "FILE";
+
       const homework = await prisma.homework.create({
         data: {
           title: data.title,
           slug,
           description: data.description,
-          language: data.language,
-          starterCode: data.starterCode,
-          solutionCode: data.solutionCode,
+          type: data.type ?? "CODE",
+          language: isFile ? null : (data.language ?? null),
+          starterCode: isFile ? null : data.starterCode,
+          solutionCode: isFile ? null : data.solutionCode,
           maxAttempts: data.maxAttempts ?? 10,
-          timeLimitSec: data.timeLimitSec ?? 5,
+          timeLimitSec: isFile ? 5 : (data.timeLimitSec ?? 5),
           passingScore: data.passingScore ?? 60,
           dueDate: data.dueDate,
           allowLate: data.allowLate ?? true,
           latePenalty: data.latePenalty ?? 20,
+          requiresManualReview: isFile ? true : false,
           lessonId,
-          testCases: {
-            create: data.testCases.map((tc, i) => ({
-              input: tc.input,
-              expected: tc.expected,
-              isHidden: tc.isHidden ?? false,
-              points: tc.points ?? 1,
-              description: tc.description,
-              sortOrder: i,
-            })),
-          },
+          ...(!isFile && data.testCases ? {
+            testCases: {
+              create: data.testCases.map((tc, i) => ({
+                input: tc.input,
+                expected: tc.expected,
+                isHidden: tc.isHidden ?? false,
+                points: tc.points ?? 1,
+                description: tc.description,
+                sortOrder: i,
+              })),
+            },
+          } : {}),
         },
         include: { testCases: true },
       });
@@ -130,6 +137,7 @@ export async function updateHomework(
   data: {
     title?: string;
     description?: string;
+    type?: HomeworkType;
     language?: ProgrammingLanguage;
     starterCode?: string;
     solutionCode?: string;
@@ -168,9 +176,14 @@ export async function updateHomework(
         slugUpdate = { slug: newSlug };
       }
 
+      const isFile = data.type === "FILE";
+
       const homework = await prisma.$transaction(async (tx) => {
-        // If testCases provided, replace them all
-        if (data.testCases) {
+        if (isFile) {
+          // Remove test cases when switching to FILE type
+          await tx.testCase.deleteMany({ where: { homeworkId } });
+        } else if (data.testCases) {
+          // If testCases provided, replace them all
           await tx.testCase.deleteMany({ where: { homeworkId } });
           await tx.testCase.createMany({
             data: data.testCases.map((tc, i) => ({
@@ -191,9 +204,17 @@ export async function updateHomework(
             ...(data.title !== undefined && { title: data.title }),
             ...slugUpdate,
             ...(data.description !== undefined && { description: data.description }),
-            ...(data.language !== undefined && { language: data.language }),
-            ...(data.starterCode !== undefined && { starterCode: data.starterCode }),
-            ...(data.solutionCode !== undefined && { solutionCode: data.solutionCode }),
+            ...(data.type !== undefined && { type: data.type }),
+            ...(isFile ? {
+              language: null,
+              starterCode: null,
+              solutionCode: null,
+              requiresManualReview: true,
+            } : {
+              ...(data.language !== undefined && { language: data.language }),
+              ...(data.starterCode !== undefined && { starterCode: data.starterCode }),
+              ...(data.solutionCode !== undefined && { solutionCode: data.solutionCode }),
+            }),
             ...(data.maxAttempts !== undefined && { maxAttempts: data.maxAttempts }),
             ...(data.timeLimitSec !== undefined && { timeLimitSec: data.timeLimitSec }),
             ...(data.passingScore !== undefined && { passingScore: data.passingScore }),
@@ -299,6 +320,7 @@ export async function getHomeworkForStudent(homeworkId: string) {
         id: true,
         title: true,
         description: true,
+        type: true,
         language: true,
         starterCode: true,
         maxAttempts: true,

@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LANGUAGE_LABELS } from "@/lib/code-runner/config";
 import { Link } from "@/i18n/navigation";
-import { ArrowLeft, Code2, Pencil } from "lucide-react";
+import { ArrowLeft, Code2, FileUp, Pencil } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { resolveFullPath } from "@/lib/slug-resolvers";
 
@@ -115,12 +115,17 @@ async function TeacherView({
           <Badge variant={homework.isPublished ? "default" : "secondary"}>
             {homework.isPublished ? t("published") : tCommon("draft")}
           </Badge>
-          {homework.language && (
+          {homework.type === "FILE" ? (
+            <Badge variant="outline">
+              <FileUp className="h-3 w-3 mr-1" />
+              {t("homeworkTypeFile")}
+            </Badge>
+          ) : homework.language ? (
             <Badge variant="outline">
               <Code2 className="h-3 w-3 mr-1" />
               {LANGUAGE_LABELS[homework.language] || homework.language}
             </Badge>
-          )}
+          ) : null}
         </div>
         <Link href={`/courses/${courseSlug}/lessons/${lessonSlug}/homework/${homeworkSlug}/edit`}>
           <Button variant="outline" size="sm">

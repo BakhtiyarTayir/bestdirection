@@ -21,7 +21,7 @@ import { LANGUAGE_LABELS } from "@/lib/code-runner/config";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Save, Plus, Trash2, Eye, EyeOff } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { ProgrammingLanguage } from "@/validators/homework";
+import type { ProgrammingLanguage, HomeworkType } from "@/validators/homework";
 
 const Editor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
@@ -41,6 +41,7 @@ interface HomeworkFormProps {
     id: string;
     title: string;
     description: string;
+    type?: string;
     language: string | null;
     starterCode: string | null;
     solutionCode: string | null;
@@ -70,6 +71,7 @@ export function HomeworkForm({ courseSlug, lessonSlug, lessonId, homework }: Hom
   const tErrors = useTranslations("errors");
   const tSuccess = useTranslations("success");
 
+  const [type, setType] = useState<"CODE" | "FILE">((homework?.type as "CODE" | "FILE") || "CODE");
   const [title, setTitle] = useState(homework?.title || "");
   const [description, setDescription] = useState(homework?.description || "");
   const [language, setLanguage] = useState<string>(homework?.language || "PYTHON");
@@ -90,6 +92,8 @@ export function HomeworkForm({ courseSlug, lessonSlug, lessonId, homework }: Hom
       description: tc.description || "",
     })) || [{ input: "", expected: "", isHidden: false, points: 1, description: "" }]
   );
+
+  const isCode = type === "CODE";
 
   const addTestCase = () => {
     setTestCases([
@@ -120,34 +124,41 @@ export function HomeworkForm({ courseSlug, lessonSlug, lessonId, homework }: Hom
       toast({ title: tErrors("generic"), description: t("enterDescription"), variant: "destructive" });
       return;
     }
-    if (testCases.some((tc) => !tc.expected.trim())) {
+    if (isCode && testCases.some((tc) => !tc.expected.trim())) {
       toast({ title: tErrors("generic"), description: t("fillExpected"), variant: "destructive" });
       return;
     }
 
     startTransition(async () => {
       try {
-        const testCasesData = testCases.map((tc) => ({
-          input: tc.input,
-          expected: tc.expected,
-          isHidden: tc.isHidden,
-          points: tc.points,
-          description: tc.description || undefined,
-        }));
+        const baseData = {
+          title: title.trim(),
+          description: description.trim(),
+          type: type as HomeworkType,
+          maxAttempts,
+          passingScore,
+          allowLate,
+          latePenalty,
+        };
+
+        const codeData = isCode ? {
+          language: language as ProgrammingLanguage,
+          starterCode: starterCode || undefined,
+          solutionCode: solutionCode || undefined,
+          timeLimitSec,
+          testCases: testCases.map((tc) => ({
+            input: tc.input,
+            expected: tc.expected,
+            isHidden: tc.isHidden,
+            points: tc.points,
+            description: tc.description || undefined,
+          })),
+        } : {};
 
         if (homework) {
           const result = await updateHomework(homework.id, {
-            title: title.trim(),
-            description: description.trim(),
-            language: language as ProgrammingLanguage,
-            starterCode: starterCode || undefined,
-            solutionCode: solutionCode || undefined,
-            maxAttempts,
-            timeLimitSec,
-            passingScore,
-            allowLate,
-            latePenalty,
-            testCases: testCasesData,
+            ...baseData,
+            ...codeData,
           });
 
           if (result.success) {
@@ -158,17 +169,8 @@ export function HomeworkForm({ courseSlug, lessonSlug, lessonId, homework }: Hom
           }
         } else {
           const result = await createHomework(lessonId, {
-            title: title.trim(),
-            description: description.trim(),
-            language: language as ProgrammingLanguage,
-            starterCode: starterCode || undefined,
-            solutionCode: solutionCode || undefined,
-            maxAttempts,
-            timeLimitSec,
-            passingScore,
-            allowLate,
-            latePenalty,
-            testCases: testCasesData,
+            ...baseData,
+            ...codeData,
           });
 
           if (result.success) {
@@ -214,22 +216,38 @@ export function HomeworkForm({ courseSlug, lessonSlug, lessonId, homework }: Hom
           />
         </div>
 
+        {/* Homework Type Selector */}
+        <div className="space-y-2">
+          <Label>{t("homeworkType")}</Label>
+          <Select value={type} onValueChange={(v) => setType(v as "CODE" | "FILE")} disabled={isPending}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="CODE">{t("homeworkTypeCode")}</SelectItem>
+              <SelectItem value="FILE">{t("homeworkTypeFile")}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <div className="space-y-2">
-            <Label>{t("language")}</Label>
-            <Select value={language} onValueChange={setLanguage} disabled={isPending}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(LANGUAGE_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {isCode && (
+            <div className="space-y-2">
+              <Label>{t("language")}</Label>
+              <Select value={language} onValueChange={setLanguage} disabled={isPending}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(LANGUAGE_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="hw-maxAttempts">{t("maxAttempts")}</Label>
@@ -244,18 +262,20 @@ export function HomeworkForm({ courseSlug, lessonSlug, lessonId, homework }: Hom
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="hw-timeLimitSec">{t("timeout")}</Label>
-            <Input
-              id="hw-timeLimitSec"
-              type="number"
-              min={1}
-              max={60}
-              value={timeLimitSec}
-              onChange={(e) => setTimeLimitSec(parseInt(e.target.value) || 5)}
-              disabled={isPending}
-            />
-          </div>
+          {isCode && (
+            <div className="space-y-2">
+              <Label htmlFor="hw-timeLimitSec">{t("timeout")}</Label>
+              <Input
+                id="hw-timeLimitSec"
+                type="number"
+                min={1}
+                max={60}
+                value={timeLimitSec}
+                onChange={(e) => setTimeLimitSec(parseInt(e.target.value) || 5)}
+                disabled={isPending}
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="hw-passingScore">{t("passingScore")}</Label>
@@ -301,142 +321,147 @@ export function HomeworkForm({ courseSlug, lessonSlug, lessonId, homework }: Hom
         </div>
       </div>
 
-      {/* Starter Code */}
-      <div className="space-y-2">
-        <Label>{t("starterCode")}</Label>
-        <div className="border rounded-lg overflow-hidden">
-          <Editor
-            height="200px"
-            language={monacoLanguage}
-            value={starterCode}
-            onChange={(value) => setStarterCode(value || "")}
-            theme="vs-dark"
-            options={{
-              minimap: { enabled: false },
-              fontSize: 13,
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
-              tabSize: 2,
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Solution Code */}
-      <div className="space-y-2">
-        <Label>{t("solutionCode")}</Label>
-        <div className="border rounded-lg overflow-hidden">
-          <Editor
-            height="200px"
-            language={monacoLanguage}
-            value={solutionCode}
-            onChange={(value) => setSolutionCode(value || "")}
-            theme="vs-dark"
-            options={{
-              minimap: { enabled: false },
-              fontSize: 13,
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
-              tabSize: 2,
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Test Cases */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Label className="text-base">{t("testCases", { count: testCases.length })}</Label>
-          <Button type="button" variant="outline" size="sm" onClick={addTestCase} disabled={isPending}>
-            <Plus className="h-4 w-4 mr-1" />
-            {t("addTest")}
-          </Button>
-        </div>
-
-        {testCases.map((tc, index) => (
-          <div key={index} className="border rounded-lg p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="font-medium text-sm">{t("testNumber", { number: index + 1 })}</span>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => updateTestCase(index, "isHidden", !tc.isHidden)}
-                  title={tc.isHidden ? t("hiddenTest") : t("visibleTest")}
-                >
-                  {tc.isHidden ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeTestCase(index)}
-                  disabled={testCases.length <= 1}
-                >
-                  <Trash2 className="h-4 w-4 text-red-500" />
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Input
-                placeholder={t("testDescription")}
-                value={tc.description}
-                onChange={(e) => updateTestCase(index, "description", e.target.value)}
-                disabled={isPending}
+      {/* CODE-specific fields */}
+      {isCode && (
+        <>
+          {/* Starter Code */}
+          <div className="space-y-2">
+            <Label>{t("starterCode")}</Label>
+            <div className="border rounded-lg overflow-hidden">
+              <Editor
+                height="200px"
+                language={monacoLanguage}
+                value={starterCode}
+                onChange={(value) => setStarterCode(value || "")}
+                theme="vs-dark"
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 13,
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  tabSize: 2,
+                }}
               />
             </div>
+          </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">{t("inputData")}</Label>
-                <Textarea
-                  value={tc.input}
-                  onChange={(e) => updateTestCase(index, "input", e.target.value)}
-                  placeholder={t("inputPlaceholder")}
-                  rows={2}
-                  disabled={isPending}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">{t("expectedResult")}</Label>
-                <Textarea
-                  value={tc.expected}
-                  onChange={(e) => updateTestCase(index, "expected", e.target.value)}
-                  placeholder={t("expectedPlaceholder")}
-                  rows={2}
-                  disabled={isPending}
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Label className="text-xs text-muted-foreground">{t("pointsLabel")}</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={tc.points}
-                  onChange={(e) => updateTestCase(index, "points", parseInt(e.target.value) || 1)}
-                  className="w-16 h-8"
-                  disabled={isPending}
-                />
-              </div>
-              {tc.isHidden && (
-                <Badge variant="outline" className="text-xs">
-                  <EyeOff className="h-3 w-3 mr-1" />
-                  {t("hidden")}
-                </Badge>
-              )}
+          {/* Solution Code */}
+          <div className="space-y-2">
+            <Label>{t("solutionCode")}</Label>
+            <div className="border rounded-lg overflow-hidden">
+              <Editor
+                height="200px"
+                language={monacoLanguage}
+                value={solutionCode}
+                onChange={(value) => setSolutionCode(value || "")}
+                theme="vs-dark"
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 13,
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  tabSize: 2,
+                }}
+              />
             </div>
           </div>
-        ))}
-      </div>
+
+          {/* Test Cases */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-base">{t("testCases", { count: testCases.length })}</Label>
+              <Button type="button" variant="outline" size="sm" onClick={addTestCase} disabled={isPending}>
+                <Plus className="h-4 w-4 mr-1" />
+                {t("addTest")}
+              </Button>
+            </div>
+
+            {testCases.map((tc, index) => (
+              <div key={index} className="border rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-sm">{t("testNumber", { number: index + 1 })}</span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => updateTestCase(index, "isHidden", !tc.isHidden)}
+                      title={tc.isHidden ? t("hiddenTest") : t("visibleTest")}
+                    >
+                      {tc.isHidden ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeTestCase(index)}
+                      disabled={testCases.length <= 1}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Input
+                    placeholder={t("testDescription")}
+                    value={tc.description}
+                    onChange={(e) => updateTestCase(index, "description", e.target.value)}
+                    disabled={isPending}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">{t("inputData")}</Label>
+                    <Textarea
+                      value={tc.input}
+                      onChange={(e) => updateTestCase(index, "input", e.target.value)}
+                      placeholder={t("inputPlaceholder")}
+                      rows={2}
+                      disabled={isPending}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">{t("expectedResult")}</Label>
+                    <Textarea
+                      value={tc.expected}
+                      onChange={(e) => updateTestCase(index, "expected", e.target.value)}
+                      placeholder={t("expectedPlaceholder")}
+                      rows={2}
+                      disabled={isPending}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs text-muted-foreground">{t("pointsLabel")}</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={tc.points}
+                      onChange={(e) => updateTestCase(index, "points", parseInt(e.target.value) || 1)}
+                      className="w-16 h-8"
+                      disabled={isPending}
+                    />
+                  </div>
+                  {tc.isHidden && (
+                    <Badge variant="outline" className="text-xs">
+                      <EyeOff className="h-3 w-3 mr-1" />
+                      {t("hidden")}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       <div className="flex justify-end">
         <Button type="submit" disabled={isPending}>

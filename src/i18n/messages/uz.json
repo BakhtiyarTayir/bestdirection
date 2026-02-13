@@ -488,7 +488,15 @@
     "uploadFileTitle": "Yoki fayl yuklang",
     "uploadFileDesc": "Agar muharrirda ishlay olmasangiz — kod faylini yuklang. O'qituvchi qo'lda tekshiradi.",
     "uploading": "Yuklanmoqda...",
-    "fileSubmitted": "Fayl tekshirish uchun yuborildi"
+    "fileSubmitted": "Fayl tekshirish uchun yuborildi",
+    "homeworkType": "Vazifa turi",
+    "homeworkTypeCode": "Kod avtotekshiruv bilan",
+    "homeworkTypeFile": "Fayl yuklash (qo'lda tekshiruv)",
+    "uploadSolutionFile": "Yechim faylini yuklang",
+    "uploadSolutionFileDesc": "Bajarilgan vazifa faylini yuboring. O'qituvchi qo'lda tekshiradi.",
+    "manualReviewPending": "Tekshiruvda",
+    "manualReviewApproved": "Qabul qilindi",
+    "manualReviewRejected": "Rad etildi"
   },
 
   "attendance": {

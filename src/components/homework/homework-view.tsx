@@ -61,6 +61,7 @@ interface Submission {
   penalty: number;
   attemptNumber: number;
   createdAt: string;
+  manualStatus?: string | null;
   testResults: TestResult[];
 }
 
@@ -68,6 +69,7 @@ interface HomeworkData {
   id: string;
   title: string;
   description: string;
+  type?: string;
   language: string | null;
   starterCode: string | null;
   maxAttempts: number;
@@ -114,6 +116,8 @@ export function HomeworkView({
     finalScore: number;
     status: string;
   } | null>(null);
+
+  const isFile = homework.type === "FILE";
 
   // Collect unique error output from test results
   const errorOutput = lastResult
@@ -180,6 +184,18 @@ export function HomeworkView({
     PENDING: t("statusPending"),
   };
 
+  const manualStatusLabels: Record<string, string> = {
+    PENDING: t("manualReviewPending"),
+    APPROVED: t("manualReviewApproved"),
+    REJECTED: t("manualReviewRejected"),
+  };
+
+  const manualStatusColors: Record<string, string> = {
+    PENDING: "bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200",
+    APPROVED: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200",
+    REJECTED: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200",
+  };
+
   return (
     <div className="space-y-6">
       {/* Homework Info */}
@@ -187,10 +203,16 @@ export function HomeworkView({
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>{homework.title}</CardTitle>
-            {homework.language && (
+            {homework.language && !isFile && (
               <Badge variant="outline">
                 <Code2 className="h-3 w-3 mr-1" />
                 {LANGUAGE_LABELS[homework.language] || homework.language}
+              </Badge>
+            )}
+            {isFile && (
+              <Badge variant="outline">
+                <FileUp className="h-3 w-3 mr-1" />
+                {t("homeworkTypeFile")}
               </Badge>
             )}
           </div>
@@ -207,13 +229,15 @@ export function HomeworkView({
               </div>
               <p className="text-lg font-semibold">{homework.passingScore}%</p>
             </div>
-            <div>
-              <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
-                <Clock className="h-4 w-4" />
-                <span className="text-xs">{t("timeoutLabel")}</span>
+            {!isFile && (
+              <div>
+                <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
+                  <Clock className="h-4 w-4" />
+                  <span className="text-xs">{t("timeoutLabel")}</span>
+                </div>
+                <p className="text-lg font-semibold">{homework.timeLimitSec} {tAssessments("seconds")}</p>
               </div>
-              <p className="text-lg font-semibold">{homework.timeLimitSec} {tAssessments("seconds")}</p>
-            </div>
+            )}
             <div>
               <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">
                 <RotateCcw className="h-4 w-4" />
@@ -246,138 +270,21 @@ export function HomeworkView({
         </CardContent>
       </Card>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="task">{t("editorTab")}</TabsTrigger>
-          <TabsTrigger value="output" className={errorOutput ? "text-red-600" : ""}>
-            {t("outputTab")}
-          </TabsTrigger>
-          <TabsTrigger value="tests">
-            {t("testsTab", { count: homework.testCases.length })}
-          </TabsTrigger>
-          <TabsTrigger value="history">
-            {t("historyTab", { count: submissions.length })}
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="task" className="mt-4 space-y-4">
-          {homework.language && (
-            <CodeEditor
-              language={homework.language}
-              code={code}
-              onCodeChange={setCode}
-              attemptsRemaining={attemptsRemaining}
-              onSubmit={handleSubmit}
-              disabled={!!(isOverdue && !homework.allowLate)}
-            />
-          )}
-
+      {isFile ? (
+        /* FILE homework: simplified view */
+        <div className="space-y-4">
           <FileUploadSection
             homeworkId={homework.id}
             attemptsRemaining={attemptsRemaining}
             disabled={!!(isOverdue && !homework.allowLate)}
+            isFileHomework
             onUploaded={() => {
               setAttemptsRemaining((prev) => prev - 1);
               toast({ title: t("fileSubmitted") });
             }}
           />
 
-          {lastResult && (
-            <TestResultsPanel
-              results={lastResult.results}
-              testCases={homework.testCases.map((tc) => ({
-                ...tc,
-                isHidden: false,
-                description: tc.description,
-              }))}
-              percentage={lastResult.percentage}
-              finalScore={lastResult.finalScore}
-              status={lastResult.status}
-              isLate={!!isOverdue}
-              penalty={homework.latePenalty}
-            />
-          )}
-        </TabsContent>
-
-        <TabsContent value="output" className="mt-4">
-          <Card>
-            <CardContent className="pt-6">
-              {!lastResult ? (
-                <p className="text-muted-foreground text-center py-8">
-                  {t("submitToSeeOutput")}
-                </p>
-              ) : errorOutput ? (
-                <div className="space-y-4">
-                  <div className="flex items-start gap-2 p-3 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-900 dark:bg-yellow-950/50 dark:border-yellow-900 dark:text-yellow-200">
-                    <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm">
-                      {t("codeHasErrors")}
-                    </p>
-                  </div>
-                  <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm font-mono whitespace-pre-wrap leading-relaxed">
-                    {errorOutput}
-                  </pre>
-                </div>
-              ) : lastResult.status === "PASSED" ? (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-green-800 dark:bg-green-950/50 dark:border-green-900 dark:text-green-200">
-                  <p className="text-sm">{t("allTestsPassedSuccess")}</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/50 dark:border-red-900 dark:text-red-200">
-                    <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm">
-                      {t("someTestsFailed")}
-                    </p>
-                  </div>
-                  {lastResult.results
-                    .filter((r) => !r.passed && r.actualOutput)
-                    .map((r, i) => (
-                      <div key={i} className="text-sm">
-                        <span className="text-muted-foreground">{t("testOutput", { number: i + 1 })}</span>
-                        <pre className="bg-muted p-2 rounded mt-1 text-xs">{r.actualOutput}</pre>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="tests" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t("exampleTests")}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {homework.testCases.length === 0 ? (
-                <p className="text-muted-foreground text-center py-4">
-                  {t("noVisibleTests")}
-                </p>
-              ) : (
-                homework.testCases.map((tc, i) => (
-                  <div key={tc.id} className="border rounded-lg p-3">
-                    <div className="font-medium text-sm mb-2">
-                      {t("testCaseLabel", { number: i + 1, description: tc.description || "" })}
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">{t("input")}</span>
-                        <pre className="bg-muted p-2 rounded mt-1 text-xs">{tc.input}</pre>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">{t("expectedOutput")}</span>
-                        <pre className="bg-muted p-2 rounded mt-1 text-xs">{tc.expected}</pre>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="history" className="mt-4">
+          {/* Submission History for FILE */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base">{t("attemptHistory")}</CardTitle>
@@ -389,49 +296,228 @@ export function HomeworkView({
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {submissions.map((sub) => {
-                    const statusColors: Record<string, string> = {
-                      PASSED: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200",
-                      PARTIAL: "bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200",
-                      FAILED: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200",
-                      ERROR: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200",
-                    };
-
-                    return (
-                      <div key={sub.id} className="border rounded-lg p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium text-sm">
-                            {t("attemptLabel", { number: sub.attemptNumber })}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <Badge className={statusColors[sub.status] || ""}>
-                              {statusLabels[sub.status] || sub.status}
+                  {submissions.map((sub) => (
+                    <div key={sub.id} className="border rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium text-sm">
+                          {t("attemptLabel", { number: sub.attemptNumber })}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {sub.manualStatus ? (
+                            <Badge className={manualStatusColors[sub.manualStatus] || ""}>
+                              {manualStatusLabels[sub.manualStatus] || sub.manualStatus}
                             </Badge>
-                            <span className="text-sm text-muted-foreground">
-                              {formatDateTime(new Date(sub.createdAt))}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>
-                            {t("testsPassedCount", { passed: sub.testResults.filter((r) => r.passed).length, total: sub.testResults.length })}
-                          </span>
-                          <span>{t("resultScore", { percent: sub.percentage })}</span>
-                          {sub.isLate && (
-                            <span className="text-orange-600">
-                              {t("penaltyInfo", { penalty: sub.penalty, finalScore: sub.finalScore })}
-                            </span>
+                          ) : (
+                            <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200">
+                              {t("manualReviewPending")}
+                            </Badge>
                           )}
+                          <span className="text-sm text-muted-foreground">
+                            {formatDateTime(new Date(sub.createdAt))}
+                          </span>
                         </div>
                       </div>
-                    );
-                  })}
+                      {sub.isLate && (
+                        <div className="text-sm text-orange-600">
+                          {t("penaltyInfo", { penalty: sub.penalty, finalScore: sub.finalScore })}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      ) : (
+        /* CODE homework: original tabbed view */
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="task">{t("editorTab")}</TabsTrigger>
+            <TabsTrigger value="output" className={errorOutput ? "text-red-600" : ""}>
+              {t("outputTab")}
+            </TabsTrigger>
+            <TabsTrigger value="tests">
+              {t("testsTab", { count: homework.testCases.length })}
+            </TabsTrigger>
+            <TabsTrigger value="history">
+              {t("historyTab", { count: submissions.length })}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="task" className="mt-4 space-y-4">
+            {homework.language && (
+              <CodeEditor
+                language={homework.language}
+                code={code}
+                onCodeChange={setCode}
+                attemptsRemaining={attemptsRemaining}
+                onSubmit={handleSubmit}
+                disabled={!!(isOverdue && !homework.allowLate)}
+              />
+            )}
+
+            <FileUploadSection
+              homeworkId={homework.id}
+              attemptsRemaining={attemptsRemaining}
+              disabled={!!(isOverdue && !homework.allowLate)}
+              onUploaded={() => {
+                setAttemptsRemaining((prev) => prev - 1);
+                toast({ title: t("fileSubmitted") });
+              }}
+            />
+
+            {lastResult && (
+              <TestResultsPanel
+                results={lastResult.results}
+                testCases={homework.testCases.map((tc) => ({
+                  ...tc,
+                  isHidden: false,
+                  description: tc.description,
+                }))}
+                percentage={lastResult.percentage}
+                finalScore={lastResult.finalScore}
+                status={lastResult.status}
+                isLate={!!isOverdue}
+                penalty={homework.latePenalty}
+              />
+            )}
+          </TabsContent>
+
+          <TabsContent value="output" className="mt-4">
+            <Card>
+              <CardContent className="pt-6">
+                {!lastResult ? (
+                  <p className="text-muted-foreground text-center py-8">
+                    {t("submitToSeeOutput")}
+                  </p>
+                ) : errorOutput ? (
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-2 p-3 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-900 dark:bg-yellow-950/50 dark:border-yellow-900 dark:text-yellow-200">
+                      <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm">
+                        {t("codeHasErrors")}
+                      </p>
+                    </div>
+                    <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm font-mono whitespace-pre-wrap leading-relaxed">
+                      {errorOutput}
+                    </pre>
+                  </div>
+                ) : lastResult.status === "PASSED" ? (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-green-800 dark:bg-green-950/50 dark:border-green-900 dark:text-green-200">
+                    <p className="text-sm">{t("allTestsPassedSuccess")}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/50 dark:border-red-900 dark:text-red-200">
+                      <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm">
+                        {t("someTestsFailed")}
+                      </p>
+                    </div>
+                    {lastResult.results
+                      .filter((r) => !r.passed && r.actualOutput)
+                      .map((r, i) => (
+                        <div key={i} className="text-sm">
+                          <span className="text-muted-foreground">{t("testOutput", { number: i + 1 })}</span>
+                          <pre className="bg-muted p-2 rounded mt-1 text-xs">{r.actualOutput}</pre>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="tests" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">{t("exampleTests")}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {homework.testCases.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">
+                    {t("noVisibleTests")}
+                  </p>
+                ) : (
+                  homework.testCases.map((tc, i) => (
+                    <div key={tc.id} className="border rounded-lg p-3">
+                      <div className="font-medium text-sm mb-2">
+                        {t("testCaseLabel", { number: i + 1, description: tc.description || "" })}
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">{t("input")}</span>
+                          <pre className="bg-muted p-2 rounded mt-1 text-xs">{tc.input}</pre>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">{t("expectedOutput")}</span>
+                          <pre className="bg-muted p-2 rounded mt-1 text-xs">{tc.expected}</pre>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="history" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">{t("attemptHistory")}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {submissions.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">
+                    {t("noSubmissions")}
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {submissions.map((sub) => {
+                      const statusColors: Record<string, string> = {
+                        PASSED: "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200",
+                        PARTIAL: "bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-200",
+                        FAILED: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200",
+                        ERROR: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200",
+                      };
+
+                      return (
+                        <div key={sub.id} className="border rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium text-sm">
+                              {t("attemptLabel", { number: sub.attemptNumber })}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <Badge className={statusColors[sub.status] || ""}>
+                                {statusLabels[sub.status] || sub.status}
+                              </Badge>
+                              <span className="text-sm text-muted-foreground">
+                                {formatDateTime(new Date(sub.createdAt))}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span>
+                              {t("testsPassedCount", { passed: sub.testResults.filter((r) => r.passed).length, total: sub.testResults.length })}
+                            </span>
+                            <span>{t("resultScore", { percent: sub.percentage })}</span>
+                            {sub.isLate && (
+                              <span className="text-orange-600">
+                                {t("penaltyInfo", { penalty: sub.penalty, finalScore: sub.finalScore })}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 }
@@ -440,11 +526,13 @@ function FileUploadSection({
   homeworkId,
   attemptsRemaining,
   disabled,
+  isFileHomework,
   onUploaded,
 }: {
   homeworkId: string;
   attemptsRemaining: number;
   disabled: boolean;
+  isFileHomework?: boolean;
   onUploaded: () => void;
 }) {
   const t = useTranslations("homework");
@@ -496,13 +584,17 @@ function FileUploadSection({
   };
 
   return (
-    <Card className="border-dashed">
+    <Card className={isFileHomework ? "" : "border-dashed"}>
       <CardContent className="pt-6">
-        <div className="flex items-center gap-3">
-          <FileUp className="h-5 w-5 text-muted-foreground shrink-0" />
-          <div className="flex-1">
-            <p className="text-sm font-medium">{t("uploadFileTitle")}</p>
-            <p className="text-xs text-muted-foreground">{t("uploadFileDesc")}</p>
+        <div className={isFileHomework ? "flex flex-col items-center gap-3 py-4" : "flex items-center gap-3"}>
+          <FileUp className={isFileHomework ? "h-8 w-8 text-muted-foreground" : "h-5 w-5 text-muted-foreground shrink-0"} />
+          <div className={isFileHomework ? "text-center" : "flex-1"}>
+            <p className={isFileHomework ? "text-base font-medium" : "text-sm font-medium"}>
+              {isFileHomework ? t("uploadSolutionFile") : t("uploadFileTitle")}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {isFileHomework ? t("uploadSolutionFileDesc") : t("uploadFileDesc")}
+            </p>
           </div>
           <input
             ref={fileInputRef}
@@ -517,8 +609,8 @@ function FileUploadSection({
             </div>
           ) : (
             <Button
-              variant="outline"
-              size="sm"
+              variant={isFileHomework ? "default" : "outline"}
+              size={isFileHomework ? "lg" : "sm"}
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading || disabled || attemptsRemaining <= 0}
             >
