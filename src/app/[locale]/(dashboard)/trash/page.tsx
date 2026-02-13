@@ -14,6 +14,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TrashTable } from "@/components/trash-table";
 
+export const dynamic = "force-dynamic";
+
 export default async function TrashPage() {
   const t = useTranslations("trash");
   await requireRole(["ADMIN"]);

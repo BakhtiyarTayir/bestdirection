@@ -24,6 +24,7 @@ import {
 
 interface HomeworkItem {
   id: string;
+  slug: string;
   title: string;
   language: string | null;
   isPublished: boolean;
@@ -33,14 +34,14 @@ interface HomeworkItem {
 }
 
 interface HomeworkManagementProps {
-  courseId: string;
-  lessonId: string;
+  courseSlug: string;
+  lessonSlug: string;
   homeworks: HomeworkItem[];
 }
 
 export function HomeworkManagement({
-  courseId,
-  lessonId,
+  courseSlug,
+  lessonSlug,
   homeworks,
 }: HomeworkManagementProps) {
   const router = useRouter();
@@ -89,7 +90,7 @@ export function HomeworkManagement({
           <p className="text-muted-foreground mb-4">
             {t("noHomework")}
           </p>
-          <Link href={`/courses/${courseId}/lessons/${lessonId}/homework/new`}>
+          <Link href={`/courses/${courseSlug}/lessons/${lessonSlug}/homework/new`}>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
               {t("createHomework")}
@@ -107,7 +108,7 @@ export function HomeworkManagement({
           <Code2 className="h-5 w-5" />
           {t("title")} ({homeworks.length})
         </h3>
-        <Link href={`/courses/${courseId}/lessons/${lessonId}/homework/new`}>
+        <Link href={`/courses/${courseSlug}/lessons/${lessonSlug}/homework/new`}>
           <Button size="sm">
             <Plus className="h-4 w-4 mr-2" />
             {tCommon("add")}
@@ -160,12 +161,12 @@ export function HomeworkManagement({
                     <Eye className="h-4 w-4" />
                   )}
                 </Button>
-                <Link href={`/courses/${courseId}/lessons/${lessonId}/homework/${hw.id}/edit`}>
+                <Link href={`/courses/${courseSlug}/lessons/${lessonSlug}/homework/${hw.slug}/edit`}>
                   <Button variant="ghost" size="sm">
                     <Pencil className="h-4 w-4" />
                   </Button>
                 </Link>
-                <Link href={`/courses/${courseId}/lessons/${lessonId}/homework/${hw.id}`}>
+                <Link href={`/courses/${courseSlug}/lessons/${lessonSlug}/homework/${hw.slug}`}>
                   <Button variant="ghost" size="sm">
                     <Users className="h-4 w-4" />
                   </Button>

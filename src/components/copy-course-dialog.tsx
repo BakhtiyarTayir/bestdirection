@@ -71,7 +71,7 @@ export function CopyCourseDialog({
           description: t("courseCreated", { title: result.data.title }),
         });
         onOpenChange(false);
-        router.push(`/courses/${result.data.id}`);
+        router.push(`/courses/${result.data.slug}`);
       } else {
         toast({
           title: tErrors("error"),

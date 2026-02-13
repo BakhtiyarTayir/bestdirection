@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { AuditTable } from "./audit-table";
 import { useTranslations } from "next-intl";
 
+export const dynamic = "force-dynamic";
+
 interface AuditPageProps {
   searchParams: Promise<{
     entityType?: string;

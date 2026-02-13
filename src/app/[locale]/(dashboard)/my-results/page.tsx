@@ -17,6 +17,8 @@ import { FileText, Trophy, CheckCircle2, GraduationCap } from "lucide-react";
 import { formatDateTime } from "@/lib/format-date";
 import { useTranslations } from "next-intl";
 
+export const dynamic = "force-dynamic";
+
 export default function MyResultsPage() {
   const t = useTranslations("results");
   const tAssessments = useTranslations("assessments");
@@ -54,12 +56,14 @@ async function MyResultsPageAsync({
           lesson: {
             select: {
               id: true,
+              slug: true,
               title: true,
             },
           },
           course: {
             select: {
               id: true,
+              slug: true,
               title: true,
             },
           },
@@ -181,7 +185,7 @@ async function MyResultsPageAsync({
                       <TableCell>
                         {attempt.assessment.lessonId && (
                           <Link
-                            href={`/courses/${attempt.assessment.course.id}/lessons/${attempt.assessment.lessonId}/test`}
+                            href={`/courses/${attempt.assessment.course.slug}/lessons/${attempt.assessment.lesson?.slug}/test`}
                           >
                             <Button variant="ghost" size="sm">
                               {tCommon("details")}
@@ -252,7 +256,7 @@ async function MyResultsPageAsync({
                       </TableCell>
                       <TableCell>
                         <Link
-                          href={`/courses/${attempt.assessment.course.id}/exams/${attempt.assessment.id}`}
+                          href={`/courses/${attempt.assessment.course.slug}/exams/${attempt.assessment.id}`}
                         >
                           <Button variant="ghost" size="sm">
                             {tCommon("details")}

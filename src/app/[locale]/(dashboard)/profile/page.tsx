@@ -1,9 +1,11 @@
 import { auth } from "@/lib/auth";
 import { getUserById } from "@/actions/user-actions";
-import { redirect } from "@/i18n/navigation";
+import { redirect } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ProfileForm } from "./profile-form";
 import { TelegramLink } from "@/components/telegram-link";
+
+export const dynamic = "force-dynamic";
 
 export default async function ProfilePage() {
   const session = await auth();

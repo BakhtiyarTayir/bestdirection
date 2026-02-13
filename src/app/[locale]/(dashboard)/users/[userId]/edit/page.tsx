@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { EditUserForm } from "./edit-user-form";
 
+export const dynamic = "force-dynamic";
+
 interface EditUserPageProps {
   params: Promise<{ userId: string }>;
 }
@@ -23,7 +25,8 @@ export default async function EditUserPage({ params }: EditUserPageProps) {
   return <EditUserPageContent user={user} />;
 }
 
-function EditUserPageContent({ user }: { user: NonNullable<Awaited<ReturnType<typeof getUserById>>["data"]> }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function EditUserPageContent({ user }: { user: any }) {
   const t = useTranslations("users");
 
   return (

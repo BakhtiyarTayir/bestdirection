@@ -401,7 +401,7 @@ export async function getAllGroups() {
       const groups = await prisma.group.findMany({
         where,
         include: {
-          course: { select: { id: true, title: true } },
+          course: { select: { id: true, slug: true, title: true } },
           _count: { select: { enrollments: true } },
         },
         orderBy: [{ course: { title: "asc" } }, { sortOrder: "asc" }],

@@ -15,6 +15,8 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, BookOpen, Users, ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+export const dynamic = "force-dynamic";
+
 export default function CoursesPage() {
   const t = useTranslations("courses");
   const tCommon = useTranslations("common");
@@ -125,7 +127,7 @@ async function CoursesPageAsync({
                 </div>
               </CardContent>
               <CardFooter>
-                <Link href={`/courses/${course.id}`} className="w-full">
+                <Link href={`/courses/${course.slug}`} className="w-full">
                   <Button variant="outline" className="w-full">
                     {t("details")}
                     <ArrowRight className="ml-2 h-4 w-4" />

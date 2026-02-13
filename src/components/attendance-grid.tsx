@@ -53,7 +53,7 @@ interface Student {
 interface AttendanceGridProps {
   sessions: AttendanceSession[];
   students: Student[];
-  courseId: string;
+  courseSlug: string;
 }
 
 function formatShortDate(date: Date | string): string {
@@ -66,7 +66,7 @@ function formatShortDate(date: Date | string): string {
 export function AttendanceGrid({
   sessions,
   students,
-  courseId,
+  courseSlug,
 }: AttendanceGridProps) {
   const t = useTranslations("attendance");
 
@@ -131,7 +131,7 @@ export function AttendanceGrid({
             {sortedSessions.map((session) => (
               <TableHead key={session.id} className="text-center min-w-[80px]">
                 <Link
-                  href={`/courses/${courseId}/attendance/${session.id}`}
+                  href={`/courses/${courseSlug}/attendance/${session.id}`}
                   className="hover:underline font-medium"
                   title={session.note ?? undefined}
                 >

@@ -51,11 +51,11 @@ interface LessonFormProps {
     sortOrder: number;
     isPublished: boolean;
   };
-  courseId: string;
+  courseSlug: string;
   onSubmit: (data: LessonFormSubmitData) => Promise<{ success: boolean; error?: string }>;
 }
 
-export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
+export function LessonForm({ lesson, courseSlug, onSubmit }: LessonFormProps) {
   const t = useTranslations("lessons");
   const tCommon = useTranslations("common");
   const tSuccess = useTranslations("success");
@@ -179,7 +179,7 @@ export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
           title: tSuccess("success"),
           description: lesson ? t("lessonUpdated") : t("lessonCreated"),
         });
-        router.push(`/courses/${courseId}/lessons`);
+        router.push(`/courses/${courseSlug}/lessons`);
         router.refresh();
       } else {
         toast({
@@ -378,7 +378,7 @@ export function LessonForm({ lesson, courseId, onSubmit }: LessonFormProps) {
         <Button
           type="button"
           variant="outline"
-          onClick={() => router.push(`/courses/${courseId}/lessons`)}
+          onClick={() => router.push(`/courses/${courseSlug}/lessons`)}
         >
           {tCommon("cancel")}
         </Button>

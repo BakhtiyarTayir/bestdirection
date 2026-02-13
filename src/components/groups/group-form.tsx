@@ -16,6 +16,7 @@ import { useTranslations } from "next-intl";
 
 interface GroupFormProps {
   courseId: string;
+  courseSlug: string;
   group?: {
     id: string;
     name: string;
@@ -26,7 +27,7 @@ interface GroupFormProps {
   };
 }
 
-export function GroupForm({ courseId, group }: GroupFormProps) {
+export function GroupForm({ courseId, courseSlug, group }: GroupFormProps) {
   const t = useTranslations("groups");
   const tCommon = useTranslations("common");
   const tErrors = useTranslations("errors");
@@ -64,7 +65,7 @@ export function GroupForm({ courseId, group }: GroupFormProps) {
       }
 
       toast({ title: isEdit ? t("groupUpdated") : t("groupCreated") });
-      router.push(`/courses/${courseId}/groups`);
+      router.push(`/courses/${courseSlug}/groups`);
       router.refresh();
     });
   };
@@ -139,7 +140,7 @@ export function GroupForm({ courseId, group }: GroupFormProps) {
         <Button
           type="button"
           variant="outline"
-          onClick={() => router.push(`/courses/${courseId}/groups`)}
+          onClick={() => router.push(`/courses/${courseSlug}/groups`)}
         >
           {tCommon("cancel")}
         </Button>

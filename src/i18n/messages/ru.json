@@ -91,7 +91,8 @@
     "trash": "Корзина",
     "audit": "Журнал аудита",
     "myResults": "Мои результаты",
-    "profile": "Профиль"
+    "profile": "Профиль",
+    "homework": "Домашние задания"
   },
 
   "roles": {
@@ -121,7 +122,9 @@
     "compare": "Сравнение",
     "trash": "Корзина",
     "audit": "Аудит",
-    "attempts": "Попытки"
+    "attempts": "Попытки",
+    "student": "Мои задания",
+    "review": "Проверка"
   },
 
   "dashboard": {
@@ -492,8 +495,12 @@
     "dropFileHere": "Перетащите файл сюда",
     "fileLoaded": "Файл {filename} загружен",
     "fileTypeError": "Допустимые расширения: {extensions}",
-    "fileTooLarge": "Файл слишком большой (макс. 100 КБ)",
-    "error": "Ошибка"
+    "fileTooLarge": "Файл слишком большой (макс. 5 МБ)",
+    "error": "Ошибка",
+    "uploadFileTitle": "Или отправьте файл",
+    "uploadFileDesc": "Если не получается в редакторе — загрузите файл с кодом. Учитель проверит вручную.",
+    "uploading": "Загрузка...",
+    "fileSubmitted": "Файл отправлен на проверку"
   },
 
   "attendance": {
@@ -921,5 +928,70 @@
     "title": "Язык",
     "ru": "Русский",
     "uz": "O'zbek"
+  },
+
+  "homeworkHub": {
+    "title": "Домашние задания",
+    "noHomeworks": "Нет домашних заданий",
+    "noHomeworksMessage": "Здесь будут отображаться ваши домашние задания",
+    "tabs": {
+      "todo": "К сдаче",
+      "revision": "На доработку",
+      "pending": "На проверке",
+      "completed": "Выполнено",
+      "overdue": "Просрочено"
+    },
+    "review": {
+      "title": "Проверка заданий",
+      "pending": "Ожидают проверки",
+      "history": "История проверок",
+      "approve": "Принять работу",
+      "revise": "На доработку",
+      "reject": "Отклонить",
+      "score": "Оценка (%)",
+      "comment": "Комментарий для студента",
+      "commentPlaceholder": "Напишите комментарий...",
+      "reviewInstructions": "Критерии проверки",
+      "runCode": "Запустить код",
+      "stdinLabel": "Входные данные (stdin)",
+      "stdinPlaceholder": "Введите входные данные...",
+      "output": "Вывод",
+      "noSubmissions": "Нет работ на проверку",
+      "noHistory": "История проверок пуста",
+      "student": "Студент",
+      "homework": "Задание",
+      "type": "Тип",
+      "autoTests": "Автотесты",
+      "submitted": "Отправлено",
+      "actions": "Действия",
+      "check": "Проверить",
+      "running": "Выполняется...",
+      "reviewed": "Проверено",
+      "reviewedBy": "Проверил"
+    },
+    "card": {
+      "attempt": "Попытка",
+      "dueDate": "Срок сдачи",
+      "dueSoon": "Скоро дедлайн",
+      "overdue": "Просрочено",
+      "start": "Начать",
+      "continue": "Продолжить",
+      "teacherComment": "Комментарий преподавателя",
+      "course": "Курс",
+      "lesson": "Урок",
+      "passed": "Пройдено",
+      "failed": "Не пройдено"
+    },
+    "status": {
+      "pending": "На проверке",
+      "approved": "Принято",
+      "rejected": "Отклонено",
+      "revision": "На доработку"
+    },
+    "type": {
+      "CODE": "Код",
+      "TEXT": "Текст",
+      "FILE": "Файл"
+    }
   }
 }

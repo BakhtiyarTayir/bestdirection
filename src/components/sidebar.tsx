@@ -21,10 +21,12 @@ import {
   ChevronsLeft,
   ChevronsRight,
   UsersRound,
+  ClipboardList,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Button } from "./ui/button";
-import { useState } from "react";
+import { Badge } from "./ui/badge";
+import { useState, useEffect } from "react";
 import {
   Tooltip,
   TooltipContent,
@@ -43,6 +45,7 @@ interface NavItem {
   labelKey: string;
   icon: React.ElementType;
   roles: string[];
+  badge?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -54,9 +57,30 @@ const navItems: NavItem[] = [
   { href: "/admin/compare", labelKey: "compare", icon: GitCompare, roles: ["ADMIN"] },
   { href: "/trash", labelKey: "trash", icon: Trash2, roles: ["ADMIN"] },
   { href: "/audit", labelKey: "audit", icon: ScrollText, roles: ["ADMIN"] },
+  { href: "/homework", labelKey: "homework", icon: ClipboardList, roles: ["ADMIN", "TEACHER", "STUDENT"], badge: true },
   { href: "/my-results", labelKey: "myResults", icon: FileText, roles: ["STUDENT"] },
   { href: "/profile", labelKey: "profile", icon: User, roles: ["ADMIN", "TEACHER", "STUDENT"] },
 ];
+
+function useHomeworkCount() {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const res = await fetch("/api/homework/count");
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled) setCount(data.count || 0);
+        }
+      } catch { /* ignore */ }
+    }
+    load();
+    const interval = setInterval(load, 60000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
+  return count;
+}
 
 export function Sidebar({ role, userName }: SidebarProps) {
   const pathname = usePathname();
@@ -66,6 +90,7 @@ export function Sidebar({ role, userName }: SidebarProps) {
   const tRoles = useTranslations("roles");
   const tAuth = useTranslations("auth");
   const locale = useLocale();
+  const homeworkCount = useHomeworkCount();
 
   const filteredItems = navItems.filter((item) => item.roles.includes(role));
 
@@ -80,6 +105,7 @@ export function Sidebar({ role, userName }: SidebarProps) {
         <TooltipProvider delayDuration={0}>
           {filteredItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+            const badgeCount = item.badge ? homeworkCount : 0;
             const link = (
               <Link
                 key={item.href}
@@ -94,7 +120,21 @@ export function Sidebar({ role, userName }: SidebarProps) {
                 )}
               >
                 <item.icon className="h-4 w-4 shrink-0" />
-                {!collapsed && t(item.labelKey)}
+                {!collapsed && (
+                  <span className="flex items-center justify-between flex-1">
+                    <span>{t(item.labelKey)}</span>
+                    {badgeCount > 0 && (
+                      <Badge variant={isActive ? "secondary" : "default"} className="ml-auto text-xs h-5 min-w-5 flex items-center justify-center">
+                        {badgeCount}
+                      </Badge>
+                    )}
+                  </span>
+                )}
+                {collapsed && badgeCount > 0 && (
+                  <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] text-primary-foreground flex items-center justify-center">
+                    {badgeCount}
+                  </span>
+                )}
               </Link>
             );
 

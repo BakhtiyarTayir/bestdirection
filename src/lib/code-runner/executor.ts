@@ -10,7 +10,8 @@ export interface ExecuteResult {
 export async function executeCode(
   language: string,
   code: string,
-  timeoutMs: number = 5000
+  timeoutMs: number = 5000,
+  stdin?: string
 ): Promise<ExecuteResult> {
   const config = LANGUAGE_CONFIG[language];
   if (!config) {
@@ -33,6 +34,7 @@ export async function executeCode(
         version: config.pistonVersion,
         files: [{ content: code }],
         run_timeout: timeoutMs,
+        ...(stdin !== undefined && { stdin }),
       }),
     });
 

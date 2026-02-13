@@ -138,9 +138,9 @@ export function CourseForm({
             coverImage: coverImage,
             isPublished: data.isPublished,
           });
-          if (result.success) {
+          if (result.success && result.data) {
             toast({ title: t("courseUpdated") });
-            router.push(`/courses/${course.id}`);
+            router.push(`/courses/${result.data.slug}`);
             router.refresh();
           } else {
             toast({
@@ -156,9 +156,9 @@ export function CourseForm({
             coverImage: coverImage || undefined,
             teacherId: data.teacherId,
           });
-          if (result.success) {
+          if (result.success && result.data) {
             toast({ title: t("courseCreated") });
-            router.push("/courses");
+            router.push(`/courses/${result.data.slug}`);
             router.refresh();
           } else {
             toast({

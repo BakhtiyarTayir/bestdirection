@@ -39,10 +39,10 @@ interface GroupData {
 
 interface GroupListProps {
   groups: GroupData[];
-  courseId: string;
+  courseSlug: string;
 }
 
-export function GroupList({ groups, courseId }: GroupListProps) {
+export function GroupList({ groups, courseSlug }: GroupListProps) {
   const t = useTranslations("groups");
   const tCommon = useTranslations("common");
   const tErrors = useTranslations("errors");
@@ -85,7 +85,7 @@ export function GroupList({ groups, courseId }: GroupListProps) {
         <p className="text-muted-foreground mb-4">
           {t("createGroupsMessage")}
         </p>
-        <Link href={`/courses/${courseId}/groups/new`}>
+        <Link href={`/courses/${courseSlug}/groups/new`}>
           <Button>{t("createGroup")}</Button>
         </Link>
       </div>
@@ -118,13 +118,13 @@ export function GroupList({ groups, courseId }: GroupListProps) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>
-                  <Link href={`/courses/${courseId}/groups/${group.id}`}>
+                  <Link href={`/courses/${courseSlug}/groups/${group.id}`}>
                     <Edit className="mr-2 h-4 w-4" />
                     {tCommon("edit")}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href={`/courses/${courseId}/groups/${group.id}/students`}>
+                  <Link href={`/courses/${courseSlug}/groups/${group.id}/students`}>
                     <UserPlus className="mr-2 h-4 w-4" />
                     {tCommon("details")}
                   </Link>

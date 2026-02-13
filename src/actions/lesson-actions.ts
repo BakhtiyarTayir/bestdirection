@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
 import { revalidatePath } from "next/cache";
 import { createAuditLog, computeChanges } from "@/lib/audit";
+import { slugify, generateUniqueSlug } from "@/lib/slugify";
 import type { VideoSource } from "@/validators/lesson";
 
 // ---------- getLessons ----------
@@ -97,9 +98,15 @@ export async function createLesson(data: {
         }
       }
 
+      const slug = await generateUniqueSlug(
+        slugify(data.title),
+        async (s) => !!(await prisma.lesson.findFirst({ where: { courseId: data.courseId, slug: s }, select: { id: true } }))
+      );
+
       const lesson = await prisma.lesson.create({
         data: {
           title: data.title,
+          slug,
           content: data.content,
           videoUrl: data.videoUrl,
           videoSource: data.videoSource,
@@ -151,10 +158,23 @@ export async function updateLesson(
         return { success: false, error: "You can only update lessons in your own courses" };
       }
 
+      let slugUpdate: { slug: string } | Record<string, never> = {};
+      if (data.title !== undefined && data.title !== existing.title) {
+        const newSlug = await generateUniqueSlug(
+          slugify(data.title),
+          async (s) => {
+            const found = await prisma.lesson.findFirst({ where: { courseId: existing.courseId, slug: s }, select: { id: true } });
+            return !!found && found.id !== id;
+          }
+        );
+        slugUpdate = { slug: newSlug };
+      }
+
       const lesson = await prisma.lesson.update({
         where: { id },
         data: {
           ...(data.title !== undefined && { title: data.title }),
+          ...slugUpdate,
           ...(data.content !== undefined && { content: data.content }),
           ...(data.videoUrl !== undefined && { videoUrl: data.videoUrl }),
           ...(data.videoSource !== undefined && { videoSource: data.videoSource }),

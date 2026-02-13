@@ -34,7 +34,8 @@ interface TestCaseData {
 }
 
 interface HomeworkFormProps {
-  courseId: string;
+  courseSlug: string;
+  lessonSlug: string;
   lessonId: string;
   homework?: {
     id: string;
@@ -60,7 +61,7 @@ interface HomeworkFormProps {
   };
 }
 
-export function HomeworkForm({ courseId, lessonId, homework }: HomeworkFormProps) {
+export function HomeworkForm({ courseSlug, lessonSlug, lessonId, homework }: HomeworkFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
@@ -172,7 +173,7 @@ export function HomeworkForm({ courseId, lessonId, homework }: HomeworkFormProps
 
           if (result.success) {
             toast({ title: tSuccess("success"), description: t("homeworkCreated") });
-            router.push(`/courses/${courseId}/lessons/${lessonId}/edit`);
+            router.push(`/courses/${courseSlug}/lessons/${lessonSlug}/edit`);
             router.refresh();
           } else {
             toast({ title: tErrors("generic"), description: result.error, variant: "destructive" });

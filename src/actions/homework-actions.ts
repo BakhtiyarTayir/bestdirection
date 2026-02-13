@@ -5,6 +5,7 @@ import { withAuth } from "@/lib/action-utils";
 import { revalidatePath } from "next/cache";
 import { createAuditLog, computeChanges } from "@/lib/audit";
 import { runAllTests } from "@/lib/code-runner/test-runner";
+import { slugify, generateUniqueSlug } from "@/lib/slugify";
 import type { ProgrammingLanguage } from "@/validators/homework";
 
 // ---------- Helper: validate lesson ownership ----------
@@ -74,9 +75,15 @@ export async function createHomework(
       const ownership = await validateLessonOwnership(lessonId, session.user.id, session.user.role);
       if (!ownership.success) return { success: false, error: ownership.error };
 
+      const slug = await generateUniqueSlug(
+        slugify(data.title),
+        async (s) => !!(await prisma.homework.findFirst({ where: { lessonId, slug: s }, select: { id: true } }))
+      );
+
       const homework = await prisma.homework.create({
         data: {
           title: data.title,
+          slug,
           description: data.description,
           language: data.language,
           starterCode: data.starterCode,
@@ -149,6 +156,18 @@ export async function updateHomework(
 
       const existing = ownership.homework;
 
+      let slugUpdate: { slug: string } | Record<string, never> = {};
+      if (data.title !== undefined && data.title !== existing.title) {
+        const newSlug = await generateUniqueSlug(
+          slugify(data.title),
+          async (s) => {
+            const found = await prisma.homework.findFirst({ where: { lessonId: existing.lessonId, slug: s }, select: { id: true } });
+            return !!found && found.id !== homeworkId;
+          }
+        );
+        slugUpdate = { slug: newSlug };
+      }
+
       const homework = await prisma.$transaction(async (tx) => {
         // If testCases provided, replace them all
         if (data.testCases) {
@@ -170,6 +189,7 @@ export async function updateHomework(
           where: { id: homeworkId },
           data: {
             ...(data.title !== undefined && { title: data.title }),
+            ...slugUpdate,
             ...(data.description !== undefined && { description: data.description }),
             ...(data.language !== undefined && { language: data.language }),
             ...(data.starterCode !== undefined && { starterCode: data.starterCode }),
@@ -498,6 +518,11 @@ export async function submitSolutionInternal(homeworkId: string, code: string, s
     : percentage;
 
   // 5. Save results
+  // Set manualStatus to PENDING if manual review is required and tests passed (or no tests)
+  const needsManualReview =
+    homework.requiresManualReview &&
+    (status === "PASSED" || homework.testCases.length === 0);
+
   await prisma.$transaction([
     prisma.submission.update({
       where: { id: submission.id },
@@ -507,6 +532,7 @@ export async function submitSolutionInternal(homeworkId: string, code: string, s
         maxScore: totalPoints,
         percentage,
         finalScore,
+        ...(needsManualReview && { manualStatus: "PENDING" as const }),
       },
     }),
     prisma.testResult.createMany({

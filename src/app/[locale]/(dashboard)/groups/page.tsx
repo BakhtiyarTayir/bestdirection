@@ -4,22 +4,22 @@ import { Link } from "@/i18n/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, Calendar, UsersRound } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 
 export default async function AllGroupsPage() {
-  const t = useTranslations("groups");
-  const tCommon = useTranslations("common");
+  const t = await getTranslations("groups");
+  const tCommon = await getTranslations("common");
   await requireAuth();
 
   const result = await getAllGroups();
   const groups = result.success ? result.data : [];
 
   // Group by course
-  const courseMap = new Map<string, { title: string; courseId: string; groups: typeof groups }>();
+  const courseMap = new Map<string, { title: string; courseSlug: string; groups: typeof groups }>();
   for (const group of groups) {
     const key = group.course.id;
     if (!courseMap.has(key)) {
-      courseMap.set(key, { title: group.course.title, courseId: key, groups: [] });
+      courseMap.set(key, { title: group.course.title, courseSlug: group.course.slug, groups: [] });
     }
     courseMap.get(key)!.groups.push(group);
   }
@@ -37,10 +37,10 @@ export default async function AllGroupsPage() {
           </p>
         </div>
       ) : (
-        Array.from(courseMap.values()).map(({ title, courseId, groups: courseGroups }) => (
-          <div key={courseId} className="space-y-4">
+        Array.from(courseMap.values()).map(({ title, courseSlug, groups: courseGroups }) => (
+          <div key={courseSlug} className="space-y-4">
             <h2 className="text-lg font-semibold">
-              <Link href={`/courses/${courseId}`} className="hover:underline">
+              <Link href={`/courses/${courseSlug}`} className="hover:underline">
                 {title}
               </Link>
             </h2>
@@ -48,7 +48,7 @@ export default async function AllGroupsPage() {
               {courseGroups.map((group) => (
                 <Link
                   key={group.id}
-                  href={`/courses/${courseId}/groups/${group.id}/students`}
+                  href={`/courses/${courseSlug}/groups/${group.id}/students`}
                 >
                   <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
                     <CardHeader className="pb-2">

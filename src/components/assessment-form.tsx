@@ -16,6 +16,7 @@ import type { AssessmentType } from "@/validators/assessment";
 interface AssessmentFormProps {
   type: AssessmentType;
   courseId: string;
+  courseSlug: string;
   lessonId?: string;
   assessment?: {
     id: string;
@@ -28,7 +29,7 @@ interface AssessmentFormProps {
   };
 }
 
-export function AssessmentForm({ type, courseId, lessonId, assessment }: AssessmentFormProps) {
+export function AssessmentForm({ type, courseId, courseSlug, lessonId, assessment }: AssessmentFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
@@ -105,7 +106,7 @@ export function AssessmentForm({ type, courseId, lessonId, assessment }: Assessm
             if (isTest) {
               router.refresh();
             } else {
-              router.push(`/courses/${courseId}/exams`);
+              router.push(`/courses/${courseSlug}/exams`);
               router.refresh();
             }
           } else {

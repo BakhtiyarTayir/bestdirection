@@ -1,9 +1,11 @@
 import { auth } from "@/lib/auth";
-import { redirect } from "@/i18n/navigation";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, Users, ClipboardCheck, FileText, GraduationCap } from "lucide-react";
 import { useTranslations } from "next-intl";
+
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const session = await auth();

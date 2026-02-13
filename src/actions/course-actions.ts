@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
 import { revalidatePath } from "next/cache";
 import { createAuditLog, computeChanges } from "@/lib/audit";
+import { slugify, generateUniqueSlug } from "@/lib/slugify";
 
 // ---------- getCourses ----------
 export async function getCourses() {
@@ -66,6 +67,7 @@ export async function getCourseById(id: string) {
         copiedFrom: {
           select: {
             id: true,
+            slug: true,
             title: true,
             teacher: { select: { firstName: true, lastName: true } },
           },
@@ -95,9 +97,15 @@ export async function createCourse(data: {
         return { success: false, error: "Teachers can only create courses for themselves" };
       }
 
+      const slug = await generateUniqueSlug(
+        slugify(data.title),
+        async (s) => !!(await prisma.course.findUnique({ where: { slug: s }, select: { id: true } }))
+      );
+
       const course = await prisma.course.create({
         data: {
           title: data.title,
+          slug,
           description: data.description,
           coverImage: data.coverImage,
           teacherId: data.teacherId,
@@ -146,10 +154,23 @@ export async function updateCourse(
         return { success: false, error: "You can only update your own courses" };
       }
 
+      let slugUpdate: { slug: string } | Record<string, never> = {};
+      if (data.title !== undefined && data.title !== existing.title) {
+        const newSlug = await generateUniqueSlug(
+          slugify(data.title),
+          async (s) => {
+            const found = await prisma.course.findUnique({ where: { slug: s }, select: { id: true } });
+            return !!found && found.id !== id;
+          }
+        );
+        slugUpdate = { slug: newSlug };
+      }
+
       const course = await prisma.course.update({
         where: { id },
         data: {
           ...(data.title !== undefined && { title: data.title }),
+          ...slugUpdate,
           ...(data.description !== undefined && { description: data.description }),
           ...(data.coverImage !== undefined && { coverImage: data.coverImage }),
           ...(data.isPublished !== undefined && { isPublished: data.isPublished }),

@@ -2,6 +2,8 @@ import { requireRole } from "@/lib/auth-guard";
 import { useTranslations } from "next-intl";
 import { CreateUserForm } from "./create-user-form";
 
+export const dynamic = "force-dynamic";
+
 export default async function NewUserPage() {
   await requireRole(["ADMIN"]);
 

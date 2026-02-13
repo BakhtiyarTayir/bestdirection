@@ -21,7 +21,8 @@ const FILE_EXTENSIONS: Record<string, string[]> = {
 
 interface CodeEditorProps {
   language: string;
-  starterCode?: string | null;
+  code: string;
+  onCodeChange: (code: string) => void;
   attemptsRemaining: number;
   onSubmit: (code: string) => Promise<void>;
   disabled?: boolean;
@@ -29,12 +30,12 @@ interface CodeEditorProps {
 
 export function CodeEditor({
   language,
-  starterCode,
+  code,
+  onCodeChange,
   attemptsRemaining,
   onSubmit,
   disabled,
 }: CodeEditorProps) {
-  const [code, setCode] = useState(starterCode || "");
   const [isPending, startTransition] = useTransition();
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -70,7 +71,7 @@ export function CodeEditor({
       reader.onload = (e) => {
         const content = e.target?.result as string;
         if (content) {
-          setCode(content);
+          onCodeChange(content);
           toast({ title: t("fileLoaded", { filename: file.name }) });
         }
       };
@@ -131,7 +132,7 @@ export function CodeEditor({
           height="400px"
           language={monacoLanguage}
           value={code}
-          onChange={(value) => setCode(value || "")}
+          onChange={(value) => onCodeChange(value || "")}
           theme="vs-dark"
           options={{
             minimap: { enabled: false },

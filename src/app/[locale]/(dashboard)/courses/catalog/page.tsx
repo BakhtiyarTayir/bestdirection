@@ -3,6 +3,8 @@ import { getCoursesForCopy } from "@/actions/course-copy-actions";
 import { CourseCatalogList } from "@/components/course-catalog-list";
 import { useTranslations } from "next-intl";
 
+export const dynamic = "force-dynamic";
+
 export default function CourseCatalogPage() {
   const t = useTranslations("catalog");
   return <CourseCatalogPageAsync t={t} />;

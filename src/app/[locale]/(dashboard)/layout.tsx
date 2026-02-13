@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth";
-import { redirect } from "@/i18n/navigation";
+import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/sidebar";
 import { BreadcrumbNav } from "@/components/breadcrumb-nav";
 import { setRequestLocale } from "next-intl/server";
@@ -15,7 +15,7 @@ export default async function DashboardLayout({
   setRequestLocale(locale);
 
   const session = await auth();
-  if (!session?.user) redirect({ href: "/login", locale });
+  if (!session?.user) redirect("/login");
 
   return (
     <div className="flex h-screen">

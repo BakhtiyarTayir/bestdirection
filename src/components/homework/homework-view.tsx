@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { CodeEditor } from "./code-editor";
@@ -18,6 +19,10 @@ import {
   Code2,
   Calendar,
   AlertTriangle,
+  Upload,
+  FileUp,
+  Loader2,
+  CheckCircle2,
 } from "lucide-react";
 
 interface TestCase {
@@ -102,6 +107,7 @@ export function HomeworkView({
   const [submissions, setSubmissions] = useState(initialSubmissions);
   const [attemptsRemaining, setAttemptsRemaining] = useState(initialAttemptsRemaining);
   const [activeTab, setActiveTab] = useState("task");
+  const [code, setCode] = useState(homework.starterCode || "");
   const [lastResult, setLastResult] = useState<{
     results: { testCaseId: string; passed: boolean; actualOutput: string | null; error: string | null; executionTime: number }[];
     percentage: number;
@@ -258,12 +264,23 @@ export function HomeworkView({
           {homework.language && (
             <CodeEditor
               language={homework.language}
-              starterCode={homework.starterCode}
+              code={code}
+              onCodeChange={setCode}
               attemptsRemaining={attemptsRemaining}
               onSubmit={handleSubmit}
               disabled={!!(isOverdue && !homework.allowLate)}
             />
           )}
+
+          <FileUploadSection
+            homeworkId={homework.id}
+            attemptsRemaining={attemptsRemaining}
+            disabled={!!(isOverdue && !homework.allowLate)}
+            onUploaded={() => {
+              setAttemptsRemaining((prev) => prev - 1);
+              toast({ title: t("fileSubmitted") });
+            }}
+          />
 
           {lastResult && (
             <TestResultsPanel
@@ -416,5 +433,105 @@ export function HomeworkView({
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function FileUploadSection({
+  homeworkId,
+  attemptsRemaining,
+  disabled,
+  onUploaded,
+}: {
+  homeworkId: string;
+  attemptsRemaining: number;
+  disabled: boolean;
+  onUploaded: () => void;
+}) {
+  const t = useTranslations("homework");
+  const { toast } = useToast();
+  const [uploading, setUploading] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: t("error"),
+        description: t("fileTooLarge"),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch(`/api/homework/${homeworkId}/upload`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Upload failed");
+      }
+
+      setUploadedFile(file.name);
+      onUploaded();
+    } catch (err) {
+      toast({
+        title: t("error"),
+        description: err instanceof Error ? err.message : t("submitFailed"),
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  return (
+    <Card className="border-dashed">
+      <CardContent className="pt-6">
+        <div className="flex items-center gap-3">
+          <FileUp className="h-5 w-5 text-muted-foreground shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium">{t("uploadFileTitle")}</p>
+            <p className="text-xs text-muted-foreground">{t("uploadFileDesc")}</p>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+          {uploadedFile ? (
+            <div className="flex items-center gap-2 text-sm text-green-600">
+              <CheckCircle2 className="h-4 w-4" />
+              {uploadedFile}
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading || disabled || attemptsRemaining <= 0}
+            >
+              {uploading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4 mr-2" />
+              )}
+              {uploading ? t("uploading") : t("uploadFile")}
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

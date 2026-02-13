@@ -91,7 +91,8 @@
     "trash": "Savat",
     "audit": "Audit jurnali",
     "myResults": "Mening natijalarim",
-    "profile": "Profil"
+    "profile": "Profil",
+    "homework": "Uy vazifalari"
   },
 
   "roles": {
@@ -121,7 +122,9 @@
     "compare": "Solishtirish",
     "trash": "Savat",
     "audit": "Audit",
-    "attempts": "Urinishlar"
+    "attempts": "Urinishlar",
+    "student": "Mening vazifalarim",
+    "review": "Tekshirish"
   },
 
   "dashboard": {
@@ -480,8 +483,12 @@
     "dropFileHere": "Faylni shu yerga tashlang",
     "fileLoaded": "{filename} fayli yuklandi",
     "fileTypeError": "Ruxsat etilgan kengaytmalar: {extensions}",
-    "fileTooLarge": "Fayl juda katta (maks. 100 KB)",
-    "error": "Xatolik"
+    "fileTooLarge": "Fayl juda katta (maks. 5 MB)",
+    "error": "Xatolik",
+    "uploadFileTitle": "Yoki fayl yuklang",
+    "uploadFileDesc": "Agar muharrirda ishlay olmasangiz — kod faylini yuklang. O'qituvchi qo'lda tekshiradi.",
+    "uploading": "Yuklanmoqda...",
+    "fileSubmitted": "Fayl tekshirish uchun yuborildi"
   },
 
   "attendance": {
@@ -909,5 +916,70 @@
     "title": "Til",
     "ru": "Русский",
     "uz": "O'zbek"
+  },
+
+  "homeworkHub": {
+    "title": "Uy vazifalari",
+    "noHomeworks": "Uy vazifalari yo'q",
+    "noHomeworksMessage": "Bu yerda uy vazifalari ko'rsatiladi",
+    "tabs": {
+      "todo": "Topshirish kerak",
+      "revision": "Qayta ishlash",
+      "pending": "Tekshiruvda",
+      "completed": "Bajarilgan",
+      "overdue": "Muddati o'tgan"
+    },
+    "review": {
+      "title": "Vazifalarni tekshirish",
+      "pending": "Tekshiruv kutmoqda",
+      "history": "Tekshirish tarixi",
+      "approve": "Qabul qilish",
+      "revise": "Qayta ishlashga",
+      "reject": "Rad etish",
+      "score": "Baho (%)",
+      "comment": "Talaba uchun izoh",
+      "commentPlaceholder": "Izoh yozing...",
+      "reviewInstructions": "Tekshirish mezonlari",
+      "runCode": "Kodni ishga tushirish",
+      "stdinLabel": "Kirish ma'lumotlari (stdin)",
+      "stdinPlaceholder": "Kirish ma'lumotlarini kiriting...",
+      "output": "Natija",
+      "noSubmissions": "Tekshirish uchun ishlar yo'q",
+      "noHistory": "Tekshirish tarixi bo'sh",
+      "student": "Talaba",
+      "homework": "Vazifa",
+      "type": "Turi",
+      "autoTests": "Avtotestlar",
+      "submitted": "Yuborilgan",
+      "actions": "Amallar",
+      "check": "Tekshirish",
+      "running": "Bajarilmoqda...",
+      "reviewed": "Tekshirilgan",
+      "reviewedBy": "Tekshirgan"
+    },
+    "card": {
+      "attempt": "Urinish",
+      "dueDate": "Topshirish muddati",
+      "dueSoon": "Muddat yaqinlashmoqda",
+      "overdue": "Muddati o'tgan",
+      "start": "Boshlash",
+      "continue": "Davom ettirish",
+      "teacherComment": "O'qituvchi izohi",
+      "course": "Kurs",
+      "lesson": "Dars",
+      "passed": "O'tdi",
+      "failed": "O'tmadi"
+    },
+    "status": {
+      "pending": "Tekshiruvda",
+      "approved": "Qabul qilindi",
+      "rejected": "Rad etildi",
+      "revision": "Qayta ishlashga"
+    },
+    "type": {
+      "CODE": "Kod",
+      "TEXT": "Matn",
+      "FILE": "Fayl"
+    }
   }
 }

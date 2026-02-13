@@ -48,12 +48,14 @@ export interface LessonTestTabAssessment {
 }
 
 interface LessonTestTabProps {
+  courseSlug: string;
+  lessonSlug: string;
   courseId: string;
   lessonId: string;
   assessment: LessonTestTabAssessment | null;
 }
 
-export function LessonTestTab({ courseId, lessonId, assessment }: LessonTestTabProps) {
+export function LessonTestTab({ courseSlug, lessonSlug, courseId, lessonId, assessment }: LessonTestTabProps) {
   const t = useTranslations("assessments");
   const tCommon = useTranslations("common");
 
@@ -73,7 +75,7 @@ export function LessonTestTab({ courseId, lessonId, assessment }: LessonTestTabP
             </p>
             <ImportButton type="test" targetId={lessonId} />
           </div>
-          <AssessmentForm type="TEST" courseId={courseId} lessonId={lessonId} />
+          <AssessmentForm type="TEST" courseId={courseId} courseSlug={courseSlug} lessonId={lessonId} />
         </CardContent>
       </Card>
     );
@@ -93,7 +95,7 @@ export function LessonTestTab({ courseId, lessonId, assessment }: LessonTestTabP
               <Badge variant={assessment.isPublished ? "default" : "secondary"}>
                 {assessment.isPublished ? tCommon("published") : tCommon("draft")}
               </Badge>
-              <Link href={`/courses/${courseId}/lessons/${lessonId}/test/attempts`}>
+              <Link href={`/courses/${courseSlug}/lessons/${lessonSlug}/test/attempts`}>
                 <Button variant="outline" size="sm">
                   <BarChart3 className="h-4 w-4 mr-2" />
                   {t("results", { count: assessment._count.attempts })}
@@ -108,6 +110,7 @@ export function LessonTestTab({ courseId, lessonId, assessment }: LessonTestTabP
           <AssessmentForm
             type="TEST"
             courseId={courseId}
+            courseSlug={courseSlug}
             lessonId={lessonId}
             assessment={{
               id: assessment.id,

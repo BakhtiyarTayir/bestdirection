@@ -1,4 +1,4 @@
-import { redirect } from "@/i18n/navigation";
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { setRequestLocale } from "next-intl/server";
 
@@ -12,8 +12,8 @@ export default async function Home({
 
   const session = await auth();
   if (session?.user) {
-    redirect({ href: "/dashboard", locale });
+    redirect("/dashboard");
   } else {
-    redirect({ href: "/login", locale });
+    redirect("/login");
   }
 }

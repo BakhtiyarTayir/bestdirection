@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+export const dynamic = "force-dynamic";
+
 export default function NewCoursePage() {
   const t = useTranslations("courses");
   return <NewCoursePageAsync t={t} />;

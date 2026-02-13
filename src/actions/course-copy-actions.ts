@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
 import { createAuditLog } from "@/lib/audit";
 import { revalidatePath } from "next/cache";
+import { slugify, generateUniqueSlug } from "@/lib/slugify";
 
 // ---------- copyCourse ----------
 
@@ -60,10 +61,17 @@ export async function copyCourse(
         return { success: false as const, error: "noAccess" };
       }
 
+      const courseTitle = options?.newTitle ?? `${source.title} (copy)`;
+      const courseSlug = await generateUniqueSlug(
+        slugify(courseTitle),
+        async (s) => !!(await prisma.course.findUnique({ where: { slug: s }, select: { id: true } }))
+      );
+
       const newCourse = await prisma.$transaction(async (tx) => {
         const course = await tx.course.create({
           data: {
-            title: options?.newTitle ?? `${source.title} (copy)`,
+            title: courseTitle,
+            slug: courseSlug,
             description: source.description,
             coverImage: source.coverImage,
             isPublished: false,
@@ -75,10 +83,20 @@ export async function copyCourse(
           },
         });
 
+        const usedLessonSlugs = new Set<string>();
         for (const lesson of source.lessons) {
+          let lessonSlug = slugify(lesson.title);
+          let counter = 0;
+          while (usedLessonSlugs.has(lessonSlug)) {
+            counter++;
+            lessonSlug = `${slugify(lesson.title)}-${counter}`;
+          }
+          usedLessonSlugs.add(lessonSlug);
+
           const newLesson = await tx.lesson.create({
             data: {
               title: lesson.title,
+              slug: lessonSlug,
               content: lesson.content,
               videoUrl: lesson.videoUrl,
               videoSource: lesson.videoSource,
@@ -178,7 +196,7 @@ export async function copyCourse(
       revalidatePath("/courses");
       return {
         success: true as const,
-        data: { id: newCourse.id, title: newCourse.title },
+        data: { id: newCourse.id, title: newCourse.title, slug: newCourse.slug },
       };
     },
     { roles: ["ADMIN", "TEACHER"] }

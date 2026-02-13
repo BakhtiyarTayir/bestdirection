@@ -32,11 +32,19 @@ const SEGMENT_KEYS: Record<string, string> = {
   compare: "compare",
   trash: "trash",
   audit: "audit",
+  student: "student",
+  review: "review",
 };
 
-function isDynamicSegment(segment: string): boolean {
-  // CUID v1/v2 pattern or generic long ID
-  return segment.length >= 20 && /^[a-z0-9]/i.test(segment);
+function isCuidSegment(segment: string): boolean {
+  // CUID v1/v2 pattern: 25+ chars, starts with c, all lowercase alphanumeric
+  return segment.length >= 20 && /^c[a-z0-9]+$/.test(segment);
+}
+
+function formatSlug(slug: string): string {
+  return slug
+    .replace(/-/g, " ")
+    .replace(/^\w/, (c) => c.toUpperCase());
 }
 
 export function BreadcrumbNav() {
@@ -57,17 +65,16 @@ export function BreadcrumbNav() {
     const segment = segments[i];
     const href = "/" + segments.slice(0, i + 1).join("/");
 
-    if (isDynamicSegment(segment)) {
-      // Skip dynamic segments — the link goes to them but label comes from next segment or "..."
+    if (isCuidSegment(segment)) {
+      // CUID segments (examId, sessionId, groupId) — skip or show "..."
       const nextSegment = segments[i + 1];
       if (nextSegment && SEGMENT_KEYS[nextSegment]) {
-        // Will be handled by the next iteration
         continue;
       }
       items.push({ label: "...", href });
     } else {
       const key = SEGMENT_KEYS[segment];
-      const label = key ? t(key) : segment;
+      const label = key ? t(key) : formatSlug(segment);
       items.push({ label, href });
     }
   }

@@ -6,6 +6,8 @@ import { Plus } from "lucide-react";
 import { UserList } from "./user-list";
 import { useTranslations } from "next-intl";
 
+export const dynamic = "force-dynamic";
+
 export default async function UsersPage() {
   await requireRole(["ADMIN"]);
 
