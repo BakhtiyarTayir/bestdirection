@@ -2,6 +2,8 @@ import { Bot, InlineKeyboard, type Context } from "grammy";
 import { prisma } from "@/lib/prisma";
 import { submitSolutionInternal } from "@/actions/homework-actions";
 import type { ProgrammingLanguage } from "@/generated/prisma";
+import { writeFile, mkdir } from "fs/promises";
+import path from "path";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
@@ -143,88 +145,143 @@ function createBot(token: string): Bot {
     const fileName = doc.file_name || "";
     const ext = fileName.split(".").pop()?.toLowerCase();
 
-    const allowedExtensions = ["py", "js", "ts", "php", "java", "cs"];
-    if (!ext || !allowedExtensions.includes(ext)) {
-      await ctx.reply(
-        `Неподдерживаемый тип файла. Допустимые: ${allowedExtensions.map((e) => "." + e).join(", ")}`
-      );
-      return;
-    }
+    const codeExtensions = ["py", "js", "ts", "php", "java", "cs"];
+    const isCodeFile = ext && codeExtensions.includes(ext);
 
-    if (doc.file_size && doc.file_size > 100 * 1024) {
-      await ctx.reply("Файл слишком большой (макс. 100 КБ).");
-      return;
-    }
+    if (isCodeFile) {
+      // CODE homework flow
+      if (doc.file_size && doc.file_size > 100 * 1024) {
+        await ctx.reply("Файл слишком большой (макс. 100 КБ).");
+        return;
+      }
 
-    // Find active homeworks matching the file's language
-    const langMap: Record<string, string> = {
-      py: "PYTHON",
-      js: "JAVASCRIPT",
-      ts: "TYPESCRIPT",
-      php: "PHP",
-      java: "JAVA",
-      cs: "CSHARP",
-    };
-    const language = langMap[ext] as ProgrammingLanguage;
+      const langMap: Record<string, string> = {
+        py: "PYTHON",
+        js: "JAVASCRIPT",
+        ts: "TYPESCRIPT",
+        php: "PHP",
+        java: "JAVA",
+        cs: "CSHARP",
+      };
+      const language = langMap[ext] as ProgrammingLanguage;
 
-    const enrollments = await prisma.enrollment.findMany({
-      where: { studentId: user.id },
-      include: {
-        course: {
-          select: {
-            title: true,
-            lessons: {
-              include: {
-                homeworks: {
-                  where: { isPublished: true, language },
-                  select: { id: true, title: true, maxAttempts: true },
+      const enrollments = await prisma.enrollment.findMany({
+        where: { studentId: user.id },
+        include: {
+          course: {
+            select: {
+              title: true,
+              lessons: {
+                include: {
+                  homeworks: {
+                    where: { isPublished: true, language },
+                    select: { id: true, title: true, maxAttempts: true },
+                  },
                 },
               },
             },
           },
         },
-      },
-    });
+      });
 
-    const matchingHomeworks: { id: string; title: string; courseName: string }[] = [];
-    for (const enrollment of enrollments) {
-      for (const lesson of enrollment.course.lessons) {
-        for (const hw of lesson.homeworks) {
-          matchingHomeworks.push({
-            id: hw.id,
-            title: hw.title,
-            courseName: enrollment.course.title,
-          });
+      const matchingHomeworks: { id: string; title: string; courseName: string }[] = [];
+      for (const enrollment of enrollments) {
+        for (const lesson of enrollment.course.lessons) {
+          for (const hw of lesson.homeworks) {
+            matchingHomeworks.push({
+              id: hw.id,
+              title: hw.title,
+              courseName: enrollment.course.title,
+            });
+          }
         }
       }
-    }
 
-    if (matchingHomeworks.length === 0) {
-      await ctx.reply("Нет активных заданий для этого языка.");
-      return;
-    }
+      if (matchingHomeworks.length === 0) {
+        await ctx.reply("Нет активных заданий для этого языка.");
+        return;
+      }
 
-    if (matchingHomeworks.length === 1) {
-      // Auto-submit to the only matching homework
-      await processFileSubmission(ctx, user.id, matchingHomeworks[0].id, fileName);
-      return;
-    }
+      if (matchingHomeworks.length === 1) {
+        await processFileSubmission(ctx, user.id, matchingHomeworks[0].id, fileName);
+        return;
+      }
 
-    // Show inline keyboard to pick homework
-    const keyboard = new InlineKeyboard();
-    for (const hw of matchingHomeworks) {
-      keyboard.text(`${hw.title} (${hw.courseName})`, `submit:${hw.id}`).row();
-    }
+      const keyboard = new InlineKeyboard();
+      for (const hw of matchingHomeworks) {
+        keyboard.text(`${hw.title} (${hw.courseName})`, `submit:${hw.id}`).row();
+      }
 
-    await ctx.reply("Выберите задание для проверки:", { reply_markup: keyboard });
+      await ctx.reply("Выберите задание для проверки:", { reply_markup: keyboard });
+    } else {
+      // FILE homework flow — any non-code file
+      const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+      if (doc.file_size && doc.file_size > MAX_FILE_SIZE) {
+        await ctx.reply("Файл слишком большой (макс. 5 МБ).");
+        return;
+      }
+
+      const enrollments = await prisma.enrollment.findMany({
+        where: { studentId: user.id },
+        include: {
+          course: {
+            select: {
+              title: true,
+              lessons: {
+                include: {
+                  homeworks: {
+                    where: { isPublished: true, type: "FILE" },
+                    select: { id: true, title: true, maxAttempts: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      const fileHomeworks: { id: string; title: string; courseName: string }[] = [];
+      for (const enrollment of enrollments) {
+        for (const lesson of enrollment.course.lessons) {
+          for (const hw of lesson.homeworks) {
+            fileHomeworks.push({
+              id: hw.id,
+              title: hw.title,
+              courseName: enrollment.course.title,
+            });
+          }
+        }
+      }
+
+      if (fileHomeworks.length === 0) {
+        await ctx.reply("Нет заданий для загрузки файлов.");
+        return;
+      }
+
+      if (fileHomeworks.length === 1) {
+        await processFileUploadSubmission(ctx, user.id, fileHomeworks[0].id, fileName);
+        return;
+      }
+
+      const keyboard = new InlineKeyboard();
+      for (const hw of fileHomeworks) {
+        keyboard.text(`${hw.title} (${hw.courseName})`, `fileupload:${hw.id}`).row();
+      }
+
+      await ctx.reply("Выберите задание для загрузки файла:", { reply_markup: keyboard });
+    }
   });
 
   // Handle inline keyboard callback for homework selection
   bot.on("callback_query:data", async (ctx) => {
     const data = ctx.callbackQuery.data;
-    if (!data.startsWith("submit:") || !ctx.chat) return;
+    if (!ctx.chat) return;
 
-    const homeworkId = data.replace("submit:", "");
+    const isSubmit = data.startsWith("submit:");
+    const isFileUpload = data.startsWith("fileupload:");
+    if (!isSubmit && !isFileUpload) return;
+
+    const homeworkId = data.replace(/^(submit|fileupload):/, "");
     const user = await findUserByChatId(String(ctx.chat.id));
     if (!user) {
       await ctx.answerCallbackQuery({ text: "Аккаунт не привязан." });
@@ -241,7 +298,13 @@ function createBot(token: string): Bot {
       return;
     }
 
-    await processFileSubmission(ctx, user.id, homeworkId, replyTo.document.file_name || "file");
+    const fileName = replyTo.document.file_name || "file";
+
+    if (isFileUpload) {
+      await processFileUploadSubmission(ctx, user.id, homeworkId, fileName);
+    } else {
+      await processFileSubmission(ctx, user.id, homeworkId, fileName);
+    }
   });
 
   return bot;
@@ -341,6 +404,141 @@ async function processFileSubmission(ctx: Context, studentId: string, homeworkId
   } catch (error) {
     console.error("Telegram submission error:", error);
     await ctx.reply("Ошибка при проверке. Попробуйте позже.");
+  }
+}
+
+const UPLOAD_DIR = path.join(process.cwd(), "public/uploads/homework");
+
+async function processFileUploadSubmission(ctx: Context, studentId: string, homeworkId: string, fileName: string) {
+  const doc = ctx.message?.document || ctx.callbackQuery?.message?.reply_to_message?.document;
+  if (!doc) {
+    await ctx.reply("Не удалось получить файл.");
+    return;
+  }
+
+  try {
+    // Fetch homework with enrollment check
+    const homework = await prisma.homework.findUnique({
+      where: { id: homeworkId },
+      include: {
+        lesson: {
+          include: {
+            course: {
+              include: {
+                enrollments: {
+                  where: { studentId },
+                  select: { id: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!homework || !homework.isPublished) {
+      await ctx.reply("Задание не найдено или не опубликовано.");
+      return;
+    }
+
+    if (homework.lesson.course.enrollments.length === 0) {
+      await ctx.reply("Вы не записаны на курс.");
+      return;
+    }
+
+    // Check deadline
+    const now = new Date();
+    const isLate = homework.dueDate ? homework.dueDate < now : false;
+    if (isLate && !homework.allowLate) {
+      await ctx.reply("Дедлайн истёк.");
+      return;
+    }
+    const penalty = isLate ? homework.latePenalty : 0;
+
+    // Check attempts
+    const attemptCount = await prisma.submission.count({
+      where: { homeworkId, studentId },
+    });
+
+    if (attemptCount >= homework.maxAttempts) {
+      await ctx.reply("Попытки закончились.");
+      return;
+    }
+
+    await ctx.reply(`Загружаю ${fileName}...`);
+
+    // Download file from Telegram
+    const file = await getBot().api.getFile(doc.file_id);
+    const url = `https://api.telegram.org/file/bot${BOT_TOKEN}/${file.file_path}`;
+    const response = await fetch(url);
+    const buffer = Buffer.from(await response.arrayBuffer());
+
+    if (buffer.length === 0) {
+      await ctx.reply("Файл пустой.");
+      return;
+    }
+
+    if (buffer.length > 5 * 1024 * 1024) {
+      await ctx.reply("Файл слишком большой (макс. 5 МБ).");
+      return;
+    }
+
+    // Save file to disk
+    const ext = path.extname(fileName) || "";
+    const safeFilename = `${homeworkId}_${studentId}_${Date.now()}${ext}`;
+    const filePath = path.join(UPLOAD_DIR, safeFilename);
+
+    await mkdir(UPLOAD_DIR, { recursive: true });
+    await writeFile(filePath, buffer);
+
+    // Create submission + file in transaction
+    const submission = await prisma.$transaction(async (tx) => {
+      const count = await tx.submission.count({
+        where: { homeworkId, studentId },
+      });
+
+      if (count >= homework.maxAttempts) {
+        throw new Error("MAX_ATTEMPTS_REACHED");
+      }
+
+      return tx.submission.create({
+        data: {
+          homeworkId,
+          studentId,
+          code: `[Файл: ${fileName}]`,
+          status: "PENDING",
+          attemptNumber: count + 1,
+          isLate,
+          penalty,
+          manualStatus: "PENDING",
+          files: {
+            create: {
+              filename: fileName,
+              path: filePath,
+              mimeType: doc.mime_type || "application/octet-stream",
+              size: buffer.length,
+            },
+          },
+        },
+      });
+    });
+
+    let message = `Файл отправлен на проверку!\n\n`;
+    message += `Задание: ${homework.title}\n`;
+    message += `Попытка: ${submission.attemptNumber}/${homework.maxAttempts}\n`;
+    message += `Статус: На проверке`;
+    if (isLate) {
+      message += `\n⚠️ Отправлено после дедлайна (штраф ${penalty}%)`;
+    }
+
+    await ctx.reply(message);
+  } catch (error) {
+    if (error instanceof Error && error.message === "MAX_ATTEMPTS_REACHED") {
+      await ctx.reply("Попытки закончились.");
+      return;
+    }
+    console.error("Telegram file upload error:", error);
+    await ctx.reply("Ошибка при загрузке файла. Попробуйте позже.");
   }
 }
 
