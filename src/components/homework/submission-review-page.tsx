@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,9 +12,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { CheckCircle2, XCircle, RotateCcw, User, Code2, FileText, TestTube } from "lucide-react";
+import dynamic from "next/dynamic";
 import { reviewSubmission } from "@/actions/homework-review-actions";
 import { CodeRunnerPanel } from "./code-runner-panel";
-import { LANGUAGE_LABELS } from "@/lib/code-runner/config";
+import { LANGUAGE_CONFIG, LANGUAGE_LABELS } from "@/lib/code-runner/config";
+
+const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
 interface TestResult {
   passed: boolean;
@@ -83,6 +86,19 @@ export function SubmissionReviewPage({ submission }: { submission: SubmissionDat
   const hasFiles = submission.files.length > 0;
   const hasTests = submission.testResults.length > 0;
 
+  // If code is a file placeholder, fetch actual file content
+  const isFilePlaceholder = submission.code?.startsWith("[Файл:");
+  const [codeContent, setCodeContent] = useState(isFilePlaceholder ? "" : submission.code);
+
+  useEffect(() => {
+    if (isFilePlaceholder && submission.files.length > 0) {
+      fetch(`/api/files/${submission.files[0].id}`)
+        .then((res) => res.text())
+        .then(setCodeContent)
+        .catch(() => setCodeContent(submission.code));
+    }
+  }, [isFilePlaceholder, submission.files, submission.code]);
+
   async function handleReview(status: "APPROVED" | "REJECTED" | "REVISION") {
     setIsSubmitting(true);
     try {
@@ -136,8 +152,22 @@ export function SubmissionReviewPage({ submission }: { submission: SubmissionDat
 
           {hasCode && (
             <TabsContent value="code" className="mt-4">
-              <div className="rounded-md border bg-muted/30 p-4 overflow-auto max-h-[600px]">
-                <pre className="text-sm font-mono whitespace-pre-wrap">{submission.code}</pre>
+              <div className="rounded-md border overflow-hidden">
+                <MonacoEditor
+                  height="500px"
+                  language={LANGUAGE_CONFIG[hw.language || ""]?.monacoLanguage || "plaintext"}
+                  value={codeContent}
+                  theme="vs-dark"
+                  options={{
+                    readOnly: true,
+                    minimap: { enabled: false },
+                    fontSize: 14,
+                    lineNumbers: "on",
+                    scrollBeyondLastLine: false,
+                    automaticLayout: true,
+                    wordWrap: "on",
+                  }}
+                />
               </div>
             </TabsContent>
           )}
