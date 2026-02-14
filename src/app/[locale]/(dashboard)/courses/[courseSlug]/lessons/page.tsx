@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { getLessons } from "@/actions/lesson-actions";
 import { Button } from "@/components/ui/button";
-import { FileText, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { LessonList } from "./lesson-list";
 import { getTranslations } from "next-intl/server";
 import { resolveCourseSlug } from "@/lib/slug-resolvers";

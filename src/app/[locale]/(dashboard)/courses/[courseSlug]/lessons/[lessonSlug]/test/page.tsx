@@ -381,7 +381,6 @@ async function TestPageAsync({
                       })),
                     })),
                   }}
-                  courseId={courseId}
                 />
               ) : assessment.questions.length === 0 ? (
                 <Card>

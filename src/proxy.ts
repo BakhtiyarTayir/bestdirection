@@ -9,8 +9,7 @@ const intlMiddleware = createMiddleware({
   localePrefix,
 });
 
-export function middleware(request: NextRequest) {
-  // Skip API routes
+export function proxy(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith("/api")) {
     const response = NextResponse.next();
     addSecurityHeaders(response);

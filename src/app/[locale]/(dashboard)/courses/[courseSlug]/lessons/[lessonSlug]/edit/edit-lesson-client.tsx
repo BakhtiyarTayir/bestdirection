@@ -39,7 +39,6 @@ interface EditLessonClientProps {
 
 export function EditLessonClient({ courseId, courseSlug, lessonSlug, lesson, assessment, homeworks }: EditLessonClientProps) {
   const t = useTranslations("lessons");
-  const tHomework = useTranslations("homework");
 
   async function handleSubmit(data: LessonFormSubmitData) {
     const result = await updateLesson(lesson.id, {

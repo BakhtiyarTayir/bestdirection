@@ -71,6 +71,7 @@ export function VideoPlayer({ url, source, lessonId, initialPosition }: VideoPla
   return (
     <div className="relative w-full" style={{ paddingTop: "56.25%" }}>
       <ReactPlayer
+        key={source}
         ref={playerRef}
         url={url}
         width="100%"

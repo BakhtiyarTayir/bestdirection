@@ -22,7 +22,7 @@ export default async function NewHomeworkPage({ params }: NewHomeworkPageProps) 
   }
 
   const { courseSlug, lessonSlug } = await params;
-  const { courseId, lessonId } = await resolveFullPath({ courseSlug, lessonSlug });
+  const { lessonId } = await resolveFullPath({ courseSlug, lessonSlug });
 
   return <NewHomeworkPageContent courseSlug={courseSlug} lessonSlug={lessonSlug} lessonId={lessonId!} />;
 }

@@ -23,12 +23,11 @@ export default async function LessonPage({ params }: LessonPageProps) {
   const tCommon = await getTranslations("common");
   const tErrors = await getTranslations("errors");
   const tAssessments = await getTranslations("assessments");
-  const tHomework = await getTranslations("homework");
   const session = await auth();
   if (!session?.user) redirect("/login");
 
   const { courseSlug, lessonSlug } = await params;
-  const { courseId, lessonId } = await resolveFullPath({ courseSlug, lessonSlug });
+  const { lessonId } = await resolveFullPath({ courseSlug, lessonSlug });
   const result = await getLessonById(lessonId);
 
   if (!result.success || !result.data) {

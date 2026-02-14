@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { slugify } from "@/lib/slugify";
 import { cn } from "@/lib/utils";
-import { List, ChevronsRight, ChevronsLeft } from "lucide-react";
+import { List, ChevronsRight } from "lucide-react";
 import { Button } from "./ui/button";
 import {
   Tooltip,

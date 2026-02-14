@@ -17,12 +17,20 @@ interface HomeworkPageProps {
   params: Promise<{ courseSlug: string; lessonSlug: string; homeworkSlug: string }>;
 }
 
+type GetHomeworkForTeacherResult = Awaited<ReturnType<typeof getHomeworkForTeacher>>;
+type TeacherHomework = Extract<GetHomeworkForTeacherResult, { success: true }>["data"];
+type GetSubmissionsResult = Awaited<ReturnType<typeof getSubmissions>>;
+type HomeworkSubmissionsData = Extract<GetSubmissionsResult, { success: true }>["data"];
+type GetHomeworkForStudentResult = Awaited<ReturnType<typeof getHomeworkForStudent>>;
+type StudentHomeworkData = Extract<GetHomeworkForStudentResult, { success: true }>["data"]["homework"];
+type StudentSubmissionsData = Extract<GetHomeworkForStudentResult, { success: true }>["data"]["submissions"];
+
 export default async function HomeworkPage({ params }: HomeworkPageProps) {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
   const { courseSlug, lessonSlug, homeworkSlug } = await params;
-  const { courseId, lessonId, homeworkId } = await resolveFullPath({ courseSlug, lessonSlug, homeworkSlug });
+  const { homeworkId } = await resolveFullPath({ courseSlug, lessonSlug, homeworkSlug });
   const isTeacherOrAdmin = session.user.role === "ADMIN" || session.user.role === "TEACHER";
 
   if (isTeacherOrAdmin) {
@@ -60,17 +68,16 @@ export default async function HomeworkPage({ params }: HomeworkPageProps) {
     );
   }
 
-  const { homework, submissions, attemptsUsed, attemptsRemaining } = result.data;
+  const { homework, submissions, attemptsRemaining } = result.data;
 
   return (
-    <StudentView
-      courseSlug={courseSlug}
-      lessonSlug={lessonSlug}
-      homework={homework}
-      submissions={submissions}
-      attemptsUsed={attemptsUsed}
-      attemptsRemaining={attemptsRemaining}
-    />
+      <StudentView
+        courseSlug={courseSlug}
+        lessonSlug={lessonSlug}
+        homework={homework}
+        submissions={submissions}
+        attemptsRemaining={attemptsRemaining}
+      />
   );
 }
 
@@ -95,8 +102,8 @@ async function TeacherView({
   courseSlug: string;
   lessonSlug: string;
   homeworkSlug: string;
-  homework: any;
-  submissions: any[];
+  homework: TeacherHomework;
+  submissions: HomeworkSubmissionsData;
 }) {
   const t = await getTranslations("homework");
   const tCommon = await getTranslations("common");
@@ -149,14 +156,12 @@ async function StudentView({
   lessonSlug,
   homework,
   submissions,
-  attemptsUsed,
   attemptsRemaining,
 }: {
   courseSlug: string;
   lessonSlug: string;
-  homework: any;
-  submissions: any[];
-  attemptsUsed: number;
+  homework: StudentHomeworkData;
+  submissions: StudentSubmissionsData;
   attemptsRemaining: number;
 }) {
   const tLessons = await getTranslations("lessons");
@@ -174,7 +179,6 @@ async function StudentView({
       <HomeworkView
         homework={JSON.parse(JSON.stringify(homework))}
         submissions={JSON.parse(JSON.stringify(submissions))}
-        attemptsUsed={attemptsUsed}
         attemptsRemaining={attemptsRemaining}
       />
     </div>

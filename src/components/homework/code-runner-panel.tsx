@@ -11,11 +11,10 @@ import { runStudentCode } from "@/actions/homework-review-actions";
 
 interface CodeRunnerPanelProps {
   submissionId: string;
-  language: string;
   codeOverride?: string;
 }
 
-export function CodeRunnerPanel({ submissionId, language, codeOverride }: CodeRunnerPanelProps) {
+export function CodeRunnerPanel({ submissionId, codeOverride }: CodeRunnerPanelProps) {
   const t = useTranslations("homeworkHub");
   const [stdin, setStdin] = useState("");
   const [output, setOutput] = useState<string | null>(null);

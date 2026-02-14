@@ -95,21 +95,19 @@ interface HomeworkData {
 interface HomeworkViewProps {
   homework: HomeworkData;
   submissions: Submission[];
-  attemptsUsed: number;
   attemptsRemaining: number;
 }
 
 export function HomeworkView({
   homework,
   submissions: initialSubmissions,
-  attemptsUsed: initialAttemptsUsed,
   attemptsRemaining: initialAttemptsRemaining,
 }: HomeworkViewProps) {
   const { toast } = useToast();
   const t = useTranslations("homework");
   const tErrors = useTranslations("errors");
   const tAssessments = useTranslations("assessments");
-  const [submissions, setSubmissions] = useState(initialSubmissions);
+  const submissions = initialSubmissions;
   const [attemptsRemaining, setAttemptsRemaining] = useState(initialAttemptsRemaining);
   const [activeTab, setActiveTab] = useState("task");
   const [code, setCode] = useState(homework.starterCode || "");
@@ -130,8 +128,6 @@ export function HomeworkView({
           .filter((e): e is string => e !== null)
       )].join("\n\n") || null
     : null;
-
-  const hasErrors = lastResult?.status === "ERROR" || lastResult?.status === "FAILED";
 
   const handleSubmit = async (code: string) => {
     const result = await submitSolution(homework.id, code);

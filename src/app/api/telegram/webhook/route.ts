@@ -9,12 +9,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Bot not configured" }, { status: 503 });
   }
 
+  if (!WEBHOOK_SECRET) {
+    return NextResponse.json({ error: "Webhook secret is not configured" }, { status: 503 });
+  }
+
   // Verify webhook secret
-  if (WEBHOOK_SECRET) {
-    const secret = req.headers.get("x-telegram-bot-api-secret-token");
-    if (secret !== WEBHOOK_SECRET) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const secret = req.headers.get("x-telegram-bot-api-secret-token");
+  if (secret !== WEBHOOK_SECRET) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {

@@ -231,7 +231,7 @@ export function SubmissionReviewPage({ submission }: { submission: SubmissionDat
             (submission.files[0] ? detectLanguageFromExtension(submission.files[0].filename) : null);
           const codeOverride = hasCode ? (codeContent || undefined) : fileEditedCode;
           return detectedLanguage ? (
-            <CodeRunnerPanel submissionId={submission.id} language={detectedLanguage} codeOverride={codeOverride} />
+            <CodeRunnerPanel submissionId={submission.id} codeOverride={codeOverride} />
           ) : null;
         })()}
       </div>
@@ -386,23 +386,21 @@ function getMonacoLanguage(filename: string): string | null {
 function FilePreview({ file, editable, onContentChange }: { file: SubmissionFile; editable?: boolean; onContentChange?: (content: string) => void }) {
   const t = useTranslations("homeworkHub");
   const [content, setContent] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
   const monacoLang = getMonacoLanguage(file.filename);
   const isPreviewable = monacoLang !== null && file.size < 512 * 1024;
+  const loading = isPreviewable && content === null && !error;
 
   useEffect(() => {
     if (!isPreviewable) return;
-    setLoading(true);
     fetch(`/api/files/${file.id}`)
       .then((res) => {
         if (!res.ok) throw new Error();
         return res.text();
       })
       .then(setContent)
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
+      .catch(() => setError(true));
   }, [file.id, isPreviewable]);
 
   return (

@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   BookOpen,
   Users,
-  ClipboardCheck,
   FileText,
   User,
   GraduationCap,

@@ -17,7 +17,6 @@ import {
   Trash2,
   FileText,
   Users,
-  Loader2,
 } from "lucide-react";
 
 interface HomeworkItem {

@@ -54,7 +54,6 @@ interface AssessmentTakingProps {
     passingScore: number;
     questions: AssessmentQuestion[];
   };
-  courseId: string;
 }
 
 type TakingState = "idle" | "taking" | "submitting" | "completed";
@@ -66,7 +65,7 @@ interface AttemptResult {
   isPassed: boolean;
 }
 
-export function AssessmentTaking({ assessment, courseId }: AssessmentTakingProps) {
+export function AssessmentTaking({ assessment }: AssessmentTakingProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [state, setState] = useState<TakingState>("idle");
@@ -126,33 +125,36 @@ export function AssessmentTaking({ assessment, courseId }: AssessmentTakingProps
       });
       setState("taking");
     }
-  }, [state, assessment, answers, router, toast]);
+  }, [state, assessment, answers, router, toast, t, tErrors]);
 
   // Timer
   useEffect(() => {
-    if (state === "taking" && assessment.timeLimitMin && timeLeft !== null) {
-      if (timeLeft <= 0 && !hasAutoSubmittedRef.current) {
-        hasAutoSubmittedRef.current = true;
-        toast({
-          title: t("timeUp"),
-          description: isTest ? t("testAutoSubmitted") : t("examAutoSubmitted"),
-          variant: "destructive",
-        });
-        handleSubmit();
-        return;
-      }
+    if (state !== "taking" || !assessment.timeLimitMin || timeLeft === null) return;
 
-      timerRef.current = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev === null || prev <= 0) return 0;
-          return prev - 1;
-        });
-      }, 1000);
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev === null || prev <= 0) return 0;
 
-      return () => {
-        if (timerRef.current) clearInterval(timerRef.current);
-      };
-    }
+        if (prev <= 1 && !hasAutoSubmittedRef.current) {
+          hasAutoSubmittedRef.current = true;
+          toast({
+            title: t("timeUp"),
+            description: isTest ? t("testAutoSubmitted") : t("examAutoSubmitted"),
+            variant: "destructive",
+          });
+          setTimeout(() => {
+            void handleSubmit();
+          }, 0);
+          return 0;
+        }
+
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
   }, [state, assessment.timeLimitMin, timeLeft, handleSubmit, toast, isTest, t]);
 
   const startAssessment = () => {

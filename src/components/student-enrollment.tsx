@@ -87,7 +87,7 @@ export function StudentEnrollment({
     });
   };
 
-  const handleUnenroll = (studentId: string, studentName: string) => {
+  const handleUnenroll = (studentId: string) => {
     if (!confirm(t("removeFromCourse"))) return;
 
     startTransition(async () => {
@@ -202,12 +202,7 @@ export function StudentEnrollment({
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() =>
-                        handleUnenroll(
-                          student.id,
-                          `${student.firstName} ${student.lastName}`
-                        )
-                      }
+                      onClick={() => handleUnenroll(student.id)}
                       disabled={isPending}
                       title={t("removeFromCourse")}
                     >

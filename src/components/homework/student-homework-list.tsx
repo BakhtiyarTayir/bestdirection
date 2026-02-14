@@ -21,7 +21,6 @@ interface HomeworkSubmission {
   createdAt: string | Date;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type HomeworkItem = {
   id: string;
   slug: string;

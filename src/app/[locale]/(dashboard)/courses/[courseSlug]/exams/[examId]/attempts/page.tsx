@@ -37,7 +37,7 @@ async function ExamAttemptsPageAsync({
   t: ReturnType<typeof useTranslations<"assessments">>;
 }) {
   const { courseSlug, examId } = await params;
-  const courseId = await resolveCourseSlug(courseSlug);
+  await resolveCourseSlug(courseSlug);
 
   const session = await auth();
   if (!session?.user) redirect("/login");

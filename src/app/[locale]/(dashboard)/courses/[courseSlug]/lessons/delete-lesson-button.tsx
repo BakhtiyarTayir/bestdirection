@@ -19,14 +19,10 @@ import { useTranslations } from "next-intl";
 
 interface DeleteLessonButtonProps {
   lessonId: string;
-  courseId: string;
-  lessonTitle: string;
 }
 
 export function DeleteLessonButton({
   lessonId,
-  courseId,
-  lessonTitle,
 }: DeleteLessonButtonProps) {
   const t = useTranslations("lessons");
   const tCommon = useTranslations("common");

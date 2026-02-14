@@ -87,7 +87,7 @@ async function ExamPageAsync({
 
   // Student-specific data
   let eligible = false;
-  let unpassedTests: { lessonTitle: string; testTitle: string }[] = [];
+  const unpassedTests: { lessonTitle: string; testTitle: string }[] = [];
 
   if (role === "STUDENT") {
     // Check eligibility: all published lesson tests must be passed
@@ -425,7 +425,6 @@ async function ExamPageAsync({
                       })),
                     })),
                   }}
-                  courseId={courseId}
                 />
               ) : assessment.questions.length === 0 ? (
                 <Card>

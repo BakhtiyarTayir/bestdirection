@@ -16,7 +16,7 @@ import {
   Code,
   Table2,
   Link,
-  Image,
+  Image as ImageIcon,
   FileUp,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -186,55 +186,142 @@ export function MarkdownEditor({
         insertMarkdown("*", "*", t("italicPlaceholder"));
       }
     },
-    [insertMarkdown]
+    [insertMarkdown, t]
   );
 
-  const toolbarButtons = [
-    { icon: Bold, title: t("bold"), action: () => insertMarkdown("**", "**", t("boldPlaceholder")) },
-    { icon: Italic, title: t("italic"), action: () => insertMarkdown("*", "*", t("italicPlaceholder")) },
-    { type: "separator" as const },
-    { icon: Heading1, title: t("heading1"), action: () => insertAtLineStart("# ") },
-    { icon: Heading2, title: t("heading2"), action: () => insertAtLineStart("## ") },
-    { icon: Heading3, title: t("heading3"), action: () => insertAtLineStart("### ") },
-    { type: "separator" as const },
-    { icon: List, title: t("bulletList"), action: () => insertAtLineStart("- ") },
-    { icon: ListOrdered, title: t("numberedList"), action: () => insertAtLineStart("1. ") },
-    { type: "separator" as const },
-    { icon: Code, title: t("codeBlock"), action: () => insertMarkdown("\n```\n", "\n```\n", t("codePlaceholder")) },
-    { icon: Table2, title: t("table"), action: () => insertMarkdown(`\n| ${t("tableHeader")} | ${t("tableHeader")} |\n|-----------|----------|\n| `, " | |\n", t("tableCell")) },
-    { icon: Link, title: t("link"), action: () => insertMarkdown("[", "](url)", t("linkText")) },
-    { icon: Image, title: t("image"), action: () => {
-      if (imageUploadEndpoint) {
-        imageInputRef.current?.click();
-      } else {
-        insertMarkdown("![", "](url)", t("imageAlt"));
-      }
-    }},
-  ];
+  const openImagePicker = useCallback(() => {
+    imageInputRef.current?.click();
+  }, []);
 
   return (
     <div className="rounded-md border">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-1 border-b p-2">
-        {toolbarButtons.map((btn, i) => {
-          if ("type" in btn && btn.type === "separator") {
-            return <div key={i} className="w-px h-6 bg-border mx-1" />;
+        <Button
+          variant="ghost"
+          size="icon"
+          type="button"
+          className="h-8 w-8"
+          title={t("bold")}
+          onClick={() => insertMarkdown("**", "**", t("boldPlaceholder"))}
+        >
+          <Bold className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          type="button"
+          className="h-8 w-8"
+          title={t("italic")}
+          onClick={() => insertMarkdown("*", "*", t("italicPlaceholder"))}
+        >
+          <Italic className="h-4 w-4" />
+        </Button>
+        <div className="w-px h-6 bg-border mx-1" />
+        <Button
+          variant="ghost"
+          size="icon"
+          type="button"
+          className="h-8 w-8"
+          title={t("heading1")}
+          onClick={() => insertAtLineStart("# ")}
+        >
+          <Heading1 className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          type="button"
+          className="h-8 w-8"
+          title={t("heading2")}
+          onClick={() => insertAtLineStart("## ")}
+        >
+          <Heading2 className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          type="button"
+          className="h-8 w-8"
+          title={t("heading3")}
+          onClick={() => insertAtLineStart("### ")}
+        >
+          <Heading3 className="h-4 w-4" />
+        </Button>
+        <div className="w-px h-6 bg-border mx-1" />
+        <Button
+          variant="ghost"
+          size="icon"
+          type="button"
+          className="h-8 w-8"
+          title={t("bulletList")}
+          onClick={() => insertAtLineStart("- ")}
+        >
+          <List className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          type="button"
+          className="h-8 w-8"
+          title={t("numberedList")}
+          onClick={() => insertAtLineStart("1. ")}
+        >
+          <ListOrdered className="h-4 w-4" />
+        </Button>
+        <div className="w-px h-6 bg-border mx-1" />
+        <Button
+          variant="ghost"
+          size="icon"
+          type="button"
+          className="h-8 w-8"
+          title={t("codeBlock")}
+          onClick={() => insertMarkdown("\n```\n", "\n```\n", t("codePlaceholder"))}
+        >
+          <Code className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          type="button"
+          className="h-8 w-8"
+          title={t("table")}
+          onClick={() =>
+            insertMarkdown(
+              `\n| ${t("tableHeader")} | ${t("tableHeader")} |\n|-----------|----------|\n| `,
+              " | |\n",
+              t("tableCell")
+            )
           }
-          const Icon = btn.icon!;
-          return (
-            <Button
-              key={i}
-              variant="ghost"
-              size="icon"
-              type="button"
-              className="h-8 w-8"
-              title={btn.title}
-              onClick={btn.action}
-            >
-              <Icon className="h-4 w-4" />
-            </Button>
-          );
-        })}
+        >
+          <Table2 className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          type="button"
+          className="h-8 w-8"
+          title={t("link")}
+          onClick={() => insertMarkdown("[", "](url)", t("linkText"))}
+        >
+          <Link className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          type="button"
+          className="h-8 w-8"
+          title={t("image")}
+          onClick={() => {
+            if (imageUploadEndpoint) {
+              openImagePicker();
+            } else {
+              insertMarkdown("![", "](url)", t("imageAlt"));
+            }
+          }}
+        >
+          <ImageIcon className="h-4 w-4" />
+        </Button>
         <div className="ml-auto">
           <Button
             variant="outline"

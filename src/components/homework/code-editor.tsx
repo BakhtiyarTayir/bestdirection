@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useTransition } from "react";
+import { useState, useRef, useCallback, useMemo, useTransition } from "react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Loader2, Send, Upload } from "lucide-react";
@@ -43,7 +43,7 @@ export function CodeEditor({
   const t = useTranslations("homework");
 
   const monacoLanguage = LANGUAGE_CONFIG[language]?.monacoLanguage || "plaintext";
-  const allowedExtensions = FILE_EXTENSIONS[language] || [];
+  const allowedExtensions = useMemo(() => FILE_EXTENSIONS[language] || [], [language]);
   const acceptString = allowedExtensions.join(",");
 
   const readFileAsText = useCallback(
@@ -77,7 +77,7 @@ export function CodeEditor({
       };
       reader.readAsText(file);
     },
-    [allowedExtensions, toast, t]
+    [allowedExtensions, onCodeChange, toast, t]
   );
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

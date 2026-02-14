@@ -37,7 +37,7 @@ async function AttemptsPageAsync({
   t: ReturnType<typeof useTranslations<"assessments">>;
 }) {
   const { courseSlug, lessonSlug } = await params;
-  const { courseId, lessonId } = await resolveFullPath({ courseSlug, lessonSlug });
+  const { lessonId } = await resolveFullPath({ courseSlug, lessonSlug });
 
   const session = await auth();
   if (!session?.user) redirect("/login");

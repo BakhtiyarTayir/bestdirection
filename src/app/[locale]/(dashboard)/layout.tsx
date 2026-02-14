@@ -15,7 +15,7 @@ export default async function DashboardLayout({
   setRequestLocale(locale);
 
   const session = await auth();
-  if (!session?.user) redirect("/login");
+  if (!session?.user) redirect(`/${locale}/login`);
 
   return (
     <div className="flex h-screen">

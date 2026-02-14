@@ -14,6 +14,9 @@ interface EditHomeworkPageProps {
   params: Promise<{ courseSlug: string; lessonSlug: string; homeworkSlug: string }>;
 }
 
+type GetHomeworkForTeacherResult = Awaited<ReturnType<typeof getHomeworkForTeacher>>;
+type TeacherHomework = Extract<GetHomeworkForTeacherResult, { success: true }>["data"];
+
 export default async function EditHomeworkPage({ params }: EditHomeworkPageProps) {
   const session = await auth();
   if (!session?.user) redirect("/login");
@@ -23,7 +26,7 @@ export default async function EditHomeworkPage({ params }: EditHomeworkPageProps
   }
 
   const { courseSlug, lessonSlug, homeworkSlug } = await params;
-  const { courseId, lessonId, homeworkId } = await resolveFullPath({ courseSlug, lessonSlug, homeworkSlug });
+  const { lessonId, homeworkId } = await resolveFullPath({ courseSlug, lessonSlug, homeworkSlug });
   const result = await getHomeworkForTeacher(homeworkId!);
 
   if (!result.success || !result.data) {
@@ -62,7 +65,7 @@ async function EditHomeworkPageContent({
   courseSlug: string;
   lessonSlug: string;
   lessonId: string;
-  homework: any;
+  homework: TeacherHomework;
 }) {
   const t = await getTranslations("homework");
   const tCommon = await getTranslations("common");

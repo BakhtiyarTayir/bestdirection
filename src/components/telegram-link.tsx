@@ -22,18 +22,23 @@ export function TelegramLink() {
   const [isLinking, setIsLinking] = useState(false);
 
   useEffect(() => {
-    loadStatus();
-  }, []);
+    let isMounted = true;
 
-  const loadStatus = async () => {
-    setIsLoading(true);
-    const result = await getTelegramStatus();
-    if (result.success && result.data) {
-      setIsLinked(result.data.isLinked);
-      setUsername(result.data.username);
-    }
-    setIsLoading(false);
-  };
+    void (async () => {
+      const result = await getTelegramStatus();
+      if (!isMounted) return;
+
+      if (result.success && result.data) {
+        setIsLinked(result.data.isLinked);
+        setUsername(result.data.username);
+      }
+      setIsLoading(false);
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleLink = async () => {
     setIsLinking(true);
