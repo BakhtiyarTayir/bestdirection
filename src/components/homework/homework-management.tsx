@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
-import { deleteHomework, toggleHomeworkPublished } from "@/actions/homework-actions";
+import { deleteHomework } from "@/actions/homework-actions";
 import { LANGUAGE_LABELS } from "@/lib/code-runner/config";
 import { useTranslations } from "next-intl";
 import {
@@ -15,8 +15,6 @@ import {
   Plus,
   Pencil,
   Trash2,
-  Eye,
-  EyeOff,
   FileText,
   Users,
   Loader2,
@@ -51,18 +49,6 @@ export function HomeworkManagement({
   const tCommon = useTranslations("common");
   const tSuccess = useTranslations("success");
   const tErrors = useTranslations("errors");
-
-  const handleTogglePublished = (homeworkId: string) => {
-    startTransition(async () => {
-      const result = await toggleHomeworkPublished(homeworkId);
-      if (result.success) {
-        toast({ title: tSuccess("success"), description: t("publishStatusUpdated") });
-        router.refresh();
-      } else {
-        toast({ title: tErrors("generic"), description: result.error, variant: "destructive" });
-      }
-    });
-  };
 
   const handleDelete = (homeworkId: string) => {
     if (!confirm(t("deleteConfirm"))) return;
@@ -146,21 +132,6 @@ export function HomeworkManagement({
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleTogglePublished(hw.id)}
-                  disabled={isPending}
-                  title={hw.isPublished ? tCommon("draft") : t("published")}
-                >
-                  {isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : hw.isPublished ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </Button>
                 <Link href={`/courses/${courseSlug}/lessons/${lessonSlug}/homework/${hw.slug}/edit`}>
                   <Button variant="ghost" size="sm">
                     <Pencil className="h-4 w-4" />

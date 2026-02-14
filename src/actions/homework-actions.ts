@@ -62,6 +62,7 @@ export async function createHomework(
     dueDate?: Date | null;
     allowLate?: boolean;
     latePenalty?: number;
+    isPublished?: boolean;
     testCases?: {
       input: string;
       expected: string;
@@ -99,6 +100,7 @@ export async function createHomework(
           allowLate: data.allowLate ?? true,
           latePenalty: data.latePenalty ?? 20,
           requiresManualReview: isFile ? true : false,
+          isPublished: data.isPublished ?? false,
           lessonId,
           ...(!isFile && data.testCases ? {
             testCases: {

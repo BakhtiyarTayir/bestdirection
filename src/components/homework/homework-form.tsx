@@ -82,6 +82,7 @@ export function HomeworkForm({ courseSlug, lessonSlug, lessonId, homework }: Hom
   const [passingScore, setPassingScore] = useState(homework?.passingScore ?? 60);
   const [allowLate, setAllowLate] = useState(homework?.allowLate ?? true);
   const [latePenalty, setLatePenalty] = useState(homework?.latePenalty ?? 20);
+  const [isPublished, setIsPublished] = useState(homework?.isPublished ?? false);
 
   const [testCases, setTestCases] = useState<TestCaseData[]>(
     homework?.testCases?.map((tc) => ({
@@ -139,6 +140,7 @@ export function HomeworkForm({ courseSlug, lessonSlug, lessonId, homework }: Hom
           passingScore,
           allowLate,
           latePenalty,
+          isPublished,
         };
 
         const codeData = isCode ? {
@@ -463,7 +465,16 @@ export function HomeworkForm({ courseSlug, lessonSlug, lessonId, homework }: Hom
         </>
       )}
 
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <Switch
+            id="hw-isPublished"
+            checked={isPublished}
+            onCheckedChange={setIsPublished}
+            disabled={isPending}
+          />
+          <Label htmlFor="hw-isPublished">{tCommon("publish")}</Label>
+        </div>
         <Button type="submit" disabled={isPending}>
           {isPending ? (
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
