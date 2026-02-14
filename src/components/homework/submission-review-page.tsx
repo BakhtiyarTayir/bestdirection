@@ -86,6 +86,12 @@ export function SubmissionReviewPage({ submission }: { submission: SubmissionDat
   const hasFiles = submission.files.length > 0;
   const hasTests = submission.testResults.length > 0;
 
+  // Track edited code from FILE tab for running
+  const [fileEditedCode, setFileEditedCode] = useState<string | undefined>(undefined);
+  const firstRunnableFileIndex = submission.files.findIndex(
+    (f) => detectLanguageFromExtension(f.filename) !== null
+  );
+
   // If code is a file placeholder, fetch actual file content
   const isFilePlaceholder = submission.code?.startsWith("[Файл:");
   const [codeContent, setCodeContent] = useState(isFilePlaceholder ? "" : submission.code);
@@ -157,9 +163,9 @@ export function SubmissionReviewPage({ submission }: { submission: SubmissionDat
                   height="500px"
                   language={LANGUAGE_CONFIG[hw.language || ""]?.monacoLanguage || "plaintext"}
                   value={codeContent}
+                  onChange={(value) => setCodeContent(value || "")}
                   theme="vs-dark"
                   options={{
-                    readOnly: true,
                     minimap: { enabled: false },
                     fontSize: 14,
                     lineNumbers: "on",
@@ -174,8 +180,13 @@ export function SubmissionReviewPage({ submission }: { submission: SubmissionDat
 
           {hasFiles && (
             <TabsContent value="files" className="mt-4 space-y-4">
-              {submission.files.map((file) => (
-                <FilePreview key={file.id} file={file} />
+              {submission.files.map((file, index) => (
+                <FilePreview
+                  key={file.id}
+                  file={file}
+                  editable={!hasCode && index === firstRunnableFileIndex}
+                  onContentChange={!hasCode && index === firstRunnableFileIndex ? setFileEditedCode : undefined}
+                />
               ))}
             </TabsContent>
           )}
@@ -218,8 +229,9 @@ export function SubmissionReviewPage({ submission }: { submission: SubmissionDat
           const detectedLanguage =
             hw.language ||
             (submission.files[0] ? detectLanguageFromExtension(submission.files[0].filename) : null);
+          const codeOverride = hasCode ? (codeContent || undefined) : fileEditedCode;
           return detectedLanguage ? (
-            <CodeRunnerPanel submissionId={submission.id} language={detectedLanguage} />
+            <CodeRunnerPanel submissionId={submission.id} language={detectedLanguage} codeOverride={codeOverride} />
           ) : null;
         })()}
       </div>
@@ -369,7 +381,7 @@ function getMonacoLanguage(filename: string): string | null {
   return TEXT_EXTENSIONS[ext] || null;
 }
 
-function FilePreview({ file }: { file: SubmissionFile }) {
+function FilePreview({ file, editable, onContentChange }: { file: SubmissionFile; editable?: boolean; onContentChange?: (content: string) => void }) {
   const t = useTranslations("homeworkHub");
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -420,9 +432,10 @@ function FilePreview({ file }: { file: SubmissionFile }) {
           height="500px"
           language={monacoLang}
           value={content}
+          onChange={editable ? (value) => { setContent(value || ""); onContentChange?.(value || ""); } : undefined}
           theme="vs-dark"
           options={{
-            readOnly: true,
+            readOnly: !editable,
             minimap: { enabled: false },
             fontSize: 14,
             lineNumbers: "on",

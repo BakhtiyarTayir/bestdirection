@@ -65,7 +65,8 @@ export async function reviewSubmission(
 // ---------- runStudentCode ----------
 export async function runStudentCode(
   submissionId: string,
-  stdin?: string
+  stdin?: string,
+  codeOverride?: string
 ) {
   return withAuth(
     async (session) => {
@@ -109,7 +110,9 @@ export async function runStudentCode(
       }
 
       let code: string;
-      if (submission.homework.language) {
+      if (codeOverride !== undefined) {
+        code = codeOverride;
+      } else if (submission.homework.language) {
         code = submission.code;
       } else {
         code = await readFile(submission.files[0].path, "utf-8");

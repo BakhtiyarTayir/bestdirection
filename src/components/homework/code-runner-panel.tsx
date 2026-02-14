@@ -12,9 +12,10 @@ import { runStudentCode } from "@/actions/homework-review-actions";
 interface CodeRunnerPanelProps {
   submissionId: string;
   language: string;
+  codeOverride?: string;
 }
 
-export function CodeRunnerPanel({ submissionId, language }: CodeRunnerPanelProps) {
+export function CodeRunnerPanel({ submissionId, language, codeOverride }: CodeRunnerPanelProps) {
   const t = useTranslations("homeworkHub");
   const [stdin, setStdin] = useState("");
   const [output, setOutput] = useState<string | null>(null);
@@ -29,7 +30,7 @@ export function CodeRunnerPanel({ submissionId, language }: CodeRunnerPanelProps
     setExecTime(null);
 
     try {
-      const result = await runStudentCode(submissionId, stdin || undefined);
+      const result = await runStudentCode(submissionId, stdin || undefined, codeOverride);
       if (result.success && result.data) {
         setOutput(result.data.output || "");
         setError(result.data.error || null);
