@@ -964,7 +964,8 @@
       "check": "Tekshirish",
       "running": "Bajarilmoqda...",
       "reviewed": "Tekshirilgan",
-      "reviewedBy": "Tekshirgan"
+      "reviewedBy": "Tekshirgan",
+      "fileLoadError": "Fayl tarkibini yuklab bo'lmadi"
     },
     "card": {
       "attempt": "Urinish",

@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { CheckCircle2, XCircle, RotateCcw, User, Code2, FileText, TestTube } from "lucide-react";
+import { CheckCircle2, XCircle, RotateCcw, User, Code2, FileText, TestTube, Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { reviewSubmission } from "@/actions/homework-review-actions";
 import { CodeRunnerPanel } from "./code-runner-panel";
@@ -173,28 +173,10 @@ export function SubmissionReviewPage({ submission }: { submission: SubmissionDat
           )}
 
           {hasFiles && (
-            <TabsContent value="files" className="mt-4">
-              <div className="space-y-2">
-                {submission.files.map((file) => (
-                  <div key={file.id} className="flex items-center justify-between rounded-md border p-3">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">{file.filename}</span>
-                      <span className="text-xs text-muted-foreground">
-                        ({Math.round(file.size / 1024)} KB)
-                      </span>
-                    </div>
-                    <div className="flex gap-2">
-                      <a href={`/api/files/${file.id}`} target="_blank" rel="noopener">
-                        <Button size="sm" variant="outline">{t("review.check")}</Button>
-                      </a>
-                      <a href={`/api/files/${file.id}/download`}>
-                        <Button size="sm" variant="ghost">↓</Button>
-                      </a>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <TabsContent value="files" className="mt-4 space-y-4">
+              {submission.files.map((file) => (
+                <FilePreview key={file.id} file={file} />
+              ))}
             </TabsContent>
           )}
 
@@ -346,6 +328,112 @@ export function SubmissionReviewPage({ submission }: { submission: SubmissionDat
           </CardContent>
         </Card>
       </div>
+    </div>
+  );
+}
+
+const TEXT_EXTENSIONS: Record<string, string> = {
+  ".py": "python",
+  ".js": "javascript",
+  ".ts": "typescript",
+  ".jsx": "javascript",
+  ".tsx": "typescript",
+  ".java": "java",
+  ".cs": "csharp",
+  ".cpp": "cpp",
+  ".c": "c",
+  ".h": "c",
+  ".php": "php",
+  ".rb": "ruby",
+  ".go": "go",
+  ".rs": "rust",
+  ".html": "html",
+  ".css": "css",
+  ".json": "json",
+  ".xml": "xml",
+  ".sql": "sql",
+  ".sh": "shell",
+  ".txt": "plaintext",
+  ".md": "markdown",
+  ".yaml": "yaml",
+  ".yml": "yaml",
+};
+
+function getMonacoLanguage(filename: string): string | null {
+  const ext = filename.slice(filename.lastIndexOf(".")).toLowerCase();
+  return TEXT_EXTENSIONS[ext] || null;
+}
+
+function FilePreview({ file }: { file: SubmissionFile }) {
+  const t = useTranslations("homeworkHub");
+  const [content, setContent] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+
+  const monacoLang = getMonacoLanguage(file.filename);
+  const isPreviewable = monacoLang !== null && file.size < 512 * 1024;
+
+  useEffect(() => {
+    if (!isPreviewable) return;
+    setLoading(true);
+    fetch(`/api/files/${file.id}`)
+      .then((res) => {
+        if (!res.ok) throw new Error();
+        return res.text();
+      })
+      .then(setContent)
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, [file.id, isPreviewable]);
+
+  return (
+    <div className="rounded-md border overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-2 bg-muted/50 border-b">
+        <div className="flex items-center gap-2">
+          <FileText className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-medium">{file.filename}</span>
+          <span className="text-xs text-muted-foreground">
+            ({Math.round(file.size / 1024)} KB)
+          </span>
+        </div>
+        <a href={`/api/files/${file.id}/download`}>
+          <Button size="sm" variant="ghost">↓</Button>
+        </a>
+      </div>
+      {isPreviewable && loading && (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      )}
+      {isPreviewable && error && (
+        <div className="p-4 text-sm text-muted-foreground text-center">
+          {t("review.fileLoadError")}
+        </div>
+      )}
+      {isPreviewable && content !== null && (
+        <MonacoEditor
+          height="500px"
+          language={monacoLang}
+          value={content}
+          theme="vs-dark"
+          options={{
+            readOnly: true,
+            minimap: { enabled: false },
+            fontSize: 14,
+            lineNumbers: "on",
+            scrollBeyondLastLine: false,
+            automaticLayout: true,
+            wordWrap: "on",
+          }}
+        />
+      )}
+      {!isPreviewable && (
+        <div className="p-4 text-sm text-muted-foreground text-center">
+          <a href={`/api/files/${file.id}`} target="_blank" rel="noopener">
+            <Button size="sm" variant="outline">{t("review.check")}</Button>
+          </a>
+        </div>
+      )}
     </div>
   );
 }
