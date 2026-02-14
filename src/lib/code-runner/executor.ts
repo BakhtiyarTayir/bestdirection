@@ -31,6 +31,10 @@ function compareVersions(a: string, b: string): number {
   return 0;
 }
 
+function normalizeRuntimeName(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
 async function getPistonRuntimes(): Promise<PistonRuntime[]> {
   const now = Date.now();
   if (runtimesCache && now < runtimesCache.expiresAt) {
@@ -57,9 +61,30 @@ function pickBestRuntimeVersion(
   language: string,
   preferredVersion: string
 ): string {
+  const normalizedLanguage = normalizeRuntimeName(language);
+
   const candidates = runtimes
     .filter(
-      (r) => r.language === language || (Array.isArray(r.aliases) && r.aliases.includes(language))
+      (r) => {
+        const runtimeLang = normalizeRuntimeName(r.language);
+        if (
+          runtimeLang === normalizedLanguage ||
+          runtimeLang.includes(normalizedLanguage) ||
+          normalizedLanguage.includes(runtimeLang)
+        ) {
+          return true;
+        }
+
+        if (!Array.isArray(r.aliases)) return false;
+        return r.aliases.some((alias) => {
+          const normalizedAlias = normalizeRuntimeName(alias);
+          return (
+            normalizedAlias === normalizedLanguage ||
+            normalizedAlias.includes(normalizedLanguage) ||
+            normalizedLanguage.includes(normalizedAlias)
+          );
+        });
+      }
     )
     .map((r) => r.version);
 
@@ -71,21 +96,23 @@ function pickBestRuntimeVersion(
 
 async function callPistonExecute(
   language: string,
-  version: string,
+  version: string | undefined,
   code: string,
   timeoutMs: number,
   stdin?: string
 ) {
+  const payload: Record<string, unknown> = {
+    language,
+    files: [{ content: code }],
+    run_timeout: timeoutMs,
+  };
+  if (version) payload.version = version;
+  if (stdin !== undefined) payload.stdin = stdin;
+
   return fetch(`${PISTON_API_URL}/execute`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      language,
-      version,
-      files: [{ content: code }],
-      run_timeout: timeoutMs,
-      ...(stdin !== undefined && { stdin }),
-    }),
+    body: JSON.stringify(payload),
   });
 }
 
@@ -148,6 +175,31 @@ export async function executeCode(
         response = await callPistonExecute(
           config.pistonName,
           fallbackVersion,
+          code,
+          timeoutMs,
+          stdin
+        );
+
+        if (!response.ok) {
+          try {
+            errorBody = await response.json();
+          } catch {
+            try {
+              errorBody = await response.text();
+            } catch {
+              errorBody = null;
+            }
+          }
+        } else {
+          errorBody = null;
+        }
+      }
+
+      // Last resort: ask Piston to pick its default runtime version.
+      if (!response.ok) {
+        response = await callPistonExecute(
+          config.pistonName,
+          undefined,
           code,
           timeoutMs,
           stdin
