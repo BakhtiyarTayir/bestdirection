@@ -52,7 +52,8 @@
     "deleting": "O'chirilmoqda...",
     "importing": "Import qilinmoqda...",
     "moving": "Ko'chirilmoqda...",
-    "adding": "Qo'shilmoqda..."
+    "adding": "Qo'shilmoqda...",
+    "publish": "Nashr qilish"
   },
 
   "auth": {
