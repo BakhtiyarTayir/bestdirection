@@ -12,6 +12,9 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 
+// Segments that exist in URL structure but have no corresponding page
+const NON_NAVIGABLE_SEGMENTS = new Set(["homework", "lessons"]);
+
 const SEGMENT_KEYS: Record<string, string> = {
   dashboard: "home",
   courses: "courses",
@@ -59,7 +62,7 @@ export function BreadcrumbNav() {
   const segments = pathname.split("/").filter(Boolean);
 
   // Build breadcrumb items
-  const items: { label: string; href: string }[] = [];
+  const items: { label: string; href: string; nonNavigable?: boolean }[] = [];
 
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i];
@@ -75,7 +78,7 @@ export function BreadcrumbNav() {
     } else {
       const key = SEGMENT_KEYS[segment];
       const label = key ? t(key) : formatSlug(segment);
-      items.push({ label, href });
+      items.push({ label, href, nonNavigable: NON_NAVIGABLE_SEGMENTS.has(segment) });
     }
   }
 
@@ -101,6 +104,8 @@ export function BreadcrumbNav() {
               <BreadcrumbItem>
                 {isLast ? (
                   <BreadcrumbPage>{item.label}</BreadcrumbPage>
+                ) : item.nonNavigable ? (
+                  <span className="text-muted-foreground">{item.label}</span>
                 ) : (
                   <BreadcrumbLink asChild>
                     <Link href={item.href}>{item.label}</Link>
