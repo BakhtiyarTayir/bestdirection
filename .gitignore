@@ -45,6 +45,8 @@ next-env.d.ts
 
 # documentation
 SYSTEM_OVERVIEW.md
+.agents/
+.claude/
 
 1-modul_kirish.md
 COURSE_COPY_AND_COMPARE.md
@@ -69,4 +71,3 @@ prisma/seed-test-modul1.ts
 public/uploads/
 sonlar.md
 sonlar_toliq.md
-
