@@ -60,7 +60,7 @@ function pickBestRuntimeVersion(
   runtimes: PistonRuntime[],
   language: string,
   preferredVersion: string
-): string {
+): string | null {
   const normalizedLanguage = normalizeRuntimeName(language);
 
   const candidates = runtimes
@@ -88,7 +88,7 @@ function pickBestRuntimeVersion(
     )
     .map((r) => r.version);
 
-  if (candidates.length === 0) return preferredVersion;
+  if (candidates.length === 0) return null;
   if (candidates.includes(preferredVersion)) return preferredVersion;
 
   return candidates.sort(compareVersions).at(-1) || preferredVersion;
@@ -96,17 +96,17 @@ function pickBestRuntimeVersion(
 
 async function callPistonExecute(
   language: string,
-  version: string | undefined,
+  version: string,
   code: string,
   timeoutMs: number,
   stdin?: string
 ) {
   const payload: Record<string, unknown> = {
     language,
+    version,
     files: [{ content: code }],
     run_timeout: timeoutMs,
   };
-  if (version) payload.version = version;
   if (stdin !== undefined) payload.stdin = stdin;
 
   return fetch(`${PISTON_API_URL}/execute`, {
@@ -171,35 +171,26 @@ export async function executeCode(
         config.pistonName,
         config.pistonVersion
       );
+
+      if (!fallbackVersion) {
+        const available = runtimes
+          .map((r) => `${r.language}-${r.version}`)
+          .slice(0, 20)
+          .join(", ");
+        return {
+          success: false,
+          output: "",
+          error: available
+            ? `No compatible runtime found for ${config.pistonName}. Available: ${available}`
+            : `No compatible runtime found for ${config.pistonName}`,
+          executionTime: Date.now() - startTime,
+        };
+      }
+
       if (fallbackVersion !== config.pistonVersion) {
         response = await callPistonExecute(
           config.pistonName,
           fallbackVersion,
-          code,
-          timeoutMs,
-          stdin
-        );
-
-        if (!response.ok) {
-          try {
-            errorBody = await response.json();
-          } catch {
-            try {
-              errorBody = await response.text();
-            } catch {
-              errorBody = null;
-            }
-          }
-        } else {
-          errorBody = null;
-        }
-      }
-
-      // Last resort: ask Piston to pick its default runtime version.
-      if (!response.ok) {
-        response = await callPistonExecute(
-          config.pistonName,
-          undefined,
           code,
           timeoutMs,
           stdin
