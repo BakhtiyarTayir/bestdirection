@@ -18,6 +18,7 @@ import {
   Calendar,
   Power,
   UsersRound,
+  BarChart3,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { useRouter } from "@/i18n/navigation";
@@ -127,6 +128,12 @@ export function GroupList({ groups, courseSlug }: GroupListProps) {
                   <Link href={`/courses/${courseSlug}/groups/${group.id}/students`}>
                     <UserPlus className="mr-2 h-4 w-4" />
                     {tCommon("details")}
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href={`/courses/${courseSlug}/groups/${group.id}/statistics`}>
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    {t("statistics")}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleToggleActive(group.id)}>

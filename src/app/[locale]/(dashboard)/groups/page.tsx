@@ -1,14 +1,12 @@
 import { requireAuth } from "@/lib/auth-guard";
 import { getAllGroups } from "@/actions/group-actions";
 import { Link } from "@/i18n/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Users, Calendar, UsersRound } from "lucide-react";
+import { UsersRound } from "lucide-react";
 import { getTranslations } from "next-intl/server";
+import { GroupList } from "@/components/groups/group-list";
 
 export default async function AllGroupsPage() {
   const t = await getTranslations("groups");
-  const tCommon = await getTranslations("common");
   await requireAuth();
 
   const result = await getAllGroups();
@@ -44,39 +42,7 @@ export default async function AllGroupsPage() {
                 {title}
               </Link>
             </h2>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {courseGroups.map((group) => (
-                <Link
-                  key={group.id}
-                  href={`/courses/${courseSlug}/groups/${group.id}/students`}
-                >
-                  <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        {group.name}
-                        {!group.isActive && (
-                          <Badge variant="secondary">{tCommon("inactive")}</Badge>
-                        )}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Users className="h-3.5 w-3.5" />
-                          {group._count.enrollments}
-                        </div>
-                        {group.schedule && (
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3.5 w-3.5" />
-                            {group.schedule}
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
+            <GroupList groups={courseGroups} courseSlug={courseSlug} />
           </div>
         ))
       )}

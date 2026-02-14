@@ -125,7 +125,8 @@
     "audit": "Audit",
     "attempts": "Urinishlar",
     "student": "Mening vazifalarim",
-    "review": "Tekshirish"
+    "review": "Tekshirish",
+    "statistics": "Statistika"
   },
 
   "dashboard": {
@@ -601,7 +602,20 @@
     "selectGroup": "Guruhni tanlang:",
     "selectGroupPlaceholder": "Guruhni tanlang",
     "move": "Ko'chirish",
-    "ungrouped": "Guruhsiz"
+    "ungrouped": "Guruhsiz",
+    "statistics": "Statistika",
+    "totalStudents": "Jami talabalar",
+    "avgAttendance": "O'rtacha davomat",
+    "avgHomeworkScore": "O'rtacha vazifa balli",
+    "avgExamScore": "O'rtacha imtihon balli",
+    "attendanceCol": "Davomat",
+    "homeworkCol": "Uy vazifalari",
+    "examCol": "Imtihonlar",
+    "overallScore": "Umumiy ball",
+    "completed": "{done} / {total}",
+    "passed": "{done} / {total} topshirildi",
+    "noStatistics": "Statistika uchun ma'lumot yo'q",
+    "studentName": "Talaba"
   },
 
   "profile": {

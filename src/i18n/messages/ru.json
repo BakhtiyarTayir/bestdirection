@@ -125,7 +125,8 @@
     "audit": "Аудит",
     "attempts": "Попытки",
     "student": "Мои задания",
-    "review": "Проверка"
+    "review": "Проверка",
+    "statistics": "Статистика"
   },
 
   "dashboard": {
@@ -613,7 +614,20 @@
     "selectGroup": "Выберите группу:",
     "selectGroupPlaceholder": "Выберите группу",
     "move": "Переместить",
-    "ungrouped": "Без группы"
+    "ungrouped": "Без группы",
+    "statistics": "Статистика",
+    "totalStudents": "Всего студентов",
+    "avgAttendance": "Средняя посещаемость",
+    "avgHomeworkScore": "Средний балл ДЗ",
+    "avgExamScore": "Средний балл экзаменов",
+    "attendanceCol": "Посещаемость",
+    "homeworkCol": "Домашние задания",
+    "examCol": "Экзамены",
+    "overallScore": "Общий балл",
+    "completed": "{done} из {total}",
+    "passed": "{done} из {total} сдано",
+    "noStatistics": "Нет данных для статистики",
+    "studentName": "Студент"
   },
 
   "profile": {
