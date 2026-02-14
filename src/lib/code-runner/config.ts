@@ -20,3 +20,17 @@ export const LANGUAGE_LABELS: Record<string, string> = {
 };
 
 export const PISTON_API_URL = process.env.PISTON_API_URL || "http://localhost:2000/api/v2";
+
+const EXT_TO_LANGUAGE: Record<string, string> = {
+  ".py": "PYTHON",
+  ".js": "JAVASCRIPT",
+  ".ts": "TYPESCRIPT",
+  ".php": "PHP",
+  ".java": "JAVA",
+  ".cs": "CSHARP",
+};
+
+export function detectLanguageFromExtension(filename: string): string | null {
+  const ext = filename.slice(filename.lastIndexOf(".")).toLowerCase();
+  return EXT_TO_LANGUAGE[ext] || null;
+}

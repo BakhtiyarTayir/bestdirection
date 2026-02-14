@@ -1,8 +1,10 @@
 "use server";
 
+import { readFile } from "fs/promises";
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
 import { executeCode } from "@/lib/code-runner/executor";
+import { detectLanguageFromExtension } from "@/lib/code-runner/config";
 import { ManualReviewStatus } from "@/generated/prisma";
 
 // ---------- reviewSubmission ----------
@@ -81,6 +83,9 @@ export async function runStudentCode(
               },
             },
           },
+          files: {
+            select: { id: true, filename: true, path: true },
+          },
         },
       });
 
@@ -95,13 +100,24 @@ export async function runStudentCode(
         return { success: false as const, error: "Forbidden" };
       }
 
-      if (!submission.homework.language) {
-        return { success: false as const, error: "No language set" };
+      const language =
+        submission.homework.language ||
+        (submission.files[0] ? detectLanguageFromExtension(submission.files[0].filename) : null);
+
+      if (!language) {
+        return { success: false as const, error: "Не удалось определить язык" };
+      }
+
+      let code: string;
+      if (submission.homework.language) {
+        code = submission.code;
+      } else {
+        code = await readFile(submission.files[0].path, "utf-8");
       }
 
       const result = await executeCode(
-        submission.homework.language,
-        submission.code,
+        language,
+        code,
         (submission.homework.timeLimitSec || 5) * 1000,
         stdin
       );

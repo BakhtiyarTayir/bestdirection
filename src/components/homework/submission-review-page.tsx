@@ -15,7 +15,7 @@ import { CheckCircle2, XCircle, RotateCcw, User, Code2, FileText, TestTube, Load
 import dynamic from "next/dynamic";
 import { reviewSubmission } from "@/actions/homework-review-actions";
 import { CodeRunnerPanel } from "./code-runner-panel";
-import { LANGUAGE_CONFIG, LANGUAGE_LABELS } from "@/lib/code-runner/config";
+import { LANGUAGE_CONFIG, LANGUAGE_LABELS, detectLanguageFromExtension } from "@/lib/code-runner/config";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
@@ -214,9 +214,14 @@ export function SubmissionReviewPage({ submission }: { submission: SubmissionDat
         </Tabs>
 
         {/* Code runner */}
-        {hw.type === "CODE" && hw.language && (
-          <CodeRunnerPanel submissionId={submission.id} language={hw.language} />
-        )}
+        {(() => {
+          const detectedLanguage =
+            hw.language ||
+            (submission.files[0] ? detectLanguageFromExtension(submission.files[0].filename) : null);
+          return detectedLanguage ? (
+            <CodeRunnerPanel submissionId={submission.id} language={detectedLanguage} />
+          ) : null;
+        })()}
       </div>
 
       {/* Right column - student info + review form */}
