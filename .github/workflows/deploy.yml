@@ -41,3 +41,10 @@ jobs:
             docker builder prune -af || true && \
             docker image prune -af || true && \
             cd /opt/lms && docker compose up -d --build"
+
+      - name: Install Piston runtimes
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
+            cd /opt/lms && \
+            PISTON_API_URL=http://127.0.0.1:2000/api/v2 ./scripts/piston-install-languages.sh && \
+            curl -s http://127.0.0.1:2000/api/v2/runtimes | grep -q '\"language\":\"python\"'"
