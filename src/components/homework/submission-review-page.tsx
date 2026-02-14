@@ -301,6 +301,7 @@ export function SubmissionReviewPage({ submission }: { submission: SubmissionDat
                 value={score}
                 onChange={(e) => setScore(e.target.value)}
                 placeholder="0-100"
+                required
               />
             </div>
 
@@ -318,7 +319,7 @@ export function SubmissionReviewPage({ submission }: { submission: SubmissionDat
               <Button
                 className="w-full"
                 onClick={() => handleReview("APPROVED")}
-                disabled={isSubmitting}
+                disabled={isSubmitting || !score}
               >
                 <CheckCircle2 className="h-4 w-4 mr-2" />
                 {t("review.approve")}
@@ -327,7 +328,7 @@ export function SubmissionReviewPage({ submission }: { submission: SubmissionDat
                 variant="outline"
                 className="w-full"
                 onClick={() => handleReview("REVISION")}
-                disabled={isSubmitting}
+                disabled={isSubmitting || !score}
               >
                 <RotateCcw className="h-4 w-4 mr-2" />
                 {t("review.revise")}
@@ -336,7 +337,7 @@ export function SubmissionReviewPage({ submission }: { submission: SubmissionDat
                 variant="destructive"
                 className="w-full"
                 onClick={() => handleReview("REJECTED")}
-                disabled={isSubmitting}
+                disabled={isSubmitting || !score}
               >
                 <XCircle className="h-4 w-4 mr-2" />
                 {t("review.reject")}
