@@ -497,7 +497,8 @@
     "uploadSolutionFileDesc": "Bajarilgan vazifa faylini yuboring. O'qituvchi qo'lda tekshiradi.",
     "manualReviewPending": "Tekshiruvda",
     "manualReviewApproved": "Qabul qilindi",
-    "manualReviewRejected": "Rad etildi"
+    "manualReviewRejected": "Rad etildi",
+    "teacherComment": "O'qituvchi izohi"
   },
 
   "attendance": {
@@ -805,7 +806,8 @@
     "uploadMd": ".md yuklash",
     "editTab": "Tahrirlash",
     "previewTab": "Ko'rish",
-    "noPreview": "Ko'rish uchun mazmun yo'q"
+    "noPreview": "Ko'rish uchun mazmun yo'q",
+    "uploading": "Yuklanmoqda..."
   },
 
   "toc": {

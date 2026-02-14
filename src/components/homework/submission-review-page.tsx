@@ -7,8 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { MarkdownEditor } from "@/components/markdown-editor";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { CheckCircle2, XCircle, RotateCcw, User, Code2, FileText, TestTube, Loader2 } from "lucide-react";
@@ -307,11 +307,12 @@ export function SubmissionReviewPage({ submission }: { submission: SubmissionDat
 
             <div className="space-y-2">
               <Label>{t("review.comment")}</Label>
-              <Textarea
+              <MarkdownEditor
                 value={comment}
-                onChange={(e) => setComment(e.target.value)}
+                onChange={setComment}
                 placeholder={t("review.commentPlaceholder")}
                 rows={4}
+                imageUploadEndpoint="/api/v1/upload/image"
               />
             </div>
 

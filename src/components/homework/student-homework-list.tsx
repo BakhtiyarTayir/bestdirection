@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Code2, FileText, File, Clock, AlertCircle, CheckCircle2, RotateCcw, MessageSquare } from "lucide-react";
 import { LANGUAGE_LABELS } from "@/lib/code-runner/config";
+import { MarkdownRenderer } from "@/components/markdown-renderer";
 
 interface HomeworkSubmission {
   id: string;
@@ -214,7 +215,7 @@ function HomeworkCard({ hw, tab }: { hw: HomeworkItem; tab: Tab }) {
             <MessageSquare className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
             <div>
               <p className="text-xs font-medium text-muted-foreground mb-0.5">{t("card.teacherComment")}:</p>
-              <p className="line-clamp-2">{sub.teacherComment}</p>
+              <MarkdownRenderer content={sub.teacherComment} className="line-clamp-4 text-sm" />
             </div>
           </div>
         )}

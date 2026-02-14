@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { CodeEditor } from "./code-editor";
 import { TestResultsPanel } from "./test-results-panel";
+import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { submitSolution } from "@/actions/homework-actions";
 import { LANGUAGE_LABELS } from "@/lib/code-runner/config";
 import { formatDateTime } from "@/lib/format-date";
@@ -23,6 +24,7 @@ import {
   FileUp,
   Loader2,
   CheckCircle2,
+  MessageSquare,
 } from "lucide-react";
 
 interface TestCase {
@@ -62,6 +64,7 @@ interface Submission {
   attemptNumber: number;
   createdAt: string;
   manualStatus?: string | null;
+  teacherComment?: string | null;
   testResults: TestResult[];
 }
 
@@ -320,6 +323,15 @@ export function HomeworkView({
                       {sub.isLate && (
                         <div className="text-sm text-orange-600">
                           {t("penaltyInfo", { penalty: sub.penalty, finalScore: sub.finalScore })}
+                        </div>
+                      )}
+                      {sub.teacherComment && (
+                        <div className="flex items-start gap-2 rounded-md bg-muted p-2 mt-2 text-sm">
+                          <MessageSquare className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium text-muted-foreground mb-1">{t("teacherComment")}</p>
+                            <MarkdownRenderer content={sub.teacherComment} className="text-sm" />
+                          </div>
                         </div>
                       )}
                     </div>

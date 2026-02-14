@@ -27,6 +27,7 @@ interface MarkdownEditorProps {
   placeholder?: string;
   rows?: number;
   id?: string;
+  imageUploadEndpoint?: string;
 }
 
 export function MarkdownEditor({
@@ -35,10 +36,12 @@ export function MarkdownEditor({
   placeholder,
   rows = 15,
   id,
+  imageUploadEndpoint,
 }: MarkdownEditorProps) {
   const t = useTranslations("markdown");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const insertMarkdown = useCallback(
     (before: string, after: string, placeholder: string) => {
@@ -105,6 +108,73 @@ export function MarkdownEditor({
     [onChange]
   );
 
+  const uploadImage = useCallback(
+    async (file: File): Promise<string | null> => {
+      if (!imageUploadEndpoint) return null;
+      const formData = new FormData();
+      formData.append("image", file);
+      try {
+        const res = await fetch(imageUploadEndpoint, { method: "POST", body: formData });
+        if (!res.ok) return null;
+        const data = await res.json();
+        return data.url || null;
+      } catch {
+        return null;
+      }
+    },
+    [imageUploadEndpoint]
+  );
+
+  const insertImageAtCursor = useCallback(
+    (file: File) => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+
+      const start = textarea.selectionStart;
+      const loadingPlaceholder = `![${t("uploading")}]()`;
+      const before = value.substring(0, start);
+      const after = value.substring(start);
+      onChange(before + loadingPlaceholder + after);
+
+      uploadImage(file).then((url) => {
+        if (url) {
+          const currentValue = before + loadingPlaceholder + after;
+          onChange(currentValue.replace(loadingPlaceholder, `![screenshot](${url})`));
+        } else {
+          const currentValue = before + loadingPlaceholder + after;
+          onChange(currentValue.replace(loadingPlaceholder, ""));
+        }
+      });
+    },
+    [value, onChange, uploadImage, t]
+  );
+
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      if (!imageUploadEndpoint) return;
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.startsWith("image/")) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (file) insertImageAtCursor(file);
+          return;
+        }
+      }
+    },
+    [imageUploadEndpoint, insertImageAtCursor]
+  );
+
+  const handleImageFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) insertImageAtCursor(file);
+      e.target.value = "";
+    },
+    [insertImageAtCursor]
+  );
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       const mod = e.metaKey || e.ctrlKey;
@@ -133,7 +203,13 @@ export function MarkdownEditor({
     { icon: Code, title: t("codeBlock"), action: () => insertMarkdown("\n```\n", "\n```\n", t("codePlaceholder")) },
     { icon: Table2, title: t("table"), action: () => insertMarkdown(`\n| ${t("tableHeader")} | ${t("tableHeader")} |\n|-----------|----------|\n| `, " | |\n", t("tableCell")) },
     { icon: Link, title: t("link"), action: () => insertMarkdown("[", "](url)", t("linkText")) },
-    { icon: Image, title: t("image"), action: () => insertMarkdown("![", "](url)", t("imageAlt")) },
+    { icon: Image, title: t("image"), action: () => {
+      if (imageUploadEndpoint) {
+        imageInputRef.current?.click();
+      } else {
+        insertMarkdown("![", "](url)", t("imageAlt"));
+      }
+    }},
   ];
 
   return (
@@ -176,6 +252,15 @@ export function MarkdownEditor({
             className="hidden"
             onChange={handleFileUpload}
           />
+          {imageUploadEndpoint && (
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleImageFileSelect}
+            />
+          )}
         </div>
       </div>
 
@@ -199,6 +284,7 @@ export function MarkdownEditor({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             placeholder={placeholder}
             rows={rows}
             className="border-0 rounded-none rounded-b-md focus-visible:ring-0 focus-visible:ring-offset-0 resize-y"

@@ -509,7 +509,8 @@
     "uploadSolutionFileDesc": "Отправьте файл с выполненным заданием. Учитель проверит вручную.",
     "manualReviewPending": "На проверке",
     "manualReviewApproved": "Принято",
-    "manualReviewRejected": "Отклонено"
+    "manualReviewRejected": "Отклонено",
+    "teacherComment": "Комментарий преподавателя"
   },
 
   "attendance": {
@@ -817,7 +818,8 @@
     "uploadMd": "Загрузить .md",
     "editTab": "Редактирование",
     "previewTab": "Просмотр",
-    "noPreview": "Нет содержимого для предпросмотра"
+    "noPreview": "Нет содержимого для предпросмотра",
+    "uploading": "Загрузка..."
   },
 
   "toc": {
