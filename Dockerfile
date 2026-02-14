@@ -12,6 +12,8 @@ COPY . .
 
 RUN npx prisma generate
 RUN npm run build
+# Keep only production dependencies for runtime migration command.
+RUN npm prune --omit=dev && npm cache clean --force
 
 # Stage 3: Production
 FROM node:22-alpine AS runner

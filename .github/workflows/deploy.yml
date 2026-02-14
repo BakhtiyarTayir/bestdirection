@@ -37,4 +37,7 @@ jobs:
 
       - name: Build and restart containers
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd /opt/lms && docker compose up -d --build"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
+            docker builder prune -af || true && \
+            docker image prune -af || true && \
+            cd /opt/lms && docker compose up -d --build"
