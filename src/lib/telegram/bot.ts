@@ -4,10 +4,90 @@ import { submitSolutionInternal } from "@/actions/homework-actions";
 import type { ProgrammingLanguage } from "@/generated/prisma";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import { randomBytes } from "crypto";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const PENDING_FILE_TTL_MS = 10 * 60 * 1000;
 
 let botInstance: Bot | null = null;
+
+interface TelegramDocumentMeta {
+  fileId: string;
+  fileName: string;
+  mimeType?: string;
+  fileSize?: number;
+}
+
+interface PendingTelegramFile extends TelegramDocumentMeta {
+  chatId: string;
+  kind: "code" | "file";
+  createdAt: number;
+}
+
+const pendingTelegramFiles = new Map<string, PendingTelegramFile>();
+
+function cleanupPendingTelegramFiles() {
+  const now = Date.now();
+  for (const [token, file] of pendingTelegramFiles) {
+    if (now - file.createdAt > PENDING_FILE_TTL_MS) {
+      pendingTelegramFiles.delete(token);
+    }
+  }
+}
+
+function createPendingTelegramFileToken(file: PendingTelegramFile): string {
+  cleanupPendingTelegramFiles();
+  const token = randomBytes(8).toString("hex");
+  pendingTelegramFiles.set(token, file);
+  return token;
+}
+
+function takePendingTelegramFile(token: string, chatId: string): PendingTelegramFile | null {
+  cleanupPendingTelegramFiles();
+  const file = pendingTelegramFiles.get(token);
+  if (!file || file.chatId !== chatId) return null;
+  pendingTelegramFiles.delete(token);
+  return file;
+}
+
+function getDocumentMetaFromContext(ctx: Context): TelegramDocumentMeta | null {
+  const doc = ctx.message?.document || ctx.callbackQuery?.message?.reply_to_message?.document;
+  if (!doc) return null;
+  return {
+    fileId: doc.file_id,
+    fileName: doc.file_name || "file",
+    mimeType: doc.mime_type,
+    fileSize: doc.file_size,
+  };
+}
+
+async function logTelegramSubmissionEvent(input: {
+  userId: string;
+  homeworkId?: string;
+  status: "accepted" | "rejected" | "error";
+  reason?: string;
+  fileName?: string;
+  details?: Record<string, unknown>;
+}) {
+  try {
+    await prisma.auditLog.create({
+      data: {
+        userId: input.userId,
+        entityType: "TelegramSubmission",
+        entityId: input.homeworkId || "unknown",
+        action: "CREATE",
+        metadata: {
+          status: input.status,
+          reason: input.reason,
+          fileName: input.fileName,
+          ...(input.details || {}),
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Failed to write Telegram submission log:", error);
+  }
+}
 
 export function getBot(): Bot {
   if (!BOT_TOKEN) {
@@ -141,16 +221,20 @@ function createBot(token: string): Bot {
       return;
     }
 
-    const doc = ctx.message.document;
-    const fileName = doc.file_name || "";
-    const ext = fileName.split(".").pop()?.toLowerCase();
+      const doc = getDocumentMetaFromContext(ctx);
+      if (!doc) {
+        await ctx.reply("Не удалось получить файл.");
+        return;
+      }
+      const fileName = doc.fileName;
+      const ext = fileName.split(".").pop()?.toLowerCase();
 
     const codeExtensions = ["py", "js", "ts", "php", "java", "cs"];
     const isCodeFile = ext && codeExtensions.includes(ext);
 
     if (isCodeFile) {
       // CODE homework flow
-      if (doc.file_size && doc.file_size > 100 * 1024) {
+      if (doc.fileSize && doc.fileSize > 100 * 1024) {
         await ctx.reply("Файл слишком большой (макс. 100 КБ).");
         return;
       }
@@ -203,20 +287,27 @@ function createBot(token: string): Bot {
       }
 
       if (matchingHomeworks.length === 1) {
-        await processFileSubmission(ctx, user.id, matchingHomeworks[0].id, fileName);
+        await processFileSubmission(ctx, user.id, matchingHomeworks[0].id, fileName, doc);
         return;
       }
 
+      const token = createPendingTelegramFileToken({
+        chatId: String(ctx.chat.id),
+        kind: "code",
+        createdAt: Date.now(),
+        ...doc,
+      });
+
       const keyboard = new InlineKeyboard();
       for (const hw of matchingHomeworks) {
-        keyboard.text(`${hw.title} (${hw.courseName})`, `submit:${hw.id}`).row();
+        keyboard.text(`${hw.title} (${hw.courseName})`, `submit:${hw.id}:${token}`).row();
       }
 
       await ctx.reply("Выберите задание для проверки:", { reply_markup: keyboard });
     } else {
       // FILE homework flow — any non-code file
       const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-      if (doc.file_size && doc.file_size > MAX_FILE_SIZE) {
+      if (doc.fileSize && doc.fileSize > MAX_FILE_SIZE) {
         await ctx.reply("Файл слишком большой (макс. 5 МБ).");
         return;
       }
@@ -259,13 +350,20 @@ function createBot(token: string): Bot {
       }
 
       if (fileHomeworks.length === 1) {
-        await processFileUploadSubmission(ctx, user.id, fileHomeworks[0].id, fileName);
+        await processFileUploadSubmission(ctx, user.id, fileHomeworks[0].id, fileName, doc);
         return;
       }
 
+      const token = createPendingTelegramFileToken({
+        chatId: String(ctx.chat.id),
+        kind: "file",
+        createdAt: Date.now(),
+        ...doc,
+      });
+
       const keyboard = new InlineKeyboard();
       for (const hw of fileHomeworks) {
-        keyboard.text(`${hw.title} (${hw.courseName})`, `fileupload:${hw.id}`).row();
+        keyboard.text(`${hw.title} (${hw.courseName})`, `fileupload:${hw.id}:${token}`).row();
       }
 
       await ctx.reply("Выберите задание для загрузки файла:", { reply_markup: keyboard });
@@ -281,7 +379,11 @@ function createBot(token: string): Bot {
     const isFileUpload = data.startsWith("fileupload:");
     if (!isSubmit && !isFileUpload) return;
 
-    const homeworkId = data.replace(/^(submit|fileupload):/, "");
+    const [, homeworkId, token] = data.split(":");
+    if (!homeworkId || !token) {
+      await ctx.answerCallbackQuery({ text: "Отправьте файл заново." });
+      return;
+    }
     const user = await findUserByChatId(String(ctx.chat.id));
     if (!user) {
       await ctx.answerCallbackQuery({ text: "Аккаунт не привязан." });
@@ -290,20 +392,18 @@ function createBot(token: string): Bot {
 
     await ctx.answerCallbackQuery();
 
-    // Get the original document from the replied message
-    const message = ctx.callbackQuery.message;
-    const replyTo = message?.reply_to_message;
-    if (!replyTo?.document) {
-      await ctx.reply("Отправьте файл заново.");
+    const pendingFile = takePendingTelegramFile(token, String(ctx.chat.id));
+    if (!pendingFile) {
+      await ctx.reply("Сессия выбора файла истекла. Отправьте файл заново.");
       return;
     }
 
-    const fileName = replyTo.document.file_name || "file";
+    const fileName = pendingFile.fileName;
 
     if (isFileUpload) {
-      await processFileUploadSubmission(ctx, user.id, homeworkId, fileName);
+      await processFileUploadSubmission(ctx, user.id, homeworkId, fileName, pendingFile);
     } else {
-      await processFileSubmission(ctx, user.id, homeworkId, fileName);
+      await processFileSubmission(ctx, user.id, homeworkId, fileName, pendingFile);
     }
   });
 
@@ -338,9 +438,22 @@ async function handleLinkAccount(ctx: Context, linkCode: string) {
   );
 }
 
-async function processFileSubmission(ctx: Context, studentId: string, homeworkId: string, fileName: string) {
-  const doc = ctx.message?.document || ctx.callbackQuery?.message?.reply_to_message?.document;
+async function processFileSubmission(
+  ctx: Context,
+  studentId: string,
+  homeworkId: string,
+  fileName: string,
+  sourceFile?: TelegramDocumentMeta
+) {
+  const doc = sourceFile || getDocumentMetaFromContext(ctx);
   if (!doc) {
+    await logTelegramSubmissionEvent({
+      userId: studentId,
+      homeworkId,
+      status: "error",
+      reason: "document_not_found",
+      fileName,
+    });
     await ctx.reply("Не удалось получить файл.");
     return;
   }
@@ -348,12 +461,19 @@ async function processFileSubmission(ctx: Context, studentId: string, homeworkId
   await ctx.reply(`Проверяю ${fileName}...`);
 
   try {
-    const file = await getBot().api.getFile(doc.file_id);
+    const file = await getBot().api.getFile(doc.fileId);
     const url = `https://api.telegram.org/file/bot${BOT_TOKEN}/${file.file_path}`;
     const response = await fetch(url);
     const code = await response.text();
 
     if (!code.trim()) {
+      await logTelegramSubmissionEvent({
+        userId: studentId,
+        homeworkId,
+        status: "rejected",
+        reason: "empty_file",
+        fileName,
+      });
       await ctx.reply("Файл пустой.");
       return;
     }
@@ -361,6 +481,13 @@ async function processFileSubmission(ctx: Context, studentId: string, homeworkId
     const result = await submitSolutionInternal(homeworkId, code, studentId);
 
     if (!result.success) {
+      await logTelegramSubmissionEvent({
+        userId: studentId,
+        homeworkId,
+        status: "rejected",
+        reason: result.error,
+        fileName,
+      });
       const errorMessages: Record<string, string> = {
         homeworkNotFound: "Задание не найдено.",
         homeworkNotPublished: "Задание не опубликовано.",
@@ -372,6 +499,17 @@ async function processFileSubmission(ctx: Context, studentId: string, homeworkId
       await ctx.reply(errorMessages[result.error] || `Ошибка: ${result.error}`);
       return;
     }
+
+    await logTelegramSubmissionEvent({
+      userId: studentId,
+      homeworkId,
+      status: "accepted",
+      fileName,
+      details: {
+        type: "CODE",
+      },
+    });
+    await ctx.reply("Ваша работа принята системой проверки.");
 
     const d = result.data;
     const statusEmoji: Record<string, string> = {
@@ -403,15 +541,35 @@ async function processFileSubmission(ctx: Context, studentId: string, homeworkId
     await ctx.reply(message);
   } catch (error) {
     console.error("Telegram submission error:", error);
+    await logTelegramSubmissionEvent({
+      userId: studentId,
+      homeworkId,
+      status: "error",
+      reason: error instanceof Error ? error.message : "unknown_error",
+      fileName,
+    });
     await ctx.reply("Ошибка при проверке. Попробуйте позже.");
   }
 }
 
 const UPLOAD_DIR = path.join(process.cwd(), "public/uploads/homework");
 
-async function processFileUploadSubmission(ctx: Context, studentId: string, homeworkId: string, fileName: string) {
-  const doc = ctx.message?.document || ctx.callbackQuery?.message?.reply_to_message?.document;
+async function processFileUploadSubmission(
+  ctx: Context,
+  studentId: string,
+  homeworkId: string,
+  fileName: string,
+  sourceFile?: TelegramDocumentMeta
+) {
+  const doc = sourceFile || getDocumentMetaFromContext(ctx);
   if (!doc) {
+    await logTelegramSubmissionEvent({
+      userId: studentId,
+      homeworkId,
+      status: "error",
+      reason: "document_not_found",
+      fileName,
+    });
     await ctx.reply("Не удалось получить файл.");
     return;
   }
@@ -437,11 +595,25 @@ async function processFileUploadSubmission(ctx: Context, studentId: string, home
     });
 
     if (!homework || !homework.isPublished) {
+      await logTelegramSubmissionEvent({
+        userId: studentId,
+        homeworkId,
+        status: "rejected",
+        reason: "homework_not_found_or_unpublished",
+        fileName,
+      });
       await ctx.reply("Задание не найдено или не опубликовано.");
       return;
     }
 
     if (homework.lesson.course.enrollments.length === 0) {
+      await logTelegramSubmissionEvent({
+        userId: studentId,
+        homeworkId,
+        status: "rejected",
+        reason: "not_enrolled",
+        fileName,
+      });
       await ctx.reply("Вы не записаны на курс.");
       return;
     }
@@ -450,6 +622,13 @@ async function processFileUploadSubmission(ctx: Context, studentId: string, home
     const now = new Date();
     const isLate = homework.dueDate ? homework.dueDate < now : false;
     if (isLate && !homework.allowLate) {
+      await logTelegramSubmissionEvent({
+        userId: studentId,
+        homeworkId,
+        status: "rejected",
+        reason: "deadline_expired",
+        fileName,
+      });
       await ctx.reply("Дедлайн истёк.");
       return;
     }
@@ -461,6 +640,13 @@ async function processFileUploadSubmission(ctx: Context, studentId: string, home
     });
 
     if (attemptCount >= homework.maxAttempts) {
+      await logTelegramSubmissionEvent({
+        userId: studentId,
+        homeworkId,
+        status: "rejected",
+        reason: "max_attempts_reached",
+        fileName,
+      });
       await ctx.reply("Попытки закончились.");
       return;
     }
@@ -468,17 +654,31 @@ async function processFileUploadSubmission(ctx: Context, studentId: string, home
     await ctx.reply(`Загружаю ${fileName}...`);
 
     // Download file from Telegram
-    const file = await getBot().api.getFile(doc.file_id);
+    const file = await getBot().api.getFile(doc.fileId);
     const url = `https://api.telegram.org/file/bot${BOT_TOKEN}/${file.file_path}`;
     const response = await fetch(url);
     const buffer = Buffer.from(await response.arrayBuffer());
 
     if (buffer.length === 0) {
+      await logTelegramSubmissionEvent({
+        userId: studentId,
+        homeworkId,
+        status: "rejected",
+        reason: "empty_file",
+        fileName,
+      });
       await ctx.reply("Файл пустой.");
       return;
     }
 
     if (buffer.length > 5 * 1024 * 1024) {
+      await logTelegramSubmissionEvent({
+        userId: studentId,
+        homeworkId,
+        status: "rejected",
+        reason: "file_too_large",
+        fileName,
+      });
       await ctx.reply("Файл слишком большой (макс. 5 МБ).");
       return;
     }
@@ -515,13 +715,25 @@ async function processFileUploadSubmission(ctx: Context, studentId: string, home
             create: {
               filename: fileName,
               path: filePath,
-              mimeType: doc.mime_type || "application/octet-stream",
+              mimeType: doc.mimeType || "application/octet-stream",
               size: buffer.length,
             },
           },
         },
       });
     });
+
+    await logTelegramSubmissionEvent({
+      userId: studentId,
+      homeworkId,
+      status: "accepted",
+      fileName,
+      details: {
+        type: "FILE",
+        submissionId: submission.id,
+      },
+    });
+    await ctx.reply("Ваша работа принята системой проверки.");
 
     let message = `Файл отправлен на проверку!\n\n`;
     message += `Задание: ${homework.title}\n`;
@@ -534,10 +746,24 @@ async function processFileUploadSubmission(ctx: Context, studentId: string, home
     await ctx.reply(message);
   } catch (error) {
     if (error instanceof Error && error.message === "MAX_ATTEMPTS_REACHED") {
+      await logTelegramSubmissionEvent({
+        userId: studentId,
+        homeworkId,
+        status: "rejected",
+        reason: "max_attempts_reached",
+        fileName,
+      });
       await ctx.reply("Попытки закончились.");
       return;
     }
     console.error("Telegram file upload error:", error);
+    await logTelegramSubmissionEvent({
+      userId: studentId,
+      homeworkId,
+      status: "error",
+      reason: error instanceof Error ? error.message : "unknown_error",
+      fileName,
+    });
     await ctx.reply("Ошибка при загрузке файла. Попробуйте позже.");
   }
 }
