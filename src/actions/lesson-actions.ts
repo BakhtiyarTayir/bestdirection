@@ -54,6 +54,7 @@ export async function getLessonById(id: string) {
           where: session.user.role === "STUDENT" ? { isPublished: true } : {},
           select: {
             id: true,
+            slug: true,
             title: true,
             language: true,
             isPublished: true,
