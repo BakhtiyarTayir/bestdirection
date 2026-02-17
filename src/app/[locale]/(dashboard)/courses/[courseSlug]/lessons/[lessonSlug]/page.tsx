@@ -111,7 +111,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
 
         {/* Table of Contents */}
         {lesson.content && (
-          <aside className="hidden lg:block shrink-0">
+          <aside className="hidden lg:block shrink-0 max-h-[calc(100vh-8rem)] overflow-y-auto pr-2">
             <LessonTOC content={lesson.content} />
           </aside>
         )}
