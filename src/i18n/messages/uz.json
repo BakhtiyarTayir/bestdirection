@@ -502,6 +502,8 @@
     "homeworkTypeFile": "Fayl yuklash (qo'lda tekshiruv)",
     "uploadSolutionFile": "Yechim faylini yuklang",
     "uploadSolutionFileDesc": "Bajarilgan vazifa faylini yuboring. O'qituvchi qo'lda tekshiradi.",
+    "signInToSubmit": "Kirish va vazifani topshirish",
+    "loginRequiredToSubmit": "Yechim yuborish va tekshiruv natijasini olish uchun tizimga kiring.",
     "manualReviewPending": "Tekshiruvda",
     "manualReviewApproved": "Qabul qilindi",
     "manualReviewRejected": "Rad etildi",

@@ -511,6 +511,8 @@
     "homeworkTypeFile": "Загрузка файла (ручная проверка)",
     "uploadSolutionFile": "Загрузите файл с решением",
     "uploadSolutionFileDesc": "Отправьте файл с выполненным заданием. Учитель проверит вручную.",
+    "signInToSubmit": "Войти и сдать задание",
+    "loginRequiredToSubmit": "Чтобы отправить решение и получить проверку, войдите в систему.",
     "manualReviewPending": "На проверке",
     "manualReviewApproved": "Принято",
     "manualReviewRejected": "Отклонено",
