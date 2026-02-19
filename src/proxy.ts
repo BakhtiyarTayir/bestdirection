@@ -48,7 +48,7 @@ function getPublicHomeworkRewrite(request: NextRequest): NextResponse | null {
     const courseSlug = pathSegments[1];
     const lessonSlug = pathSegments[3];
     const homeworkSlug = pathSegments[5];
-    const localePathPrefix = hasLocalePrefix || locale !== defaultLocale ? `/${locale}` : "";
+    const localePathPrefix = `/${locale}`;
 
     const rewriteUrl = request.nextUrl.clone();
     rewriteUrl.pathname = `${localePathPrefix}/homework/open/${courseSlug}/${lessonSlug}/${homeworkSlug}`;
@@ -62,7 +62,7 @@ function getPublicHomeworkRewrite(request: NextRequest): NextResponse | null {
   ) {
     const courseSlug = pathSegments[1];
     const lessonSlug = pathSegments[3];
-    const localePathPrefix = hasLocalePrefix || locale !== defaultLocale ? `/${locale}` : "";
+    const localePathPrefix = `/${locale}`;
 
     const rewriteUrl = request.nextUrl.clone();
     rewriteUrl.pathname = `${localePathPrefix}/lessons/open/${courseSlug}/${lessonSlug}`;

@@ -48,8 +48,9 @@ export default async function PublicLessonPage({ params }: PublicLessonPageProps
   const callbackPath = `/courses/${courseSlug}/lessons/${lessonSlug}`;
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div className="flex items-center justify-between gap-4">
+    <div className="mx-auto w-full max-w-5xl px-4 py-8 md:px-6 md:py-10">
+      <div className="mx-auto w-full max-w-4xl space-y-6">
+      <div className="flex flex-col gap-4 rounded-xl border bg-card p-5 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">{lesson.title}</h1>
         <Button asChild>
           <Link href={`/login?callbackUrl=${encodeURIComponent(callbackPath)}`}>
@@ -69,9 +70,10 @@ export default async function PublicLessonPage({ params }: PublicLessonPageProps
       )}
 
       {lesson.homeworks.length > 0 && (
-        <div className="space-y-3">
+        <div className="space-y-3 rounded-xl border bg-card p-5">
+          <h2 className="text-lg font-semibold">{tLessons("homeworkTab")}</h2>
           {lesson.homeworks.map((hw) => (
-            <div key={hw.id} className="rounded-lg border p-4 bg-card">
+            <div key={hw.id} className="rounded-xl border p-4">
               <div className="flex items-center gap-2 mb-3">
                 <h2 className="font-semibold">{hw.title}</h2>
                 {hw.language && (
@@ -93,6 +95,7 @@ export default async function PublicLessonPage({ params }: PublicLessonPageProps
 
       <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
         {tHomework("loginRequiredToSubmit")}
+      </div>
       </div>
     </div>
   );

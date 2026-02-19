@@ -57,8 +57,9 @@ export default async function PublicHomeworkPage({ params }: PublicHomeworkPageP
   const callbackPath = `/courses/${courseSlug}/lessons/${lessonSlug}/homework/${homeworkSlug}`;
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div className="flex items-start justify-between gap-4">
+    <div className="mx-auto w-full max-w-5xl px-4 py-8 md:px-6 md:py-10">
+      <div className="mx-auto w-full max-w-4xl space-y-6">
+      <div className="flex flex-col gap-4 rounded-xl border bg-card p-5 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
           <h1 className="text-2xl font-bold">{homework.title}</h1>
           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
@@ -88,13 +89,15 @@ export default async function PublicHomeworkPage({ params }: PublicHomeworkPageP
         </Button>
       </div>
 
-      <MarkdownRenderer content={homework.description} />
+      <div className="rounded-xl border bg-card p-5">
+        <MarkdownRenderer content={homework.description} />
+      </div>
 
       {homework.type !== "FILE" && homework.testCases.length > 0 && (
         <div className="space-y-3">
           <h2 className="text-lg font-semibold">{t("exampleTests")}</h2>
           {homework.testCases.map((tc, index) => (
-            <div key={tc.id} className="rounded-lg border p-4 space-y-2">
+            <div key={tc.id} className="rounded-xl border bg-card p-4 space-y-2">
               <div className="font-medium text-sm">
                 {t("testCaseLabel", { number: index + 1, description: tc.description || "" })}
               </div>
@@ -123,6 +126,7 @@ export default async function PublicHomeworkPage({ params }: PublicHomeworkPageP
             {tAuth("login")}
           </Link>
         </Button>
+      </div>
       </div>
     </div>
   );
