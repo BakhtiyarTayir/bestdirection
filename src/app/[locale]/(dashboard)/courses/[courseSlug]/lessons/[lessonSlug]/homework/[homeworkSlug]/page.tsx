@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getHomeworkForStudent, getHomeworkForTeacher, getSubmissions } from "@/actions/homework-actions";
 import { HomeworkView } from "@/components/homework/homework-view";
 import { HomeworkSubmissions } from "@/components/homework/homework-submissions";
+import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LANGUAGE_LABELS } from "@/lib/code-runner/config";
@@ -142,9 +143,7 @@ async function TeacherView({
         </Link>
       </div>
 
-      <div className="prose prose-sm dark:prose-invert max-w-none">
-        <p className="whitespace-pre-wrap">{homework.description}</p>
-      </div>
+      <MarkdownRenderer content={homework.description} />
 
       <HomeworkSubmissions submissions={JSON.parse(JSON.stringify(submissions))} />
     </div>

@@ -217,9 +217,7 @@ export function HomeworkView({
           </div>
         </CardHeader>
         <CardContent>
-          <div className="prose prose-sm dark:prose-invert max-w-none mb-4">
-            <p className="whitespace-pre-wrap">{homework.description}</p>
-          </div>
+          <MarkdownRenderer content={homework.description} className="mb-4" />
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center border-t pt-4">
             <div>
               <div className="flex items-center justify-center gap-1 text-muted-foreground mb-1">

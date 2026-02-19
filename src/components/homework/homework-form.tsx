@@ -19,6 +19,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { createHomework, updateHomework } from "@/actions/homework-actions";
 import { LANGUAGE_LABELS } from "@/lib/code-runner/config";
 import { Badge } from "@/components/ui/badge";
+import { MarkdownEditor } from "@/components/markdown-editor";
 import { Loader2, Save, Plus, Trash2, Eye, EyeOff } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ProgrammingLanguage, HomeworkType } from "@/validators/homework";
@@ -208,13 +209,12 @@ export function HomeworkForm({ courseSlug, lessonSlug, lessonId, homework }: Hom
 
         <div className="space-y-2">
           <Label htmlFor="hw-description">{t("homeworkDescription")}</Label>
-          <Textarea
+          <MarkdownEditor
             id="hw-description"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={setDescription}
             placeholder={t("homeworkDescriptionPlaceholder")}
-            rows={4}
-            disabled={isPending}
+            rows={10}
           />
         </div>
 
