@@ -5,7 +5,6 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "@/i18n/navigation";
 import { Link } from "@/i18n/navigation";
 import { useTranslations, useLocale } from "next-intl";
-import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, type LoginInput } from "@/validators/auth";
@@ -20,15 +19,8 @@ export default function LoginPage() {
   const router = useRouter();
   const t = useTranslations("auth");
   const locale = useLocale();
-  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const callbackUrlParam = searchParams.get("callbackUrl");
-  const safeCallbackUrl =
-    callbackUrlParam && callbackUrlParam.startsWith("/") && !callbackUrlParam.startsWith("//")
-      ? callbackUrlParam
-      : `/${locale}/dashboard`;
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -37,6 +29,12 @@ export default function LoginPage() {
   async function onSubmit(data: LoginInput) {
     setLoading(true);
     setError(null);
+
+    const callbackUrlParam = new URLSearchParams(window.location.search).get("callbackUrl");
+    const safeCallbackUrl =
+      callbackUrlParam && callbackUrlParam.startsWith("/") && !callbackUrlParam.startsWith("//")
+        ? callbackUrlParam
+        : `/${locale}/dashboard`;
 
     const result = await signIn("credentials", {
       email: data.email,
