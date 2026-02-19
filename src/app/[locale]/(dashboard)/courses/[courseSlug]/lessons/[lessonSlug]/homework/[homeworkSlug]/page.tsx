@@ -4,6 +4,7 @@ import { getHomeworkForStudent, getHomeworkForTeacher, getSubmissions } from "@/
 import { HomeworkView } from "@/components/homework/homework-view";
 import { HomeworkSubmissions } from "@/components/homework/homework-submissions";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
+import { ShareButton } from "@/components/share-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LANGUAGE_LABELS } from "@/lib/code-runner/config";
@@ -27,10 +28,13 @@ type StudentHomeworkData = Extract<GetHomeworkForStudentResult, { success: true 
 type StudentSubmissionsData = Extract<GetHomeworkForStudentResult, { success: true }>["data"]["submissions"];
 
 export default async function HomeworkPage({ params }: HomeworkPageProps) {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
-
   const { courseSlug, lessonSlug, homeworkSlug } = await params;
+  const session = await auth();
+  if (!session?.user) {
+    const callbackPath = `/courses/${courseSlug}/lessons/${lessonSlug}/homework/${homeworkSlug}`;
+    redirect(`/login?callbackUrl=${encodeURIComponent(callbackPath)}`);
+  }
+
   const { homeworkId } = await resolveFullPath({ courseSlug, lessonSlug, homeworkSlug });
   const isTeacherOrAdmin = session.user.role === "ADMIN" || session.user.role === "TEACHER";
 
@@ -135,12 +139,15 @@ async function TeacherView({
             </Badge>
           ) : null}
         </div>
-        <Link href={`/courses/${courseSlug}/lessons/${lessonSlug}/homework/${homeworkSlug}/edit`}>
-          <Button variant="outline" size="sm">
-            <Pencil className="h-4 w-4 mr-2" />
-            {tCommon("edit")}
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <ShareButton title={homework.title} />
+          <Link href={`/courses/${courseSlug}/lessons/${lessonSlug}/homework/${homeworkSlug}/edit`}>
+            <Button variant="outline" size="sm">
+              <Pencil className="h-4 w-4 mr-2" />
+              {tCommon("edit")}
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <MarkdownRenderer content={homework.description} />
@@ -174,6 +181,7 @@ async function StudentView({
             {tLessons("backToLesson")}
           </Button>
         </Link>
+        <ShareButton title={homework.title} />
       </div>
       <HomeworkView
         homework={JSON.parse(JSON.stringify(homework))}

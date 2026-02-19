@@ -5,6 +5,7 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "@/i18n/navigation";
 import { Link } from "@/i18n/navigation";
 import { useTranslations, useLocale } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, type LoginInput } from "@/validators/auth";
@@ -19,8 +20,15 @@ export default function LoginPage() {
   const router = useRouter();
   const t = useTranslations("auth");
   const locale = useLocale();
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const callbackUrlParam = searchParams.get("callbackUrl");
+  const safeCallbackUrl =
+    callbackUrlParam && callbackUrlParam.startsWith("/") && !callbackUrlParam.startsWith("//")
+      ? callbackUrlParam
+      : `/${locale}/dashboard`;
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -34,7 +42,7 @@ export default function LoginPage() {
       email: data.email,
       password: data.password,
       redirect: false,
-      callbackUrl: `/${locale}/dashboard`,
+      callbackUrl: safeCallbackUrl,
     });
 
     if (result?.error) {
@@ -43,7 +51,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dashboard");
+    router.push(safeCallbackUrl);
     router.refresh();
   }
 
