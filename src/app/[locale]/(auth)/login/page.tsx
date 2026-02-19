@@ -26,15 +26,23 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
+  const normalizeForLocalizedRouter = (path: string) => {
+    const localePrefix = `/${locale}`;
+    if (path === localePrefix) return "/";
+    if (path.startsWith(`${localePrefix}/`)) return path.slice(localePrefix.length);
+    return path;
+  };
+
   async function onSubmit(data: LoginInput) {
     setLoading(true);
     setError(null);
 
     const callbackUrlParam = new URLSearchParams(window.location.search).get("callbackUrl");
-    const safeCallbackUrl =
+    const safeCallbackUrlRaw =
       callbackUrlParam && callbackUrlParam.startsWith("/") && !callbackUrlParam.startsWith("//")
         ? callbackUrlParam
-        : `/${locale}/dashboard`;
+        : "/dashboard";
+    const safeCallbackUrl = normalizeForLocalizedRouter(safeCallbackUrlRaw);
 
     const result = await signIn("credentials", {
       email: data.email,
