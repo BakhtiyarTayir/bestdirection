@@ -2,7 +2,7 @@ import { requireRole } from "@/lib/auth-guard";
 import { getUsers } from "@/actions/user-actions";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { BarChart3, Plus } from "lucide-react";
 import { UserList } from "./user-list";
 import { getTranslations } from "next-intl/server";
 
@@ -31,14 +31,22 @@ async function UsersPageContent({
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">{t("title")}</h1>
-        {canManageUsers && (
-          <Link href="/users/new">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              {t("createUser")}
+        <div className="flex items-center gap-2">
+          <Link href="/users/statistics">
+            <Button variant="outline">
+              <BarChart3 className="mr-2 h-4 w-4" />
+              {t("statsTitle")}
             </Button>
           </Link>
-        )}
+          {canManageUsers && (
+            <Link href="/users/new">
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                {t("createUser")}
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
 
       <UserList initialUsers={users} canManageUsers={canManageUsers} />
