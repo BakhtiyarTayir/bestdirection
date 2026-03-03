@@ -10,8 +10,11 @@ import type { Role } from "@/validators/user";
 // ---------- getUsers ----------
 export async function getUsers() {
   return withAuth(
-    async () => {
+    async (session) => {
+      const where = session.user.role === "TEACHER" ? { role: "STUDENT" as const } : {};
+
       const users = await prisma.user.findMany({
+        where,
         orderBy: { createdAt: "desc" },
         select: {
           id: true,
@@ -28,7 +31,7 @@ export async function getUsers() {
 
       return { success: true, data: users };
     },
-    { roles: ["ADMIN"] }
+    { roles: ["ADMIN", "TEACHER"] }
   );
 }
 

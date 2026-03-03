@@ -9,30 +9,39 @@ import { getTranslations } from "next-intl/server";
 export const dynamic = "force-dynamic";
 
 export default async function UsersPage() {
-  await requireRole(["ADMIN"]);
+  const session = await requireRole(["ADMIN", "TEACHER"]);
+  const canManageUsers = session.user.role === "ADMIN";
 
   const result = await getUsers();
   const users = result.success && result.data ? result.data : [];
 
-  return <UsersPageContent users={users} />;
+  return <UsersPageContent users={users} canManageUsers={canManageUsers} />;
 }
 
-async function UsersPageContent({ users }: { users: Array<{ id: string; firstName: string; lastName: string; email: string; role: string; isActive: boolean }> }) {
+async function UsersPageContent({
+  users,
+  canManageUsers,
+}: {
+  users: Array<{ id: string; firstName: string; lastName: string; email: string; role: string; isActive: boolean }>;
+  canManageUsers: boolean;
+}) {
   const t = await getTranslations("users");
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">{t("title")}</h1>
-        <Link href="/users/new">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            {t("createUser")}
-          </Button>
-        </Link>
+        {canManageUsers && (
+          <Link href="/users/new">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              {t("createUser")}
+            </Button>
+          </Link>
+        )}
       </div>
 
-      <UserList initialUsers={users} />
+      <UserList initialUsers={users} canManageUsers={canManageUsers} />
     </div>
   );
 }

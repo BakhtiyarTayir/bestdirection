@@ -45,9 +45,10 @@ interface User {
 
 interface UserListProps {
   initialUsers: User[];
+  canManageUsers?: boolean;
 }
 
-export function UserList({ initialUsers }: UserListProps) {
+export function UserList({ initialUsers, canManageUsers = true }: UserListProps) {
   const t = useTranslations("users");
   const tRoles = useTranslations("roles");
   const tCommon = useTranslations("common");
@@ -111,13 +112,13 @@ export function UserList({ initialUsers }: UserListProps) {
               <TableHead>{tCommon("email")}</TableHead>
               <TableHead>{tCommon("role")}</TableHead>
               <TableHead>{tCommon("status")}</TableHead>
-              <TableHead className="text-right">{tCommon("actions")}</TableHead>
+              {canManageUsers && <TableHead className="text-right">{tCommon("actions")}</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {optimisticUsers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                <TableCell colSpan={canManageUsers ? 5 : 4} className="text-center text-muted-foreground">
                   {t("noUsersFound")}
                 </TableCell>
               </TableRow>
@@ -138,30 +139,32 @@ export function UserList({ initialUsers }: UserListProps) {
                       {user.isActive ? tCommon("active") : tCommon("inactive")}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Link href={`/users/${user.id}/edit`}>
-                        <Button variant="outline" size="sm">
-                          <Pencil className="h-4 w-4" />
+                  {canManageUsers && (
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Link href={`/users/${user.id}/edit`}>
+                          <Button variant="outline" size="sm">
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={deletingId === user.id}
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setDialogOpen(true);
+                          }}
+                        >
+                          {deletingId === user.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          )}
                         </Button>
-                      </Link>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={deletingId === user.id}
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setDialogOpen(true);
-                        }}
-                      >
-                        {deletingId === user.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        )}
-                      </Button>
-                    </div>
-                  </TableCell>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}

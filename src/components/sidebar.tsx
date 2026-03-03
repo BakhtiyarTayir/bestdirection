@@ -50,7 +50,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard, roles: ["ADMIN", "TEACHER", "STUDENT"] },
   { href: "/courses", labelKey: "courses", icon: BookOpen, roles: ["ADMIN", "TEACHER", "STUDENT"] },
-  { href: "/users", labelKey: "users", icon: Users, roles: ["ADMIN"] },
+  { href: "/users", labelKey: "users", icon: Users, roles: ["ADMIN", "TEACHER"] },
   { href: "/groups", labelKey: "groups", icon: UsersRound, roles: ["ADMIN", "TEACHER"] },
   { href: "/courses/catalog", labelKey: "catalog", icon: Copy, roles: ["ADMIN", "TEACHER"] },
   { href: "/admin/compare", labelKey: "compare", icon: GitCompare, roles: ["ADMIN"] },
