@@ -77,7 +77,7 @@ export async function restoreUser(userId: string) {
     async () => {
       const user = await prisma.user.update({
         where: { id: userId },
-        data: { deletedAt: null },
+        data: { deletedAt: null, isActive: true },
       });
       return { success: true as const, data: user };
     },

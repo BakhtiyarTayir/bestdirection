@@ -17,7 +17,10 @@ export type HomeworkSubmissionState =
 export async function getUsers() {
   return withAuth(
     async (session) => {
-      const where = session.user.role === "TEACHER" ? { role: "STUDENT" as const } : {};
+      const where =
+        session.user.role === "TEACHER"
+          ? { deletedAt: null, role: "STUDENT" as const }
+          : { deletedAt: null };
 
       const users = await prisma.user.findMany({
         where,
@@ -145,6 +148,10 @@ export async function getUsersHomeworkStatistics(filters: {
       const enrollments = await prisma.enrollment.findMany({
         where: {
           courseId: selectedCourseId,
+          student: {
+            deletedAt: null,
+            isActive: true,
+          },
           ...(selectedGroupId ? { groupId: selectedGroupId } : {}),
         },
         include: {
@@ -472,7 +479,7 @@ export async function deleteUser(id: string) {
 
       await prisma.user.update({
         where: { id },
-        data: { isActive: false },
+        data: { isActive: false, deletedAt: new Date() },
       });
 
       await createAuditLog({
