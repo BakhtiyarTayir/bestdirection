@@ -54,6 +54,7 @@ export default async function UsersStatisticsPage({
           failedCount: 0,
           notSubmittedCount: 0,
           averageBestPercent: 0,
+          onlineNowCount: 0,
         },
         rows: [],
       };
@@ -87,4 +88,3 @@ export default async function UsersStatisticsPage({
     </div>
   );
 }
-

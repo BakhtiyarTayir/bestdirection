@@ -81,6 +81,7 @@
     "noAccount": "Нет аккаунта?",
     "hasAccount": "Уже есть аккаунт?",
     "invalidCredentials": "Неверный email или пароль",
+    "emailAlreadyExists": "Пользователь с таким email уже существует",
     "registerError": "Ошибка регистрации",
     "registerSuccessLoginFailed": "Регистрация успешна, но не удалось войти. Попробуйте войти вручную."
   },
@@ -601,6 +602,7 @@
     "statsFailed": "Провалили",
     "statsNotSubmitted": "Не сдали",
     "statsAveragePercent": "Средний %",
+    "statsOnlineNow": "Сейчас онлайн",
     "statsStudent": "Ученик",
     "statsAttempts": "Попытки",
     "statsBestPercent": "Лучший %",

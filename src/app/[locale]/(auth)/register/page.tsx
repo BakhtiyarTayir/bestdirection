@@ -39,7 +39,11 @@ export default function RegisterPage() {
     });
 
     if (!result.success) {
-      setError(result.error || t("registerError"));
+      if (result.error === "emailAlreadyExists") {
+        setError(t("emailAlreadyExists"));
+      } else {
+        setError(t("registerError"));
+      }
       setLoading(false);
       return;
     }

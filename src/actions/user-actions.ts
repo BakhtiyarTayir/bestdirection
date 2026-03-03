@@ -13,6 +13,8 @@ export type HomeworkSubmissionState =
   | "FAILED"
   | "NOT_SUBMITTED";
 
+const ONLINE_WINDOW_MINUTES = 5;
+
 // ---------- getUsers ----------
 export async function getUsers() {
   return withAuth(
@@ -75,6 +77,7 @@ export async function getUsersHomeworkStatistics(filters: {
         failedCount: 0,
         notSubmittedCount: 0,
         averageBestPercent: 0,
+        onlineNowCount: 0,
       };
 
       if (!selectedCourseId) {
@@ -162,6 +165,7 @@ export async function getUsersHomeworkStatistics(filters: {
               lastName: true,
               email: true,
               isActive: true,
+              lastSeenAt: true,
             },
           },
           group: { select: { id: true, name: true } },
@@ -216,9 +220,15 @@ export async function getUsersHomeworkStatistics(filters: {
         submissionsByStudent.set(sub.studentId, list);
       }
 
+      const onlineThreshold = new Date(Date.now() - ONLINE_WINDOW_MINUTES * 60 * 1000);
+
       const baseRows = enrollments.map((enrollment) => {
         const studentSubs = submissionsByStudent.get(enrollment.student.id) || [];
         const hasSubmission = studentSubs.length > 0;
+        const isOnlineNow =
+          enrollment.student.isActive &&
+          enrollment.student.lastSeenAt !== null &&
+          enrollment.student.lastSeenAt >= onlineThreshold;
 
         const bestPercent = hasSubmission
           ? Math.round(
@@ -263,6 +273,7 @@ export async function getUsersHomeworkStatistics(filters: {
           fullName: `${enrollment.student.firstName} ${enrollment.student.lastName}`,
           email: enrollment.student.email,
           isActive: enrollment.student.isActive,
+          isOnlineNow,
           groupId: enrollment.group?.id || null,
           groupName: enrollment.group?.name || null,
           attempts: studentSubs.length,
@@ -278,6 +289,7 @@ export async function getUsersHomeworkStatistics(filters: {
         passedCount: baseRows.filter((r) => r.submissionState === "PASSED").length,
         failedCount: baseRows.filter((r) => r.submissionState === "FAILED").length,
         notSubmittedCount: baseRows.filter((r) => r.submissionState === "NOT_SUBMITTED").length,
+        onlineNowCount: baseRows.filter((r) => r.isOnlineNow).length,
         averageBestPercent:
           baseRows.filter((r) => r.hasSubmission).length > 0
             ? Math.round(

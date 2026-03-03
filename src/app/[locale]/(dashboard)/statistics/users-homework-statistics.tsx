@@ -32,6 +32,7 @@ interface UsersHomeworkStatisticsProps {
     fullName: string;
     email: string;
     isActive: boolean;
+    isOnlineNow: boolean;
     groupId: string | null;
     groupName: string | null;
     attempts: number;
@@ -46,6 +47,7 @@ interface UsersHomeworkStatisticsProps {
     failedCount: number;
     notSubmittedCount: number;
     averageBestPercent: number;
+    onlineNowCount: number;
   };
   selectedCourseId?: string;
   selectedHomeworkId?: string;
@@ -170,7 +172,7 @@ export function UsersHomeworkStatistics({
         </Select>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">{t("statsTotalStudents")}</CardTitle>
@@ -200,6 +202,12 @@ export function UsersHomeworkStatistics({
             <CardTitle className="text-sm">{t("statsAveragePercent")}</CardTitle>
           </CardHeader>
           <CardContent className="text-2xl font-bold">{summary.averageBestPercent}%</CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{t("statsOnlineNow")}</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-bold text-emerald-600">{summary.onlineNowCount}</CardContent>
         </Card>
       </div>
 
@@ -234,6 +242,9 @@ export function UsersHomeworkStatistics({
                   <TableCell>
                     <div className="font-medium">{row.fullName}</div>
                     <div className="text-xs text-muted-foreground">{row.email}</div>
+                    {row.isOnlineNow && (
+                      <div className="text-xs text-emerald-600">{t("statsOnlineNow")}</div>
+                    )}
                   </TableCell>
                   <TableCell>{row.groupName || t("statsUngrouped")}</TableCell>
                   <TableCell className="text-center">{row.attempts}</TableCell>
