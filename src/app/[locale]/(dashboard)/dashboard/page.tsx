@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { Link } from "@/i18n/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, Users, ClipboardCheck, FileText, GraduationCap } from "lucide-react";
 import { getTranslations } from "next-intl/server";
@@ -53,8 +54,18 @@ async function TeacherDashboard({ userId }: { userId: string }) {
     <div>
       <h1 className="text-3xl font-bold mb-6">{t("teacherTitle")}</h1>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <StatCard title={t("myCourses")} value={courseCount} icon={BookOpen} />
-        <StatCard title={t("enrolledStudents")} value={studentCount} icon={Users} />
+        <StatCard
+          title={t("myCourses")}
+          value={courseCount}
+          icon={BookOpen}
+          href="/courses"
+        />
+        <StatCard
+          title={t("enrolledStudents")}
+          value={studentCount}
+          icon={Users}
+          href="/users/statistics"
+        />
       </div>
     </div>
   );
@@ -78,8 +89,18 @@ async function StudentDashboard({ userId }: { userId: string }) {
   );
 }
 
-function StatCard({ title, value, icon: Icon }: { title: string; value: number; icon: React.ElementType }) {
-  return (
+function StatCard({
+  title,
+  value,
+  icon: Icon,
+  href,
+}: {
+  title: string;
+  value: number;
+  icon: React.ElementType;
+  href?: string;
+}) {
+  const content = (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
@@ -89,5 +110,16 @@ function StatCard({ title, value, icon: Icon }: { title: string; value: number; 
         <div className="text-2xl font-bold">{value}</div>
       </CardContent>
     </Card>
+  );
+
+  if (!href) return content;
+
+  return (
+    <Link
+      href={href}
+      className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+    >
+      {content}
+    </Link>
   );
 }
