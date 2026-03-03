@@ -4,9 +4,15 @@ PISTON_URL="${PISTON_API_URL:-http://localhost:2000/api/v2}"
 
 echo "Piston URL: $PISTON_URL"
 
+curl_retry() {
+  local url="$1"
+  shift || true
+  curl -fsS --retry 8 --retry-all-errors --retry-delay 2 --max-time 30 "$url" "$@"
+}
+
 # Дождаться готовности Piston
 echo "Ожидание готовности Piston..."
-until curl -s "$PISTON_URL/runtimes" > /dev/null 2>&1; do
+until curl_retry "$PISTON_URL/runtimes" > /dev/null 2>&1; do
   sleep 2
 done
 echo "Piston готов!"
@@ -25,12 +31,20 @@ for lang in "${languages[@]}"; do
   name=$(echo "$lang" | grep -oP '"language":"\K[^"]+')
   version=$(echo "$lang" | grep -oP '"version":"\K[^"]+')
   echo "Установка $name $version..."
-  result=$(curl -s -X POST "$PISTON_URL/packages" \
-    -H "Content-Type: application/json" \
-    -d "$lang")
-  echo "  $result"
+  if result=$(curl_retry "$PISTON_URL/packages" \
+      -X POST \
+      -H "Content-Type: application/json" \
+      -d "$lang" 2>/dev/null); then
+    echo "  $result"
+  else
+    echo "  [warn] Не удалось установить $name $version (пропускаем)"
+  fi
 done
 
 echo ""
 echo "Установленные рантаймы:"
-curl -s "$PISTON_URL/runtimes" | python3 -m json.tool 2>/dev/null || curl -s "$PISTON_URL/runtimes"
+if runtimes=$(curl_retry "$PISTON_URL/runtimes" 2>/dev/null); then
+  echo "$runtimes" | python3 -m json.tool 2>/dev/null || echo "$runtimes"
+else
+  echo "[warn] Не удалось получить список рантаймов"
+fi
