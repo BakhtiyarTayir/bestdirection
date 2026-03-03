@@ -64,7 +64,7 @@ async function TeacherDashboard({ userId }: { userId: string }) {
           title={t("enrolledStudents")}
           value={studentCount}
           icon={Users}
-          href="/users/statistics"
+          href="/statistics"
         />
       </div>
     </div>

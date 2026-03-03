@@ -89,7 +89,7 @@ export function UsersHomeworkStatistics({
       }
     }
 
-    router.push(`/users/statistics?${params.toString()}`);
+    router.push(`/statistics?${params.toString()}`);
   };
 
   const statusLabel = (state: "PASSED" | "FAILED" | "NOT_SUBMITTED") => {
@@ -257,4 +257,3 @@ export function UsersHomeworkStatistics({
     </div>
   );
 }
-
