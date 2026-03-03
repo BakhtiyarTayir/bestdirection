@@ -66,7 +66,7 @@ export function EditLessonClient({ courseId, courseSlug, lessonSlug, lesson, ass
         <LessonTestTab courseSlug={courseSlug} lessonSlug={lessonSlug} courseId={courseId} lessonId={lesson.id} assessment={assessment} />
       </TabsContent>
       <TabsContent value="homework" className="mt-6">
-        <HomeworkManagement courseSlug={courseSlug} lessonSlug={lessonSlug} homeworks={homeworks} />
+        <HomeworkManagement lessonId={lesson.id} courseSlug={courseSlug} lessonSlug={lessonSlug} homeworks={homeworks} />
       </TabsContent>
     </Tabs>
   );

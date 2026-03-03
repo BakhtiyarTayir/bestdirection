@@ -831,14 +831,18 @@
     "exportError": "Ошибка экспорта",
     "selectFile": "Выберите файл",
     "unsupportedFormat": "Поддерживаются только файлы .xlsx, .csv и .json",
+    "homeworkJsonOnly": "Для домашних заданий поддерживается только .json",
     "importTestTitle": "Импорт теста из файла",
     "importExamTitle": "Импорт экзамена из файла",
+    "importHomeworkTitle": "Импорт домашних заданий из файла",
     "importTestDescription": "Загрузите файл в формате Excel (.xlsx), CSV (.csv) или JSON (.json). Тест будет создан как черновик.",
     "importExamDescription": "Загрузите файл в формате Excel (.xlsx), CSV (.csv) или JSON (.json). Экзамен будет создан как черновик.",
+    "importHomeworkDescription": "Загрузите JSON-файл, экспортированный из урока. Домашние задания будут импортированы как черновики.",
     "importButton": "Импортировать",
     "importSuccess": "Импорт завершён",
     "importTestSuccess": "Тест успешно импортирован (черновик)",
     "importExamSuccess": "Экзамен успешно импортирован (черновик)",
+    "importHomeworkSuccess": "Домашние задания успешно импортированы (черновики)",
     "importError": "Произошла ошибка при импорте"
   },
 
@@ -926,9 +930,13 @@
     "deadlineExpired": "Дедлайн истёк",
     "onlyOwnImportTests": "Вы можете импортировать тесты только для своих курсов",
     "onlyOwnImportExams": "Вы можете импортировать экзамены только для своих курсов",
+    "onlyOwnImportHomeworks": "Вы можете импортировать домашние задания только для своих курсов",
     "lessonOrFileRequired": "Не указан урок или файл",
     "courseOrFileRequired": "Не указан курс или файл",
-    "fileReadError": "Ошибка чтения файла"
+    "fileReadError": "Ошибка чтения файла",
+    "invalidHomeworkImportFormat": "Для импорта домашних заданий поддерживается только JSON",
+    "invalidHomeworkImportPayload": "Некорректная структура JSON для импорта домашних заданий",
+    "homeworkImportEmpty": "Файл не содержит корректных домашних заданий для импорта"
   },
 
   "success": {

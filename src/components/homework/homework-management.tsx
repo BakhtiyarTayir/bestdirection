@@ -10,6 +10,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { deleteHomework } from "@/actions/homework-actions";
 import { LANGUAGE_LABELS } from "@/lib/code-runner/config";
 import { useTranslations } from "next-intl";
+import { ExportButton, ImportButton } from "@/components/export-import-buttons";
 import {
   Code2,
   Plus,
@@ -31,12 +32,14 @@ interface HomeworkItem {
 }
 
 interface HomeworkManagementProps {
+  lessonId: string;
   courseSlug: string;
   lessonSlug: string;
   homeworks: HomeworkItem[];
 }
 
 export function HomeworkManagement({
+  lessonId,
   courseSlug,
   lessonSlug,
   homeworks,
@@ -75,12 +78,15 @@ export function HomeworkManagement({
           <p className="text-muted-foreground mb-4">
             {t("noHomework")}
           </p>
-          <Link href={`/courses/${courseSlug}/lessons/${lessonSlug}/homework/new`}>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              {t("createHomework")}
-            </Button>
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <ImportButton type="homework" targetId={lessonId} />
+            <Link href={`/courses/${courseSlug}/lessons/${lessonSlug}/homework/new`}>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                {t("createHomework")}
+              </Button>
+            </Link>
+          </div>
         </CardContent>
       </Card>
     );
@@ -93,12 +99,16 @@ export function HomeworkManagement({
           <Code2 className="h-5 w-5" />
           {t("title")} ({homeworks.length})
         </h3>
-        <Link href={`/courses/${courseSlug}/lessons/${lessonSlug}/homework/new`}>
-          <Button size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            {tCommon("add")}
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <ImportButton type="homework" targetId={lessonId} />
+          <ExportButton type="homework" id={lessonId} />
+          <Link href={`/courses/${courseSlug}/lessons/${lessonSlug}/homework/new`}>
+            <Button size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              {tCommon("add")}
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {homeworks.map((hw) => (

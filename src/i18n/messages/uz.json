@@ -822,14 +822,18 @@
     "exportError": "Eksport xatosi",
     "selectFile": "Faylni tanlang",
     "unsupportedFormat": "Faqat .xlsx, .csv va .json fayllar qo'llab-quvvatlanadi",
+    "homeworkJsonOnly": "Uy vazifalari uchun faqat .json qo'llab-quvvatlanadi",
     "importTestTitle": "Fayldan test import qilish",
     "importExamTitle": "Fayldan imtihon import qilish",
+    "importHomeworkTitle": "Fayldan uy vazifalarini import qilish",
     "importTestDescription": "Excel (.xlsx), CSV (.csv) yoki JSON (.json) formatidagi faylni yuklang. Test qoralama sifatida yaratiladi.",
     "importExamDescription": "Excel (.xlsx), CSV (.csv) yoki JSON (.json) formatidagi faylni yuklang. Imtihon qoralama sifatida yaratiladi.",
+    "importHomeworkDescription": "Darsdan eksport qilingan JSON faylni yuklang. Uy vazifalari qoralama holatda yaratiladi.",
     "importButton": "Import qilish",
     "importSuccess": "Import yakunlandi",
     "importTestSuccess": "Test muvaffaqiyatli import qilindi (qoralama)",
     "importExamSuccess": "Imtihon muvaffaqiyatli import qilindi (qoralama)",
+    "importHomeworkSuccess": "Uy vazifalari muvaffaqiyatli import qilindi (qoralama)",
     "importError": "Import qilishda xatolik yuz berdi"
   },
 
@@ -917,9 +921,13 @@
     "deadlineExpired": "Muddat tugagan",
     "onlyOwnImportTests": "Siz faqat o'z kurslaringiz uchun test import qilishingiz mumkin",
     "onlyOwnImportExams": "Siz faqat o'z kurslaringiz uchun imtihon import qilishingiz mumkin",
+    "onlyOwnImportHomeworks": "Siz faqat o'z kurslaringiz uchun uy vazifalarini import qila olasiz",
     "lessonOrFileRequired": "Dars yoki fayl ko'rsatilmagan",
     "courseOrFileRequired": "Kurs yoki fayl ko'rsatilmagan",
-    "fileReadError": "Faylni o'qishda xatolik"
+    "fileReadError": "Faylni o'qishda xatolik",
+    "invalidHomeworkImportFormat": "Uy vazifalarini import qilish uchun faqat JSON qo'llab-quvvatlanadi",
+    "invalidHomeworkImportPayload": "Uy vazifasini import qilish uchun JSON tuzilmasi noto'g'ri",
+    "homeworkImportEmpty": "Faylda import qilish uchun to'g'ri uy vazifalari topilmadi"
   },
 
   "success": {

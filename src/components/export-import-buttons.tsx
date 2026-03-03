@@ -18,13 +18,13 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { Download, Upload, FileSpreadsheet, FileText, Braces, Loader2 } from "lucide-react";
-import { importTestFromFile, importExamFromFile } from "@/actions/import-actions";
+import { importTestFromFile, importExamFromFile, importHomeworkFromFile } from "@/actions/import-actions";
 import { useTranslations } from "next-intl";
 
 // ---------- ExportButton ----------
 
 interface ExportButtonProps {
-  type: "test" | "exam";
+  type: "test" | "exam" | "homework";
   id: string;
 }
 
@@ -38,7 +38,9 @@ export function ExportButton({ type, id }: ExportButtonProps) {
       const url =
         type === "test"
           ? `/api/v1/export/test/${id}?format=${format}`
-          : `/api/v1/export/exam/${id}?format=${format}`;
+          : type === "exam"
+            ? `/api/v1/export/exam/${id}?format=${format}`
+            : `/api/v1/export/homework/${id}?format=${format}`;
 
       const res = await fetch(url);
       if (!res.ok) {
@@ -78,14 +80,18 @@ export function ExportButton({ type, id }: ExportButtonProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
-        <DropdownMenuItem onClick={() => handleExport("xlsx")}>
-          <FileSpreadsheet className="h-4 w-4 mr-2" />
-          {t("excel")}
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleExport("csv")}>
-          <FileText className="h-4 w-4 mr-2" />
-          {t("csv")}
-        </DropdownMenuItem>
+        {type !== "homework" && (
+          <DropdownMenuItem onClick={() => handleExport("xlsx")}>
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            {t("excel")}
+          </DropdownMenuItem>
+        )}
+        {type !== "homework" && (
+          <DropdownMenuItem onClick={() => handleExport("csv")}>
+            <FileText className="h-4 w-4 mr-2" />
+            {t("csv")}
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onClick={() => handleExport("json")}>
           <Braces className="h-4 w-4 mr-2" />
           {t("json")}
@@ -98,7 +104,7 @@ export function ExportButton({ type, id }: ExportButtonProps) {
 // ---------- ImportButton ----------
 
 interface ImportButtonProps {
-  type: "test" | "exam";
+  type: "test" | "exam" | "homework";
   targetId: string;
 }
 
@@ -120,7 +126,12 @@ export function ImportButton({ type, targetId }: ImportButtonProps) {
     }
 
     const ext = file.name.split(".").pop()?.toLowerCase();
-    if (ext !== "xlsx" && ext !== "csv" && ext !== "json") {
+    if (type === "homework" && ext !== "json") {
+      setError(t("homeworkJsonOnly"));
+      return;
+    }
+
+    if (type !== "homework" && ext !== "xlsx" && ext !== "csv" && ext !== "json") {
       setError(t("unsupportedFormat"));
       return;
     }
@@ -134,14 +145,18 @@ export function ImportButton({ type, targetId }: ImportButtonProps) {
 
       if (type === "test") {
         formData.append("lessonId", targetId);
-      } else {
+      } else if (type === "exam") {
         formData.append("courseId", targetId);
+      } else {
+        formData.append("lessonId", targetId);
       }
 
       const result =
         type === "test"
           ? await importTestFromFile(formData)
-          : await importExamFromFile(formData);
+          : type === "exam"
+            ? await importExamFromFile(formData)
+            : await importHomeworkFromFile(formData);
 
       if (!result.success) {
         setError(result.error || t("importError"));
@@ -150,7 +165,12 @@ export function ImportButton({ type, targetId }: ImportButtonProps) {
 
       toast({
         title: t("importSuccess"),
-        description: type === "test" ? t("importTestSuccess") : t("importExamSuccess"),
+        description:
+          type === "test"
+            ? t("importTestSuccess")
+            : type === "exam"
+              ? t("importExamSuccess")
+              : t("importHomeworkSuccess"),
       });
       setOpen(false);
       router.refresh();
@@ -172,17 +192,25 @@ export function ImportButton({ type, targetId }: ImportButtonProps) {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {type === "test" ? t("importTestTitle") : t("importExamTitle")}
+            {type === "test"
+              ? t("importTestTitle")
+              : type === "exam"
+                ? t("importExamTitle")
+                : t("importHomeworkTitle")}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            {type === "test" ? t("importTestDescription") : t("importExamDescription")}
+            {type === "test"
+              ? t("importTestDescription")
+              : type === "exam"
+                ? t("importExamDescription")
+                : t("importHomeworkDescription")}
           </p>
           <input
             ref={fileRef}
             type="file"
-            accept=".xlsx,.csv,.json"
+            accept={type === "homework" ? ".json" : ".xlsx,.csv,.json"}
             className="block w-full text-sm text-muted-foreground
               file:mr-4 file:py-2 file:px-4
               file:rounded-md file:border-0
