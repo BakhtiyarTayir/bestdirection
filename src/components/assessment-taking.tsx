@@ -347,7 +347,9 @@ export function AssessmentTaking({ assessment }: AssessmentTakingProps) {
                 <span className="text-muted-foreground mr-2">
                   {index + 1}.
                 </span>
-                {question.text}
+                <span className="whitespace-pre-wrap break-words leading-relaxed">
+                  {question.text}
+                </span>
               </CardTitle>
               <div className="flex items-center gap-2 ml-4 flex-shrink-0">
                 <Badge variant="outline" className="text-xs">

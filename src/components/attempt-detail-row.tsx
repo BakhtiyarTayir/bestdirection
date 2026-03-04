@@ -109,7 +109,7 @@ export function AttemptDetailRow({ attempt, colSpan }: AttemptDetailRowProps) {
                     )}
                     <div className="flex-1 space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <p className="font-medium text-sm">
+                        <p className="font-medium text-sm whitespace-pre-wrap break-words leading-relaxed">
                           <span className="text-muted-foreground mr-1">{index + 1}.</span>
                           {answer.question.text}
                         </p>

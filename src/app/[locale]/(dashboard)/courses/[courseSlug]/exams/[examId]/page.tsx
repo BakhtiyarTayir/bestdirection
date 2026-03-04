@@ -14,7 +14,6 @@ import {
   BarChart3,
   FileText,
   GraduationCap,
-  Lock,
 } from "lucide-react";
 import { AssessmentForm } from "@/components/assessment-form";
 import { AssessmentQuestionForm } from "@/components/assessment-question-form";
@@ -84,44 +83,6 @@ async function ExamPageAsync({
 
   const isTeacherOrAdmin =
     role === "ADMIN" || (role === "TEACHER" && course.teacherId === userId);
-
-  // Student-specific data
-  let eligible = false;
-  const unpassedTests: { lessonTitle: string; testTitle: string }[] = [];
-
-  if (role === "STUDENT") {
-    // Check eligibility: all published lesson tests must be passed
-    const lessonTests = await prisma.assessment.findMany({
-      where: {
-        courseId,
-        type: "TEST",
-        isPublished: true,
-        lessonId: { not: null },
-      },
-      include: {
-        lesson: { select: { title: true } },
-      },
-    });
-
-    let allPassed = true;
-    for (const test of lessonTests) {
-      const passedAttempt = await prisma.assessmentAttempt.findFirst({
-        where: {
-          assessmentId: test.id,
-          studentId: userId,
-          isPassed: true,
-        },
-      });
-      if (!passedAttempt) {
-        allPassed = false;
-        unpassedTests.push({
-          lessonTitle: test.lesson?.title ?? "",
-          testTitle: test.title,
-        });
-      }
-    }
-    eligible = allPassed;
-  }
 
   // Get student attempts
   const studentAttempts = role === "STUDENT"
@@ -237,7 +198,9 @@ async function ExamPageAsync({
                             {question.points} {question.points === 1 ? t("pointOne") : question.points < 5 ? t("pointFew") : t("pointMany")}
                           </Badge>
                         </div>
-                        <p className="font-medium">{question.text}</p>
+                        <p className="font-medium whitespace-pre-wrap break-words leading-relaxed">
+                          {question.text}
+                        </p>
                       </div>
                       <div className="flex items-center gap-1 ml-4">
                         <AssessmentQuestionForm
@@ -335,29 +298,6 @@ async function ExamPageAsync({
                 <p className="text-center text-muted-foreground py-8">
                   {t("examNotAvailable")}
                 </p>
-              </CardContent>
-            </Card>
-          ) : !eligible ? (
-            <Card className="border-orange-200 bg-orange-50 dark:border-orange-900 dark:bg-orange-950">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-3">
-                  <Lock className="h-5 w-5 text-orange-500 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-orange-800 dark:text-orange-200">
-                      {t("examBlocked")}
-                    </p>
-                    <p className="text-sm text-orange-600 dark:text-orange-300 mb-3">
-                      {t("passAllTests")}
-                    </p>
-                    <div className="space-y-1">
-                      {unpassedTests.map((ut, i) => (
-                        <p key={i} className="text-sm text-orange-600 dark:text-orange-300">
-                          • {ut.lessonTitle} — {ut.testTitle}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                </div>
               </CardContent>
             </Card>
           ) : (

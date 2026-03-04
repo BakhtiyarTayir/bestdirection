@@ -519,17 +519,6 @@ export async function submitAssessmentAttempt(data: {
       return { success: false, error: "notEnrolled" };
     }
 
-    // For exams, check eligibility
-    if (assessment.type === "EXAM") {
-      const eligibility = await checkAssessmentEligibility(data.assessmentId);
-      if (!eligibility.success) {
-        return { success: false, error: eligibility.error || "eligibilityCheckError" };
-      }
-      if (!eligibility.data?.eligible) {
-        return { success: false, error: "mustPassAllTests" };
-      }
-    }
-
     // Score the attempt
     let totalScore = 0;
     let maxScore = 0;

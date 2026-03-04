@@ -217,7 +217,9 @@ async function TestPageAsync({
                                 {question.points} {question.points === 1 ? t("pointOne") : question.points < 5 ? t("pointFew") : t("pointMany")}
                               </Badge>
                             </div>
-                            <p className="font-medium">{question.text}</p>
+                            <p className="font-medium whitespace-pre-wrap break-words leading-relaxed">
+                              {question.text}
+                            </p>
                           </div>
                           <div className="flex items-center gap-1 ml-4">
                             <AssessmentQuestionForm

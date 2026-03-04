@@ -128,7 +128,7 @@ export function AssessmentResults({ attempt, attemptNumber }: AssessmentResultsP
                   )}
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center justify-between">
-                      <p className="font-medium text-sm">
+                      <p className="font-medium text-sm whitespace-pre-wrap break-words leading-relaxed">
                         <span className="text-muted-foreground mr-1">
                           {index + 1}.
                         </span>
