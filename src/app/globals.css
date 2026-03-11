@@ -80,7 +80,7 @@ body {
   @apply bg-muted;
 }
 .prose pre {
-  @apply bg-gray-900 text-gray-100 border border-border;
+  @apply bg-gray-900 text-gray-100 border border-gray-300 dark:border-gray-700;
 }
 .prose code:not(pre code) {
   @apply bg-muted px-1.5 py-0.5 rounded-md text-sm font-mono;
