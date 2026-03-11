@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
-@import "highlight.js/styles/github.css";
+@import "highlight.js/styles/atom-one-light.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -80,7 +80,11 @@ body {
   @apply bg-muted;
 }
 .prose pre {
-  @apply bg-gray-900 text-gray-100 border border-gray-300 dark:border-gray-700;
+  @apply border border-gray-300 bg-transparent;
+  box-shadow: none;
+}
+.prose pre code {
+  border: 0;
 }
 .prose code:not(pre code) {
   @apply bg-muted px-1.5 py-0.5 rounded-md text-sm font-mono;
