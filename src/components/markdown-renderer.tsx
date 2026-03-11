@@ -1,9 +1,14 @@
+"use client";
+
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import { cn } from "@/lib/utils";
 import { slugify } from "@/lib/slugify";
+import { createContext, useContext } from "react";
 import type { ReactNode } from "react";
+const InsidePreContext = createContext(false);
+
 
 interface MarkdownRendererProps {
   content: string;
@@ -34,22 +39,42 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
             <h3 id={slugify(getTextContent(children))}>{children}</h3>
           ),
           pre: ({ children }) => (
-            <pre className="!p-0 w-full overflow-x-auto rounded-md bg-zinc-950">
-              {children}
-            </pre>
+            <InsidePreContext.Provider value={true}>
+              <pre className="!p-0 w-full overflow-x-auto rounded-md bg-zinc-950">
+                {children}
+              </pre>
+            </InsidePreContext.Provider>
           ),
           code: ({ children, className }) => {
-            const isBlock = className?.includes("language-");
-            if (!isBlock) {
-              return <code className="px-3 py-3 rounded block w-full p-4 bg-black text-zinc-50 text-sm leading-relaxed">{children}</code>;
+            const isInsidePre = useContext(InsidePreContext);
+            const isHighlighted = className?.includes("language-");
+
+            // Тип 2: inline `code` внутри текста — без стилей блока
+            if (!isInsidePre) {
+              return (
+                <code className="px-1.5 py-0.5 rounded bg-muted text-sm">
+                  {children}
+                </code>
+              );
             }
+
+            // Тип 3: подсвеченный блок кода (```python и т.д.)
+            if (isHighlighted) {
+              return (
+                <code
+                  className={cn(
+                    className,
+                    "block w-full p-4 bg-transparent text-zinc-50 text-sm leading-relaxed"
+                  )}
+                >
+                  {children}
+                </code>
+              );
+            }
+
+            // Тип 1: plain блок кода без языка (``` без указания языка)
             return (
-              <code
-                className={cn(
-                  className,
-                  "block w-full p-4 bg-transparent text-zinc-50 text-sm leading-relaxed"
-                )}
-              >
+              <code className="block w-full p-4 text-black bg-muted text-sm leading-relaxed">
                 {children}
               </code>
             );
