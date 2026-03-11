@@ -34,14 +34,25 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
             <h3 id={slugify(getTextContent(children))}>{children}</h3>
           ),
           pre: ({ children }) => (
-            <pre className="!p-0">{children}</pre>
+            <pre className="!p-0 w-full overflow-x-auto rounded-md bg-zinc-950">
+              {children}
+            </pre>
           ),
           code: ({ children, className }) => {
-            const isInline = !className;
-            if (isInline) {
-              return <code className="px-3 py-2">{children}</code>;
+            const isBlock = className?.includes("language-");
+            if (!isBlock) {
+              return <code className="px-3 py-3 rounded block w-full p-4 bg-black text-zinc-50 text-sm leading-relaxed">{children}</code>;
             }
-            return <code className={className}>{children}</code>;
+            return (
+              <code
+                className={cn(
+                  className,
+                  "block w-full p-4 bg-transparent text-zinc-50 text-sm leading-relaxed"
+                )}
+              >
+                {children}
+              </code>
+            );
           },
         }}
       >
