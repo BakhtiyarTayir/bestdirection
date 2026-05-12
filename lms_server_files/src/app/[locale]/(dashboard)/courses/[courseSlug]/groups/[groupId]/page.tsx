@@ -1,0 +1,31 @@
+import { requireAuth } from "@/lib/auth-guard";
+import { getGroupDetails } from "@/actions/group-actions";
+import { notFound } from "next/navigation";
+import { GroupForm } from "@/components/groups/group-form";
+import { getTranslations } from "next-intl/server";
+import { resolveCourseSlug } from "@/lib/slug-resolvers";
+
+export const dynamic = "force-dynamic";
+
+interface GroupDetailPageProps {
+  params: Promise<{ courseSlug: string; groupId: string }>;
+}
+
+export default async function GroupDetailPage({ params }: GroupDetailPageProps) {
+  const t = await getTranslations("groups");
+  const { courseSlug, groupId } = await params;
+  const courseId = await resolveCourseSlug(courseSlug);
+  await requireAuth();
+
+  const result = await getGroupDetails(groupId);
+  if (!result.success || !result.data) notFound();
+
+  const group = result.data;
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">{t("editGroup")}</h1>
+      <GroupForm courseId={courseId} courseSlug={courseSlug} group={group} />
+    </div>
+  );
+}

@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.gitignore
+.env
+.env.*
+.claude
+.agents
+*.md
+!README.md
+*.dump
+*.csv
+*.log
+.github

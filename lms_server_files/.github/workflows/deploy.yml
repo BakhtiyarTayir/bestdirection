@@ -1,0 +1,66 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Sync files to server
+        run: |
+          rsync -avz --delete \
+            --exclude '.next' \
+            --exclude 'node_modules' \
+            --exclude '.env' \
+            --exclude 'public/uploads' \
+            --exclude '.git' \
+            --exclude '.claude' \
+            --exclude '.agents' \
+            --exclude 'hexlet-basics' \
+            --exclude '*.dump' \
+            --exclude '*.md' \
+            --exclude 'export.csv' \
+            --exclude 'prisma/seed-test-modul1.ts' \
+            ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/lms/
+
+      - name: Build and restart containers
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "\
+            docker builder prune -af || true && \
+            docker image prune -af || true && \
+            cd /opt/lms && docker compose up -d --build"
+
+      - name: Install Piston runtimes
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} 'bash -s' <<'REMOTE'
+            set -euo pipefail
+            cd /opt/lms
+            PISTON_API_URL=http://127.0.0.1:2000/api/v2 ./scripts/piston-install-languages.sh
+
+            echo "Проверка наличия python runtime..."
+            for i in $(seq 1 20); do
+              if curl -fsS --retry 2 --retry-all-errors --max-time 20 \
+                http://127.0.0.1:2000/api/v2/runtimes \
+                | python3 -c 'import sys,json; data=json.load(sys.stdin); sys.exit(0 if any(r.get("language")=="python" for r in data) else 1)'
+              then
+                echo "python runtime найден"
+                exit 0
+              fi
+              sleep 3
+            done
+
+            echo "python runtime не найден" >&2
+            exit 1
+          REMOTE
