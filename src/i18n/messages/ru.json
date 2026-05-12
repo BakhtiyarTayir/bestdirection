@@ -98,9 +98,9 @@
     "audit": "Журнал аудита",
     "myResults": "Мои результаты",
     "profile": "Профиль",
-    "homework": "Домашние задания"
+    "homework": "Домашние задания",
+    "attendance": "Посещаемость"
   },
-
   "roles": {
     "ADMIN": "Администратор",
     "TEACHER": "Преподаватель",
@@ -553,7 +553,13 @@
     "deleteSession": "Удалить сессию",
     "deleteSessionConfirm": "Удалить эту сессию посещаемости? Все данные посещаемости будут потеряны.",
     "sessionDeleted": "Сессия удалена",
-    "deleteSessionFailed": "Не удалось удалить сессию"
+    "deleteSessionFailed": "Не удалось удалить сессию",
+    "noCourses": "Нет доступных курсов.",
+    "sessionCount": "{count, plural, one {# сессия} few {# сессии} many {# сессий} other {# сессий}}",
+    "viewAttendance": "Посмотреть посещаемость",
+    "manageAttendance": "Управлять посещаемостью",
+    "groupOptional": "Группа (необязательно)",
+    "allGroups": "Все группы"
   },
 
   "users": {

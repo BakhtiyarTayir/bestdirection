@@ -98,9 +98,9 @@
     "audit": "Audit jurnali",
     "myResults": "Mening natijalarim",
     "profile": "Profil",
-    "homework": "Uy vazifalari"
+    "homework": "Uy vazifalari",
+    "attendance": "Davomat"
   },
-
   "roles": {
     "ADMIN": "Administrator",
     "TEACHER": "O'qituvchi",
@@ -553,7 +553,13 @@
     "deleteSession": "Sessiyani o'chirish",
     "deleteSessionConfirm": "Bu davomat sessiyasini o'chirasizmi? Barcha davomat ma'lumotlari yo'qoladi.",
     "sessionDeleted": "Sessiya o'chirildi",
-    "deleteSessionFailed": "Sessiyani o'chirib bo'lmadi"
+    "deleteSessionFailed": "Sessiyani o'chirib bo'lmadi",
+    "noCourses": "Hech qanday kurs mavjud emas.",
+    "sessionCount": "{count, plural, one {# sessiya} other {# sessiya}}",
+    "viewAttendance": "Davomatni ko'rish",
+    "manageAttendance": "Davomatni boshqarish",
+    "groupOptional": "Guruh (ixtiyoriy)",
+    "allGroups": "Barcha guruhlar"
   },
 
   "users": {

@@ -53,7 +53,7 @@ export default async function AttendancePage({ params }: AttendancePageProps) {
           </h1>
           <p className="text-muted-foreground mt-1">{course.title}</p>
         </div>
-        <CreateSessionDialog courseId={courseId} />
+        <CreateSessionDialog courseId={courseId} courseSlug={courseSlug} />
       </div>
 
       <Separator />

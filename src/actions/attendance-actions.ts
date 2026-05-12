@@ -5,6 +5,16 @@ import { withAuth } from "@/lib/action-utils";
 import { revalidatePath } from "next/cache";
 import type { AttendanceStatus } from "@/validators/attendance";
 
+async function revalidateCourseAttendance(courseId: string) {
+  const course = await prisma.course.findUnique({
+    where: { id: courseId },
+    select: { slug: true },
+  });
+  if (course) {
+    revalidatePath(`/courses/${course.slug}/attendance`);
+  }
+}
+
 // ---------- getAttendanceSessions ----------
 export async function getAttendanceSessions(courseId: string) {
   return withAuth(async () => {
@@ -32,6 +42,7 @@ export async function createAttendanceSession(data: {
   courseId: string;
   date: Date | string;
   note?: string;
+  groupId?: string;
 }) {
   return withAuth(
     async (session) => {
@@ -55,10 +66,11 @@ export async function createAttendanceSession(data: {
             courseId: data.courseId,
             date: dateValue,
             note: data.note,
+            groupId: data.groupId || null,
           },
         });
 
-        revalidatePath(`/dashboard/courses/${data.courseId}/attendance`);
+        await revalidateCourseAttendance(data.courseId);
         return { success: true, data: attendanceSession };
       } catch (error) {
         if (
@@ -121,7 +133,7 @@ export async function updateAttendanceRecords(data: {
         )
       );
 
-      revalidatePath(`/dashboard/courses/${attendanceSession.course.id}/attendance`);
+      await revalidateCourseAttendance(attendanceSession.course.id);
       return { success: true };
     },
     { roles: ["ADMIN", "TEACHER"] }
@@ -272,7 +284,7 @@ export async function deleteAttendanceSession(id: string) {
 
       await prisma.attendanceSession.delete({ where: { id } });
 
-      revalidatePath(`/dashboard/courses/${existing.course.id}/attendance`);
+      await revalidateCourseAttendance(existing.course.id);
       return { success: true };
     },
     { roles: ["ADMIN", "TEACHER"] }
