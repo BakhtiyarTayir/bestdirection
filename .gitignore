@@ -71,3 +71,5 @@ prisma/seed-test-modul1.ts
 public/uploads/
 sonlar.md
 sonlar_toliq.md
+lms_server_files/
+lms_server_files.zip

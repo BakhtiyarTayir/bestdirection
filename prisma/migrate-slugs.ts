@@ -1,14 +1,15 @@
 import { PrismaClient } from "../src/generated/prisma";
+import { slugify as transliterate } from "transliteration";
 
 const prisma = new PrismaClient();
 
 function slugify(text: string): string {
-  const slug = text
+  const slug = transliterate(text)
     .toString()
     .toLowerCase()
     .trim()
     .replace(/\s+/g, "-")
-    .replace(/[^\w\u0400-\u04FF\u0600-\u06FF-]/g, "")
+    .replace(/[^\w-]/g, "")
     .replace(/--+/g, "-")
     .replace(/^-+|-+$/g, "");
   return slug || "untitled";
