@@ -28,6 +28,7 @@ services:
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-https://course.uportal.uz}
       AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-true}
+      MARKETING_DOMAIN: ${MARKETING_DOMAIN:-uportal.uz}
     volumes:
       - uploads:/app/public/uploads
     depends_on:

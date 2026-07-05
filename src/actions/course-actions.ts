@@ -88,6 +88,14 @@ export async function createCourse(data: {
   description?: string;
   coverImage?: string;
   teacherId: string;
+  isPublicListed?: boolean;
+  price?: number;
+  publicSummaryRu?: string;
+  publicSummaryUz?: string;
+  intakeStartDate?: Date;
+  intakeSeats?: number;
+  intakeNoteRu?: string;
+  intakeNoteUz?: string;
 }) {
   return withAuth(
     async (session) => {
@@ -109,6 +117,14 @@ export async function createCourse(data: {
           description: data.description,
           coverImage: data.coverImage,
           teacherId: data.teacherId,
+          isPublicListed: data.isPublicListed ?? false,
+          price: data.price,
+          publicSummaryRu: data.publicSummaryRu,
+          publicSummaryUz: data.publicSummaryUz,
+          intakeStartDate: data.intakeStartDate,
+          intakeSeats: data.intakeSeats,
+          intakeNoteRu: data.intakeNoteRu,
+          intakeNoteUz: data.intakeNoteUz,
         },
         include: {
           teacher: {
@@ -141,6 +157,14 @@ export async function updateCourse(
     coverImage?: string | null;
     isPublished?: boolean;
     sortOrder?: number;
+    isPublicListed?: boolean;
+    price?: number;
+    publicSummaryRu?: string;
+    publicSummaryUz?: string;
+    intakeStartDate?: Date;
+    intakeSeats?: number;
+    intakeNoteRu?: string;
+    intakeNoteUz?: string;
   }
 ) {
   return withAuth(
@@ -175,6 +199,14 @@ export async function updateCourse(
           ...(data.coverImage !== undefined && { coverImage: data.coverImage }),
           ...(data.isPublished !== undefined && { isPublished: data.isPublished }),
           ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
+          ...(data.isPublicListed !== undefined && { isPublicListed: data.isPublicListed }),
+          ...(data.price !== undefined && { price: data.price }),
+          ...(data.publicSummaryRu !== undefined && { publicSummaryRu: data.publicSummaryRu }),
+          ...(data.publicSummaryUz !== undefined && { publicSummaryUz: data.publicSummaryUz }),
+          ...(data.intakeStartDate !== undefined && { intakeStartDate: data.intakeStartDate }),
+          ...(data.intakeSeats !== undefined && { intakeSeats: data.intakeSeats }),
+          ...(data.intakeNoteRu !== undefined && { intakeNoteRu: data.intakeNoteRu }),
+          ...(data.intakeNoteUz !== undefined && { intakeNoteUz: data.intakeNoteUz }),
         },
         include: {
           teacher: {

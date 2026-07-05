@@ -54,6 +54,14 @@ export default async function EditCoursePage({ params }: EditCoursePageProps) {
           coverImage: course.coverImage,
           teacherId: course.teacherId,
           isPublished: course.isPublished,
+          isPublicListed: course.isPublicListed,
+          price: course.price,
+          publicSummaryRu: course.publicSummaryRu,
+          publicSummaryUz: course.publicSummaryUz,
+          intakeStartDate: course.intakeStartDate,
+          intakeSeats: course.intakeSeats,
+          intakeNoteRu: course.intakeNoteRu,
+          intakeNoteUz: course.intakeNoteUz,
         }}
         teachers={teachers}
         currentUserId={userId}

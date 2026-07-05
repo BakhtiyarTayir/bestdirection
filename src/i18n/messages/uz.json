@@ -58,7 +58,6 @@
     "adding": "Qo'shilmoqda...",
     "publish": "Nashr qilish"
   },
-
   "auth": {
     "login": "Kirish",
     "loginTitle": "O'quv markazi",
@@ -85,7 +84,6 @@
     "registerError": "Ro'yxatdan o'tishda xatolik",
     "registerSuccessLoginFailed": "Ro'yxatdan o'tish muvaffaqiyatli, lekin kirib bo'lmadi. Qo'lda kirishga urinib ko'ring."
   },
-
   "nav": {
     "dashboard": "Boshqaruv paneli",
     "courses": "Kurslar",
@@ -99,14 +97,14 @@
     "myResults": "Mening natijalarim",
     "profile": "Profil",
     "homework": "Uy vazifalari",
-    "attendance": "Davomat"
+    "attendance": "Davomat",
+    "leads": "Arizalar"
   },
   "roles": {
     "ADMIN": "Administrator",
     "TEACHER": "O'qituvchi",
     "STUDENT": "Talaba"
   },
-
   "breadcrumb": {
     "home": "Bosh sahifa",
     "courses": "Kurslar",
@@ -133,7 +131,6 @@
     "review": "Tekshirish",
     "statistics": "Statistika"
   },
-
   "dashboard": {
     "adminTitle": "Administrator paneli",
     "teacherTitle": "O'qituvchi paneli",
@@ -146,7 +143,6 @@
     "enrolledStudents": "Yozilgan talabalar",
     "testsPassed": "O'tilgan testlar"
   },
-
   "courses": {
     "title": "Kurslar",
     "createCourse": "Kurs yaratish",
@@ -191,9 +187,21 @@
     "examsCountFew": "imtihon",
     "examsCountMany": "imtihon",
     "copiedFrom": "Nusxa olingan:",
-    "goToExams": "Kurs imtihonlariga o'tish"
+    "goToExams": "Kurs imtihonlariga o'tish",
+    "publicationTitle": "Saytda joylashtirish",
+    "isPublicListedLabel": "Landingda ko'rsatish (uportal.uz)",
+    "priceLabel": "Narxi, so'm",
+    "pricePlaceholder": "Masalan: 1500000",
+    "publicSummaryRuLabel": "Landing uchun qisqa tavsif (rus.)",
+    "publicSummaryUzLabel": "Landing uchun qisqa tavsif (o'zb.)",
+    "publicSummaryPlaceholder": "Kurs haqida qisqa marketing matni",
+    "intakeStartDateLabel": "Qabul boshlanish sanasi",
+    "intakeSeatsLabel": "Qabuldagi o'rinlar",
+    "intakeSeatsPlaceholder": "Masalan: 15",
+    "intakeNoteRuLabel": "Qabul haqida eslatma (rus.)",
+    "intakeNoteUzLabel": "Qabul haqida eslatma (o'zb.)",
+    "intakeNotePlaceholder": "Masalan: Qabul 15 avgustgacha"
   },
-
   "lessons": {
     "title": "Darslar",
     "createLesson": "Dars yaratish",
@@ -242,7 +250,6 @@
     "deleteError": "Darsni o'chirib bo'lmadi",
     "backToLesson": "Darsga"
   },
-
   "assessments": {
     "title": "Testlar va imtihonlar",
     "test": "Test",
@@ -397,7 +404,6 @@
     "questionsLabel": "Savollar",
     "resultsPageTitle": "Natijalar: {title}"
   },
-
   "homework": {
     "title": "Uy vazifalari",
     "createHomework": "Vazifa yaratish",
@@ -520,7 +526,6 @@
     "manualReviewRejected": "Rad etildi",
     "teacherComment": "O'qituvchi izohi"
   },
-
   "attendance": {
     "title": "Davomat",
     "present": "Keldi",
@@ -561,7 +566,6 @@
     "groupOptional": "Guruh (ixtiyoriy)",
     "allGroups": "Barcha guruhlar"
   },
-
   "users": {
     "title": "Foydalanuvchilar",
     "createUser": "Foydalanuvchi qo'shish",
@@ -618,7 +622,6 @@
     "statsSelectCourseAndHomework": "Hisobot uchun kurs va uy vazifasini tanlang.",
     "statsNoData": "Tanlangan filtrlarga mos ma'lumot yo'q."
   },
-
   "groups": {
     "title": "Guruhlar",
     "allGroups": "Barcha guruhlar",
@@ -669,7 +672,6 @@
     "noStatistics": "Statistika uchun ma'lumot yo'q",
     "studentName": "Talaba"
   },
-
   "profile": {
     "title": "Mening profilim",
     "personalData": "Shaxsiy ma'lumotlar",
@@ -699,7 +701,6 @@
     "passwordChangedDescription": "Parolingiz muvaffaqiyatli yangilandi.",
     "passwordChangeFailed": "Parolni o'zgartirib bo'lmadi."
   },
-
   "audit": {
     "title": "Audit jurnali",
     "entityType": "Obyekt turi",
@@ -716,7 +717,6 @@
     "actionUpdate": "O'zgartirish",
     "actionDelete": "O'chirish"
   },
-
   "trash": {
     "title": "Savat",
     "deletedCount": "{count} ta o'chirilgan yozuv",
@@ -737,7 +737,6 @@
     "deletePermanentlyConfirm": "Butunlay o'chirasizmi?",
     "deletePermanentlyDescription": "Siz {type} \"{name}\"ni qaytarib bo'lmaydigan tarzda o'chirmoqchisiz. Bu amalni bekor qilib bo'lmaydi."
   },
-
   "results": {
     "title": "Mening natijalarim",
     "totalAttempts": "Jami urinishlar",
@@ -748,7 +747,6 @@
     "test": "Test",
     "examLabel": "Imtihon"
   },
-
   "enrollment": {
     "title": "Kurs talabalari ({count})",
     "addStudent": "Talaba qo'shish",
@@ -763,7 +761,6 @@
     "noStudentsEnrolled": "Bu kursga hali birorta talaba yozilmagan.",
     "enrollmentDate": "Yozilgan sana"
   },
-
   "copyCourse": {
     "title": "Kursni nusxalash",
     "description": "Sizning muallifligingizda kursning to'liq nusxasi yaratiladi",
@@ -788,7 +785,6 @@
     "copiesCount": "{count} nusxa",
     "myVersion": "mening versiyam"
   },
-
   "compare": {
     "title": "Kurslarni solishtirish",
     "description": "Farqlarni tahlil qilish uchun ikki kursning mazmunini solishtiring",
@@ -821,7 +817,6 @@
     "valueYes": "bor",
     "valueNo": "yo'q"
   },
-
   "catalog": {
     "title": "Kurslar katalogi",
     "loadError": "Katalogni yuklashda xatolik",
@@ -830,7 +825,6 @@
     "teacherCourses": "O'qituvchilar kurslari",
     "noCoursesAvailable": "Nusxalash uchun mavjud kurslar yo'q"
   },
-
   "exportImport": {
     "export": "Eksport",
     "excel": "Excel (.xlsx)",
@@ -853,7 +847,6 @@
     "importHomeworkSuccess": "Uy vazifalari muvaffaqiyatli import qilindi (qoralama)",
     "importError": "Import qilishda xatolik yuz berdi"
   },
-
   "markdown": {
     "bold": "Qalin (Ctrl+B)",
     "boldPlaceholder": "qalin matn",
@@ -879,16 +872,13 @@
     "noPreview": "Ko'rish uchun mazmun yo'q",
     "uploading": "Yuklanmoqda..."
   },
-
   "toc": {
     "showContents": "Mundarijani ko'rsatish",
     "contents": "Mundarija"
   },
-
   "datePicker": {
     "selectDate": "Sanani tanlang"
   },
-
   "errors": {
     "generic": "Xatolik yuz berdi",
     "unexpected": "Kutilmagan xatolik yuz berdi.",
@@ -946,7 +936,6 @@
     "invalidHomeworkImportPayload": "Uy vazifasini import qilish uchun JSON tuzilmasi noto'g'ri",
     "homeworkImportEmpty": "Faylda import qilish uchun to'g'ri uy vazifalari topilmadi"
   },
-
   "success": {
     "saved": "Saqlandi",
     "created": "Yaratildi",
@@ -955,7 +944,6 @@
     "restored": "Tiklandi",
     "success": "Muvaffaqiyatli"
   },
-
   "validation": {
     "required": "Bu maydon majburiy",
     "titleRequired": "Nom majburiy",
@@ -996,13 +984,11 @@
     "homeworkTitleRequired": "Nom majburiy",
     "homeworkDescriptionRequired": "Tavsif majburiy"
   },
-
   "language": {
     "title": "Til",
     "ru": "Русский",
     "uz": "O'zbek"
   },
-
   "homeworkHub": {
     "title": "Uy vazifalari",
     "noHomeworks": "Uy vazifalari yo'q",
@@ -1067,5 +1053,123 @@
       "TEXT": "Matn",
       "FILE": "Fayl"
     }
+  },
+  "marketing": {
+    "meta": {
+      "title": "IT School Chirchiq — O'quv markazi",
+      "description": "IT School Chirchiq — o'quv markazi. Onlayn kurslar, qabul va sertifikat bilan o'qitish."
+    },
+    "header": {
+      "brand": "IT School Chirchiq",
+      "how": "Bu qanday ishlaydi",
+      "courses": "Kurslar",
+      "reviews": "Fikrlar",
+      "contacts": "Kontaktlar",
+      "cta": "Shaxsiy kabinet"
+    },
+    "hero": {
+      "eyebrow": "O'quv markazi",
+      "title": "Yangicha uslubda o'qing —",
+      "titleAccent": "IT School Chirchiq",
+      "subtitle": "O'qituvchilar, uy vazifalari va yakunida sertifikat beriladigan amaliy onlayn kurslar.",
+      "ctaPrimary": "Kursga yozilish",
+      "ctaSecondary": "Bu qanday ishlaydi"
+    },
+    "how": {
+      "eyebrow": "O'quv jarayoni",
+      "title": "Bu qanday ishlaydi?",
+      "subtitle": "Arizadan sertifikatgacha uch oddiy qadam",
+      "step1Title": "Ariza qoldiring",
+      "step1Text": "Qisqa formani to'ldiring — biz siz bilan bog'lanib, yaqin qabul haqida ma'lumot beramiz.",
+      "step2Title": "Kursni tanlang va to'lang",
+      "step2Text": "Sizning jadvalingizga mos kurs va guruhni tanlab beramiz.",
+      "step3Title": "O'qing va sertifikat oling",
+      "step3Text": "Darslar va uy vazifalarini bajaring, kurs yakunida sertifikat oling."
+    },
+    "courses": {
+      "eyebrow": "Bizning kurslar",
+      "title": "O'z kursingizni tanlang",
+      "subtitle": "Qabul ochiq bo'lgan dolzarb dasturlar",
+      "empty": "Tez orada bu yerda kurslar paydo bo'ladi — yangilanishlarni kuzatib boring.",
+      "priceOnRequest": "Narxi so'rov bo'yicha",
+      "intakeSeatsLeft": "Qolgan o'rinlar: {count}",
+      "intakeStarts": "Qabul boshlanishi: {date}",
+      "applyButton": "Yozilish",
+      "detailsButton": "Batafsil"
+    },
+    "stats": {
+      "eyebrow": "Markaz yutuqlari",
+      "title": "Bizga ishonishadi",
+      "graduatesLabel": "Bitiruvchilar",
+      "lessonsLabel": "O'tilgan darslar",
+      "studentsLabel": "Hozirgi talabalar",
+      "teachersLabel": "O'qituvchilar"
+    },
+    "testimonials": {
+      "eyebrow": "Fikrlar",
+      "title": "Talabalarimiz nima deydi",
+      "items": [
+        {
+          "quote": "Kurs menga ishda allaqachon qo'llayotgan real ko'nikmalar berdi. O'qituvchilarga tushunarli tushuntirishlari uchun alohida rahmat.",
+          "author": "Aziz Karimov",
+          "role": "Kurs bitiruvchisi"
+        },
+        {
+          "quote": "Format yoqdi: birinchi darsdan amaliyot, uy vazifalari bo'yicha jonli fikr-mulohaza va yakunida sertifikat.",
+          "author": "Madina Yusupova",
+          "role": "Kurs bitiruvchisi"
+        }
+      ]
+    },
+    "cta": {
+      "title": "Vaqt keldi",
+      "titleAccent": "o'zingizga sarmoya",
+      "titleEnd": "kiritishga",
+      "subtitle": "Hozir ariza qoldiring — yaqin qabul haqida gapirib beramiz va kurs tanlashda yordam beramiz.",
+      "button": "Kursga yozilish"
+    },
+    "footer": {
+      "about": "IT School Chirchiq — amaliy onlayn kurslar va sertifikat bilan o'qitadigan o'quv markazi.",
+      "coursesTitle": "Kurslar",
+      "pagesTitle": "Sahifalar",
+      "contactsTitle": "Kontaktlar",
+      "address": "Toshkent sh., O'zbekiston",
+      "phone": "+998 90 000 00 00",
+      "email": "info@uportal.uz",
+      "loginLink": "Shaxsiy kabinet",
+      "rights": "Barcha huquqlar himoyalangan."
+    },
+    "leadForm": {
+      "title": "Kursga yozilish",
+      "subtitle": "Kontaktlaringizni qoldiring — biz bog'lanib, yaqin qabul haqida gapirib beramiz",
+      "nameLabel": "Ism",
+      "namePlaceholder": "Ismingiz",
+      "phoneLabel": "Telefon",
+      "phonePlaceholder": "+998 90 123 45 67",
+      "messageLabel": "Izoh",
+      "messagePlaceholder": "Ixtiyoriy",
+      "submit": "Arizani yuborish",
+      "submitting": "Yuborilmoqda...",
+      "success": "Rahmat! Tez orada siz bilan bog'lanamiz.",
+      "invalidInput": "Iltimos, to'ldirilgan maydonlarni tekshiring.",
+      "tooManyRequests": "Juda ko'p urinish. Keyinroq qayta urinib ko'ring.",
+      "courseNotFound": "Bu kurs hozircha yozilish uchun mavjud emas.",
+      "genericError": "Arizani yuborib bo'lmadi. Qayta urinib ko'ring.",
+      "courseLabel": "Kurs"
+    }
+  },
+  "leads": {
+    "title": "Landingdan tushgan arizalar",
+    "noLeads": "Hozircha arizalar yo'q",
+    "courseColumn": "Kurs",
+    "nameColumn": "Ism",
+    "phoneColumn": "Telefon",
+    "messageColumn": "Xabar",
+    "dateColumn": "Sana",
+    "statusColumn": "Holati",
+    "contacted": "Ishlov berilgan",
+    "notContacted": "Yangi",
+    "markContacted": "Ishlov berilgan deb belgilash",
+    "markNotContacted": "Ishlov berilmagan deb belgilash"
   }
 }

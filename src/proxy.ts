@@ -2,6 +2,7 @@ import createMiddleware from "next-intl/middleware";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { locales, defaultLocale, localePrefix } from "./i18n/config";
+import { isMarketingHost, MARKETING_DEFAULT_LOCALE } from "./lib/marketing-domain";
 
 const intlMiddleware = createMiddleware({
   locales,
@@ -16,6 +17,12 @@ export function proxy(request: NextRequest) {
     return response;
   }
 
+  const rewriteToMarketing = getMarketingRewrite(request);
+  if (rewriteToMarketing) {
+    addSecurityHeaders(rewriteToMarketing);
+    return rewriteToMarketing;
+  }
+
   const rewriteToPublicHomework = getPublicHomeworkRewrite(request);
   if (rewriteToPublicHomework) {
     addSecurityHeaders(rewriteToPublicHomework);
@@ -25,6 +32,22 @@ export function proxy(request: NextRequest) {
   const response = intlMiddleware(request);
   addSecurityHeaders(response);
   return response;
+}
+
+function getMarketingRewrite(request: NextRequest): NextResponse | null {
+  const host = request.headers.get("host");
+  if (!host || !isMarketingHost(host)) return null;
+  if (request.nextUrl.pathname.startsWith("/marketing")) return null;
+
+  const segments = request.nextUrl.pathname.split("/").filter(Boolean);
+  const firstSegment = segments[0];
+  const hasLocalePrefix = Boolean(firstSegment && locales.includes(firstSegment as (typeof locales)[number]));
+  const locale = hasLocalePrefix ? firstSegment! : MARKETING_DEFAULT_LOCALE;
+  const rest = (hasLocalePrefix ? segments.slice(1) : segments).join("/");
+
+  const rewriteUrl = request.nextUrl.clone();
+  rewriteUrl.pathname = `/marketing/${locale}${rest ? `/${rest}` : ""}`;
+  return NextResponse.rewrite(rewriteUrl);
 }
 
 function getPublicHomeworkRewrite(request: NextRequest): NextResponse | null {

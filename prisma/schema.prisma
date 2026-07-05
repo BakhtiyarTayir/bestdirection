@@ -112,6 +112,16 @@ model Course {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+  // Публичный лендинг (uportal.uz)
+  isPublicListed  Boolean   @default(false)
+  price           Int?
+  publicSummaryRu String?
+  publicSummaryUz String?
+  intakeStartDate DateTime?
+  intakeSeats     Int?
+  intakeNoteRu    String?
+  intakeNoteUz    String?
+
   teacherId String
   teacher   User   @relation(fields: [teacherId], references: [id])
 
@@ -125,12 +135,29 @@ model Course {
   assessments        Assessment[]
   attendanceSessions AttendanceSession[]
   groups             Group[]
+  leads              CourseLead[]
 
   @@index([teacherId])
   @@index([isPublished])
   @@index([isTemplate])
   @@index([copiedFromId])
   @@index([deletedAt])
+  @@index([isPublicListed])
+}
+
+model CourseLead {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  fullName  String
+  phone     String
+  message   String?
+  contacted Boolean  @default(false)
+
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId])
+  @@index([contacted])
 }
 
 model Enrollment {

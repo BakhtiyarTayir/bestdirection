@@ -58,7 +58,6 @@
     "adding": "Добавление...",
     "publish": "Опубликовать"
   },
-
   "auth": {
     "login": "Войти",
     "loginTitle": "Учебный центр",
@@ -85,7 +84,6 @@
     "registerError": "Ошибка регистрации",
     "registerSuccessLoginFailed": "Регистрация успешна, но не удалось войти. Попробуйте войти вручную."
   },
-
   "nav": {
     "dashboard": "Дашборд",
     "courses": "Курсы",
@@ -99,14 +97,14 @@
     "myResults": "Мои результаты",
     "profile": "Профиль",
     "homework": "Домашние задания",
-    "attendance": "Посещаемость"
+    "attendance": "Посещаемость",
+    "leads": "Заявки"
   },
   "roles": {
     "ADMIN": "Администратор",
     "TEACHER": "Преподаватель",
     "STUDENT": "Студент"
   },
-
   "breadcrumb": {
     "home": "Главная",
     "courses": "Курсы",
@@ -133,7 +131,6 @@
     "review": "Проверка",
     "statistics": "Статистика"
   },
-
   "dashboard": {
     "adminTitle": "Панель администратора",
     "teacherTitle": "Панель преподавателя",
@@ -146,7 +143,6 @@
     "enrolledStudents": "Записанных студентов",
     "testsPassed": "Пройдено тестов"
   },
-
   "courses": {
     "title": "Курсы",
     "createCourse": "Создать курс",
@@ -191,9 +187,21 @@
     "examsCountFew": "экзамена",
     "examsCountMany": "экзаменов",
     "copiedFrom": "Скопирован из:",
-    "goToExams": "Перейти к экзаменам курса"
+    "goToExams": "Перейти к экзаменам курса",
+    "publicationTitle": "Публикация на сайте",
+    "isPublicListedLabel": "Показывать на лендинге (uportal.uz)",
+    "priceLabel": "Цена, сум",
+    "pricePlaceholder": "Например: 1500000",
+    "publicSummaryRuLabel": "Краткое описание для лендинга (рус.)",
+    "publicSummaryUzLabel": "Краткое описание для лендинга (узб.)",
+    "publicSummaryPlaceholder": "Короткий маркетинговый текст о курсе",
+    "intakeStartDateLabel": "Дата старта набора",
+    "intakeSeatsLabel": "Мест в наборе",
+    "intakeSeatsPlaceholder": "Например: 15",
+    "intakeNoteRuLabel": "Заметка о наборе (рус.)",
+    "intakeNoteUzLabel": "Заметка о наборе (узб.)",
+    "intakeNotePlaceholder": "Например: Набор до 15 августа"
   },
-
   "lessons": {
     "title": "Уроки",
     "createLesson": "Создать урок",
@@ -242,7 +250,6 @@
     "homeworkTab": "Домашнее задание",
     "backToLesson": "К уроку"
   },
-
   "assessments": {
     "title": "Тесты и экзамены",
     "test": "Тест",
@@ -397,7 +404,6 @@
     "questionsLabel": "Вопросов",
     "resultsPageTitle": "Результаты: {title}"
   },
-
   "homework": {
     "title": "Домашние задания",
     "createHomework": "Создать задание",
@@ -520,7 +526,6 @@
     "manualReviewRejected": "Отклонено",
     "teacherComment": "Комментарий преподавателя"
   },
-
   "attendance": {
     "title": "Посещаемость",
     "present": "Присутствует",
@@ -561,7 +566,6 @@
     "groupOptional": "Группа (необязательно)",
     "allGroups": "Все группы"
   },
-
   "users": {
     "title": "Пользователи",
     "createUser": "Добавить пользователя",
@@ -618,7 +622,6 @@
     "statsSelectCourseAndHomework": "Выберите курс и домашнее задание для отчета.",
     "statsNoData": "По выбранным фильтрам данных нет."
   },
-
   "groups": {
     "title": "Группы",
     "allGroups": "Все группы",
@@ -669,7 +672,6 @@
     "noStatistics": "Нет данных для статистики",
     "studentName": "Студент"
   },
-
   "profile": {
     "title": "Мой профиль",
     "personalData": "Личные данные",
@@ -699,7 +701,6 @@
     "passwordChangedDescription": "Ваш пароль успешно обновлен.",
     "passwordChangeFailed": "Не удалось изменить пароль."
   },
-
   "audit": {
     "title": "Журнал аудита",
     "entityType": "Тип объекта",
@@ -716,7 +717,6 @@
     "actionUpdate": "Изменение",
     "actionDelete": "Удаление"
   },
-
   "trash": {
     "title": "Корзина",
     "deletedCount": "{count} удалённых записей",
@@ -737,7 +737,6 @@
     "deletePermanentlyConfirm": "Удалить навсегда?",
     "deletePermanentlyDescription": "Вы собираетесь безвозвратно удалить {type} \"{name}\". Это действие нельзя отменить."
   },
-
   "results": {
     "title": "Мои результаты",
     "totalAttempts": "Всего попыток",
@@ -748,7 +747,6 @@
     "test": "Тест",
     "examLabel": "Экзамен"
   },
-
   "enrollment": {
     "title": "Студенты курса ({count})",
     "addStudent": "Добавить студента",
@@ -763,7 +761,6 @@
     "noStudentsEnrolled": "В этот курс пока не записан ни один студент.",
     "enrollmentDate": "Дата записи"
   },
-
   "copyCourse": {
     "title": "Копировать курс",
     "description": "Будет создана полная копия курса с вашим авторством",
@@ -788,7 +785,6 @@
     "copiesCount": "{count} копий",
     "myVersion": "моя версия"
   },
-
   "compare": {
     "title": "Сравнение курсов",
     "description": "Сравните содержимое двух курсов для анализа различий",
@@ -821,7 +817,6 @@
     "valueYes": "есть",
     "valueNo": "нет"
   },
-
   "catalog": {
     "title": "Каталог курсов",
     "loadError": "Ошибка загрузки каталога",
@@ -830,7 +825,6 @@
     "teacherCourses": "Курсы преподавателей",
     "noCoursesAvailable": "Нет доступных курсов для копирования"
   },
-
   "exportImport": {
     "export": "Экспорт",
     "excel": "Excel (.xlsx)",
@@ -853,7 +847,6 @@
     "importHomeworkSuccess": "Домашние задания успешно импортированы (черновики)",
     "importError": "Произошла ошибка при импорте"
   },
-
   "markdown": {
     "bold": "Жирный (Ctrl+B)",
     "boldPlaceholder": "жирный текст",
@@ -879,16 +872,13 @@
     "noPreview": "Нет содержимого для предпросмотра",
     "uploading": "Загрузка..."
   },
-
   "toc": {
     "showContents": "Показать содержание",
     "contents": "Содержание"
   },
-
   "datePicker": {
     "selectDate": "Выберите дату"
   },
-
   "errors": {
     "generic": "Произошла ошибка",
     "unexpected": "Произошла непредвиденная ошибка.",
@@ -946,7 +936,6 @@
     "invalidHomeworkImportPayload": "Некорректная структура JSON для импорта домашних заданий",
     "homeworkImportEmpty": "Файл не содержит корректных домашних заданий для импорта"
   },
-
   "success": {
     "saved": "Сохранено",
     "created": "Создано",
@@ -955,7 +944,6 @@
     "restored": "Восстановлено",
     "success": "Успешно"
   },
-
   "validation": {
     "required": "Это поле обязательно",
     "titleRequired": "Название обязательно",
@@ -996,13 +984,11 @@
     "homeworkTitleRequired": "Название обязательно",
     "homeworkDescriptionRequired": "Описание обязательно"
   },
-
   "language": {
     "title": "Язык",
     "ru": "Русский",
     "uz": "O'zbek"
   },
-
   "homeworkHub": {
     "title": "Домашние задания",
     "noHomeworks": "Нет домашних заданий",
@@ -1067,5 +1053,123 @@
       "TEXT": "Текст",
       "FILE": "Файл"
     }
+  },
+  "marketing": {
+    "meta": {
+      "title": "IT School Chirchiq — Учебный центр",
+      "description": "IT School Chirchiq — учебный центр. Онлайн-курсы, наборы и обучение с сертификатом."
+    },
+    "header": {
+      "brand": "IT School Chirchiq",
+      "how": "Как это работает",
+      "courses": "Курсы",
+      "reviews": "Отзывы",
+      "contacts": "Контакты",
+      "cta": "Личный кабинет"
+    },
+    "hero": {
+      "eyebrow": "Учебный центр",
+      "title": "Учитесь по-новому вместе с",
+      "titleAccent": "IT School Chirchiq",
+      "subtitle": "Практические онлайн-курсы с преподавателями, домашними заданиями и сертификатом по итогам обучения.",
+      "ctaPrimary": "Записаться на курс",
+      "ctaSecondary": "Как это работает"
+    },
+    "how": {
+      "eyebrow": "Процесс обучения",
+      "title": "Как это работает?",
+      "subtitle": "Три простых шага от заявки до сертификата",
+      "step1Title": "Оставьте заявку",
+      "step1Text": "Заполните короткую форму — мы свяжемся с вами и расскажем о ближайшем наборе.",
+      "step2Title": "Выберите курс и оплатите",
+      "step2Text": "Подберём подходящий курс и группу под ваш график.",
+      "step3Title": "Учитесь и получите сертификат",
+      "step3Text": "Проходите уроки и домашние задания, получите сертификат по итогам курса."
+    },
+    "courses": {
+      "eyebrow": "Наши курсы",
+      "title": "Выберите свой курс",
+      "subtitle": "Актуальные программы с открытым набором",
+      "empty": "Скоро здесь появятся курсы — следите за обновлениями.",
+      "priceOnRequest": "Цена по запросу",
+      "intakeSeatsLeft": "Осталось мест: {count}",
+      "intakeStarts": "Старт набора: {date}",
+      "applyButton": "Записаться",
+      "detailsButton": "Подробнее"
+    },
+    "stats": {
+      "eyebrow": "Достижения центра",
+      "title": "Нам доверяют",
+      "graduatesLabel": "Выпускников",
+      "lessonsLabel": "Уроков пройдено",
+      "studentsLabel": "Студентов сейчас",
+      "teachersLabel": "Преподавателей"
+    },
+    "testimonials": {
+      "eyebrow": "Отзывы",
+      "title": "Что говорят наши студенты",
+      "items": [
+        {
+          "quote": "Курс дал мне реальные навыки, которые я уже использую на работе. Отдельное спасибо преподавателям за терпение и понятные объяснения.",
+          "author": "Азиз Каримов",
+          "role": "Выпускник курса"
+        },
+        {
+          "quote": "Понравился формат: практика с первого занятия, живая обратная связь по домашним заданиям и итоговый сертификат.",
+          "author": "Мадина Юсупова",
+          "role": "Выпускница курса"
+        }
+      ]
+    },
+    "cta": {
+      "title": "Пора начать",
+      "titleAccent": "инвестировать",
+      "titleEnd": "в себя",
+      "subtitle": "Оставьте заявку сейчас — расскажем о ближайшем наборе и поможем выбрать курс.",
+      "button": "Записаться на курс"
+    },
+    "footer": {
+      "about": "IT School Chirchiq — учебный центр с практическими онлайн-курсами и обучением с сертификатом.",
+      "coursesTitle": "Курсы",
+      "pagesTitle": "Страницы",
+      "contactsTitle": "Контакты",
+      "address": "г. Ташкент, Узбекистан",
+      "phone": "+998 90 000 00 00",
+      "email": "info@uportal.uz",
+      "loginLink": "Личный кабинет",
+      "rights": "Все права защищены."
+    },
+    "leadForm": {
+      "title": "Записаться на курс",
+      "subtitle": "Оставьте контакты — мы свяжемся с вами и расскажем о ближайшем наборе",
+      "nameLabel": "Имя",
+      "namePlaceholder": "Ваше имя",
+      "phoneLabel": "Телефон",
+      "phonePlaceholder": "+998 90 123 45 67",
+      "messageLabel": "Комментарий",
+      "messagePlaceholder": "Необязательно",
+      "submit": "Отправить заявку",
+      "submitting": "Отправка...",
+      "success": "Спасибо! Мы свяжемся с вами в ближайшее время.",
+      "invalidInput": "Проверьте, пожалуйста, заполненные поля.",
+      "tooManyRequests": "Слишком много попыток. Попробуйте позже.",
+      "courseNotFound": "Этот курс сейчас недоступен для записи.",
+      "genericError": "Не удалось отправить заявку. Попробуйте ещё раз.",
+      "courseLabel": "Курс"
+    }
+  },
+  "leads": {
+    "title": "Заявки с лендинга",
+    "noLeads": "Заявок пока нет",
+    "courseColumn": "Курс",
+    "nameColumn": "Имя",
+    "phoneColumn": "Телефон",
+    "messageColumn": "Сообщение",
+    "dateColumn": "Дата",
+    "statusColumn": "Статус",
+    "contacted": "Обработано",
+    "notContacted": "Новая",
+    "markContacted": "Отметить обработанной",
+    "markNotContacted": "Отметить необработанной"
   }
 }

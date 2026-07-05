@@ -1,5 +1,16 @@
 import { z } from "zod";
 
+const marketingFields = {
+  isPublicListed: z.boolean().optional(),
+  price: z.coerce.number().int().nonnegative().optional(),
+  publicSummaryRu: z.string().max(500, "maxChars500").optional(),
+  publicSummaryUz: z.string().max(500, "maxChars500").optional(),
+  intakeStartDate: z.coerce.date().optional(),
+  intakeSeats: z.coerce.number().int().nonnegative().optional(),
+  intakeNoteRu: z.string().max(300, "maxChars300").optional(),
+  intakeNoteUz: z.string().max(300, "maxChars300").optional(),
+};
+
 export const createCourseSchema = z.object({
   title: z
     .string()
@@ -12,6 +23,7 @@ export const createCourseSchema = z.object({
   teacherId: z
     .string()
     .min(1, "teacherRequired"),
+  ...marketingFields,
 });
 
 export type CreateCourseInput = z.infer<typeof createCourseSchema>;
@@ -32,6 +44,7 @@ export const updateCourseSchema = z.object({
     .string()
     .min(1, "teacherRequired")
     .optional(),
+  ...marketingFields,
 });
 
 export type UpdateCourseInput = z.infer<typeof updateCourseSchema>;

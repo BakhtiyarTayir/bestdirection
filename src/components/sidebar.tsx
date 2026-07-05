@@ -23,6 +23,7 @@ import {
   ClipboardList,
   BarChart3,
   CalendarCheck,
+  Inbox,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Button } from "./ui/button";
@@ -57,6 +58,7 @@ const navItems: NavItem[] = [
   { href: "/groups", labelKey: "groups", icon: UsersRound, roles: ["ADMIN", "TEACHER"] },
   { href: "/courses/catalog", labelKey: "catalog", icon: Copy, roles: ["ADMIN", "TEACHER"] },
   { href: "/admin/compare", labelKey: "compare", icon: GitCompare, roles: ["ADMIN"] },
+  { href: "/admin/leads", labelKey: "leads", icon: Inbox, roles: ["ADMIN"] },
   { href: "/trash", labelKey: "trash", icon: Trash2, roles: ["ADMIN"] },
   { href: "/audit", labelKey: "audit", icon: ScrollText, roles: ["ADMIN"] },
   { href: "/homework", labelKey: "homework", icon: ClipboardList, roles: ["ADMIN", "TEACHER", "STUDENT"], badge: true },

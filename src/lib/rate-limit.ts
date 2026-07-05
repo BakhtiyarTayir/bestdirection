@@ -32,8 +32,9 @@ function createLimiter(
 export const authLimiter = createLimiter(5, "60 s");
 export const apiLimiter = createLimiter(30, "60 s");
 export const uploadLimiter = createLimiter(5, "60 s");
+export const leadLimiter = createLimiter(3, "60 s");
 
-export function getClientIp(request: NextRequest): string {
+export function getClientIp(request: { headers: Pick<Headers, "get"> }): string {
   const forwarded = request.headers.get("x-forwarded-for");
   if (forwarded) {
     return forwarded.split(",")[0].trim();
@@ -73,4 +74,19 @@ export async function applyRateLimit(
   }
 
   return null;
+}
+
+export async function isWithinRateLimit(
+  limiter: Ratelimit | null,
+  ip: string
+): Promise<boolean> {
+  if (!limiter) return true;
+
+  try {
+    const { success } = await limiter.limit(ip);
+    return success;
+  } catch {
+    // Graceful fallback: if Redis is unavailable, allow the request
+    return true;
+  }
 }

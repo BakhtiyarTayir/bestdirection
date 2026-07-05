@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "@/i18n/navigation";
 import { useRef, useState, useTransition } from "react";
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -43,6 +44,14 @@ interface CourseData {
   coverImage: string | null;
   teacherId: string;
   isPublished: boolean;
+  isPublicListed?: boolean;
+  price?: number | null;
+  publicSummaryRu?: string | null;
+  publicSummaryUz?: string | null;
+  intakeStartDate?: Date | null;
+  intakeSeats?: number | null;
+  intakeNoteRu?: string | null;
+  intakeNoteUz?: string | null;
 }
 
 interface CourseFormProps {
@@ -76,6 +85,7 @@ export function CourseForm({
     handleSubmit,
     setValue,
     watch,
+    control,
     formState: { errors },
   } = useForm<CourseFormValues>({
     resolver: zodResolver(courseFormSchema),
@@ -84,11 +94,20 @@ export function CourseForm({
       description: course?.description || "",
       teacherId: isAdmin ? (course?.teacherId || "") : currentUserId,
       isPublished: course?.isPublished || false,
+      isPublicListed: course?.isPublicListed || false,
+      price: course?.price ?? undefined,
+      publicSummaryRu: course?.publicSummaryRu || "",
+      publicSummaryUz: course?.publicSummaryUz || "",
+      intakeStartDate: course?.intakeStartDate ?? undefined,
+      intakeSeats: course?.intakeSeats ?? undefined,
+      intakeNoteRu: course?.intakeNoteRu || "",
+      intakeNoteUz: course?.intakeNoteUz || "",
     },
   });
 
   const selectedTeacherId = watch("teacherId");
   const isPublished = watch("isPublished");
+  const isPublicListed = watch("isPublicListed");
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -137,6 +156,14 @@ export function CourseForm({
             description: data.description,
             coverImage: coverImage,
             isPublished: data.isPublished,
+            isPublicListed: data.isPublicListed,
+            price: data.price,
+            publicSummaryRu: data.publicSummaryRu,
+            publicSummaryUz: data.publicSummaryUz,
+            intakeStartDate: data.intakeStartDate,
+            intakeSeats: data.intakeSeats,
+            intakeNoteRu: data.intakeNoteRu,
+            intakeNoteUz: data.intakeNoteUz,
           });
           if (result.success && result.data) {
             toast({ title: t("courseUpdated") });
@@ -316,6 +343,98 @@ export function CourseForm({
                 onCheckedChange={(checked) => setValue("isPublished", checked)}
               />
               <Label htmlFor="isPublished">{tCommon("published")}</Label>
+            </div>
+          )}
+
+          {isEditing && (
+            <div className="space-y-4 rounded-lg border p-4">
+              <h3 className="font-medium">{t("publicationTitle")}</h3>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="isPublicListed"
+                  checked={isPublicListed}
+                  onCheckedChange={(checked) => setValue("isPublicListed", checked)}
+                />
+                <Label htmlFor="isPublicListed">{t("isPublicListedLabel")}</Label>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="price">{t("priceLabel")}</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    min={0}
+                    placeholder={t("pricePlaceholder")}
+                    {...register("price")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="intakeSeats">{t("intakeSeatsLabel")}</Label>
+                  <Input
+                    id="intakeSeats"
+                    type="number"
+                    min={0}
+                    placeholder={t("intakeSeatsPlaceholder")}
+                    {...register("intakeSeats")}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t("intakeStartDateLabel")}</Label>
+                <Controller
+                  name="intakeStartDate"
+                  control={control}
+                  render={({ field }) => (
+                    <DatePicker
+                      value={field.value ? new Date(field.value) : undefined}
+                      onChange={(date) => field.onChange(date)}
+                    />
+                  )}
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="publicSummaryRu">{t("publicSummaryRuLabel")}</Label>
+                  <Textarea
+                    id="publicSummaryRu"
+                    rows={3}
+                    placeholder={t("publicSummaryPlaceholder")}
+                    {...register("publicSummaryRu")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="publicSummaryUz">{t("publicSummaryUzLabel")}</Label>
+                  <Textarea
+                    id="publicSummaryUz"
+                    rows={3}
+                    placeholder={t("publicSummaryPlaceholder")}
+                    {...register("publicSummaryUz")}
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="intakeNoteRu">{t("intakeNoteRuLabel")}</Label>
+                  <Input
+                    id="intakeNoteRu"
+                    placeholder={t("intakeNotePlaceholder")}
+                    {...register("intakeNoteRu")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="intakeNoteUz">{t("intakeNoteUzLabel")}</Label>
+                  <Input
+                    id="intakeNoteUz"
+                    placeholder={t("intakeNotePlaceholder")}
+                    {...register("intakeNoteUz")}
+                  />
+                </div>
+              </div>
             </div>
           )}
 
