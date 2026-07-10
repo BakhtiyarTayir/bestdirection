@@ -2,6 +2,7 @@
 
 import { Link, usePathname } from "@/i18n/navigation";
 import { useTranslations, useLocale } from "next-intl";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -9,7 +10,6 @@ import {
   Users,
   FileText,
   User,
-  GraduationCap,
   LogOut,
   Menu,
   X,
@@ -102,8 +102,8 @@ export function Sidebar({ role, userName }: SidebarProps) {
   const sidebarContent = (
     <div className="flex h-full flex-col">
       <div className={cn("flex h-16 items-center gap-2 border-b", collapsed ? "justify-center px-2" : "px-6")}>
-        <GraduationCap className="h-6 w-6 text-primary shrink-0" />
-        {!collapsed && <span className="text-lg font-semibold">LMS</span>}
+        <Image src="/logo.png" alt="" width={490} height={492} className="h-7 w-auto shrink-0" />
+        {!collapsed && <span className="text-lg font-semibold">IT School</span>}
       </div>
 
       <nav className={cn("flex-1 space-y-1", collapsed ? "p-2" : "p-4")}>

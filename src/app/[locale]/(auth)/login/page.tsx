@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { GraduationCap } from "lucide-react";
+import Image from "next/image";
 import { LanguageSwitcher } from "@/components/language-switcher";
 
 export default function LoginPage() {
@@ -68,8 +68,8 @@ export default function LoginPage() {
       </div>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary">
-            <GraduationCap className="h-6 w-6 text-primary-foreground" />
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border bg-white">
+            <Image src="/logo.png" alt="" width={490} height={492} className="h-8 w-auto" />
           </div>
           <CardTitle className="text-2xl">{t("loginTitle")}</CardTitle>
           <CardDescription>{t("loginSubtitle")}</CardDescription>

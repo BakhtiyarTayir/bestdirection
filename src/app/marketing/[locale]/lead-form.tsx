@@ -57,7 +57,7 @@ export function LeadForm({ courses }: LeadFormProps) {
 
   if (submitted) {
     return (
-      <p className="rounded-lg bg-[#eef3fb] px-6 py-8 text-center text-[#16213e] font-medium">
+      <p role="status" className="rounded-lg bg-[#f9f3e8] px-6 py-8 text-center text-[#191211] font-medium">
         {t("success")}
       </p>
     );
@@ -73,9 +73,9 @@ export function LeadForm({ courses }: LeadFormProps) {
 
       {courses.length > 1 && (
         <div className="space-y-2">
-          <Label>{t("courseLabel")}</Label>
+          <Label htmlFor="course">{t("courseLabel")}</Label>
           <Select value={courseId} onValueChange={setCourseId}>
-            <SelectTrigger>
+            <SelectTrigger id="course">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -91,12 +91,12 @@ export function LeadForm({ courses }: LeadFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="fullName">{t("nameLabel")}</Label>
-        <Input id="fullName" name="fullName" placeholder={t("namePlaceholder")} required minLength={2} maxLength={100} />
+        <Input id="fullName" name="fullName" autoComplete="name" placeholder={t("namePlaceholder")} required minLength={2} maxLength={100} />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="phone">{t("phoneLabel")}</Label>
-        <Input id="phone" name="phone" type="tel" placeholder={t("phonePlaceholder")} required minLength={5} maxLength={30} />
+        <Input id="phone" name="phone" type="tel" autoComplete="tel" placeholder={t("phonePlaceholder")} required minLength={5} maxLength={30} />
       </div>
 
       <div className="space-y-2">
@@ -104,10 +104,10 @@ export function LeadForm({ courses }: LeadFormProps) {
         <Textarea id="message" name="message" placeholder={t("messagePlaceholder")} maxLength={1000} />
       </div>
 
-      <Button type="submit" disabled={submitting} className="w-full bg-[#2ed47a] text-[#0f1830] hover:bg-[#24b567]">
+      <Button type="submit" disabled={submitting} className="w-full bg-[#F6B93B] text-[#120d0c] hover:bg-[#d99a22]">
         {submitting ? (
           <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
             {t("submitting")}
           </>
         ) : (
