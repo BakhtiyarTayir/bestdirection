@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { leadLimiter, getClientIp, isWithinRateLimit } from "@/lib/rate-limit";
 import { submitLeadSchema, type SubmitLeadInput } from "@/validators/lead";
+import { findMarketingCourse } from "@/lib/marketing-courses";
 
 // ---------- submitCourseLead (public, no auth) ----------
 export async function submitCourseLead(input: SubmitLeadInput) {
@@ -14,7 +15,7 @@ export async function submitCourseLead(input: SubmitLeadInput) {
     return { success: false as const, error: "invalidInput" };
   }
 
-  const { courseId, fullName, phone, message, website } = parsed.data;
+  const { courseSlug, fullName, phone, message, website } = parsed.data;
   if (website) {
     // Honeypot tripped — silently pretend success so bots don't learn to skip the field.
     return { success: true as const };
@@ -27,16 +28,15 @@ export async function submitCourseLead(input: SubmitLeadInput) {
     return { success: false as const, error: "tooManyRequests" };
   }
 
-  const course = await prisma.course.findFirst({
-    where: { id: courseId, isPublicListed: true, isPublished: true, deletedAt: null },
-    select: { id: true },
-  });
+  // Курсы лендинга статичны (src/lib/marketing-courses.ts) — заявка не
+  // привязана к курсам платформы, название курса хранится строкой.
+  const course = findMarketingCourse(courseSlug);
   if (!course) {
     return { success: false as const, error: "courseNotFound" };
   }
 
   await prisma.courseLead.create({
-    data: { courseId, fullName, phone, message },
+    data: { courseName: course.title, fullName, phone, message },
   });
 
   return { success: true as const };
@@ -55,7 +55,7 @@ export async function getLeads() {
           message: true,
           contacted: true,
           createdAt: true,
-          course: { select: { id: true, title: true } },
+          courseName: true,
         },
       });
 

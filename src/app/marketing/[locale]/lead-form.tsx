@@ -18,7 +18,7 @@ import { submitCourseLead } from "@/actions/lead-actions";
 import { Loader2 } from "lucide-react";
 
 interface LeadFormProps {
-  courses: { id: string; title: string }[];
+  courses: { slug: string; title: string }[];
 }
 
 export function LeadForm({ courses }: LeadFormProps) {
@@ -26,14 +26,14 @@ export function LeadForm({ courses }: LeadFormProps) {
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [courseId, setCourseId] = useState(courses[0]?.id ?? "");
+  const [courseSlug, setCourseSlug] = useState(courses[0]?.slug ?? "");
 
   async function handleSubmit(formData: FormData) {
-    if (!courseId) return;
+    if (!courseSlug) return;
     setSubmitting(true);
     try {
       const result = await submitCourseLead({
-        courseId,
+        courseSlug,
         fullName: String(formData.get("fullName") || ""),
         phone: String(formData.get("phone") || ""),
         message: String(formData.get("message") || "") || undefined,
@@ -74,13 +74,13 @@ export function LeadForm({ courses }: LeadFormProps) {
       {courses.length > 1 && (
         <div className="space-y-2">
           <Label htmlFor="course">{t("courseLabel")}</Label>
-          <Select value={courseId} onValueChange={setCourseId}>
+          <Select value={courseSlug} onValueChange={setCourseSlug}>
             <SelectTrigger id="course">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {courses.map((course) => (
-                <SelectItem key={course.id} value={course.id}>
+                <SelectItem key={course.slug} value={course.slug}>
                   {course.title}
                 </SelectItem>
               ))}

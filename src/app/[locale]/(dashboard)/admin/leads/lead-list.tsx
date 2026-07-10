@@ -23,7 +23,7 @@ interface Lead {
   message: string | null;
   contacted: boolean;
   createdAt: Date;
-  course: { id: string; title: string };
+  courseName: string;
 }
 
 interface LeadListProps {
@@ -75,7 +75,7 @@ export function LeadList({ initialLeads }: LeadListProps) {
             <TableCell className="whitespace-nowrap">
               {new Date(lead.createdAt).toLocaleString()}
             </TableCell>
-            <TableCell>{lead.course.title}</TableCell>
+            <TableCell>{lead.courseName}</TableCell>
             <TableCell>{lead.fullName}</TableCell>
             <TableCell>{lead.phone}</TableCell>
             <TableCell className="max-w-xs truncate">{lead.message || "—"}</TableCell>

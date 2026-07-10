@@ -1,8 +1,8 @@
-import { prisma } from "@/lib/prisma";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import Image from "next/image";
 import { LeadForm } from "./lead-form";
 import { Button } from "@/components/ui/button";
+import { marketingCourses } from "@/lib/marketing-courses";
 
 interface MarketingPageProps {
   params: Promise<{ locale: string }>;
@@ -15,22 +15,8 @@ export default async function MarketingPage({ params }: MarketingPageProps) {
   const isUz = locale === "uz";
   const t = await getTranslations("marketing");
 
-  const courses = await prisma.course.findMany({
-    where: { isPublicListed: true, isPublished: true, deletedAt: null },
-    orderBy: { sortOrder: "asc" },
-    select: {
-      id: true,
-      title: true,
-      coverImage: true,
-      price: true,
-      publicSummaryRu: true,
-      publicSummaryUz: true,
-      intakeStartDate: true,
-      intakeSeats: true,
-      intakeNoteRu: true,
-      intakeNoteUz: true,
-    },
-  });
+  // Курсы лендинга — статичный список, независимый от курсов платформы
+  const courses = marketingCourses;
 
   const testimonials = t.raw("testimonials.items") as Array<{
     quote: string;
@@ -135,14 +121,14 @@ export default async function MarketingPage({ params }: MarketingPageProps) {
             ) : (
               <div className="grid gap-7 md:grid-cols-3">
                 {courses.map((course) => {
-                  const summary = (isUz ? course.publicSummaryUz : course.publicSummaryRu) || course.publicSummaryRu;
+                  const summary = isUz ? course.summaryUz : course.summaryRu;
                   const intakeNote = (isUz ? course.intakeNoteUz : course.intakeNoteRu) || course.intakeNoteRu;
 
                   return (
-                    <div key={course.id} className="overflow-hidden rounded-xl bg-white shadow-[0_10px_30px_rgba(25,18,17,0.08)]">
+                    <div key={course.slug} className="overflow-hidden rounded-xl bg-white shadow-[0_10px_30px_rgba(25,18,17,0.08)]">
                       <div className="relative flex h-[170px] items-center justify-center bg-gradient-to-br from-[#F6B93B] to-[#191211]">
-                        {course.coverImage ? (
-                          <Image src={course.coverImage} alt={course.title} fill className="object-cover" />
+                        {course.cover ? (
+                          <Image src={course.cover} alt={course.title} fill className="object-cover" />
                         ) : (
                           <span className="text-4xl font-bold text-white/70">{course.title.charAt(0)}</span>
                         )}
@@ -198,7 +184,7 @@ export default async function MarketingPage({ params }: MarketingPageProps) {
               <h2 className="mb-1 text-xl font-bold">{t("leadForm.title")}</h2>
               <p className="mb-6 text-sm text-[#6f6660]">{t("leadForm.subtitle")}</p>
               {courses.length > 0 ? (
-                <LeadForm courses={courses.map((c) => ({ id: c.id, title: c.title }))} />
+                <LeadForm courses={courses.map((c) => ({ slug: c.slug, title: c.title }))} />
               ) : (
                 <p className="text-sm text-[#6f6660]">{t("courses.empty")}</p>
               )}
@@ -238,7 +224,7 @@ export default async function MarketingPage({ params }: MarketingPageProps) {
               <h4 className="mb-4 text-sm font-bold uppercase tracking-wide text-white">{t("footer.coursesTitle")}</h4>
               <ul className="space-y-3 text-sm">
                 {courses.map((course) => (
-                  <li key={course.id}>
+                  <li key={course.slug}>
                     <a href="#courses" className="hover:text-white">{course.title}</a>
                   </li>
                 ))}

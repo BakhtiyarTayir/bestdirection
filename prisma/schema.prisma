@@ -135,7 +135,6 @@ model Course {
   assessments        Assessment[]
   attendanceSessions AttendanceSession[]
   groups             Group[]
-  leads              CourseLead[]
 
   @@index([teacherId])
   @@index([isPublished])
@@ -153,10 +152,10 @@ model CourseLead {
   message   String?
   contacted Boolean  @default(false)
 
-  courseId String
-  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  // Название курса лендинга (статичный список в src/lib/marketing-courses.ts) —
+  // заявки не привязаны к курсам платформы.
+  courseName String
 
-  @@index([courseId])
   @@index([contacted])
 }
 
