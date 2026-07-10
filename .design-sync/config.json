@@ -1,0 +1,159 @@
+{
+  "projectId": "803a5989-696a-4669-a209-33d06c895d13",
+  "pkg": "lms",
+  "globalName": "LMS",
+  "shape": "package",
+  "entry": "./dist/index.js",
+  "srcDir": "src/components/ui",
+  "tsconfig": "tsconfig.json",
+  "cssEntry": ".design-sync/.cache/tailwind-compiled.css",
+  "buildCmd": "npx --yes @tailwindcss/cli@4 -i .design-sync/tw-entry.css -o .design-sync/.cache/tailwind-compiled.css",
+  "componentSrcMap": {
+    "AlertDialogAction": null,
+    "AlertDialogCancel": null,
+    "AlertDialogContent": null,
+    "AlertDialogDescription": null,
+    "AlertDialogFooter": null,
+    "AlertDialogHeader": null,
+    "AlertDialogOverlay": null,
+    "AlertDialogPortal": null,
+    "AlertDialogTitle": null,
+    "AlertDialogTrigger": null,
+    "AvatarFallback": null,
+    "AvatarImage": null,
+    "BreadcrumbEllipsis": null,
+    "BreadcrumbItem": null,
+    "BreadcrumbLink": null,
+    "BreadcrumbList": null,
+    "BreadcrumbPage": null,
+    "BreadcrumbSeparator": null,
+    "CardContent": null,
+    "CardDescription": null,
+    "CardFooter": null,
+    "CardHeader": null,
+    "CardTitle": null,
+    "DialogClose": null,
+    "DialogContent": null,
+    "DialogDescription": null,
+    "DialogFooter": null,
+    "DialogHeader": null,
+    "DialogOverlay": null,
+    "DialogPortal": null,
+    "DialogTitle": null,
+    "DialogTrigger": null,
+    "DropdownMenuCheckboxItem": null,
+    "DropdownMenuContent": null,
+    "DropdownMenuGroup": null,
+    "DropdownMenuItem": null,
+    "DropdownMenuLabel": null,
+    "DropdownMenuPortal": null,
+    "DropdownMenuRadioGroup": null,
+    "DropdownMenuRadioItem": null,
+    "DropdownMenuSeparator": null,
+    "DropdownMenuShortcut": null,
+    "DropdownMenuSub": null,
+    "DropdownMenuSubContent": null,
+    "DropdownMenuSubTrigger": null,
+    "DropdownMenuTrigger": null,
+    "PopoverAnchor": null,
+    "PopoverContent": null,
+    "PopoverTrigger": null,
+    "RadioGroupItem": null,
+    "ScrollBar": null,
+    "SelectContent": null,
+    "SelectGroup": null,
+    "SelectItem": null,
+    "SelectLabel": null,
+    "SelectScrollDownButton": null,
+    "SelectScrollUpButton": null,
+    "SelectSeparator": null,
+    "SelectTrigger": null,
+    "SelectValue": null,
+    "TableBody": null,
+    "TableCaption": null,
+    "TableCell": null,
+    "TableFooter": null,
+    "TableHead": null,
+    "TableHeader": null,
+    "TableRow": null,
+    "TabsContent": null,
+    "TabsList": null,
+    "TabsTrigger": null,
+    "ToastAction": null,
+    "ToastClose": null,
+    "ToastDescription": null,
+    "ToastProvider": null,
+    "ToastTitle": null,
+    "ToastViewport": null,
+    "TooltipContent": null,
+    "TooltipProvider": null,
+    "TooltipTrigger": null
+  },
+  "extraFonts": [
+    ".design-sync/fonts/brand-fonts.css"
+  ],
+  "overrides": {
+    "Select": {
+      "cardMode": "single",
+      "primaryStory": "Open"
+    },
+    "Badge": {
+      "cardMode": "column"
+    },
+    "Card": {
+      "cardMode": "column"
+    },
+    "Progress": {
+      "cardMode": "column"
+    },
+    "RadioGroup": {
+      "cardMode": "column"
+    },
+    "ScrollArea": {
+      "cardMode": "column"
+    },
+    "Separator": {
+      "cardMode": "column"
+    },
+    "Switch": {
+      "cardMode": "column"
+    },
+    "Table": {
+      "cardMode": "column"
+    },
+    "Tabs": {
+      "cardMode": "column"
+    },
+    "Textarea": {
+      "cardMode": "column"
+    },
+    "AlertDialog": {
+      "cardMode": "single",
+      "primaryStory": "DeleteStudent"
+    },
+    "Dialog": {
+      "cardMode": "single",
+      "primaryStory": "CreateGroup"
+    },
+    "DropdownMenu": {
+      "cardMode": "single",
+      "primaryStory": "GroupActions"
+    },
+    "Popover": {
+      "cardMode": "single",
+      "primaryStory": "StudentCard"
+    },
+    "Toast": {
+      "cardMode": "single",
+      "primaryStory": "GradePosted"
+    },
+    "Tooltip": {
+      "cardMode": "single",
+      "primaryStory": "IconButton"
+    }
+  },
+  "extraEntries": [
+    "./.design-sync/ds-provider.tsx"
+  ],
+  "readmeHeader": ".design-sync/conventions.md"
+}

@@ -1,0 +1,9 @@
+/* design-sync Tailwind entry: the app's globals.css plus the font variables
+   that next/font injects at runtime (the DS bundle ships the brand fonts). */
+@import "../src/app/globals.css";
+
+:root {
+  --font-manrope: "Manrope Variable";
+  --font-space-grotesk: "Space Grotesk Variable";
+  --font-geist-mono: "Geist Mono";
+}

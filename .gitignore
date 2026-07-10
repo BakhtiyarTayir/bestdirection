@@ -73,3 +73,13 @@ sonlar.md
 sonlar_toliq.md
 lms_server_files/
 lms_server_files.zip
+
+# design-sync (staged scripts, build output, machine state)
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
+
+# local brand source (referenced by .design-sync/NOTES.md), not shipped
+IT School - Brend Kit/
