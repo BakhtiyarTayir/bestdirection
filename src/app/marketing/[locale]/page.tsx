@@ -32,30 +32,30 @@ export default async function MarketingPage({ params }: MarketingPageProps) {
 
   return (
     <div className="min-h-screen bg-white text-[#191211]">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-[#191211]">
+      {/* Header — акцентный красный (фон логотипа) */}
+      <header className="sticky top-0 z-50 bg-[#8C120C] shadow-[0_2px_16px_rgba(25,18,17,0.25)]">
         <div className="mx-auto flex h-[76px] max-w-6xl items-center justify-between px-6">
           <div className="flex items-center gap-3">
             <Image src="/marketing/logo-white.png" alt="" width={521} height={522} className="h-11 w-auto" priority />
             <span className="text-lg font-bold text-white">{t("header.brand")}</span>
           </div>
           <nav className="hidden items-center gap-8 md:flex">
-            <a href="#how" className="rounded-sm text-sm font-semibold text-white/85 hover:text-[#F6B93B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F6B93B]">
+            <a href="#how" className="rounded-sm text-sm font-semibold text-white/85 hover:text-[#F6B93B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
               {t("header.how")}
             </a>
-            <a href="#courses" className="rounded-sm text-sm font-semibold text-white/85 hover:text-[#F6B93B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F6B93B]">
+            <a href="#courses" className="rounded-sm text-sm font-semibold text-white/85 hover:text-[#F6B93B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
               {t("header.courses")}
             </a>
-            <a href="#reviews" className="rounded-sm text-sm font-semibold text-white/85 hover:text-[#F6B93B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F6B93B]">
+            <a href="#reviews" className="rounded-sm text-sm font-semibold text-white/85 hover:text-[#F6B93B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
               {t("header.reviews")}
             </a>
-            <a href="#contacts" className="rounded-sm text-sm font-semibold text-white/85 hover:text-[#F6B93B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F6B93B]">
+            <a href="#contacts" className="rounded-sm text-sm font-semibold text-white/85 hover:text-[#F6B93B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
               {t("header.contacts")}
             </a>
           </nav>
           <a
             href="https://course.uportal.uz"
-            className="rounded-full bg-[#F6B93B] px-5 py-2.5 text-sm font-bold text-[#120d0c] shadow-[0_8px_20px_rgba(246,185,59,0.35)] hover:bg-[#d99a22] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+            className="rounded-full bg-[#F6B93B] px-5 py-2.5 text-sm font-bold text-[#191211] shadow-[0_8px_20px_rgba(25,18,17,0.35)] transition-[transform,box-shadow,background-color] duration-200 motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-95 hover:bg-[#ffc95c] hover:shadow-[0_12px_26px_rgba(25,18,17,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
             {t("header.cta")}
           </a>
@@ -85,13 +85,13 @@ export default async function MarketingPage({ params }: MarketingPageProps) {
             <div className="flex flex-wrap justify-center gap-4">
               <a
                 href="#apply"
-                className="rounded-full bg-[#F6B93B] px-7 py-3.5 text-sm font-bold text-[#120d0c] shadow-[0_8px_20px_rgba(246,185,59,0.35)] hover:bg-[#d99a22] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+                className="rounded-full bg-[#8C120C] px-7 py-3.5 text-sm font-bold text-white shadow-[0_8px_22px_rgba(140,18,12,0.55)] transition-[transform,box-shadow,background-color] duration-200 motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-95 hover:bg-[#a81a12] hover:shadow-[0_14px_30px_rgba(140,18,12,0.65)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
               >
                 {t("hero.ctaPrimary")}
               </a>
               <a
                 href="#how"
-                className="rounded-full border-2 border-white/50 px-7 py-3.5 text-sm font-bold text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+                className="rounded-full border-2 border-white/50 px-7 py-3.5 text-sm font-bold text-white transition-[transform,box-shadow,background-color] duration-200 motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-95 hover:border-[#F6B93B] hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
               >
                 {t("hero.ctaSecondary")}
               </a>
@@ -151,7 +151,7 @@ export default async function MarketingPage({ params }: MarketingPageProps) {
                           <strong className="text-lg">
                             {course.price ? `${priceFormatter.format(course.price)} UZS` : t("courses.priceOnRequest")}
                           </strong>
-                          <Button asChild size="sm" className="bg-[#F6B93B] text-[#120d0c] hover:bg-[#d99a22]">
+                          <Button asChild size="sm" className="bg-[#8C120C] text-white transition-[transform,box-shadow,background-color] duration-200 motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-95 hover:bg-[#a81a12] hover:shadow-[0_8px_18px_rgba(140,18,12,0.5)]">
                             <a href="#apply">{t("courses.applyButton")}</a>
                           </Button>
                         </div>
@@ -201,7 +201,7 @@ export default async function MarketingPage({ params }: MarketingPageProps) {
             <p className="mb-8 text-white/70">{t("cta.subtitle")}</p>
             <a
               href="#apply"
-              className="rounded-full bg-[#F6B93B] px-7 py-3.5 text-sm font-bold text-[#120d0c] shadow-[0_8px_20px_rgba(246,185,59,0.35)] hover:bg-[#d99a22] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+              className="rounded-full bg-[#8C120C] px-7 py-3.5 text-sm font-bold text-white shadow-[0_8px_22px_rgba(140,18,12,0.55)] transition-[transform,box-shadow,background-color] duration-200 motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-95 hover:bg-[#a81a12] hover:shadow-[0_14px_30px_rgba(140,18,12,0.65)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
             >
               {t("cta.button")}
             </a>
