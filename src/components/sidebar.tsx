@@ -103,7 +103,7 @@ export function Sidebar({ role, userName }: SidebarProps) {
     <div className="flex h-full flex-col">
       <div className={cn("flex h-16 items-center gap-2 border-b", collapsed ? "justify-center px-2" : "px-6")}>
         <Image src="/logo.png" alt="" width={490} height={492} className="h-7 w-auto shrink-0" />
-        {!collapsed && <span className="text-lg font-semibold">IT School</span>}
+        {!collapsed && <span className="text-lg font-semibold">IT School official</span>}
       </div>
 
       <nav className={cn("flex-1 space-y-1", collapsed ? "p-2" : "p-4")}>

@@ -19,8 +19,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LMS",
-  description: "LMS Platform",
+  title: "IT School official",
+  description: "IT School official — учебный центр",
 };
 
 export default function RootLayout({

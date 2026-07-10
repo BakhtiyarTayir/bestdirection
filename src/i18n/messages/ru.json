@@ -1056,11 +1056,11 @@
   },
   "marketing": {
     "meta": {
-      "title": "IT School Chirchiq — Учебный центр",
-      "description": "IT School Chirchiq — учебный центр. Онлайн-курсы, наборы и обучение с сертификатом."
+      "title": "IT School official — Учебный центр",
+      "description": "IT School official — учебный центр. Онлайн-курсы, наборы и обучение с сертификатом."
     },
     "header": {
-      "brand": "IT School Chirchiq",
+      "brand": "IT School official",
       "how": "Как это работает",
       "courses": "Курсы",
       "reviews": "Отзывы",
@@ -1070,7 +1070,7 @@
     "hero": {
       "eyebrow": "Учебный центр",
       "title": "Учитесь по-новому вместе с",
-      "titleAccent": "IT School Chirchiq",
+      "titleAccent": "IT School official",
       "subtitle": "Практические онлайн-курсы с преподавателями, домашними заданиями и сертификатом по итогам обучения.",
       "ctaPrimary": "Записаться на курс",
       "ctaSecondary": "Как это работает"
@@ -1129,7 +1129,7 @@
       "button": "Записаться на курс"
     },
     "footer": {
-      "about": "IT School Chirchiq — учебный центр с практическими онлайн-курсами и обучением с сертификатом.",
+      "about": "IT School official — учебный центр с практическими онлайн-курсами и обучением с сертификатом.",
       "coursesTitle": "Курсы",
       "pagesTitle": "Страницы",
       "contactsTitle": "Контакты",
