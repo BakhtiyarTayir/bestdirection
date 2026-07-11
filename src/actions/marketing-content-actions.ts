@@ -15,12 +15,15 @@ import {
   marketingGalleryItemSchema,
   marketingTestimonialSchema,
   marketingTextsSchema,
+  marketingPageSchema,
   type MarketingCourseInput,
   type MarketingReelInput,
   type MarketingGalleryItemInput,
   type MarketingTestimonialInput,
   type MarketingTextsInput,
+  type MarketingPageInput,
 } from "@/validators/marketing";
+import { Prisma } from "@/generated/prisma";
 import ruMessages from "@/i18n/messages/ru.json";
 import uzMessages from "@/i18n/messages/uz.json";
 
@@ -131,6 +134,42 @@ export async function saveMarketingTestimonial(input: MarketingTestimonialInput)
 export async function deleteMarketingTestimonial(id: string) {
   return withAuth(async () => {
     await prisma.marketingTestimonial.delete({ where: { id } });
+    published();
+    return { success: true as const };
+  }, ADMIN);
+}
+
+// ---------- страницы ----------
+
+// Слаги, занятые роутингом (префиксы локалей, служебные пути)
+const RESERVED_PAGE_SLUGS = new Set(["ru", "uz", "api", "marketing", "login", "register"]);
+
+export async function saveMarketingPage(input: MarketingPageInput) {
+  return withAuth(async () => {
+    const parsed = marketingPageSchema.safeParse(input);
+    if (!parsed.success) return { success: false as const, error: "invalidInput" };
+    const { id, contentRu, contentUz, ...data } = parsed.data;
+
+    if (RESERVED_PAGE_SLUGS.has(data.slug)) return { success: false as const, error: "slugTaken" };
+    const clash = await prisma.marketingPage.findUnique({ where: { slug: data.slug } });
+    if (clash && clash.id !== id) return { success: false as const, error: "slugTaken" };
+
+    const jsonData = {
+      ...data,
+      contentRu: contentRu ? (contentRu as Prisma.InputJsonValue) : Prisma.JsonNull,
+      contentUz: contentUz ? (contentUz as Prisma.InputJsonValue) : Prisma.JsonNull,
+    };
+    const row = id
+      ? await prisma.marketingPage.update({ where: { id }, data: jsonData })
+      : await prisma.marketingPage.create({ data: jsonData });
+    published();
+    return { success: true as const, id: row.id };
+  }, ADMIN);
+}
+
+export async function deleteMarketingPage(id: string) {
+  return withAuth(async () => {
+    await prisma.marketingPage.delete({ where: { id } });
     published();
     return { success: true as const };
   }, ADMIN);

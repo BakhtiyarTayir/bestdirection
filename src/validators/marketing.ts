@@ -67,6 +67,44 @@ export const marketingTestimonialSchema = z.object({
 });
 export type MarketingTestimonialInput = z.infer<typeof marketingTestimonialSchema>;
 
+// Editor.js JSON: {blocks: [{type, data}, ...]}
+const editorContent = z
+  .object({
+    time: z.number().optional(),
+    blocks: z.array(z.object({ id: z.string().optional(), type: z.string().max(40), data: z.record(z.string(), z.unknown()) })).max(300),
+    version: z.string().optional(),
+  })
+  .nullable()
+  .optional();
+
+const optionalShort = z
+  .string()
+  .max(300)
+  .transform((v) => v.trim() || null)
+  .nullable()
+  .optional();
+
+export const marketingPageSchema = z.object({
+  id: z.string().optional(),
+  slug: z
+    .string()
+    .min(1)
+    .max(80)
+    .regex(/^[a-z0-9-]+$/, "slugFormat"),
+  titleRu: z.string().trim().min(1).max(200),
+  titleUz: z.string().trim().min(1).max(200),
+  contentRu: editorContent,
+  contentUz: editorContent,
+  seoTitleRu: optionalShort,
+  seoTitleUz: optionalShort,
+  seoDescRu: optionalShort,
+  seoDescUz: optionalShort,
+  showInFooter: z.boolean().default(false),
+  sortOrder,
+  published: z.boolean().default(false),
+});
+export type MarketingPageInput = z.infer<typeof marketingPageSchema>;
+
 export const marketingTextsSchema = z
   .array(
     z.object({

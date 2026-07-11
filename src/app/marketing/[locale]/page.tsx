@@ -2,11 +2,13 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import Image from "next/image";
 import { LeadForm } from "./lead-form";
 import { InstagramReels } from "./instagram-reels";
+import { MarketingHeader, MarketingFooter } from "./marketing-chrome";
 import { Button } from "@/components/ui/button";
 import { instagramProfileUrl } from "@/lib/marketing-reels";
 import {
   getLandingCourses,
   getLandingGallery,
+  getLandingPages,
   getLandingReels,
   getLandingTestimonials,
   getLandingTexts,
@@ -26,12 +28,13 @@ export default async function MarketingPage({ params }: MarketingPageProps) {
 
   // Контент лендинга из БД (редактируется в /admin/landing); пустые таблицы
   // отдают статичные значения по умолчанию
-  const [courses, galleryRows, reelUrls, dbTestimonials, textRows] = await Promise.all([
+  const [courses, galleryRows, reelUrls, dbTestimonials, textRows, pages] = await Promise.all([
     getLandingCourses(),
     getLandingGallery(),
     getLandingReels(),
     getLandingTestimonials(),
     getLandingTexts(),
+    getLandingPages(),
   ]);
   const mt = makeLandingText(textRows, locale, t);
 
@@ -55,6 +58,9 @@ export default async function MarketingPage({ params }: MarketingPageProps) {
     text: isUz ? item.textUz : item.textRu,
   }));
 
+  // У курса есть детальная страница, если опубликована страница с тем же slug
+  const pageSlugs = new Set(pages.map((p) => p.slug));
+
   const dateFormatter = new Intl.DateTimeFormat(isUz ? "uz-UZ" : "ru-RU", {
     day: "numeric",
     month: "long",
@@ -63,35 +69,7 @@ export default async function MarketingPage({ params }: MarketingPageProps) {
 
   return (
     <div className="min-h-screen bg-white text-[#191211]">
-      {/* Header — акцентный красный (фон логотипа) */}
-      <header className="sticky top-0 z-50 bg-[#8C120C] shadow-[0_2px_16px_rgba(25,18,17,0.25)]">
-        <div className="mx-auto flex h-[76px] max-w-6xl items-center justify-between px-6">
-          <div className="flex items-center gap-3">
-            <Image src="/marketing/logo-white.png" alt="" width={521} height={522} className="h-11 w-auto" priority />
-            <span className="text-lg font-bold text-white">{mt("header.brand")}</span>
-          </div>
-          <nav className="hidden items-center gap-8 md:flex">
-            <a href="#how" className="rounded-sm text-sm font-semibold text-white/85 hover:text-[#F6B93B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
-              {mt("header.how")}
-            </a>
-            <a href="#courses" className="rounded-sm text-sm font-semibold text-white/85 hover:text-[#F6B93B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
-              {mt("header.courses")}
-            </a>
-            <a href="#reviews" className="rounded-sm text-sm font-semibold text-white/85 hover:text-[#F6B93B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
-              {mt("header.reviews")}
-            </a>
-            <a href="#contacts" className="rounded-sm text-sm font-semibold text-white/85 hover:text-[#F6B93B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
-              {mt("header.contacts")}
-            </a>
-          </nav>
-          <a
-            href="https://course.uportal.uz"
-            className="rounded-full bg-[#F6B93B] px-5 py-2.5 text-sm font-bold text-[#191211] shadow-[0_8px_20px_rgba(25,18,17,0.35)] transition-[transform,box-shadow,background-color] duration-200 motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-95 hover:bg-[#ffc95c] hover:shadow-[0_12px_26px_rgba(25,18,17,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-          >
-            {mt("header.cta")}
-          </a>
-        </div>
-      </header>
+      <MarketingHeader mt={mt} />
 
       <main>
         {/* Hero */}
@@ -180,11 +158,18 @@ export default async function MarketingPage({ params }: MarketingPageProps) {
                         {intakeNote && <p className="mb-3 text-xs text-[#6f6660]">{intakeNote}</p>}
                         <div className="mt-4 flex items-center justify-between">
                           <strong className="text-lg">
-                            {course.price ? `${priceFormatter.format(course.price)} UZS` : t("courses.priceOnRequest")}
+                            {course.price ? `${priceFormatter.format(course.price)} UZS` : mt("courses.priceOnRequest")}
                           </strong>
-                          <Button asChild size="sm" className="bg-[#8C120C] text-white transition-[transform,box-shadow,background-color] duration-200 motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-95 hover:bg-[#a81a12] hover:shadow-[0_8px_18px_rgba(140,18,12,0.5)]">
-                            <a href="#apply">{mt("courses.applyButton")}</a>
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            {pageSlugs.has(course.slug) && (
+                              <Button asChild size="sm" variant="outline" className="border-[#8C120C] text-[#8C120C] transition-[transform,box-shadow,background-color] duration-200 motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-95 hover:bg-[#8C120C]/5 hover:text-[#8C120C]">
+                              <a href={`${isUz ? "/" : "/ru/"}${course.slug}`}>{mt("courses.detailsButton")}</a>
+                              </Button>
+                            )}
+                            <Button asChild size="sm" className="bg-[#8C120C] text-white transition-[transform,box-shadow,background-color] duration-200 motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-95 hover:bg-[#a81a12] hover:shadow-[0_8px_18px_rgba(140,18,12,0.5)]">
+                              <a href="#apply">{mt("courses.applyButton")}</a>
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -282,51 +267,7 @@ export default async function MarketingPage({ params }: MarketingPageProps) {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer id="contacts" className="scroll-mt-24 bg-[#120d0c] px-6 py-16 text-white/70">
-        <div className="mx-auto max-w-6xl">
-          <div className="grid gap-10 border-b border-white/10 pb-10 md:grid-cols-4">
-            <div>
-              <div className="mb-4 flex items-center gap-3">
-                <Image src="/marketing/logo-white.png" alt="" width={521} height={522} className="h-10 w-auto" />
-                <span className="font-bold text-white">{mt("header.brand")}</span>
-              </div>
-              <p className="text-sm">{mt("footer.about")}</p>
-            </div>
-            <div>
-              <h4 className="mb-4 text-sm font-bold uppercase tracking-wide text-white">{mt("footer.coursesTitle")}</h4>
-              <ul className="space-y-3 text-sm">
-                {courses.map((course) => (
-                  <li key={course.slug}>
-                    <a href="#courses" className="hover:text-white">{course.title}</a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h4 className="mb-4 text-sm font-bold uppercase tracking-wide text-white">{mt("footer.pagesTitle")}</h4>
-              <ul className="space-y-3 text-sm">
-                <li><a href="#how" className="hover:text-white">{mt("header.how")}</a></li>
-                <li><a href="#courses" className="hover:text-white">{mt("header.courses")}</a></li>
-                <li><a href="#gallery" className="hover:text-white">{mt("gallery.eyebrow")}</a></li>
-                <li><a href="#reviews" className="hover:text-white">{mt("header.reviews")}</a></li>
-                <li><a href="https://course.uportal.uz" className="hover:text-white">{mt("footer.loginLink")}</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="mb-4 text-sm font-bold uppercase tracking-wide text-white">{mt("footer.contactsTitle")}</h4>
-              <ul className="space-y-3 text-sm">
-                <li>{mt("footer.address")}</li>
-                <li>{mt("footer.phone")}</li>
-                <li>{mt("footer.email")}</li>
-              </ul>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-6 text-xs">
-            <span>© {new Date().getFullYear()} {mt("header.brand")}. {mt("footer.rights")}</span>
-          </div>
-        </div>
-      </footer>
+      <MarketingFooter mt={mt} courses={courses} pages={pages} isUz={isUz} />
     </div>
   );
 }

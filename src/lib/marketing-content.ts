@@ -152,3 +152,60 @@ export async function findLandingCourse(slug: string): Promise<LandingCourse | u
   const courses = await getLandingCourses();
   return courses.find((c) => c.slug === slug);
 }
+
+// ─── Страницы (uportal.uz/<slug>) ────────────────────────────────────────
+
+/** Блок Editor.js; data зависит от типа блока */
+export interface EditorBlock {
+  id?: string;
+  type: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any;
+}
+
+export interface EditorContent {
+  time?: number;
+  blocks: EditorBlock[];
+  version?: string;
+}
+
+export interface LandingPage {
+  slug: string;
+  titleRu: string;
+  titleUz: string;
+  contentRu: EditorContent | null;
+  contentUz: EditorContent | null;
+  seoTitleRu: string | null;
+  seoTitleUz: string | null;
+  seoDescRu: string | null;
+  seoDescUz: string | null;
+  showInFooter: boolean;
+}
+
+export const getLandingPages = unstable_cache(
+  async (): Promise<LandingPage[]> => {
+    const rows = await prisma.marketingPage.findMany({
+      where: { published: true },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    });
+    return rows.map((r) => ({
+      slug: r.slug,
+      titleRu: r.titleRu,
+      titleUz: r.titleUz,
+      contentRu: (r.contentRu as unknown as EditorContent) ?? null,
+      contentUz: (r.contentUz as unknown as EditorContent) ?? null,
+      seoTitleRu: r.seoTitleRu,
+      seoTitleUz: r.seoTitleUz,
+      seoDescRu: r.seoDescRu,
+      seoDescUz: r.seoDescUz,
+      showInFooter: r.showInFooter,
+    }));
+  },
+  ["landing-pages"],
+  { tags: [MARKETING_TAG] }
+);
+
+export async function findLandingPage(slug: string): Promise<LandingPage | undefined> {
+  const pages = await getLandingPages();
+  return pages.find((p) => p.slug === slug);
+}

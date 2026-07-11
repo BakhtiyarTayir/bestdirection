@@ -1253,6 +1253,27 @@
     "textsUzColumn": "Узбекский",
     "textsSaveAll": "Сохранить изменения ({count})",
     "textsHint": "Ключи вида hero.title соответствуют блокам лендинга. Плейсхолдеры count и date в фигурных скобках должны остаться в тексте без изменений.",
-    "textsEmpty": "Тексты ещё не импортированы — нажмите «Импортировать текущий контент»."
+    "textsEmpty": "Тексты ещё не импортированы — нажмите «Импортировать текущий контент».",
+    "tabPages": "Страницы",
+    "pagesEmpty": "Страниц пока нет. Создайте первую — например, «О нас» или детальную страницу курса.",
+    "pageTitleColumn": "Заголовок",
+    "pageSlugColumn": "Адрес",
+    "pageAdd": "Создать страницу",
+    "pageTitleRu": "Заголовок (рус)",
+    "pageTitleUz": "Заголовок (узб)",
+    "pageSlug": "Slug — адрес страницы (uportal.uz/адрес)",
+    "pageSlugHint": "Только латиница, цифры и дефис. Если slug совпадает со slug курса, на карточке курса появится кнопка «Подробнее».",
+    "pageShowInFooter": "Ссылка в футере",
+    "pageSeoBlock": "SEO (необязательно)",
+    "pageSeoTitleRu": "SEO title (рус)",
+    "pageSeoTitleUz": "SEO title (узб)",
+    "pageSeoDescRu": "SEO description (рус)",
+    "pageSeoDescUz": "SEO description (узб)",
+    "pageContentRuTab": "Контент — русский",
+    "pageContentUzTab": "Контент — узбекский",
+    "pageBack": "К списку страниц",
+    "pageOpen": "Открыть на сайте",
+    "editorLoading": "Редактор загружается…",
+    "pageDraftBadge": "Черновик"
   }
 }

@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,6 +39,7 @@ import {
   deleteMarketingTestimonial,
   saveMarketingTexts,
   seedMarketingContent,
+  deleteMarketingPage,
 } from "@/actions/marketing-content-actions";
 import { Loader2, Pencil, Plus, Trash2, Upload, DownloadCloud } from "lucide-react";
 
@@ -93,17 +95,29 @@ interface TextRow {
   uz: string;
 }
 
+interface PageListRow {
+  id: string;
+  slug: string;
+  titleRu: string;
+  titleUz: string;
+  published: boolean;
+  showInFooter: boolean;
+  sortOrder: number;
+}
+
 interface LandingAdminProps {
   courses: CourseRow[];
   reels: ReelRow[];
   gallery: GalleryRow[];
   testimonials: TestimonialRow[];
   texts: TextRow[];
+  pages: PageListRow[];
+  initialTab?: string;
 }
 
 type ActionResult = { success: true } | { success: false; error: string };
 
-export function LandingAdmin({ courses, reels, gallery, testimonials, texts }: LandingAdminProps) {
+export function LandingAdmin({ courses, reels, gallery, testimonials, texts, pages, initialTab }: LandingAdminProps) {
   const t = useTranslations("landingAdmin");
   const { toast } = useToast();
   const router = useRouter();
@@ -168,9 +182,10 @@ export function LandingAdmin({ courses, reels, gallery, testimonials, texts }: L
         </div>
       )}
 
-      <Tabs defaultValue="courses">
+      <Tabs defaultValue={initialTab === "pages" ? "pages" : "courses"}>
         <TabsList>
           <TabsTrigger value="courses">{t("tabCourses")}</TabsTrigger>
+          <TabsTrigger value="pages">{t("tabPages")}</TabsTrigger>
           <TabsTrigger value="gallery">{t("tabGallery")}</TabsTrigger>
           <TabsTrigger value="reels">{t("tabReels")}</TabsTrigger>
           <TabsTrigger value="testimonials">{t("tabTestimonials")}</TabsTrigger>
@@ -179,6 +194,9 @@ export function LandingAdmin({ courses, reels, gallery, testimonials, texts }: L
 
         <TabsContent value="courses">
           <CoursesTab rows={courses} notify={notify} />
+        </TabsContent>
+        <TabsContent value="pages">
+          <PagesTab rows={pages} notify={notify} />
         </TabsContent>
         <TabsContent value="gallery">
           <GalleryTab rows={gallery} notify={notify} />
@@ -534,6 +552,86 @@ function CourseDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ─── Страницы ────────────────────────────────────────────────────────────
+
+function PagesTab({ rows, notify }: { rows: PageListRow[]; notify: Notify }) {
+  const t = useTranslations("landingAdmin");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const remove = async (id: string) => {
+    setDeletingId(id);
+    notify(await deleteMarketingPage(id), t("deleted"));
+    setDeletingId(null);
+  };
+
+  return (
+    <div className="space-y-4">
+      <Button asChild>
+        <Link href="/admin/landing/pages/new">
+          <Plus className="mr-2 h-4 w-4" />
+          {t("pageAdd")}
+        </Link>
+      </Button>
+
+      {rows.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{t("pagesEmpty")}</p>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t("pageTitleColumn")}</TableHead>
+              <TableHead>{t("pageSlugColumn")}</TableHead>
+              <TableHead>{t("sortOrderField")}</TableHead>
+              <TableHead />
+              <TableHead />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((row) => (
+              <TableRow key={row.id}>
+                <TableCell className="font-medium">
+                  <Link href={`/admin/landing/pages/${row.id}`} className="hover:underline">
+                    {row.titleRu}
+                  </Link>
+                </TableCell>
+                <TableCell className="text-muted-foreground">/{row.slug}</TableCell>
+                <TableCell>{row.sortOrder}</TableCell>
+                <TableCell>
+                  {!row.published && <Badge variant="secondary">{t("pageDraftBadge")}</Badge>}
+                </TableCell>
+                <TableCell>
+                  <div className="flex justify-end gap-2">
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={`/admin/landing/pages/${row.id}`} aria-label={t("save")}>
+                        <Pencil className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={deletingId === row.id}
+                      onClick={() => {
+                        if (window.confirm(t("confirmDelete"))) remove(row.id);
+                      }}
+                      aria-label={t("delete")}
+                    >
+                      {deletingId === row.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </div>
   );
 }
 

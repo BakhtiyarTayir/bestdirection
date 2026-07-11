@@ -5,16 +5,25 @@ import { LandingAdmin } from "./landing-admin";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminLandingPage() {
+interface AdminLandingPageProps {
+  searchParams: Promise<{ tab?: string }>;
+}
+
+export default async function AdminLandingPage({ searchParams }: AdminLandingPageProps) {
   await requireRole(["ADMIN"]);
   const t = await getTranslations("landingAdmin");
+  const { tab } = await searchParams;
 
-  const [courses, reels, gallery, testimonials, texts] = await Promise.all([
+  const [courses, reels, gallery, testimonials, texts, pages] = await Promise.all([
     prisma.marketingCourse.findMany({ orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] }),
     prisma.marketingReel.findMany({ orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] }),
     prisma.marketingGalleryItem.findMany({ orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] }),
     prisma.marketingTestimonial.findMany({ orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] }),
     prisma.marketingText.findMany({ orderBy: { key: "asc" } }),
+    prisma.marketingPage.findMany({
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      select: { id: true, slug: true, titleRu: true, titleUz: true, published: true, showInFooter: true, sortOrder: true },
+    }),
   ]);
 
   return (
@@ -27,6 +36,8 @@ export default async function AdminLandingPage() {
         gallery={gallery}
         testimonials={testimonials}
         texts={texts}
+        pages={pages}
+        initialTab={tab}
       />
     </div>
   );

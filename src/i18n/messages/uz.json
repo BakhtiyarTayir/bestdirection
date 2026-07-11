@@ -1253,6 +1253,27 @@
     "textsUzColumn": "O‘zbekcha",
     "textsSaveAll": "O‘zgarishlarni saqlash ({count})",
     "textsHint": "hero.title kabi kalitlar lending bloklariga mos keladi. Figurali qavsdagi count va date joy tutuvchilari matnda o'zgarishsiz qolishi shart.",
-    "textsEmpty": "Matnlar hali import qilinmagan — «Joriy kontentni import qilish» tugmasini bosing."
+    "textsEmpty": "Matnlar hali import qilinmagan — «Joriy kontentni import qilish» tugmasini bosing.",
+    "tabPages": "Sahifalar",
+    "pagesEmpty": "Hozircha sahifalar yo‘q. Birinchisini yarating — masalan, «Biz haqimizda» yoki kursning batafsil sahifasi.",
+    "pageTitleColumn": "Sarlavha",
+    "pageSlugColumn": "Manzil",
+    "pageAdd": "Sahifa yaratish",
+    "pageTitleRu": "Sarlavha (rus)",
+    "pageTitleUz": "Sarlavha (o‘zb)",
+    "pageSlug": "Slug — sahifa manzili (uportal.uz/manzil)",
+    "pageSlugHint": "Faqat lotin harflari, raqamlar va defis. Slug kurs slug'i bilan bir xil bo‘lsa, kurs kartochkasida «Batafsil» tugmasi paydo bo‘ladi.",
+    "pageShowInFooter": "Futerdagi havola",
+    "pageSeoBlock": "SEO (ixtiyoriy)",
+    "pageSeoTitleRu": "SEO title (rus)",
+    "pageSeoTitleUz": "SEO title (o‘zb)",
+    "pageSeoDescRu": "SEO description (rus)",
+    "pageSeoDescUz": "SEO description (o‘zb)",
+    "pageContentRuTab": "Kontent — ruscha",
+    "pageContentUzTab": "Kontent — o‘zbekcha",
+    "pageBack": "Sahifalar ro‘yxatiga",
+    "pageOpen": "Saytda ochish",
+    "editorLoading": "Muharrir yuklanmoqda…",
+    "pageDraftBadge": "Qoralama"
   }
 }

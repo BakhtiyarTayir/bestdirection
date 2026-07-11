@@ -580,3 +580,25 @@ model MarketingText {
   uz        String
   updatedAt DateTime @updatedAt
 }
+
+// Произвольные страницы лендинга (uportal.uz/<slug>): детальные страницы
+// курсов, «О нас», политика и т.п. Контент — JSON блочного редактора Editor.js.
+model MarketingPage {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  titleRu      String
+  titleUz      String
+  contentRu    Json?
+  contentUz    Json?
+  seoTitleRu   String?
+  seoTitleUz   String?
+  seoDescRu    String?
+  seoDescUz    String?
+  showInFooter Boolean  @default(false)
+  published    Boolean  @default(false)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([published])
+}
