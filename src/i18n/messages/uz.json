@@ -1097,6 +1097,19 @@
       "applyButton": "Yozilish",
       "detailsButton": "Batafsil"
     },
+    "gallery": {
+      "eyebrow": "Galereya",
+      "title": "Robototexnika darslari qanday o‘tadi",
+      "subtitle": "Bolalar o‘z robotlarini yig‘adi, dasturlaydi va sinovdan o‘tkazadi — kursdagi mashg‘ulotlar shunday o‘tadi.",
+      "item1Title": "Robot yig‘ish",
+      "item1Text": "Konstruksiya va mexanizmlarni o‘z qo‘limiz bilan yig‘amiz",
+      "item2Title": "Dasturlash",
+      "item2Text": "Robotni Python kodi bilan jonlantiramiz",
+      "item3Title": "Trassada sinov",
+      "item3Text": "Robot marshrutni qanday bosib o‘tishini tekshiramiz",
+      "item4Title": "Jamoaviy loyihalar",
+      "item4Text": "Jamoada ishlaymiz va loyihalarimizni himoya qilamiz"
+    },
     "stats": {
       "eyebrow": "Markaz yutuqlari",
       "title": "Bizga ishonishadi",

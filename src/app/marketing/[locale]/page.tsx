@@ -24,6 +24,14 @@ export default async function MarketingPage({ params }: MarketingPageProps) {
     role: string;
   }>;
 
+  // Иллюстрации курса робототехники (см. public/marketing/gallery)
+  const galleryItems = [
+    { image: "/marketing/gallery/robotics-build.png", title: t("gallery.item1Title"), text: t("gallery.item1Text") },
+    { image: "/marketing/gallery/robotics-code.png", title: t("gallery.item2Title"), text: t("gallery.item2Text") },
+    { image: "/marketing/gallery/robotics-test.png", title: t("gallery.item3Title"), text: t("gallery.item3Text") },
+    { image: "/marketing/gallery/robotics-team.png", title: t("gallery.item4Title"), text: t("gallery.item4Text") },
+  ];
+
   const dateFormatter = new Intl.DateTimeFormat(isUz ? "uz-UZ" : "ru-RU", {
     day: "numeric",
     month: "long",
@@ -164,6 +172,30 @@ export default async function MarketingPage({ params }: MarketingPageProps) {
           </div>
         </section>
 
+        {/* Robotics gallery */}
+        <section id="gallery" className="scroll-mt-24 py-20">
+          <div className="mx-auto max-w-6xl px-6">
+            <SectionHead eyebrow={t("gallery.eyebrow")} title={t("gallery.title")} subtitle={t("gallery.subtitle")} />
+            <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-4">
+              {galleryItems.map((item) => (
+                <figure key={item.image} className="overflow-hidden rounded-xl bg-white shadow-[0_10px_30px_rgba(25,18,17,0.08)]">
+                  <Image
+                    src={item.image}
+                    alt={item.title}
+                    width={800}
+                    height={600}
+                    className="aspect-[4/3] w-full object-cover"
+                  />
+                  <figcaption className="p-5">
+                    <h3 className="mb-1 text-base font-bold">{item.title}</h3>
+                    <p className="text-sm text-[#6f6660]">{item.text}</p>
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* Reviews + Apply */}
         <section id="reviews" className="scroll-mt-24 py-20">
           <div className="mx-auto grid max-w-6xl gap-7 px-6 md:grid-cols-2">
@@ -235,6 +267,7 @@ export default async function MarketingPage({ params }: MarketingPageProps) {
               <ul className="space-y-3 text-sm">
                 <li><a href="#how" className="hover:text-white">{t("header.how")}</a></li>
                 <li><a href="#courses" className="hover:text-white">{t("header.courses")}</a></li>
+                <li><a href="#gallery" className="hover:text-white">{t("gallery.eyebrow")}</a></li>
                 <li><a href="#reviews" className="hover:text-white">{t("header.reviews")}</a></li>
                 <li><a href="https://course.uportal.uz" className="hover:text-white">{t("footer.loginLink")}</a></li>
               </ul>
