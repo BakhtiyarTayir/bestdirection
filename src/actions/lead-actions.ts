@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { leadLimiter, getClientIp, isWithinRateLimit } from "@/lib/rate-limit";
 import { submitLeadSchema, type SubmitLeadInput } from "@/validators/lead";
-import { findMarketingCourse } from "@/lib/marketing-courses";
+import { findLandingCourse } from "@/lib/marketing-content";
 
 // ---------- submitCourseLead (public, no auth) ----------
 export async function submitCourseLead(input: SubmitLeadInput) {
@@ -28,9 +28,9 @@ export async function submitCourseLead(input: SubmitLeadInput) {
     return { success: false as const, error: "tooManyRequests" };
   }
 
-  // Курсы лендинга статичны (src/lib/marketing-courses.ts) — заявка не
+  // Курсы лендинга (БД, редактируются в /admin/landing) — заявка не
   // привязана к курсам платформы, название курса хранится строкой.
-  const course = findMarketingCourse(courseSlug);
+  const course = await findLandingCourse(courseSlug);
   if (!course) {
     return { success: false as const, error: "courseNotFound" };
   }

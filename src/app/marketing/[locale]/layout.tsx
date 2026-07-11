@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { locales } from "@/i18n/config";
 import { isMarketingHost } from "@/lib/marketing-domain";
+import { getLandingTexts, makeLandingText } from "@/lib/marketing-content";
 import { Toaster } from "@/components/ui/toaster";
 
 export async function generateMetadata({
@@ -14,10 +15,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "marketing" });
+  const mt = makeLandingText(await getLandingTexts(), locale, t);
 
   return {
-    title: t("meta.title"),
-    description: t("meta.description"),
+    title: mt("meta.title"),
+    description: mt("meta.description"),
   };
 }
 
