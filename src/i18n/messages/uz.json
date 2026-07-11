@@ -1110,6 +1110,14 @@
       "item4Title": "Jamoaviy loyihalar",
       "item4Text": "Jamoada ishlaymiz va loyihalarimizni himoya qilamiz"
     },
+    "instagram": {
+      "eyebrow": "Instagram",
+      "title": "Biz Instagramda",
+      "subtitle": "Darslar, o‘quvchilar va maktab hayoti haqidagi reels — hech narsani o‘tkazib yubormaslik uchun obuna bo‘ling.",
+      "follow": "@it_school_official sahifasiga obuna bo‘lish",
+      "prev": "Oldingi video",
+      "next": "Keyingi video"
+    },
     "stats": {
       "eyebrow": "Markaz yutuqlari",
       "title": "Bizga ishonishadi",

@@ -1,8 +1,10 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import Image from "next/image";
 import { LeadForm } from "./lead-form";
+import { InstagramReels } from "./instagram-reels";
 import { Button } from "@/components/ui/button";
 import { marketingCourses } from "@/lib/marketing-courses";
+import { instagramProfileUrl, marketingReels } from "@/lib/marketing-reels";
 
 interface MarketingPageProps {
   params: Promise<{ locale: string }>;
@@ -192,6 +194,24 @@ export default async function MarketingPage({ params }: MarketingPageProps) {
                   </figcaption>
                 </figure>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Instagram reels */}
+        <section id="reels" className="scroll-mt-24 bg-[#f9f3e8] py-20">
+          <div className="mx-auto max-w-6xl px-6">
+            <SectionHead eyebrow={t("instagram.eyebrow")} title={t("instagram.title")} subtitle={t("instagram.subtitle")} />
+            <InstagramReels urls={marketingReels} prevLabel={t("instagram.prev")} nextLabel={t("instagram.next")} />
+            <div className="mt-8 text-center">
+              <a
+                href={instagramProfileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block rounded-full bg-[#8C120C] px-7 py-3.5 text-sm font-bold text-white shadow-[0_8px_22px_rgba(140,18,12,0.55)] transition-[transform,box-shadow,background-color] duration-200 motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-95 hover:bg-[#a81a12] hover:shadow-[0_14px_30px_rgba(140,18,12,0.65)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#191211]"
+              >
+                {t("instagram.follow")}
+              </a>
             </div>
           </div>
         </section>
