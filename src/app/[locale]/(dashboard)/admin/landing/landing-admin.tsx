@@ -152,17 +152,21 @@ export function LandingAdmin({ courses, reels, gallery, testimonials, texts }: L
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <Button variant="outline" onClick={handleSeed} disabled={seeding}>
-          {seeding ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <DownloadCloud className="mr-2 h-4 w-4" />
-          )}
-          {t("seedButton")}
-        </Button>
-        {allEmpty && <p className="text-sm text-muted-foreground">{t("emptyGeneric")}</p>}
-      </div>
+      {/* Кнопка импорта нужна только при первом запуске — когда контент уже
+          в БД, контент-менеджеру она ни к чему */}
+      {allEmpty && (
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="outline" onClick={handleSeed} disabled={seeding}>
+            {seeding ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <DownloadCloud className="mr-2 h-4 w-4" />
+            )}
+            {t("seedButton")}
+          </Button>
+          <p className="text-sm text-muted-foreground">{t("emptyGeneric")}</p>
+        </div>
+      )}
 
       <Tabs defaultValue="courses">
         <TabsList>
