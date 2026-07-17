@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { format } from "date-fns";
 import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -85,7 +86,10 @@ export function CreateSessionDialog({
     try {
       const result = await createAttendanceSession({
         courseId,
-        date,
+        // Send the calendar date as a plain string: a Date object serializes
+        // to a UTC instant and @db.Date truncates it to the previous day
+        // for timezones ahead of UTC.
+        date: format(date, "yyyy-MM-dd"),
         note: note.trim() || undefined,
         groupId: groupId || undefined,
       });
