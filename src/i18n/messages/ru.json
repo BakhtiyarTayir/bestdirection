@@ -84,7 +84,7 @@
     "registerError": "Ошибка регистрации",
     "registerSuccessLoginFailed": "Регистрация успешна, но не удалось войти. Попробуйте войти вручную.",
     "orContinueWith": "или",
-    "loginWithTelegramBot": "Войти через Telegram-бота",
+    "loginWithTelegramBot": "Войти через Telegram",
     "telegramWaitingConfirm": "Подтвердите вход в Telegram…",
     "telegramLoginFailed": "Не удалось войти через Telegram",
     "telegramLoginExpired": "Код входа истёк. Попробуйте ещё раз",

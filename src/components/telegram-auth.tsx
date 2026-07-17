@@ -14,26 +14,9 @@ import {
 
 const POLL_INTERVAL_MS = 2500;
 
-interface TelegramWidgetUser {
-  id: number;
-  first_name?: string;
-  last_name?: string;
-  username?: string;
-  photo_url?: string;
-  auth_date: number;
-  hash: string;
-}
-
-declare global {
-  interface Window {
-    onTelegramAuth?: (user: TelegramWidgetUser) => void;
-  }
-}
-
 export function TelegramAuth() {
   const t = useTranslations("auth");
   const router = useRouter();
-  const widgetRef = useRef<HTMLDivElement>(null);
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const [botUsername, setBotUsername] = useState<string | null>(null);
   const [waiting, setWaiting] = useState(false);
@@ -48,6 +31,7 @@ export function TelegramAuth() {
     });
     return () => {
       isMounted = false;
+      if (pollTimer.current) clearInterval(pollTimer.current);
     };
   }, []);
 
@@ -65,46 +49,8 @@ export function TelegramAuth() {
     [router, t]
   );
 
-  // Официальный Telegram Login Widget
-  useEffect(() => {
-    if (!botUsername || !widgetRef.current) return;
-
-    window.onTelegramAuth = (user) => {
-      const params: Record<string, string> = {
-        id: String(user.id),
-        auth_date: String(user.auth_date),
-        hash: user.hash,
-      };
-      if (user.first_name) params.first_name = user.first_name;
-      if (user.last_name) params.last_name = user.last_name;
-      if (user.username) params.username = user.username;
-      if (user.photo_url) params.photo_url = user.photo_url;
-      void finishSignIn("telegram-widget", params);
-    };
-
-    const script = document.createElement("script");
-    script.src = "https://telegram.org/js/telegram-widget.js?22";
-    script.async = true;
-    script.setAttribute("data-telegram-login", botUsername);
-    script.setAttribute("data-size", "large");
-    script.setAttribute("data-radius", "8");
-    script.setAttribute("data-onauth", "onTelegramAuth(user)");
-    const container = widgetRef.current;
-    container.appendChild(script);
-
-    return () => {
-      container.replaceChildren();
-      delete window.onTelegramAuth;
-    };
-  }, [botUsername, finishSignIn]);
-
-  useEffect(() => {
-    return () => {
-      if (pollTimer.current) clearInterval(pollTimer.current);
-    };
-  }, []);
-
-  // Запасной путь: подтверждение входа в чате с ботом
+  // Вход через бота: одноразовый код подтверждается в чате,
+  // страница опрашивает статус и завершает вход сама.
   const loginViaBot = async () => {
     setError(null);
     setWaiting(true);
@@ -148,12 +94,9 @@ export function TelegramAuth() {
         </div>
       )}
 
-      <div ref={widgetRef} className="flex justify-center" />
-
       <Button
         type="button"
-        variant="outline"
-        className="w-full"
+        className="w-full bg-[#2AABEE] text-white hover:bg-[#229ED9]"
         onClick={loginViaBot}
         disabled={waiting}
       >
