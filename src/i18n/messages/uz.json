@@ -87,7 +87,9 @@
     "loginWithTelegramBot": "Telegram-bot orqali kirish",
     "telegramWaitingConfirm": "Telegramda kirishni tasdiqlang…",
     "telegramLoginFailed": "Telegram orqali kirib bo'lmadi",
-    "telegramLoginExpired": "Kirish kodi eskirdi. Qayta urinib ko'ring"
+    "telegramLoginExpired": "Kirish kodi eskirdi. Qayta urinib ko'ring",
+    "loginWithEmail": "Email va parol orqali kirish",
+    "registerWithEmail": "Email orqali ro'yxatdan o'tish"
   },
   "nav": {
     "dashboard": "Boshqaruv paneli",

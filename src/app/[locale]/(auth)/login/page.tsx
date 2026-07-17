@@ -22,6 +22,7 @@ export default function LoginPage() {
   const locale = useLocale();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showEmailForm, setShowEmailForm] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -77,6 +78,17 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <TelegramAuth />
+          {!showEmailForm && (
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full text-muted-foreground"
+              onClick={() => setShowEmailForm(true)}
+            >
+              {t("loginWithEmail")}
+            </Button>
+          )}
+          {showEmailForm && (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {error && (
               <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
@@ -111,6 +123,7 @@ export default function LoginPage() {
               {loading ? t("loggingIn") : t("login")}
             </Button>
           </form>
+          )}
           <p className="mt-4 text-center text-sm text-muted-foreground">
             {t("noAccount")}{" "}
             <Link href="/register" className="text-primary hover:underline">

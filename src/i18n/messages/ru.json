@@ -87,7 +87,9 @@
     "loginWithTelegramBot": "Войти через Telegram-бота",
     "telegramWaitingConfirm": "Подтвердите вход в Telegram…",
     "telegramLoginFailed": "Не удалось войти через Telegram",
-    "telegramLoginExpired": "Код входа истёк. Попробуйте ещё раз"
+    "telegramLoginExpired": "Код входа истёк. Попробуйте ещё раз",
+    "loginWithEmail": "Войти по email и паролю",
+    "registerWithEmail": "Зарегистрироваться по email"
   },
   "nav": {
     "dashboard": "Дашборд",
