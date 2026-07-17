@@ -76,6 +76,7 @@ export default function LoginPage() {
           <CardDescription>{t("loginSubtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
+          <TelegramAuth />
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {error && (
               <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
@@ -110,7 +111,6 @@ export default function LoginPage() {
               {loading ? t("loggingIn") : t("login")}
             </Button>
           </form>
-          <TelegramAuth />
           <p className="mt-4 text-center text-sm text-muted-foreground">
             {t("noAccount")}{" "}
             <Link href="/register" className="text-primary hover:underline">

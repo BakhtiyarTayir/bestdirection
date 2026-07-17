@@ -141,15 +141,7 @@ export function TelegramAuth() {
   if (!botUsername) return null;
 
   return (
-    <div className="mt-4 space-y-3">
-      <div className="flex items-center gap-3">
-        <div className="h-px flex-1 bg-border" />
-        <span className="text-xs uppercase text-muted-foreground">
-          {t("orContinueWith")}
-        </span>
-        <div className="h-px flex-1 bg-border" />
-      </div>
-
+    <div className="mb-4 space-y-3">
       {error && (
         <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
           {error}
@@ -168,6 +160,14 @@ export function TelegramAuth() {
         <Send className="mr-2 h-4 w-4" />
         {waiting ? t("telegramWaitingConfirm") : t("loginWithTelegramBot")}
       </Button>
+
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs uppercase text-muted-foreground">
+          {t("orContinueWith")}
+        </span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
     </div>
   );
 }
