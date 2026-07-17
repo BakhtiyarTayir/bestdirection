@@ -565,7 +565,8 @@
     "viewAttendance": "Посмотреть посещаемость",
     "manageAttendance": "Управлять посещаемостью",
     "groupOptional": "Группа (необязательно)",
-    "allGroups": "Все группы"
+    "allGroups": "Все группы",
+    "editSession": "Редактировать сессию"
   },
   "users": {
     "title": "Пользователи",

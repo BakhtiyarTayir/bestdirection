@@ -11,7 +11,7 @@ import {
   TableRow,
   TableFooter,
 } from "@/components/ui/table";
-import { Check, X, Clock, AlertCircle } from "lucide-react";
+import { Check, X, Clock, AlertCircle, Pencil } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { AttendanceStatus } from "@/validators/attendance";
 
@@ -132,10 +132,12 @@ export function AttendanceGrid({
               <TableHead key={session.id} className="text-center min-w-[80px]">
                 <Link
                   href={`/courses/${courseSlug}/attendance/${session.id}`}
-                  className="hover:underline font-medium"
-                  title={session.note ?? undefined}
+                  className="inline-flex items-center gap-1 rounded-md border bg-background px-2 py-1 font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+                  title={session.note ?? t("editSession")}
                 >
                   {formatShortDate(session.date)}
+                  <Pencil className="h-3 w-3 text-muted-foreground" />
+                  <span className="sr-only">{t("editSession")}</span>
                 </Link>
               </TableHead>
             ))}

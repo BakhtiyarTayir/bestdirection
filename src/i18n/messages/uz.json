@@ -565,7 +565,8 @@
     "viewAttendance": "Davomatni ko'rish",
     "manageAttendance": "Davomatni boshqarish",
     "groupOptional": "Guruh (ixtiyoriy)",
-    "allGroups": "Barcha guruhlar"
+    "allGroups": "Barcha guruhlar",
+    "editSession": "Sessiyani tahrirlash"
   },
   "users": {
     "title": "Foydalanuvchilar",
