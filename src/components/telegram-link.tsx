@@ -11,11 +11,11 @@ import {
   unlinkTelegram,
 } from "@/actions/telegram-actions";
 import { MessageCircle, Link2, Unlink, Loader2 } from "lucide-react";
-
-const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
+import { getTelegramBotUsername } from "@/actions/telegram-auth-actions";
 
 export function TelegramLink() {
   const { toast } = useToast();
+  const [botUsername, setBotUsername] = useState<string | null>(null);
   const [isLinked, setIsLinked] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -23,6 +23,12 @@ export function TelegramLink() {
 
   useEffect(() => {
     let isMounted = true;
+
+    void getTelegramBotUsername().then((result) => {
+      if (isMounted && result.data.username) {
+        setBotUsername(result.data.username);
+      }
+    });
 
     void (async () => {
       const result = await getTelegramStatus();
@@ -44,7 +50,7 @@ export function TelegramLink() {
     setIsLinking(true);
     const result = await generateTelegramLinkCode();
     if (result.success && result.data) {
-      const botUrl = `https://t.me/${BOT_USERNAME}?start=${result.data.code}`;
+      const botUrl = `https://t.me/${botUsername}?start=${result.data.code}`;
       window.open(botUrl, "_blank");
       toast({
         title: "Откройте Telegram",
@@ -123,7 +129,7 @@ export function TelegramLink() {
               variant="outline"
               size="sm"
               onClick={handleLink}
-              disabled={isLinking || !BOT_USERNAME}
+              disabled={isLinking || !botUsername}
             >
               {isLinking ? (
                 <Loader2 className="h-4 w-4 mr-1 animate-spin" />

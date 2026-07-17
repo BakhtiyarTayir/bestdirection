@@ -70,8 +70,8 @@ enum ManualReviewStatus {
 
 model User {
   id           String    @id @default(cuid())
-  email        String    @unique
-  passwordHash String
+  email        String?   @unique
+  passwordHash String?
   firstName    String
   lastName     String
   phone        String?
@@ -226,6 +226,21 @@ model Lesson {
   @@index([courseId])
   @@index([sortOrder])
   @@index([deletedAt])
+}
+
+// Одноразовая заявка на вход через Telegram-бота (deep-link t.me/bot?start=login_<code>)
+model TelegramAuthRequest {
+  id               String   @id @default(cuid())
+  code             String   @unique
+  status           String   @default("PENDING") // PENDING | CONFIRMED
+  telegramChatId   String?
+  telegramUsername String?
+  firstName        String?
+  lastName         String?
+  createdAt        DateTime @default(now())
+  expiresAt        DateTime
+
+  @@index([expiresAt])
 }
 
 model AttendanceSession {

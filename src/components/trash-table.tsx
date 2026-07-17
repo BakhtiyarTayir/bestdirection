@@ -29,7 +29,7 @@ import { useTranslations } from "next-intl";
 interface TrashItem {
   id: string;
   title?: string;
-  email?: string;
+  email?: string | null;
   firstName?: string;
   lastName?: string;
   deletedAt: Date | null;

@@ -28,7 +28,7 @@ export default async function EditCoursePage({ params }: EditCoursePageProps) {
     notFound();
   }
 
-  let teachers: { id: string; firstName: string; lastName: string; email: string }[] = [];
+  let teachers: { id: string; firstName: string; lastName: string; email: string | null }[] = [];
 
   if (role === "ADMIN") {
     const usersResult = await getUsers();

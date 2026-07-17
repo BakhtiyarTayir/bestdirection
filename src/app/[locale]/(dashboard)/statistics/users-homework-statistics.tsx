@@ -30,7 +30,7 @@ interface UsersHomeworkStatisticsProps {
   rows: {
     studentId: string;
     fullName: string;
-    email: string;
+    email: string | null;
     isActive: boolean;
     isOnlineNow: boolean;
     groupId: string | null;

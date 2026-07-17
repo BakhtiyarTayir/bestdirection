@@ -18,7 +18,7 @@ async function NewCoursePageAsync({ t }: { t: ReturnType<typeof useTranslations<
   const role = session.user.role;
   const userId = session.user.id;
 
-  let teachers: { id: string; firstName: string; lastName: string; email: string }[] = [];
+  let teachers: { id: string; firstName: string; lastName: string; email: string | null }[] = [];
 
   if (role === "ADMIN") {
     const result = await getUsers();

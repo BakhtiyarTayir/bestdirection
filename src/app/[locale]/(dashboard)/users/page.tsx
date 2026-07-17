@@ -22,7 +22,7 @@ async function UsersPageContent({
   users,
   canManageUsers,
 }: {
-  users: Array<{ id: string; firstName: string; lastName: string; email: string; role: string; isActive: boolean }>;
+  users: Array<{ id: string; firstName: string; lastName: string; email: string | null; role: string; isActive: boolean }>;
   canManageUsers: boolean;
 }) {
   const t = await getTranslations("users");

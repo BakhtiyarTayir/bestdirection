@@ -42,7 +42,7 @@ interface AttemptDetailRowProps {
     isPassed: boolean;
     startedAt: string;
     studentName: string;
-    studentEmail: string;
+    studentEmail: string | null;
     answers: AttemptAnswer[];
   };
   colSpan: number;

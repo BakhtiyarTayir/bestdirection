@@ -102,10 +102,12 @@ export function getBot(): Bot {
 function createBot(token: string): Bot {
   const bot = new Bot(token);
 
-  // /start — link account or welcome
+  // /start — link account, confirm site login, or welcome
   bot.command("start", async (ctx) => {
     const linkCode = ctx.match;
-    if (linkCode) {
+    if (linkCode && linkCode.startsWith("login_")) {
+      await handleLoginRequest(ctx, linkCode.slice("login_".length));
+    } else if (linkCode) {
       await handleLinkAccount(ctx, linkCode);
     } else {
       const user = await findUserByChatId(String(ctx.chat.id));
@@ -375,6 +377,11 @@ function createBot(token: string): Bot {
     const data = ctx.callbackQuery.data;
     if (!ctx.chat) return;
 
+    if (data.startsWith("tglogin:")) {
+      await handleLoginConfirm(ctx, data.slice("tglogin:".length));
+      return;
+    }
+
     const isSubmit = data.startsWith("submit:");
     const isFileUpload = data.startsWith("fileupload:");
     if (!isSubmit && !isFileUpload) return;
@@ -408,6 +415,60 @@ function createBot(token: string): Bot {
   });
 
   return bot;
+}
+
+async function findValidLoginRequest(code: string) {
+  if (!/^[0-9a-f]{32}$/.test(code)) return null;
+  const request = await prisma.telegramAuthRequest.findUnique({
+    where: { code },
+  });
+  if (!request || request.expiresAt < new Date()) return null;
+  return request;
+}
+
+async function handleLoginRequest(ctx: Context, code: string) {
+  if (!ctx.chat) return;
+
+  const request = await findValidLoginRequest(code);
+  if (!request) {
+    await ctx.reply("Код входа не найден или истёк. Вернитесь на сайт и попробуйте снова.");
+    return;
+  }
+
+  const keyboard = new InlineKeyboard().text(
+    "✅ Подтвердить вход",
+    `tglogin:${code}`
+  );
+  await ctx.reply(
+    "Вход на сайт учебного центра.\n\n" +
+      "Если это вы нажали «Войти через Telegram» на сайте — подтвердите вход. " +
+      "Если нет — просто проигнорируйте это сообщение.",
+    { reply_markup: keyboard }
+  );
+}
+
+async function handleLoginConfirm(ctx: Context, code: string) {
+  if (!ctx.chat || !ctx.from) return;
+
+  const request = await findValidLoginRequest(code);
+  if (!request || request.status !== "PENDING") {
+    await ctx.answerCallbackQuery({ text: "Код входа не найден или истёк." });
+    return;
+  }
+
+  await prisma.telegramAuthRequest.update({
+    where: { id: request.id },
+    data: {
+      status: "CONFIRMED",
+      telegramChatId: String(ctx.chat.id),
+      telegramUsername: ctx.from.username || null,
+      firstName: ctx.from.first_name || null,
+      lastName: ctx.from.last_name || null,
+    },
+  });
+
+  await ctx.answerCallbackQuery({ text: "Вход подтверждён" });
+  await ctx.reply("Вход подтверждён ✅ Вернитесь на сайт — вы будете авторизованы автоматически.");
 }
 
 async function handleLinkAccount(ctx: Context, linkCode: string) {

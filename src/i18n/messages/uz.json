@@ -82,7 +82,12 @@
     "invalidCredentials": "Email yoki parol noto'g'ri",
     "emailAlreadyExists": "Bunday emailli foydalanuvchi allaqachon mavjud",
     "registerError": "Ro'yxatdan o'tishda xatolik",
-    "registerSuccessLoginFailed": "Ro'yxatdan o'tish muvaffaqiyatli, lekin kirib bo'lmadi. Qo'lda kirishga urinib ko'ring."
+    "registerSuccessLoginFailed": "Ro'yxatdan o'tish muvaffaqiyatli, lekin kirib bo'lmadi. Qo'lda kirishga urinib ko'ring.",
+    "orContinueWith": "yoki",
+    "loginWithTelegramBot": "Telegram-bot orqali kirish",
+    "telegramWaitingConfirm": "Telegramda kirishni tasdiqlang…",
+    "telegramLoginFailed": "Telegram orqali kirib bo'lmadi",
+    "telegramLoginExpired": "Kirish kodi eskirdi. Qayta urinib ko'ring"
   },
   "nav": {
     "dashboard": "Boshqaruv paneli",

@@ -82,7 +82,12 @@
     "invalidCredentials": "Неверный email или пароль",
     "emailAlreadyExists": "Пользователь с таким email уже существует",
     "registerError": "Ошибка регистрации",
-    "registerSuccessLoginFailed": "Регистрация успешна, но не удалось войти. Попробуйте войти вручную."
+    "registerSuccessLoginFailed": "Регистрация успешна, но не удалось войти. Попробуйте войти вручную.",
+    "orContinueWith": "или",
+    "loginWithTelegramBot": "Войти через Telegram-бота",
+    "telegramWaitingConfirm": "Подтвердите вход в Telegram…",
+    "telegramLoginFailed": "Не удалось войти через Telegram",
+    "telegramLoginExpired": "Код входа истёк. Попробуйте ещё раз"
   },
   "nav": {
     "dashboard": "Дашборд",

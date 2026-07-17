@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { TelegramAuth } from "@/components/telegram-auth";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -149,6 +150,7 @@ export default function RegisterPage() {
               {loading ? t("registering") : t("register")}
             </Button>
           </form>
+          <TelegramAuth />
           <p className="mt-4 text-center text-sm text-muted-foreground">
             {t("hasAccount")}{" "}
             <Link href="/login" className="text-primary hover:underline">

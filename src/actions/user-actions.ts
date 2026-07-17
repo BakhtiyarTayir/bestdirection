@@ -550,9 +550,12 @@ export async function changePassword(data: {
 
     if (!user) return { success: false, error: "User not found" };
 
-    const isValid = await bcrypt.compare(data.currentPassword, user.passwordHash);
-    if (!isValid) {
-      return { success: false, error: "Current password is incorrect" };
+    // У Telegram-аккаунтов пароля может не быть — тогда разрешаем задать его сразу
+    if (user.passwordHash) {
+      const isValid = await bcrypt.compare(data.currentPassword, user.passwordHash);
+      if (!isValid) {
+        return { success: false, error: "Current password is incorrect" };
+      }
     }
 
     const passwordHash = await bcrypt.hash(data.newPassword, 10);

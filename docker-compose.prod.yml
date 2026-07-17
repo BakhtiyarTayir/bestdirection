@@ -29,6 +29,9 @@ services:
       NEXTAUTH_URL: ${NEXTAUTH_URL:-https://course.uportal.uz}
       AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-true}
       MARKETING_DOMAIN: ${MARKETING_DOMAIN:-uportal.uz}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+      NEXT_PUBLIC_TELEGRAM_BOT_USERNAME: ${NEXT_PUBLIC_TELEGRAM_BOT_USERNAME:-}
     volumes:
       - uploads:/app/public/uploads
     depends_on:
