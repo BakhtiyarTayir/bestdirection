@@ -103,7 +103,7 @@ export function Sidebar({ role, userName }: SidebarProps) {
 
   const sidebarContent = (
     <div className="flex h-full flex-col">
-      <div className={cn("flex h-16 items-center gap-2 border-b", collapsed ? "justify-center px-2" : "px-6")}>
+      <div className={cn("flex items-center gap-2 border-b py-5", collapsed ? "justify-center px-2" : "px-6")}>
         <Image src="/logo.png" alt="" width={490} height={492} className="h-7 w-auto shrink-0" />
         {!collapsed && <span className="text-lg font-semibold">IT School official</span>}
       </div>
