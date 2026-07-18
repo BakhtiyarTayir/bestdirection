@@ -6,6 +6,7 @@ import { withAuth } from "@/lib/action-utils";
 import { executeCode } from "@/lib/code-runner/executor";
 import { detectLanguageFromExtension } from "@/lib/code-runner/config";
 import { ManualReviewStatus } from "@/generated/prisma";
+import { createAuditLog, computeChanges } from "@/lib/audit";
 
 // ---------- reviewSubmission ----------
 export async function reviewSubmission(
@@ -53,6 +54,29 @@ export async function reviewSubmission(
           manualScore: data.manualScore ?? null,
           reviewedById: session.user.id,
           reviewedAt: new Date(),
+        },
+      });
+
+      await createAuditLog({
+        userId: session.user.id,
+        entityType: "Submission",
+        entityId: submissionId,
+        action: "UPDATE",
+        changes: computeChanges(
+          {
+            manualStatus: submission.manualStatus,
+            manualScore: submission.manualScore,
+            teacherComment: submission.teacherComment,
+          },
+          {
+            manualStatus: updated.manualStatus,
+            manualScore: updated.manualScore,
+            teacherComment: updated.teacherComment,
+          }
+        ),
+        metadata: {
+          studentId: submission.studentId,
+          homeworkId: submission.homeworkId,
         },
       });
 

@@ -83,3 +83,14 @@ ds-bundle/
 
 # local brand source (referenced by .design-sync/NOTES.md), not shipped
 IT School - Brend Kit/
+
+# migration backups
+/backups/
+
+# local artifacts: DB dumps, exports, design sources
+*.dump
+/export*.csv
+/export*.json
+/*.zip
+/design/
+/favicon*.png

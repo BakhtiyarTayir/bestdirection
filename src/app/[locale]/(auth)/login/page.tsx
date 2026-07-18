@@ -55,7 +55,11 @@ export default function LoginPage() {
     });
 
     if (result?.error) {
-      setError(t("invalidCredentials"));
+      setError(
+        result.code === "too_many_attempts"
+          ? t("tooManyLoginAttempts")
+          : t("invalidCredentials")
+      );
       setLoading(false);
       return;
     }

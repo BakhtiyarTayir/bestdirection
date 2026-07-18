@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
-import { revalidatePath } from "next/cache";
+import { revalidateLocalized } from "@/lib/revalidate";
 import { createAuditLog, computeChanges } from "@/lib/audit";
 import type { QuestionType, AssessmentType } from "@/validators/assessment";
 
@@ -185,7 +185,7 @@ export async function createAssessment(data: {
         metadata: { title: assessment.title, type: assessment.type, courseId: data.courseId },
       });
 
-      revalidatePath(`/courses/${data.courseId}`);
+      revalidateLocalized(`/courses/${data.courseId}`);
       return { success: true, data: assessment };
     },
     { roles: ["ADMIN", "TEACHER"] }
@@ -245,7 +245,7 @@ export async function updateAssessment(
         });
       }
 
-      revalidatePath(`/courses/${existing.course.id}`);
+      revalidateLocalized(`/courses/${existing.course.id}`);
       return { success: true, data: assessment };
     },
     { roles: ["ADMIN", "TEACHER"] }
@@ -277,7 +277,7 @@ export async function deleteAssessment(id: string) {
         metadata: { title: existing.title, type: existing.type, courseId: existing.course.id },
       });
 
-      revalidatePath(`/courses/${existing.course.id}`);
+      revalidateLocalized(`/courses/${existing.course.id}`);
       return { success: true };
     },
     { roles: ["ADMIN", "TEACHER"] }
@@ -326,7 +326,7 @@ export async function addAssessmentQuestion(data: {
         },
       });
 
-      revalidatePath(`/courses/${assessment.course.id}`);
+      revalidateLocalized(`/courses/${assessment.course.id}`);
       return { success: true, data: question };
     },
     { roles: ["ADMIN", "TEACHER"] }
@@ -387,7 +387,7 @@ export async function updateAssessmentQuestion(
         return updatedQuestion;
       });
 
-      revalidatePath(`/courses/${existing.assessment.course.id}`);
+      revalidateLocalized(`/courses/${existing.assessment.course.id}`);
       return { success: true, data: question };
     },
     { roles: ["ADMIN", "TEACHER"] }
@@ -415,7 +415,7 @@ export async function deleteAssessmentQuestion(id: string) {
 
       await prisma.assessmentQuestion.delete({ where: { id } });
 
-      revalidatePath(`/courses/${existing.assessment.course.id}`);
+      revalidateLocalized(`/courses/${existing.assessment.course.id}`);
       return { success: true };
     },
     { roles: ["ADMIN", "TEACHER"] }
@@ -609,7 +609,7 @@ export async function submitAssessmentAttempt(data: {
       throw error;
     }
 
-    revalidatePath(`/courses/${assessment.courseId}`);
+    revalidateLocalized(`/courses/${assessment.courseId}`);
     return { success: true, data: attempt };
   });
 }

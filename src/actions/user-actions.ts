@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
-import { revalidatePath } from "next/cache";
+import { revalidateLocalized } from "@/lib/revalidate";
 import { createAuditLog, computeChanges } from "@/lib/audit";
 import bcrypt from "bcryptjs";
 import type { Role } from "@/validators/user";
@@ -402,7 +402,7 @@ export async function createUser(data: {
         metadata: { email: user.email, role: user.role },
       });
 
-      revalidatePath("/dashboard/users");
+      revalidateLocalized("/users");
       return { success: true, data: user };
     },
     { roles: ["ADMIN"] }
@@ -473,8 +473,8 @@ export async function updateUser(
         });
       }
 
-      revalidatePath("/dashboard/users");
-      revalidatePath(`/dashboard/users/${id}`);
+      revalidateLocalized("/users");
+      revalidateLocalized(`/dashboard/users/${id}`);
       return { success: true, data: user };
     },
     { roles: ["ADMIN"] }
@@ -502,7 +502,7 @@ export async function deleteUser(id: string) {
         metadata: { softDelete: true },
       });
 
-      revalidatePath("/dashboard/users");
+      revalidateLocalized("/users");
       return { success: true };
     },
     { roles: ["ADMIN"] }
@@ -533,7 +533,7 @@ export async function updateProfile(data: {
       },
     });
 
-    revalidatePath("/dashboard/profile");
+    revalidateLocalized("/profile");
     return { success: true, data: user };
   });
 }

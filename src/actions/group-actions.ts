@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
-import { revalidatePath } from "next/cache";
+import { revalidateLocalized } from "@/lib/revalidate";
 import { createAuditLog, computeChanges } from "@/lib/audit";
 import type { CreateGroupInput, UpdateGroupInput } from "@/validators/group";
 
@@ -100,7 +100,7 @@ export async function createGroup(courseId: string, data: CreateGroupInput) {
         metadata: { groupName: group.name, courseId },
       });
 
-      revalidatePath(`/courses/${courseId}/groups`);
+      revalidateLocalized(`/courses/${courseId}/groups`);
       return { success: true as const, data: group };
     },
     { roles: ["ADMIN", "TEACHER"] }
@@ -147,7 +147,7 @@ export async function updateGroup(groupId: string, data: UpdateGroupInput) {
         changes,
       });
 
-      revalidatePath(`/courses/${group.courseId}/groups`);
+      revalidateLocalized(`/courses/${group.courseId}/groups`);
       return { success: true as const, data: updated };
     },
     { roles: ["ADMIN", "TEACHER"] }
@@ -187,7 +187,7 @@ export async function deleteGroup(groupId: string) {
         metadata: { groupName: group.name, courseId: group.courseId },
       });
 
-      revalidatePath(`/courses/${group.courseId}/groups`);
+      revalidateLocalized(`/courses/${group.courseId}/groups`);
       return { success: true as const, data: { id: groupId } };
     },
     { roles: ["ADMIN", "TEACHER"] }
@@ -216,7 +216,7 @@ export async function toggleGroupActive(groupId: string) {
         data: { isActive: !group.isActive },
       });
 
-      revalidatePath(`/courses/${group.courseId}/groups`);
+      revalidateLocalized(`/courses/${group.courseId}/groups`);
       return { success: true as const, data: updated };
     },
     { roles: ["ADMIN", "TEACHER"] }
@@ -258,7 +258,7 @@ export async function addStudentsToGroup(groupId: string, studentIds: string[]) 
         }
       }
 
-      revalidatePath(`/courses/${group.courseId}/groups`);
+      revalidateLocalized(`/courses/${group.courseId}/groups`);
       return { success: true as const, data: { added: studentIds.length } };
     },
     { roles: ["ADMIN", "TEACHER"] }
@@ -287,7 +287,7 @@ export async function removeStudentFromGroup(groupId: string, studentId: string)
         data: { groupId: null },
       });
 
-      revalidatePath(`/courses/${group.courseId}/groups`);
+      revalidateLocalized(`/courses/${group.courseId}/groups`);
       return { success: true as const, data: { studentId } };
     },
     { roles: ["ADMIN", "TEACHER"] }
@@ -320,7 +320,7 @@ export async function moveStudentToGroup(
         data: { groupId: toGroupId },
       });
 
-      revalidatePath(`/courses/${courseId}/groups`);
+      revalidateLocalized(`/courses/${courseId}/groups`);
       return { success: true as const, data: { studentId, toGroupId } };
     },
     { roles: ["ADMIN", "TEACHER"] }

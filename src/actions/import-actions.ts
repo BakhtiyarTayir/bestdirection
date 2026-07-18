@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
-import { revalidatePath } from "next/cache";
+import { revalidateLocalized } from "@/lib/revalidate";
 import { bufferToData, jsonToData, validateSpreadsheetData } from "@/lib/spreadsheet-utils";
 import { generateUniqueSlug, slugify } from "@/lib/slugify";
 import type { QuestionType } from "@/validators/assessment";
@@ -89,7 +89,7 @@ export async function importTestFromFile(formData: FormData) {
         },
       });
 
-      revalidatePath(`/courses/${lesson.course.id}`);
+      revalidateLocalized(`/courses/${lesson.course.id}`);
       return { success: true, data: assessment };
     },
     { roles: ["ADMIN", "TEACHER"] }
@@ -170,7 +170,7 @@ export async function importExamFromFile(formData: FormData) {
         },
       });
 
-      revalidatePath(`/courses/${courseId}`);
+      revalidateLocalized(`/courses/${courseId}`);
       return { success: true, data: assessment };
     },
     { roles: ["ADMIN", "TEACHER"] }
@@ -403,7 +403,7 @@ export async function importHomeworkFromFile(formData: FormData) {
         return { success: false, error: "homeworkImportEmpty" };
       }
 
-      revalidatePath(`/courses/${lesson.course.id}`);
+      revalidateLocalized(`/courses/${lesson.course.id}`);
 
       return { success: true, data: { count: createdCount } };
     },

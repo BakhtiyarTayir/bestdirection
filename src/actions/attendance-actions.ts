@@ -2,7 +2,8 @@
 
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
-import { revalidatePath } from "next/cache";
+import { revalidateLocalized } from "@/lib/revalidate";
+import { createAuditLog } from "@/lib/audit";
 import type { AttendanceStatus } from "@/validators/attendance";
 
 async function revalidateCourseAttendance(courseId: string) {
@@ -11,7 +12,7 @@ async function revalidateCourseAttendance(courseId: string) {
     select: { slug: true },
   });
   if (course) {
-    revalidatePath(`/courses/${course.slug}/attendance`);
+    revalidateLocalized(`/courses/${course.slug}/attendance`);
   }
 }
 
@@ -68,6 +69,14 @@ export async function createAttendanceSession(data: {
             note: data.note,
             groupId: data.groupId || null,
           },
+        });
+
+        await createAuditLog({
+          userId: session.user.id,
+          entityType: "AttendanceSession",
+          entityId: attendanceSession.id,
+          action: "CREATE",
+          metadata: { courseId: data.courseId, date: String(data.date) },
         });
 
         await revalidateCourseAttendance(data.courseId);
@@ -132,6 +141,20 @@ export async function updateAttendanceRecords(data: {
           })
         )
       );
+
+      await createAuditLog({
+        userId: session.user.id,
+        entityType: "AttendanceSession",
+        entityId: data.sessionId,
+        action: "UPDATE",
+        metadata: {
+          courseId: attendanceSession.course.id,
+          records: data.records.map((r) => ({
+            studentId: r.studentId,
+            status: r.status,
+          })),
+        },
+      });
 
       await revalidateCourseAttendance(attendanceSession.course.id);
       return { success: true };
@@ -283,6 +306,17 @@ export async function deleteAttendanceSession(id: string) {
       }
 
       await prisma.attendanceSession.delete({ where: { id } });
+
+      await createAuditLog({
+        userId: session.user.id,
+        entityType: "AttendanceSession",
+        entityId: id,
+        action: "DELETE",
+        metadata: {
+          courseId: existing.course.id,
+          date: existing.date.toISOString(),
+        },
+      });
 
       await revalidateCourseAttendance(existing.course.id);
       return { success: true };

@@ -16,6 +16,36 @@ async function getClientIpFromHeaders(): Promise<string> {
 }
 
 /**
+ * Только проверка, без записи попытки: true — лимит превышен.
+ * Для сценария «считаем лишь неудачные попытки» (см. recordFailedAttempt).
+ */
+export async function isActionRateLimited(
+  bucket: string,
+  limit: number,
+  windowMs = 60_000
+): Promise<boolean> {
+  const ip = await getClientIpFromHeaders();
+  const key = `${bucket}:${ip}`;
+  const now = Date.now();
+  const timestamps = (buckets.get(key) ?? []).filter((t) => now - t < windowMs);
+  buckets.set(key, timestamps);
+  return timestamps.length >= limit;
+}
+
+/** Записывает неудачную попытку в счётчик bucket. */
+export async function recordFailedAttempt(
+  bucket: string,
+  windowMs = 60_000
+): Promise<void> {
+  const ip = await getClientIpFromHeaders();
+  const key = `${bucket}:${ip}`;
+  const now = Date.now();
+  const timestamps = (buckets.get(key) ?? []).filter((t) => now - t < windowMs);
+  timestamps.push(now);
+  buckets.set(key, timestamps);
+}
+
+/**
  * true — запрос в пределах лимита; false — превышен.
  * bucket разделяет счётчики разных actions.
  */

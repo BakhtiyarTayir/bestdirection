@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
 import { createAuditLog } from "@/lib/audit";
-import { revalidatePath } from "next/cache";
+import { revalidateLocalized } from "@/lib/revalidate";
 import { slugify, generateUniqueSlug } from "@/lib/slugify";
 
 // ---------- copyCourse ----------
@@ -193,7 +193,7 @@ export async function copyCourse(
         },
       });
 
-      revalidatePath("/courses");
+      revalidateLocalized("/courses");
       return {
         success: true as const,
         data: { id: newCourse.id, title: newCourse.title, slug: newCourse.slug },

@@ -1,4 +1,4 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
@@ -6,6 +6,18 @@ import {
   findOrCreateTelegramUser,
   verifyTelegramWidgetPayload,
 } from "./telegram/login";
+import {
+  isActionRateLimited,
+  recordFailedAttempt,
+} from "./action-rate-limit";
+
+const LOGIN_ATTEMPT_LIMIT = 5;
+const LOGIN_ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
+
+// Прокидывается на клиент как result.code при signIn(redirect: false)
+class TooManyLoginAttempts extends CredentialsSignin {
+  code = "too_many_attempts";
+}
 
 const WIDGET_FIELDS = [
   "id",
@@ -27,18 +39,36 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
+        const email = (credentials.email as string).trim().toLowerCase();
+        const limitBucket = `login:${email}`;
+
+        // 5 неудачных попыток за 15 минут с одного IP по одному email
+        if (
+          await isActionRateLimited(
+            limitBucket,
+            LOGIN_ATTEMPT_LIMIT,
+            LOGIN_ATTEMPT_WINDOW_MS
+          )
+        ) {
+          throw new TooManyLoginAttempts();
+        }
+
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
+          where: { email },
         });
 
-        if (!user || !user.isActive || !user.passwordHash) return null;
+        const isValid =
+          !!user?.isActive &&
+          !!user.passwordHash &&
+          (await bcrypt.compare(
+            credentials.password as string,
+            user.passwordHash
+          ));
 
-        const isValid = await bcrypt.compare(
-          credentials.password as string,
-          user.passwordHash
-        );
-
-        if (!isValid) return null;
+        if (!user || !isValid) {
+          await recordFailedAttempt(limitBucket, LOGIN_ATTEMPT_WINDOW_MS);
+          return null;
+        }
 
         return {
           id: user.id,

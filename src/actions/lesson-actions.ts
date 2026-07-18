@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
-import { revalidatePath } from "next/cache";
+import { revalidateLocalized } from "@/lib/revalidate";
 import { createAuditLog, computeChanges } from "@/lib/audit";
 import { slugify, generateUniqueSlug } from "@/lib/slugify";
 import type { VideoSource } from "@/validators/lesson";
@@ -125,7 +125,7 @@ export async function createLesson(data: {
         metadata: { title: lesson.title, courseId: data.courseId },
       });
 
-      revalidatePath(`/dashboard/courses/${data.courseId}`);
+      revalidateLocalized(`/courses/${data.courseId}`);
       return { success: true, data: lesson };
     },
     { roles: ["ADMIN", "TEACHER"] }
@@ -198,8 +198,8 @@ export async function updateLesson(
         });
       }
 
-      revalidatePath(`/dashboard/courses/${existing.courseId}`);
-      revalidatePath(`/dashboard/courses/${existing.courseId}/lessons/${id}`);
+      revalidateLocalized(`/courses/${existing.courseId}`);
+      revalidateLocalized(`/courses/${existing.courseId}/lessons/${id}`);
       return { success: true, data: lesson };
     },
     { roles: ["ADMIN", "TEACHER"] }
@@ -233,7 +233,7 @@ export async function deleteLesson(id: string) {
         metadata: { title: existing.title, courseId: existing.course.id },
       });
 
-      revalidatePath(`/dashboard/courses/${existing.course.id}`);
+      revalidateLocalized(`/courses/${existing.course.id}`);
       return { success: true };
     },
     { roles: ["ADMIN", "TEACHER"] }

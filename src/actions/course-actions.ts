@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
-import { revalidatePath } from "next/cache";
+import { revalidateLocalized } from "@/lib/revalidate";
 import { createAuditLog, computeChanges } from "@/lib/audit";
 import { slugify, generateUniqueSlug } from "@/lib/slugify";
 
@@ -141,7 +141,7 @@ export async function createCourse(data: {
         metadata: { title: course.title },
       });
 
-      revalidatePath("/dashboard/courses");
+      revalidateLocalized("/courses");
       return { success: true, data: course };
     },
     { roles: ["ADMIN", "TEACHER"] }
@@ -229,8 +229,8 @@ export async function updateCourse(
         });
       }
 
-      revalidatePath("/dashboard/courses");
-      revalidatePath(`/dashboard/courses/${id}`);
+      revalidateLocalized("/courses");
+      revalidateLocalized(`/courses/${id}`);
       return { success: true, data: course };
     },
     { roles: ["ADMIN", "TEACHER"] }
@@ -252,7 +252,7 @@ export async function deleteCourse(id: string) {
         metadata: { title: existing?.title },
       });
 
-      revalidatePath("/dashboard/courses");
+      revalidateLocalized("/courses");
       return { success: true };
     },
     { roles: ["ADMIN"] }
@@ -295,7 +295,15 @@ export async function enrollStudent(courseId: string, studentId: string) {
         },
       });
 
-      revalidatePath(`/dashboard/courses/${courseId}`);
+      await createAuditLog({
+        userId: session.user.id,
+        entityType: "Enrollment",
+        entityId: enrollment.id,
+        action: "CREATE",
+        metadata: { courseId, studentId },
+      });
+
+      revalidateLocalized(`/courses/${courseId}`);
       return { success: true, data: enrollment };
     },
     { roles: ["ADMIN", "TEACHER"] }
@@ -320,7 +328,15 @@ export async function unenrollStudent(courseId: string, studentId: string) {
         where: { studentId_courseId: { studentId, courseId } },
       });
 
-      revalidatePath(`/dashboard/courses/${courseId}`);
+      await createAuditLog({
+        userId: session.user.id,
+        entityType: "Enrollment",
+        entityId: `${studentId}:${courseId}`,
+        action: "DELETE",
+        metadata: { courseId, studentId },
+      });
+
+      revalidateLocalized(`/courses/${courseId}`);
       return { success: true };
     },
     { roles: ["ADMIN", "TEACHER"] }

@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
 import { submitSolutionInternal } from "@/lib/homework-submission";
-import { revalidatePath } from "next/cache";
+import { revalidateLocalized } from "@/lib/revalidate";
 import { createAuditLog, computeChanges } from "@/lib/audit";
 import { slugify, generateUniqueSlug } from "@/lib/slugify";
 import type { ProgrammingLanguage, HomeworkType } from "@/validators/homework";
@@ -126,7 +126,7 @@ export async function createHomework(
         metadata: { title: homework.title, lessonId },
       });
 
-      revalidatePath(`/courses/${ownership.lesson.course.id}`);
+      revalidateLocalized(`/courses/${ownership.lesson.course.id}`);
       return { success: true, data: homework };
     },
     { roles: ["ADMIN", "TEACHER"] }
@@ -243,7 +243,7 @@ export async function updateHomework(
         });
       }
 
-      revalidatePath(`/courses/${existing.lesson.course.id}`);
+      revalidateLocalized(`/courses/${existing.lesson.course.id}`);
       return { success: true, data: homework };
     },
     { roles: ["ADMIN", "TEACHER"] }
@@ -267,7 +267,7 @@ export async function deleteHomework(homeworkId: string) {
         metadata: { title: ownership.homework.title },
       });
 
-      revalidatePath(`/courses/${ownership.homework.lesson.course.id}`);
+      revalidateLocalized(`/courses/${ownership.homework.lesson.course.id}`);
       return { success: true };
     },
     { roles: ["ADMIN", "TEACHER"] }
@@ -286,7 +286,7 @@ export async function toggleHomeworkPublished(homeworkId: string) {
         data: { isPublished: !ownership.homework.isPublished },
       });
 
-      revalidatePath(`/courses/${ownership.homework.lesson.course.id}`);
+      revalidateLocalized(`/courses/${ownership.homework.lesson.course.id}`);
       return { success: true, data: homework };
     },
     { roles: ["ADMIN", "TEACHER"] }
@@ -455,7 +455,7 @@ export async function submitSolution(homeworkId: string, code: string) {
     const result = await submitSolutionInternal(homeworkId, code, session.user.id);
 
     if (result.success) {
-      revalidatePath(`/courses/${result.data.courseId}`);
+      revalidateLocalized(`/courses/${result.data.courseId}`);
     }
 
     return result;

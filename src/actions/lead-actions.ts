@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
-import { revalidatePath } from "next/cache";
+import { revalidateLocalized } from "@/lib/revalidate";
 import { headers } from "next/headers";
 import { leadLimiter, getClientIp, isWithinRateLimit } from "@/lib/rate-limit";
 import { submitLeadSchema, type SubmitLeadInput } from "@/validators/lead";
@@ -74,7 +74,7 @@ export async function markLeadContacted(id: string, contacted: boolean) {
         data: { contacted },
       });
 
-      revalidatePath("/admin/leads");
+      revalidateLocalized("/admin/leads");
       return { success: true as const };
     },
     { roles: ["ADMIN"] }
