@@ -19,6 +19,7 @@ import { TelegramAuth } from "@/components/telegram-auth";
 export default function LoginPage() {
   const router = useRouter();
   const t = useTranslations("auth");
+  const tValidation = useTranslations("validation");
   const locale = useLocale();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -104,7 +105,7 @@ export default function LoginPage() {
                 {...register("email")}
               />
               {errors.email && (
-                <p className="text-sm text-destructive">{errors.email.message}</p>
+                <p className="text-sm text-destructive">{tValidation(errors.email.message ?? "required")}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -116,7 +117,7 @@ export default function LoginPage() {
                 {...register("password")}
               />
               {errors.password && (
-                <p className="text-sm text-destructive">{errors.password.message}</p>
+                <p className="text-sm text-destructive">{tValidation(errors.password.message ?? "required")}</p>
               )}
             </div>
             <Button type="submit" className="w-full" disabled={loading}>

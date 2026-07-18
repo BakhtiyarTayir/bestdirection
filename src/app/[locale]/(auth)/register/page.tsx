@@ -29,6 +29,7 @@ type Step = "email" | "code" | "details";
 export default function RegisterPage() {
   const router = useRouter();
   const t = useTranslations("auth");
+  const tValidation = useTranslations("validation");
   const locale = useLocale();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -272,7 +273,7 @@ export default function RegisterPage() {
                     {...register("firstName")}
                   />
                   {errors.firstName && (
-                    <p className="text-sm text-destructive">{errors.firstName.message}</p>
+                    <p className="text-sm text-destructive">{tValidation(errors.firstName.message ?? "required")}</p>
                   )}
                 </div>
                 <div className="space-y-2">
@@ -283,7 +284,7 @@ export default function RegisterPage() {
                     {...register("lastName")}
                   />
                   {errors.lastName && (
-                    <p className="text-sm text-destructive">{errors.lastName.message}</p>
+                    <p className="text-sm text-destructive">{tValidation(errors.lastName.message ?? "required")}</p>
                   )}
                 </div>
               </div>
@@ -296,7 +297,7 @@ export default function RegisterPage() {
                   {...register("password")}
                 />
                 {errors.password && (
-                  <p className="text-sm text-destructive">{errors.password.message}</p>
+                  <p className="text-sm text-destructive">{tValidation(errors.password.message ?? "required")}</p>
                 )}
               </div>
               <div className="space-y-2">
@@ -308,7 +309,7 @@ export default function RegisterPage() {
                   {...register("confirmPassword")}
                 />
                 {errors.confirmPassword && (
-                  <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
+                  <p className="text-sm text-destructive">{tValidation(errors.confirmPassword.message ?? "required")}</p>
                 )}
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
