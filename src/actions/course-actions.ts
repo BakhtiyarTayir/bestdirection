@@ -88,6 +88,7 @@ export async function createCourse(data: {
   description?: string;
   coverImage?: string;
   teacherId: string;
+  accessType?: "CLOSED" | "FREE" | "PAID";
   isPublicListed?: boolean;
   price?: number;
   publicSummaryRu?: string;
@@ -117,6 +118,7 @@ export async function createCourse(data: {
           description: data.description,
           coverImage: data.coverImage,
           teacherId: data.teacherId,
+          accessType: data.accessType ?? "CLOSED",
           isPublicListed: data.isPublicListed ?? false,
           price: data.price,
           publicSummaryRu: data.publicSummaryRu,
@@ -157,6 +159,7 @@ export async function updateCourse(
     coverImage?: string | null;
     isPublished?: boolean;
     sortOrder?: number;
+    accessType?: "CLOSED" | "FREE" | "PAID";
     isPublicListed?: boolean;
     price?: number;
     publicSummaryRu?: string;
@@ -199,6 +202,7 @@ export async function updateCourse(
           ...(data.coverImage !== undefined && { coverImage: data.coverImage }),
           ...(data.isPublished !== undefined && { isPublished: data.isPublished }),
           ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
+          ...(data.accessType !== undefined && { accessType: data.accessType }),
           ...(data.isPublicListed !== undefined && { isPublicListed: data.isPublicListed }),
           ...(data.price !== undefined && { price: data.price }),
           ...(data.publicSummaryRu !== undefined && { publicSummaryRu: data.publicSummaryRu }),

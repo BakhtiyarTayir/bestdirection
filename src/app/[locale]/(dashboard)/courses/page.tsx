@@ -50,6 +50,14 @@ async function CoursesPageAsync({
             </Button>
           </Link>
         )}
+        {role === "STUDENT" && (
+          <Link href="/courses/browse">
+            <Button variant="outline">
+              <BookOpen className="mr-2 h-4 w-4" />
+              {t("browseCatalog")}
+            </Button>
+          </Link>
+        )}
       </div>
 
       {courses.length === 0 ? (
@@ -66,6 +74,14 @@ async function CoursesPageAsync({
               <Button className="mt-4" variant="outline">
                 <Plus className="mr-2 h-4 w-4" />
                 {t("createCourse")}
+              </Button>
+            </Link>
+          )}
+          {role === "STUDENT" && (
+            <Link href="/courses/browse">
+              <Button className="mt-4">
+                <BookOpen className="mr-2 h-4 w-4" />
+                {t("browseCatalog")}
               </Button>
             </Link>
           )}

@@ -1,6 +1,9 @@
 import { z } from "zod";
 
+export const courseAccessTypes = ["CLOSED", "FREE", "PAID"] as const;
+
 const marketingFields = {
+  accessType: z.enum(courseAccessTypes).optional(),
   isPublicListed: z.boolean().optional(),
   price: z.coerce.number().int().nonnegative().optional(),
   publicSummaryRu: z.string().max(500, "maxChars500").optional(),

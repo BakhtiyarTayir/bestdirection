@@ -114,7 +114,8 @@
     "userNotFound": "Bunday emailli foydalanuvchi topilmadi",
     "resetFailed": "Parolni o'zgartirib bo'lmadi. Qayta urinib ko'ring",
     "backToLogin": "Kirishga qaytish",
-    "tooManyRequests": "So'rovlar juda ko'p. Bir daqiqa kutib, qayta urinib ko'ring"
+    "tooManyRequests": "So'rovlar juda ko'p. Bir daqiqa kutib, qayta urinib ko'ring",
+    "tooManyLoginAttempts": "Kirish urinishlari juda ko'p. 15 daqiqadan keyin urinib ko'ring yoki parolni tiklang"
   },
   "nav": {
     "dashboard": "Boshqaruv paneli",
@@ -131,7 +132,9 @@
     "homework": "Uy vazifalari",
     "attendance": "Davomat",
     "leads": "Arizalar",
-    "landing": "Lending"
+    "landing": "Lending",
+    "browseCatalog": "Kurslar katalogi",
+    "enrollmentRequests": "Kurslarga arizalar"
   },
   "roles": {
     "ADMIN": "Administrator",
@@ -233,7 +236,16 @@
     "intakeSeatsPlaceholder": "Masalan: 15",
     "intakeNoteRuLabel": "Qabul haqida eslatma (rus.)",
     "intakeNoteUzLabel": "Qabul haqida eslatma (o'zb.)",
-    "intakeNotePlaceholder": "Masalan: Qabul 15 avgustgacha"
+    "intakeNotePlaceholder": "Masalan: Qabul 15 avgustgacha",
+    "browseCatalog": "Kurslar katalogi",
+    "accessTitle": "Kirish va ro'yxatga olish",
+    "accessTypeLabel": "Kim yozilishi mumkin",
+    "accessClosed": "Yopiq — o'qituvchi yozadi",
+    "accessFree": "Ochiq bepul",
+    "accessPaid": "Ochiq pullik",
+    "accessClosedHint": "Kurs katalogda ko'rinmaydi. Talabalarni o'qituvchi yoki administrator yozadi.",
+    "accessFreeHint": "Kurs katalogda ko'rinadi. Har qanday ro'yxatdan o'tgan talaba darhol o'zi yoziladi.",
+    "accessPaidHint": "Kurs katalogda ko'rinadi. Talaba ariza beradi, siz to'lovdan keyin tasdiqlaysiz (offlayn)."
   },
   "lessons": {
     "title": "Darslar",
@@ -1308,5 +1320,48 @@
     "pageOpen": "Saytda ochish",
     "editorLoading": "Muharrir yuklanmoqda…",
     "pageDraftBadge": "Qoralama"
+  },
+  "catalogStudent": {
+    "title": "Kurslar katalogi",
+    "subtitle": "Yozilish mumkin bo'lgan kurslar",
+    "empty": "Hozircha mavjud kurslar yo'q",
+    "emptyHint": "Keyinroq qarang — o'qituvchilar yangi kurslar ochishadi.",
+    "freeBadge": "Bepul",
+    "paidBadge": "Pullik",
+    "teacher": "O'qituvchi",
+    "lessonsCount": "Darslar: {count}",
+    "seatsLeft": "Qolgan o'rinlar: {count}",
+    "enrolled": "Siz yozilgansiz — kursga o'tish",
+    "enrollFree": "Yozilish",
+    "requestEnroll": "Ariza berish",
+    "requestAgain": "Qayta ariza berish",
+    "requestPending": "Ariza ko'rib chiqilmoqda",
+    "requestRejected": "Oldingi ariza rad etilgan",
+    "noSeatsLeft": "O'rinlar yo'q",
+    "alreadyEnrolled": "Siz bu kursga allaqachon yozilgansiz",
+    "actionFailed": "Amalga oshmadi. Qayta urinib ko'ring",
+    "enrolledToast": "Siz kursga yozildingiz!",
+    "requestSentToast": "Ariza yuborildi",
+    "requestSentHint": "O'qituvchi to'lov bo'yicha bog'lanadi va yozilishni tasdiqlaydi."
+  },
+  "enrollmentRequests": {
+    "title": "Kurslarga arizalar",
+    "subtitle": "Talabalarning pullik kurslarga arizalari. To'lovdan keyin tasdiqlang.",
+    "empty": "Hozircha arizalar yo'q",
+    "colDate": "Sana",
+    "colCourse": "Kurs",
+    "colStudent": "Talaba",
+    "colContacts": "Kontaktlar",
+    "colStatus": "Holat",
+    "colActions": "Amallar",
+    "statusPending": "Ko'rib chiqilmoqda",
+    "statusApproved": "Tasdiqlangan",
+    "statusRejected": "Rad etilgan",
+    "approve": "Tasdiqlash",
+    "reject": "Rad etish",
+    "approvedToast": "Ariza tasdiqlandi — talaba kursga yozildi",
+    "rejectedToast": "Ariza rad etildi",
+    "noSeatsLeft": "Kursda o'rin qolmadi",
+    "actionFailed": "Amalga oshmadi. Sahifani yangilab, qayta urinib ko'ring"
   }
 }

@@ -44,6 +44,7 @@ interface CourseData {
   coverImage: string | null;
   teacherId: string;
   isPublished: boolean;
+  accessType?: "CLOSED" | "FREE" | "PAID";
   isPublicListed?: boolean;
   price?: number | null;
   publicSummaryRu?: string | null;
@@ -94,6 +95,7 @@ export function CourseForm({
       description: course?.description || "",
       teacherId: isAdmin ? (course?.teacherId || "") : currentUserId,
       isPublished: course?.isPublished || false,
+      accessType: course?.accessType || "CLOSED",
       isPublicListed: course?.isPublicListed || false,
       price: course?.price ?? undefined,
       publicSummaryRu: course?.publicSummaryRu || "",
@@ -108,6 +110,7 @@ export function CourseForm({
   const selectedTeacherId = watch("teacherId");
   const isPublished = watch("isPublished");
   const isPublicListed = watch("isPublicListed");
+  const accessType = watch("accessType");
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -156,6 +159,7 @@ export function CourseForm({
             description: data.description,
             coverImage: coverImage,
             isPublished: data.isPublished,
+            accessType: data.accessType,
             isPublicListed: data.isPublicListed,
             price: data.price,
             publicSummaryRu: data.publicSummaryRu,
@@ -182,6 +186,8 @@ export function CourseForm({
             description: data.description,
             coverImage: coverImage || undefined,
             teacherId: data.teacherId,
+            accessType: data.accessType,
+            price: data.price,
           });
           if (result.success && result.data) {
             toast({ title: t("courseCreated") });
@@ -346,6 +352,48 @@ export function CourseForm({
             </div>
           )}
 
+          <div className="space-y-4 rounded-lg border p-4">
+            <h3 className="font-medium">{t("accessTitle")}</h3>
+            <div className="space-y-2">
+              <Label>{t("accessTypeLabel")}</Label>
+              <Controller
+                name="accessType"
+                control={control}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CLOSED">{t("accessClosed")}</SelectItem>
+                      <SelectItem value="FREE">{t("accessFree")}</SelectItem>
+                      <SelectItem value="PAID">{t("accessPaid")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              <p className="text-sm text-muted-foreground">
+                {accessType === "FREE"
+                  ? t("accessFreeHint")
+                  : accessType === "PAID"
+                  ? t("accessPaidHint")
+                  : t("accessClosedHint")}
+              </p>
+            </div>
+            {accessType === "PAID" && (
+              <div className="space-y-2">
+                <Label htmlFor="price">{t("priceLabel")}</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  min={0}
+                  placeholder={t("pricePlaceholder")}
+                  {...register("price")}
+                />
+              </div>
+            )}
+          </div>
+
           {isEditing && (
             <div className="space-y-4 rounded-lg border p-4">
               <h3 className="font-medium">{t("publicationTitle")}</h3>
@@ -360,16 +408,18 @@ export function CourseForm({
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
+                {accessType !== "PAID" && (
                 <div className="space-y-2">
-                  <Label htmlFor="price">{t("priceLabel")}</Label>
+                  <Label htmlFor="price-marketing">{t("priceLabel")}</Label>
                   <Input
-                    id="price"
+                    id="price-marketing"
                     type="number"
                     min={0}
                     placeholder={t("pricePlaceholder")}
                     {...register("price")}
                   />
                 </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="intakeSeats">{t("intakeSeatsLabel")}</Label>
                   <Input

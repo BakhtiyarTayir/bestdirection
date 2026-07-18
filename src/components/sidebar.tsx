@@ -19,6 +19,7 @@ import {
   GitCompare,
   ChevronsLeft,
   ChevronsRight,
+  ChevronDown,
   UsersRound,
   ClipboardList,
   BarChart3,
@@ -48,7 +49,9 @@ interface NavItem {
   labelKey: string;
   icon: React.ElementType;
   roles: string[];
-  badge?: boolean;
+  badge?: "homework" | "enrollmentRequests";
+  /** Подпункты: родитель становится раскрывающимся разделом */
+  children?: { href: string; labelKey: string }[];
 }
 
 const navItems: NavItem[] = [
@@ -58,24 +61,36 @@ const navItems: NavItem[] = [
   { href: "/statistics", labelKey: "homeworkStats", icon: BarChart3, roles: ["ADMIN", "TEACHER"] },
   { href: "/groups", labelKey: "groups", icon: UsersRound, roles: ["ADMIN", "TEACHER"] },
   { href: "/courses/catalog", labelKey: "catalog", icon: Copy, roles: ["ADMIN", "TEACHER"] },
+  { href: "/courses/browse", labelKey: "browseCatalog", icon: BookOpen, roles: ["STUDENT"] },
+  { href: "/courses/requests", labelKey: "enrollmentRequests", icon: Inbox, roles: ["ADMIN", "TEACHER"], badge: "enrollmentRequests" },
   { href: "/admin/compare", labelKey: "compare", icon: GitCompare, roles: ["ADMIN"] },
   { href: "/admin/leads", labelKey: "leads", icon: Inbox, roles: ["ADMIN"] },
-  { href: "/admin/landing", labelKey: "landing", icon: Megaphone, roles: ["ADMIN"] },
+  {
+    href: "/admin/landing",
+    labelKey: "site",
+    icon: Megaphone,
+    roles: ["ADMIN"],
+    children: [
+      { href: "/admin/landing", labelKey: "siteLanding" },
+      { href: "/admin/landing/pages", labelKey: "sitePages" },
+    ],
+  },
   { href: "/trash", labelKey: "trash", icon: Trash2, roles: ["ADMIN"] },
   { href: "/audit", labelKey: "audit", icon: ScrollText, roles: ["ADMIN"] },
-  { href: "/homework", labelKey: "homework", icon: ClipboardList, roles: ["ADMIN", "TEACHER", "STUDENT"], badge: true },
+  { href: "/homework", labelKey: "homework", icon: ClipboardList, roles: ["ADMIN", "TEACHER", "STUDENT"], badge: "homework" },
   { href: "/attendance", labelKey: "attendance", icon: CalendarCheck, roles: ["ADMIN", "TEACHER", "STUDENT"] },
   { href: "/my-results", labelKey: "myResults", icon: FileText, roles: ["STUDENT"] },
   { href: "/profile", labelKey: "profile", icon: User, roles: ["ADMIN", "TEACHER", "STUDENT"] },
 ];
 
-function useHomeworkCount() {
+function useBadgeCount(endpoint: string, enabled: boolean) {
   const [count, setCount] = useState(0);
   useEffect(() => {
+    if (!enabled) return;
     let cancelled = false;
     async function load() {
       try {
-        const res = await fetch("/api/homework/count");
+        const res = await fetch(endpoint);
         if (res.ok) {
           const data = await res.json();
           if (!cancelled) setCount(data.count || 0);
@@ -85,7 +100,7 @@ function useHomeworkCount() {
     load();
     const interval = setInterval(load, 60000);
     return () => { cancelled = true; clearInterval(interval); };
-  }, []);
+  }, [endpoint, enabled]);
   return count;
 }
 
@@ -93,11 +108,18 @@ export function Sidebar({ role, userName }: SidebarProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  // Раскрытые группы; группа с активным подпунктом раскрыта по умолчанию
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const t = useTranslations("nav");
   const tRoles = useTranslations("roles");
   const tAuth = useTranslations("auth");
   const locale = useLocale();
-  const homeworkCount = useHomeworkCount();
+  const homeworkCount = useBadgeCount("/api/homework/count", true);
+  const requestsCount = useBadgeCount(
+    "/api/enrollment-requests/count",
+    role === "ADMIN" || role === "TEACHER"
+  );
+  const badgeCounts = { homework: homeworkCount, enrollmentRequests: requestsCount } as const;
 
   const filteredItems = navItems.filter((item) => item.roles.includes(role));
 
@@ -112,7 +134,56 @@ export function Sidebar({ role, userName }: SidebarProps) {
         <TooltipProvider delayDuration={0}>
           {filteredItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-            const badgeCount = item.badge ? homeworkCount : 0;
+            const badgeCount = item.badge ? badgeCounts[item.badge] : 0;
+
+            if (item.children && !collapsed) {
+              const isOpen = openGroups[item.href] ?? isActive;
+              return (
+                <div key={item.href}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenGroups((prev) => ({ ...prev, [item.href]: !isOpen }))}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                      isActive && !isOpen
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    <item.icon className="h-4 w-4 shrink-0" />
+                    <span className="flex-1 text-left">{t(item.labelKey)}</span>
+                    <ChevronDown
+                      className={cn("h-4 w-4 shrink-0 transition-transform", !isOpen && "-rotate-90")}
+                    />
+                  </button>
+                  {isOpen && (
+                    <div className="ml-4 mt-1 space-y-1 border-l pl-3">
+                      {item.children.map((child) => {
+                        // Точное совпадение, чтобы /admin/landing не подсвечивался на /admin/landing/pages
+                        const childActive =
+                          pathname === child.href ||
+                          (child.href !== item.href && pathname.startsWith(child.href + "/"));
+                        return (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            onClick={() => setMobileOpen(false)}
+                            className={cn(
+                              "flex items-center rounded-lg px-3 py-2 text-sm transition-colors",
+                              childActive
+                                ? "bg-primary text-primary-foreground"
+                                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                            )}
+                          >
+                            {t(child.labelKey)}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
             const link = (
               <Link
                 key={item.href}

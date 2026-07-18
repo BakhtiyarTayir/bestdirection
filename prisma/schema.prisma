@@ -68,6 +68,20 @@ enum ManualReviewStatus {
   REVISION
 }
 
+// Режим записи на курс: закрытый (только преподавателем),
+// бесплатный (мгновенная самозапись), платный (заявка + подтверждение)
+enum CourseAccessType {
+  CLOSED
+  FREE
+  PAID
+}
+
+enum EnrollmentRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id           String    @id @default(cuid())
   email        String?   @unique
@@ -90,6 +104,8 @@ model User {
   auditLogs            AuditLog[]
   submissions          Submission[]
   reviewedSubmissions  Submission[]  @relation("ReviewedSubmissions")
+  enrollmentRequests         EnrollmentRequest[] @relation("StudentEnrollmentRequests")
+  reviewedEnrollmentRequests EnrollmentRequest[] @relation("ReviewedEnrollmentRequests")
   telegramChatId       String?   @unique
   telegramUsername     String?
 
@@ -111,6 +127,10 @@ model Course {
   deletedAt   DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  // Запись студентов: CLOSED — только преподавателем, FREE — самозапись,
+  // PAID — по заявке (оплата оффлайн, цена в поле price)
+  accessType CourseAccessType @default(CLOSED)
 
   // Публичный лендинг (uportal.uz)
   isPublicListed  Boolean   @default(false)
@@ -135,6 +155,7 @@ model Course {
   assessments        Assessment[]
   attendanceSessions AttendanceSession[]
   groups             Group[]
+  enrollmentRequests EnrollmentRequest[]
 
   @@index([teacherId])
   @@index([isPublished])
@@ -142,6 +163,30 @@ model Course {
   @@index([copiedFromId])
   @@index([deletedAt])
   @@index([isPublicListed])
+  @@index([accessType])
+}
+
+// Заявка студента на платный курс; одна запись на пару курс+студент,
+// повторная подача после отклонения переводит REJECTED → PENDING
+model EnrollmentRequest {
+  id        String                  @id @default(cuid())
+  status    EnrollmentRequestStatus @default(PENDING)
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  studentId String
+  student   User   @relation("StudentEnrollmentRequests", fields: [studentId], references: [id], onDelete: Cascade)
+
+  reviewedById String?
+  reviewedBy   User?     @relation("ReviewedEnrollmentRequests", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt   DateTime?
+
+  @@unique([courseId, studentId])
+  @@index([status])
+  @@index([studentId])
 }
 
 model CourseLead {
