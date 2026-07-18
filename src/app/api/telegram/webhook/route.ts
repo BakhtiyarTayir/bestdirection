@@ -24,7 +24,10 @@ export async function POST(req: NextRequest) {
     const handler = webhookCallback(bot, "std/http");
     return await handler(req);
   } catch (error) {
+    // ВАЖНО: отвечаем 200 даже при ошибке обработчика. bot.catch в grammY
+    // не действует в webhook-режиме, ошибки долетают сюда; ответ 500
+    // заставляет Telegram бесконечно ретраить апдейт и вся очередь встаёт.
     console.error("Telegram webhook error:", error);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    return NextResponse.json({ ok: true });
   }
 }
