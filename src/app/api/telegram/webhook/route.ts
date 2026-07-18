@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   try {
     const bot = getBot();
     const handler = webhookCallback(bot, "std/http");
-    return handler(req);
+    return await handler(req);
   } catch (error) {
     console.error("Telegram webhook error:", error);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });

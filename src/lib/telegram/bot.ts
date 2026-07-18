@@ -102,6 +102,12 @@ export function getBot(): Bot {
 function createBot(token: string): Bot {
   const bot = new Bot(token);
 
+  // Не даём одной упавшей команде обрушить webhook в 500:
+  // иначе Telegram бесконечно ретраит апдейт и очередь бота встаёт.
+  bot.catch((err) => {
+    console.error("Telegram bot error:", err.error);
+  });
+
   // /start — link account, confirm site login, or welcome
   bot.command("start", async (ctx) => {
     const linkCode = ctx.match;
@@ -481,6 +487,23 @@ async function handleLinkAccount(ctx: Context, linkCode: string) {
 
   if (!pendingUser) {
     await ctx.reply("Код привязки не найден или истёк. Попробуйте заново через сайт.");
+    return;
+  }
+
+  // Этот Telegram может быть уже занят другим аккаунтом
+  // (например, автосозданным при входе через Telegram)
+  const holder = await prisma.user.findUnique({
+    where: { telegramChatId: String(ctx.chat.id) },
+  });
+  if (holder && holder.id !== pendingUser.id) {
+    await prisma.user.update({
+      where: { id: pendingUser.id },
+      data: { telegramChatId: null },
+    });
+    await ctx.reply(
+      `Этот Telegram уже привязан к аккаунту ${holder.firstName} ${holder.lastName}.\n` +
+      "Сначала отвяжите его в профиле того аккаунта (или попросите администратора), затем повторите привязку."
+    );
     return;
   }
 
