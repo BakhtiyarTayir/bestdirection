@@ -11,20 +11,40 @@ interface VerificationEmailTexts {
   ignore: string;
 }
 
-const TEXTS: Record<string, VerificationEmailTexts> = {
-  ru: {
-    subject: "Код подтверждения регистрации",
-    greeting: "Здравствуйте!",
-    codeIntro: "Ваш код подтверждения для регистрации в учебном центре:",
-    expires: "Код действует 15 минут.",
-    ignore: "Если вы не регистрировались — просто проигнорируйте это письмо.",
+export type VerificationEmailKind = "register" | "reset";
+
+const TEXTS: Record<VerificationEmailKind, Record<string, VerificationEmailTexts>> = {
+  register: {
+    ru: {
+      subject: "Код подтверждения регистрации",
+      greeting: "Здравствуйте!",
+      codeIntro: "Ваш код подтверждения для регистрации в учебном центре:",
+      expires: "Код действует 15 минут.",
+      ignore: "Если вы не регистрировались — просто проигнорируйте это письмо.",
+    },
+    uz: {
+      subject: "Ro'yxatdan o'tishni tasdiqlash kodi",
+      greeting: "Assalomu alaykum!",
+      codeIntro: "O'quv markazida ro'yxatdan o'tish uchun tasdiqlash kodingiz:",
+      expires: "Kod 15 daqiqa davomida amal qiladi.",
+      ignore: "Agar siz ro'yxatdan o'tmagan bo'lsangiz, bu xatni e'tiborsiz qoldiring.",
+    },
   },
-  uz: {
-    subject: "Ro'yxatdan o'tishni tasdiqlash kodi",
-    greeting: "Assalomu alaykum!",
-    codeIntro: "O'quv markazida ro'yxatdan o'tish uchun tasdiqlash kodingiz:",
-    expires: "Kod 15 daqiqa davomida amal qiladi.",
-    ignore: "Agar siz ro'yxatdan o'tmagan bo'lsangiz, bu xatni e'tiborsiz qoldiring.",
+  reset: {
+    ru: {
+      subject: "Код для сброса пароля",
+      greeting: "Здравствуйте!",
+      codeIntro: "Ваш код для сброса пароля в учебном центре:",
+      expires: "Код действует 15 минут.",
+      ignore: "Если вы не запрашивали сброс пароля — просто проигнорируйте это письмо, ваш пароль не изменится.",
+    },
+    uz: {
+      subject: "Parolni tiklash kodi",
+      greeting: "Assalomu alaykum!",
+      codeIntro: "O'quv markazida parolni tiklash uchun kodingiz:",
+      expires: "Kod 15 daqiqa davomida amal qiladi.",
+      ignore: "Agar siz parolni tiklashni so'ramagan bo'lsangiz, bu xatni e'tiborsiz qoldiring — parolingiz o'zgarmaydi.",
+    },
   },
 };
 
@@ -35,12 +55,13 @@ export function isEmailConfigured(): boolean {
 export async function sendVerificationEmail(
   to: string,
   code: string,
-  locale: string
+  locale: string,
+  kind: VerificationEmailKind = "register"
 ): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return false;
 
-  const t = TEXTS[locale] ?? TEXTS.ru;
+  const t = TEXTS[kind][locale] ?? TEXTS[kind].ru;
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">

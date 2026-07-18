@@ -104,7 +104,16 @@
     "verifyCode": "Kodni tasdiqlash",
     "verifyingCode": "Tekshirilmoqda...",
     "changeEmail": "Emailni o'zgartirish",
-    "emailConfirmed": "{email} pochtasi tasdiqlandi. Akkaunt ma'lumotlarini to'ldirish qoldi."
+    "emailConfirmed": "{email} pochtasi tasdiqlandi. Akkaunt ma'lumotlarini to'ldirish qoldi.",
+    "forgotPassword": "Parolni unutdingizmi?",
+    "resetPasswordTitle": "Parolni tiklash",
+    "resetPasswordSubtitle": "Pochtangizga tasdiqlash kodini yuboramiz",
+    "newPassword": "Yangi parol",
+    "resetPasswordButton": "Parolni o'zgartirish",
+    "resettingPassword": "Parol o'zgartirilmoqda...",
+    "userNotFound": "Bunday emailli foydalanuvchi topilmadi",
+    "resetFailed": "Parolni o'zgartirib bo'lmadi. Qayta urinib ko'ring",
+    "backToLogin": "Kirishga qaytish"
   },
   "nav": {
     "dashboard": "Boshqaruv paneli",

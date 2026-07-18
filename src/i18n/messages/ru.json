@@ -104,7 +104,16 @@
     "verifyCode": "Подтвердить код",
     "verifyingCode": "Проверка...",
     "changeEmail": "Изменить email",
-    "emailConfirmed": "Почта {email} подтверждена. Осталось заполнить данные аккаунта."
+    "emailConfirmed": "Почта {email} подтверждена. Осталось заполнить данные аккаунта.",
+    "forgotPassword": "Забыли пароль?",
+    "resetPasswordTitle": "Восстановление пароля",
+    "resetPasswordSubtitle": "Отправим код подтверждения на вашу почту",
+    "newPassword": "Новый пароль",
+    "resetPasswordButton": "Сменить пароль",
+    "resettingPassword": "Смена пароля...",
+    "userNotFound": "Пользователь с таким email не найден",
+    "resetFailed": "Не удалось сменить пароль. Попробуйте ещё раз",
+    "backToLogin": "Вернуться ко входу"
   },
   "nav": {
     "dashboard": "Дашборд",
