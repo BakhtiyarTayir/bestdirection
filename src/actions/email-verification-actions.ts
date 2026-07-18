@@ -5,6 +5,7 @@ import { sendVerificationEmail, isEmailConfigured } from "@/lib/email";
 import {
   EMAIL_CODE_TTL_MS,
   EMAIL_CODE_RESEND_COOLDOWN_MS,
+  EMAIL_CODE_MAX_ATTEMPTS,
   hashVerificationCode,
 } from "@/lib/email-codes";
 import { randomInt } from "crypto";
@@ -62,6 +63,36 @@ export async function requestEmailVerification(data: {
   const sent = await sendVerificationEmail(email, code, data.locale ?? "ru");
   if (!sent) {
     return { success: false, error: "emailSendFailed" };
+  }
+
+  return { success: true };
+}
+
+// ---------- verifyEmailCode ----------
+// Публичный: шаг 2 регистрации. Проверяет код, НЕ удаляя его —
+// окончательно код гасится в registerUser при создании аккаунта.
+export async function verifyEmailCode(data: { email: string; code: string }) {
+  const email = data.email?.trim().toLowerCase();
+  if (!email || !/^\d{6}$/.test(data.code ?? "")) {
+    return { success: false, error: "invalidCode" };
+  }
+
+  const verification = await prisma.emailVerificationCode.findUnique({
+    where: { email },
+  });
+
+  if (!verification || verification.expiresAt < new Date()) {
+    return { success: false, error: "codeExpired" };
+  }
+  if (verification.attempts >= EMAIL_CODE_MAX_ATTEMPTS) {
+    return { success: false, error: "tooManyAttempts" };
+  }
+  if (verification.codeHash !== hashVerificationCode(email, data.code)) {
+    await prisma.emailVerificationCode.update({
+      where: { id: verification.id },
+      data: { attempts: { increment: 1 } },
+    });
+    return { success: false, error: "invalidCode" };
   }
 
   return { success: true };

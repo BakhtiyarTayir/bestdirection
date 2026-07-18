@@ -31,3 +31,20 @@ export const registerSchema = z
   });
 
 export type RegisterInput = z.infer<typeof registerSchema>;
+
+// Шаг «остальные поля» при регистрации: email уже подтверждён кодом
+export const registerDetailsSchema = z
+  .object({
+    firstName: z.string().min(1, "firstNameRequired"),
+    lastName: z.string().min(1, "lastNameRequired"),
+    password: z
+      .string()
+      .min(8, "passwordMinLength"),
+    confirmPassword: z.string().min(1, "confirmPasswordRequired"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "passwordMismatch",
+    path: ["confirmPassword"],
+  });
+
+export type RegisterDetailsInput = z.infer<typeof registerDetailsSchema>;

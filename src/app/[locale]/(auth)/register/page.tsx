@@ -7,9 +7,15 @@ import { Link } from "@/i18n/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { registerSchema, type RegisterInput } from "@/validators/auth";
+import {
+  registerDetailsSchema,
+  type RegisterDetailsInput,
+} from "@/validators/auth";
 import { registerUser } from "@/actions/auth-actions";
-import { requestEmailVerification } from "@/actions/email-verification-actions";
+import {
+  requestEmailVerification,
+  verifyEmailCode,
+} from "@/actions/email-verification-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +24,8 @@ import Image from "next/image";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { TelegramAuth } from "@/components/telegram-auth";
 
+type Step = "email" | "code" | "details";
+
 export default function RegisterPage() {
   const router = useRouter();
   const t = useTranslations("auth");
@@ -25,13 +33,13 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
-  const [step, setStep] = useState<"form" | "code">("form");
-  const [pendingData, setPendingData] = useState<RegisterInput | null>(null);
+  const [step, setStep] = useState<Step>("email");
+  const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [resendTimer, setResendTimer] = useState(0);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<RegisterInput>({
-    resolver: zodResolver(registerSchema),
+  const { register, handleSubmit, formState: { errors } } = useForm<RegisterDetailsInput>({
+    resolver: zodResolver(registerDetailsSchema),
   });
 
   useEffect(() => {
@@ -40,8 +48,8 @@ export default function RegisterPage() {
     return () => clearTimeout(timer);
   }, [resendTimer]);
 
-  function verificationErrorText(code?: string): string {
-    switch (code) {
+  function verificationErrorText(errorCode?: string): string {
+    switch (errorCode) {
       case "emailAlreadyExists":
         return t("emailAlreadyExists");
       case "invalidCode":
@@ -58,14 +66,13 @@ export default function RegisterPage() {
     }
   }
 
-  async function onSubmit(data: RegisterInput) {
+  // Шаг 1: отправить код на почту
+  async function onSendCode(e: React.FormEvent) {
+    e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const result = await requestEmailVerification({
-      email: data.email,
-      locale,
-    });
+    const result = await requestEmailVerification({ email, locale });
 
     // resendCooldown: недавно отправленный код ещё действует — идём к вводу
     if (!result.success && result.error !== "resendCooldown") {
@@ -74,7 +81,6 @@ export default function RegisterPage() {
       return;
     }
 
-    setPendingData(data);
     setCode("");
     setStep("code");
     setResendTimer(60);
@@ -82,12 +88,9 @@ export default function RegisterPage() {
   }
 
   async function onResend() {
-    if (!pendingData || resendTimer > 0) return;
+    if (resendTimer > 0) return;
     setError(null);
-    const result = await requestEmailVerification({
-      email: pendingData.email,
-      locale,
-    });
+    const result = await requestEmailVerification({ email, locale });
     if (!result.success && result.error !== "resendCooldown") {
       setError(verificationErrorText(result.error));
       return;
@@ -95,18 +98,33 @@ export default function RegisterPage() {
     setResendTimer(60);
   }
 
-  async function onConfirm(e: React.FormEvent) {
+  // Шаг 2: проверить код
+  async function onVerifyCode(e: React.FormEvent) {
     e.preventDefault();
-    if (!pendingData) return;
+    setLoading(true);
+    setError(null);
 
+    const result = await verifyEmailCode({ email, code: code.trim() });
+    if (!result.success) {
+      setError(verificationErrorText(result.error));
+      setLoading(false);
+      return;
+    }
+
+    setStep("details");
+    setLoading(false);
+  }
+
+  // Шаг 3: создать аккаунт
+  async function onSubmitDetails(data: RegisterDetailsInput) {
     setLoading(true);
     setError(null);
 
     const result = await registerUser({
-      firstName: pendingData.firstName,
-      lastName: pendingData.lastName,
-      email: pendingData.email,
-      password: pendingData.password,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email,
+      password: data.password,
       code: code.trim(),
     });
 
@@ -117,8 +135,8 @@ export default function RegisterPage() {
     }
 
     const signInResult = await signIn("credentials", {
-      email: pendingData.email,
-      password: pendingData.password,
+      email,
+      password: data.password,
       redirect: false,
       callbackUrl: `/${locale}/dashboard`,
     });
@@ -132,6 +150,12 @@ export default function RegisterPage() {
     router.push("/dashboard");
     router.refresh();
   }
+
+  const errorBox = error && (
+    <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+      {error}
+    </div>
+  );
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/50 px-4">
@@ -147,7 +171,7 @@ export default function RegisterPage() {
           <CardDescription>{t("registerSubtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
-          {step === "form" && (
+          {step === "email" && (
             <>
               <TelegramAuth />
               {!showEmailForm && (
@@ -161,89 +185,32 @@ export default function RegisterPage() {
                 </Button>
               )}
               {showEmailForm && (
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                {error && (
-                  <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                    {error}
-                  </div>
-                )}
-                <div className="grid grid-cols-2 gap-4">
+                <form onSubmit={onSendCode} className="space-y-4">
+                  {errorBox}
                   <div className="space-y-2">
-                    <Label htmlFor="firstName">{t("firstName")}</Label>
+                    <Label htmlFor="email">{t("email")}</Label>
                     <Input
-                      id="firstName"
-                      placeholder={t("firstNamePlaceholder")}
-                      {...register("firstName")}
+                      id="email"
+                      type="email"
+                      required
+                      placeholder="email@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                     />
-                    {errors.firstName && (
-                      <p className="text-sm text-destructive">{errors.firstName.message}</p>
-                    )}
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">{t("lastName")}</Label>
-                    <Input
-                      id="lastName"
-                      placeholder={t("lastNamePlaceholder")}
-                      {...register("lastName")}
-                    />
-                    {errors.lastName && (
-                      <p className="text-sm text-destructive">{errors.lastName.message}</p>
-                    )}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">{t("email")}</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="email@example.com"
-                    {...register("email")}
-                  />
-                  {errors.email && (
-                    <p className="text-sm text-destructive">{errors.email.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">{t("password")}</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder={t("passwordPlaceholder")}
-                    {...register("password")}
-                  />
-                  {errors.password && (
-                    <p className="text-sm text-destructive">{errors.password.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">{t("confirmPassword")}</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder={t("confirmPasswordPlaceholder")}
-                    {...register("confirmPassword")}
-                  />
-                  {errors.confirmPassword && (
-                    <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
-                  )}
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? t("sendingCode") : t("sendCode")}
-                </Button>
-              </form>
+                  <Button type="submit" className="w-full" disabled={loading || !email}>
+                    {loading ? t("sendingCode") : t("sendCode")}
+                  </Button>
+                </form>
               )}
             </>
           )}
 
-          {step === "code" && pendingData && (
-            <form onSubmit={onConfirm} className="space-y-4">
-              {error && (
-                <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                  {error}
-                </div>
-              )}
+          {step === "code" && (
+            <form onSubmit={onVerifyCode} className="space-y-4">
+              {errorBox}
               <p className="text-sm text-muted-foreground">
-                {t("codeSentTo", { email: pendingData.email })}
+                {t("codeSentTo", { email })}
               </p>
               <div className="space-y-2">
                 <Label htmlFor="verification-code">{t("verificationCode")}</Label>
@@ -263,18 +230,18 @@ export default function RegisterPage() {
                 className="w-full"
                 disabled={loading || code.length !== 6}
               >
-                {loading ? t("registering") : t("register")}
+                {loading ? t("verifyingCode") : t("verifyCode")}
               </Button>
               <div className="flex items-center justify-between text-sm">
                 <button
                   type="button"
                   className="text-muted-foreground hover:underline"
                   onClick={() => {
-                    setStep("form");
+                    setStep("email");
                     setError(null);
                   }}
                 >
-                  {t("changeData")}
+                  {t("changeEmail")}
                 </button>
                 <button
                   type="button"
@@ -287,6 +254,66 @@ export default function RegisterPage() {
                     : t("resendCode")}
                 </button>
               </div>
+            </form>
+          )}
+
+          {step === "details" && (
+            <form onSubmit={handleSubmit(onSubmitDetails)} className="space-y-4">
+              {errorBox}
+              <p className="text-sm text-muted-foreground">
+                {t("emailConfirmed", { email })}
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">{t("firstName")}</Label>
+                  <Input
+                    id="firstName"
+                    placeholder={t("firstNamePlaceholder")}
+                    {...register("firstName")}
+                  />
+                  {errors.firstName && (
+                    <p className="text-sm text-destructive">{errors.firstName.message}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">{t("lastName")}</Label>
+                  <Input
+                    id="lastName"
+                    placeholder={t("lastNamePlaceholder")}
+                    {...register("lastName")}
+                  />
+                  {errors.lastName && (
+                    <p className="text-sm text-destructive">{errors.lastName.message}</p>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">{t("password")}</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder={t("passwordPlaceholder")}
+                  {...register("password")}
+                />
+                {errors.password && (
+                  <p className="text-sm text-destructive">{errors.password.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">{t("confirmPassword")}</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder={t("confirmPasswordPlaceholder")}
+                  {...register("confirmPassword")}
+                />
+                {errors.confirmPassword && (
+                  <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
+                )}
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? t("registering") : t("register")}
+              </Button>
             </form>
           )}
 

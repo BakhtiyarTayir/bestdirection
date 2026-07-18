@@ -100,7 +100,11 @@
     "invalidCode": "Kod noto'g'ri. Tekshirib, qayta urinib ko'ring",
     "codeExpired": "Kod eskirdi. Yangisini so'rang",
     "tooManyAttempts": "Urinishlar soni oshib ketdi. Yangi kod so'rang",
-    "emailSendFailed": "Xat yuborib bo'lmadi. Keyinroq urinib ko'ring"
+    "emailSendFailed": "Xat yuborib bo'lmadi. Keyinroq urinib ko'ring",
+    "verifyCode": "Kodni tasdiqlash",
+    "verifyingCode": "Tekshirilmoqda...",
+    "changeEmail": "Emailni o'zgartirish",
+    "emailConfirmed": "{email} pochtasi tasdiqlandi. Akkaunt ma'lumotlarini to'ldirish qoldi."
   },
   "nav": {
     "dashboard": "Boshqaruv paneli",
