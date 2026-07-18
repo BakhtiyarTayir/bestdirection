@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "@/i18n/navigation";
 import { Link } from "@/i18n/navigation";
@@ -9,6 +9,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { registerSchema, type RegisterInput } from "@/validators/auth";
 import { registerUser } from "@/actions/auth-actions";
+import { requestEmailVerification } from "@/actions/email-verification-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,35 +25,100 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
+  const [step, setStep] = useState<"form" | "code">("form");
+  const [pendingData, setPendingData] = useState<RegisterInput | null>(null);
+  const [code, setCode] = useState("");
+  const [resendTimer, setResendTimer] = useState(0);
 
   const { register, handleSubmit, formState: { errors } } = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
   });
 
+  useEffect(() => {
+    if (resendTimer <= 0) return;
+    const timer = setTimeout(() => setResendTimer((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendTimer]);
+
+  function verificationErrorText(code?: string): string {
+    switch (code) {
+      case "emailAlreadyExists":
+        return t("emailAlreadyExists");
+      case "invalidCode":
+        return t("invalidCode");
+      case "codeExpired":
+        return t("codeExpired");
+      case "tooManyAttempts":
+        return t("tooManyAttempts");
+      case "emailSendFailed":
+      case "emailNotConfigured":
+        return t("emailSendFailed");
+      default:
+        return t("registerError");
+    }
+  }
+
   async function onSubmit(data: RegisterInput) {
     setLoading(true);
     setError(null);
 
-    const result = await registerUser({
-      firstName: data.firstName,
-      lastName: data.lastName,
+    const result = await requestEmailVerification({
       email: data.email,
-      password: data.password,
+      locale,
+    });
+
+    // resendCooldown: недавно отправленный код ещё действует — идём к вводу
+    if (!result.success && result.error !== "resendCooldown") {
+      setError(verificationErrorText(result.error));
+      setLoading(false);
+      return;
+    }
+
+    setPendingData(data);
+    setCode("");
+    setStep("code");
+    setResendTimer(60);
+    setLoading(false);
+  }
+
+  async function onResend() {
+    if (!pendingData || resendTimer > 0) return;
+    setError(null);
+    const result = await requestEmailVerification({
+      email: pendingData.email,
+      locale,
+    });
+    if (!result.success && result.error !== "resendCooldown") {
+      setError(verificationErrorText(result.error));
+      return;
+    }
+    setResendTimer(60);
+  }
+
+  async function onConfirm(e: React.FormEvent) {
+    e.preventDefault();
+    if (!pendingData) return;
+
+    setLoading(true);
+    setError(null);
+
+    const result = await registerUser({
+      firstName: pendingData.firstName,
+      lastName: pendingData.lastName,
+      email: pendingData.email,
+      password: pendingData.password,
+      code: code.trim(),
     });
 
     if (!result.success) {
-      if (result.error === "emailAlreadyExists") {
-        setError(t("emailAlreadyExists"));
-      } else {
-        setError(t("registerError"));
-      }
+      setError(verificationErrorText(result.error));
       setLoading(false);
       return;
     }
 
     const signInResult = await signIn("credentials", {
-      email: data.email,
-      password: data.password,
+      email: pendingData.email,
+      password: pendingData.password,
       redirect: false,
       callbackUrl: `/${locale}/dashboard`,
     });
@@ -81,89 +147,149 @@ export default function RegisterPage() {
           <CardDescription>{t("registerSubtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <TelegramAuth />
-          {!showEmailForm && (
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full text-muted-foreground"
-              onClick={() => setShowEmailForm(true)}
-            >
-              {t("registerWithEmail")}
-            </Button>
-          )}
-          {showEmailForm && (
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {error && (
-              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                {error}
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">{t("firstName")}</Label>
-                <Input
-                  id="firstName"
-                  placeholder={t("firstNamePlaceholder")}
-                  {...register("firstName")}
-                />
-                {errors.firstName && (
-                  <p className="text-sm text-destructive">{errors.firstName.message}</p>
+          {step === "form" && (
+            <>
+              <TelegramAuth />
+              {!showEmailForm && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full text-muted-foreground"
+                  onClick={() => setShowEmailForm(true)}
+                >
+                  {t("registerWithEmail")}
+                </Button>
+              )}
+              {showEmailForm && (
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                {error && (
+                  <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                    {error}
+                  </div>
                 )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName">{t("lastName")}</Label>
-                <Input
-                  id="lastName"
-                  placeholder={t("lastNamePlaceholder")}
-                  {...register("lastName")}
-                />
-                {errors.lastName && (
-                  <p className="text-sm text-destructive">{errors.lastName.message}</p>
-                )}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">{t("email")}</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="email@example.com"
-                {...register("email")}
-              />
-              {errors.email && (
-                <p className="text-sm text-destructive">{errors.email.message}</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">{t("firstName")}</Label>
+                    <Input
+                      id="firstName"
+                      placeholder={t("firstNamePlaceholder")}
+                      {...register("firstName")}
+                    />
+                    {errors.firstName && (
+                      <p className="text-sm text-destructive">{errors.firstName.message}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">{t("lastName")}</Label>
+                    <Input
+                      id="lastName"
+                      placeholder={t("lastNamePlaceholder")}
+                      {...register("lastName")}
+                    />
+                    {errors.lastName && (
+                      <p className="text-sm text-destructive">{errors.lastName.message}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">{t("email")}</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="email@example.com"
+                    {...register("email")}
+                  />
+                  {errors.email && (
+                    <p className="text-sm text-destructive">{errors.email.message}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">{t("password")}</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder={t("passwordPlaceholder")}
+                    {...register("password")}
+                  />
+                  {errors.password && (
+                    <p className="text-sm text-destructive">{errors.password.message}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">{t("confirmPassword")}</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder={t("confirmPasswordPlaceholder")}
+                    {...register("confirmPassword")}
+                  />
+                  {errors.confirmPassword && (
+                    <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
+                  )}
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? t("sendingCode") : t("sendCode")}
+                </Button>
+              </form>
               )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">{t("password")}</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder={t("passwordPlaceholder")}
-                {...register("password")}
-              />
-              {errors.password && (
-                <p className="text-sm text-destructive">{errors.password.message}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">{t("confirmPassword")}</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder={t("confirmPasswordPlaceholder")}
-                {...register("confirmPassword")}
-              />
-              {errors.confirmPassword && (
-                <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
-              )}
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? t("registering") : t("register")}
-            </Button>
-          </form>
+            </>
           )}
+
+          {step === "code" && pendingData && (
+            <form onSubmit={onConfirm} className="space-y-4">
+              {error && (
+                <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                  {error}
+                </div>
+              )}
+              <p className="text-sm text-muted-foreground">
+                {t("codeSentTo", { email: pendingData.email })}
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="verification-code">{t("verificationCode")}</Label>
+                <Input
+                  id="verification-code"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  placeholder="000000"
+                  maxLength={6}
+                  className="text-center text-2xl tracking-[0.5em]"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                />
+              </div>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={loading || code.length !== 6}
+              >
+                {loading ? t("registering") : t("register")}
+              </Button>
+              <div className="flex items-center justify-between text-sm">
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:underline"
+                  onClick={() => {
+                    setStep("form");
+                    setError(null);
+                  }}
+                >
+                  {t("changeData")}
+                </button>
+                <button
+                  type="button"
+                  className="text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
+                  disabled={resendTimer > 0}
+                  onClick={onResend}
+                >
+                  {resendTimer > 0
+                    ? t("resendCodeIn", { seconds: resendTimer })
+                    : t("resendCode")}
+                </button>
+              </div>
+            </form>
+          )}
+
           <p className="mt-4 text-center text-sm text-muted-foreground">
             {t("hasAccount")}{" "}
             <Link href="/login" className="text-primary hover:underline">

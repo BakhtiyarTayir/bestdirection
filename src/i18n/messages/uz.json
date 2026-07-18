@@ -89,7 +89,18 @@
     "telegramLoginFailed": "Telegram orqali kirib bo'lmadi",
     "telegramLoginExpired": "Kirish kodi eskirdi. Qayta urinib ko'ring",
     "loginWithEmail": "Email va parol orqali kirish",
-    "registerWithEmail": "Email orqali ro'yxatdan o'tish"
+    "registerWithEmail": "Email orqali ro'yxatdan o'tish",
+    "sendCode": "Pochtaga kod olish",
+    "sendingCode": "Kod yuborilmoqda...",
+    "codeSentTo": "{email} manziliga 6 xonali kod yubordik. Pochtangizni (va \"Spam\" papkasini) tekshiring.",
+    "verificationCode": "Xatdagi kod",
+    "changeData": "Ma'lumotlarni o'zgartirish",
+    "resendCode": "Kodni qayta yuborish",
+    "resendCodeIn": "Qayta yuborish {seconds} soniyadan keyin",
+    "invalidCode": "Kod noto'g'ri. Tekshirib, qayta urinib ko'ring",
+    "codeExpired": "Kod eskirdi. Yangisini so'rang",
+    "tooManyAttempts": "Urinishlar soni oshib ketdi. Yangi kod so'rang",
+    "emailSendFailed": "Xat yuborib bo'lmadi. Keyinroq urinib ko'ring"
   },
   "nav": {
     "dashboard": "Boshqaruv paneli",

@@ -4,12 +4,17 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import {
+  EMAIL_CODE_MAX_ATTEMPTS,
+  hashVerificationCode,
+} from "@/lib/email-codes";
 
 const registerUserSchema = z.object({
   firstName: z.string().trim().min(1),
   lastName: z.string().trim().min(1),
   email: z.string().trim().email(),
   password: z.string().min(8),
+  code: z.string().regex(/^\d{6}$/),
 });
 
 export async function registerUser(data: {
@@ -17,6 +22,7 @@ export async function registerUser(data: {
   lastName: string;
   email: string;
   password: string;
+  code: string;
 }) {
   const parsed = registerUserSchema.safeParse(data);
   if (!parsed.success) {
@@ -35,6 +41,30 @@ export async function registerUser(data: {
   if (existing) {
     return { success: false, error: "emailAlreadyExists" };
   }
+
+  // Проверка кода подтверждения почты
+  const verification = await prisma.emailVerificationCode.findUnique({
+    where: { email: normalizedData.email },
+  });
+
+  if (!verification || verification.expiresAt < new Date()) {
+    return { success: false, error: "codeExpired" };
+  }
+  if (verification.attempts >= EMAIL_CODE_MAX_ATTEMPTS) {
+    return { success: false, error: "tooManyAttempts" };
+  }
+  if (
+    verification.codeHash !==
+    hashVerificationCode(normalizedData.email, normalizedData.code)
+  ) {
+    await prisma.emailVerificationCode.update({
+      where: { id: verification.id },
+      data: { attempts: { increment: 1 } },
+    });
+    return { success: false, error: "invalidCode" };
+  }
+
+  await prisma.emailVerificationCode.delete({ where: { id: verification.id } });
 
   const passwordHash = await bcrypt.hash(normalizedData.password, 10);
 

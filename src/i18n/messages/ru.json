@@ -89,7 +89,18 @@
     "telegramLoginFailed": "Не удалось войти через Telegram",
     "telegramLoginExpired": "Код входа истёк. Попробуйте ещё раз",
     "loginWithEmail": "Войти по email и паролю",
-    "registerWithEmail": "Зарегистрироваться по email"
+    "registerWithEmail": "Зарегистрироваться по email",
+    "sendCode": "Получить код на почту",
+    "sendingCode": "Отправка кода...",
+    "codeSentTo": "Мы отправили 6-значный код на {email}. Проверьте почту (и папку «Спам»).",
+    "verificationCode": "Код из письма",
+    "changeData": "Изменить данные",
+    "resendCode": "Отправить код ещё раз",
+    "resendCodeIn": "Повторная отправка через {seconds} с",
+    "invalidCode": "Неверный код. Проверьте и попробуйте снова",
+    "codeExpired": "Код истёк. Запросите новый",
+    "tooManyAttempts": "Слишком много попыток. Запросите новый код",
+    "emailSendFailed": "Не удалось отправить письмо. Попробуйте позже"
   },
   "nav": {
     "dashboard": "Дашборд",

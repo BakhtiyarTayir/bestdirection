@@ -228,6 +228,16 @@ model Lesson {
   @@index([deletedAt])
 }
 
+// Код подтверждения email при регистрации: один активный код на адрес
+model EmailVerificationCode {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  codeHash  String
+  attempts  Int      @default(0)
+  expiresAt DateTime
+  sentAt    DateTime @default(now())
+}
+
 // Одноразовая заявка на вход через Telegram-бота (deep-link t.me/bot?start=login_<code>)
 model TelegramAuthRequest {
   id               String   @id @default(cuid())
