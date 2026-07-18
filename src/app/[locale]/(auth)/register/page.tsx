@@ -62,6 +62,8 @@ export default function RegisterPage() {
       case "emailSendFailed":
       case "emailNotConfigured":
         return t("emailSendFailed");
+      case "tooManyRequests":
+        return t("tooManyRequests");
       default:
         return t("registerError");
     }

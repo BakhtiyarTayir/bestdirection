@@ -11,6 +11,7 @@ import {
 import { randomInt } from "crypto";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
+import { checkActionRateLimit } from "@/lib/action-rate-limit";
 
 // ---------- requestEmailVerification ----------
 // Публичный: шаг 1 регистрации. Отправляет 6-значный код на почту.
@@ -18,6 +19,10 @@ export async function requestEmailVerification(data: {
   email: string;
   locale?: string;
 }) {
+  if (!(await checkActionRateLimit("email-code", 5))) {
+    return { success: false, error: "tooManyRequests" };
+  }
+
   const parsed = z.string().trim().email().safeParse(data.email);
   if (!parsed.success) {
     return { success: false, error: "invalidData" };
@@ -75,6 +80,10 @@ export async function requestPasswordReset(data: {
   email: string;
   locale?: string;
 }) {
+  if (!(await checkActionRateLimit("email-code", 5))) {
+    return { success: false, error: "tooManyRequests" };
+  }
+
   const parsed = z.string().trim().email().safeParse(data.email);
   if (!parsed.success) {
     return { success: false, error: "invalidData" };
@@ -132,6 +141,10 @@ export async function resetPassword(data: {
   code: string;
   newPassword: string;
 }) {
+  if (!(await checkActionRateLimit("verify-code", 10))) {
+    return { success: false, error: "tooManyRequests" };
+  }
+
   const parsed = z
     .object({
       email: z.string().trim().email(),
@@ -182,6 +195,10 @@ export async function resetPassword(data: {
 // Публичный: шаг 2 регистрации. Проверяет код, НЕ удаляя его —
 // окончательно код гасится в registerUser при создании аккаунта.
 export async function verifyEmailCode(data: { email: string; code: string }) {
+  if (!(await checkActionRateLimit("verify-code", 10))) {
+    return { success: false, error: "tooManyRequests" };
+  }
+
   const email = data.email?.trim().toLowerCase();
   if (!email || !/^\d{6}$/.test(data.code ?? "")) {
     return { success: false, error: "invalidCode" };

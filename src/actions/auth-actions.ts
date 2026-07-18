@@ -8,6 +8,7 @@ import {
   EMAIL_CODE_MAX_ATTEMPTS,
   hashVerificationCode,
 } from "@/lib/email-codes";
+import { checkActionRateLimit } from "@/lib/action-rate-limit";
 
 const registerUserSchema = z.object({
   firstName: z.string().trim().min(1),
@@ -24,6 +25,10 @@ export async function registerUser(data: {
   password: string;
   code: string;
 }) {
+  if (!(await checkActionRateLimit("register", 10))) {
+    return { success: false, error: "tooManyRequests" };
+  }
+
   const parsed = registerUserSchema.safeParse(data);
   if (!parsed.success) {
     return { success: false, error: "invalidData" };

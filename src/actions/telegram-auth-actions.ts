@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { randomBytes } from "crypto";
+import { checkActionRateLimit } from "@/lib/action-rate-limit";
 
 const LOGIN_REQUEST_TTL_MS = 10 * 60 * 1000;
 
@@ -19,6 +20,10 @@ export async function getTelegramBotUsername() {
 // ---------- createTelegramLoginRequest ----------
 // Публичный: вызывается со страницы входа до аутентификации.
 export async function createTelegramLoginRequest() {
+  if (!(await checkActionRateLimit("tg-login-create", 10))) {
+    return { success: false as const, error: "tooManyRequests" };
+  }
+
   // Попутная уборка истёкших заявок
   await prisma.telegramAuthRequest.deleteMany({
     where: { expiresAt: { lt: new Date() } },
@@ -40,6 +45,11 @@ export async function createTelegramLoginRequest() {
 // Публичный: страница входа опрашивает статус, пока пользователь
 // подтверждает вход в чате с ботом.
 export async function getTelegramLoginStatus(code: string) {
+  // Страница опрашивает раз в 2.5 с (~24/мин) — лимит с запасом
+  if (!(await checkActionRateLimit("tg-login-status", 120))) {
+    return { success: false, error: "tooManyRequests" };
+  }
+
   if (typeof code !== "string" || !/^[0-9a-f]{32}$/.test(code)) {
     return { success: false, error: "Invalid code" };
   }

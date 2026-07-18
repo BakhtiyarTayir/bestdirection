@@ -1,11 +1,20 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { writeFile, mkdir } from "fs/promises";
+import { writeFile, mkdir, unlink } from "fs/promises";
 import path from "path";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const UPLOAD_DIR = path.join(process.cwd(), "public/uploads/homework");
+// Вне public/: работы студентов не должны раздаваться статикой в обход
+// авторизованного /api/files/[fileId]
+const UPLOAD_DIR = path.join(process.cwd(), "uploads/homework");
+
+const ALLOWED_EXTENSIONS = new Set([
+  ".py", ".js", ".ts", ".jsx", ".tsx", ".php", ".java", ".cs", ".cpp", ".c",
+  ".h", ".html", ".css", ".sql", ".json", ".txt", ".md", ".ipynb",
+  ".zip", ".rar", ".7z", ".pdf", ".doc", ".docx", ".xls", ".xlsx",
+  ".png", ".jpg", ".jpeg", ".gif", ".webp",
+]);
 
 export async function POST(
   request: Request,
@@ -76,7 +85,10 @@ export async function POST(
 
   // Save file to disk
   const buffer = Buffer.from(await file.arrayBuffer());
-  const ext = path.extname(file.name) || "";
+  const ext = (path.extname(file.name) || "").toLowerCase();
+  if (!ALLOWED_EXTENSIONS.has(ext)) {
+    return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
+  }
   const safeFilename = `${homeworkId}_${session.user.id}_${Date.now()}${ext}`;
   const filePath = path.join(UPLOAD_DIR, safeFilename);
 
@@ -84,41 +96,51 @@ export async function POST(
   await writeFile(filePath, buffer);
 
   // Create submission + file in transaction
-  const submission = await prisma.$transaction(async (tx) => {
-    const count = await tx.submission.count({
-      where: { homeworkId, studentId: session.user.id },
-    });
+  let submission;
+  try {
+    submission = await prisma.$transaction(async (tx) => {
+      const count = await tx.submission.count({
+        where: { homeworkId, studentId: session.user.id },
+      });
 
-    if (count >= homework.maxAttempts) {
-      throw new Error("MAX_ATTEMPTS_REACHED");
-    }
+      if (count >= homework.maxAttempts) {
+        throw new Error("MAX_ATTEMPTS_REACHED");
+      }
 
-    const sub = await tx.submission.create({
-      data: {
-        homeworkId,
-        studentId: session.user.id,
-        code: `[Файл: ${file.name}]`,
-        status: "PENDING",
-        attemptNumber: count + 1,
-        isLate,
-        penalty,
-        manualStatus: "PENDING",
-        files: {
-          create: {
-            filename: file.name,
-            path: filePath,
-            mimeType: file.type || "application/octet-stream",
-            size: file.size,
+      const sub = await tx.submission.create({
+        data: {
+          homeworkId,
+          studentId: session.user.id,
+          code: `[Файл: ${file.name}]`,
+          status: "PENDING",
+          attemptNumber: count + 1,
+          isLate,
+          penalty,
+          manualStatus: "PENDING",
+          files: {
+            create: {
+              filename: file.name,
+              path: filePath,
+              mimeType: file.type || "application/octet-stream",
+              size: file.size,
+            },
           },
         },
-      },
-      include: {
-        files: { select: { id: true, filename: true, size: true } },
-      },
-    });
+        include: {
+          files: { select: { id: true, filename: true, size: true } },
+        },
+      });
 
-    return sub;
-  });
+      return sub;
+    });
+  } catch (error) {
+    // Не оставляем осиротевший файл на диске
+    await unlink(filePath).catch(() => {});
+    if (error instanceof Error && error.message === "MAX_ATTEMPTS_REACHED") {
+      return NextResponse.json({ error: "Max attempts reached" }, { status: 400 });
+    }
+    throw error;
+  }
 
   return NextResponse.json({
     success: true,

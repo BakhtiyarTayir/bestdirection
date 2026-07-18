@@ -544,6 +544,10 @@ export async function changePassword(data: {
   newPassword: string;
 }) {
   return withAuth(async (session) => {
+    if (typeof data.newPassword !== "string" || data.newPassword.length < 8) {
+      return { success: false, error: "Password must be at least 8 characters" };
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
     });

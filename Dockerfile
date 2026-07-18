@@ -32,9 +32,10 @@ COPY --from=builder /app/public ./public
 # Prisma schema + migrations kept for reference / manual migrate steps (tiny).
 COPY --from=builder /app/prisma ./prisma
 
-# Ensure uploads + Next.js image cache dirs exist and are writable by the app user
-RUN mkdir -p /app/public/uploads /app/.next/cache \
-    && chown -R nextjs:nodejs /app/public/uploads /app/.next/cache
+# Ensure uploads + Next.js image cache dirs exist and are writable by the app user.
+# /app/uploads — приватные файлы (сдачи ДЗ), НЕ раздаются статикой
+RUN mkdir -p /app/public/uploads /app/uploads /app/.next/cache \
+    && chown -R nextjs:nodejs /app/public/uploads /app/uploads /app/.next/cache
 
 USER nextjs
 

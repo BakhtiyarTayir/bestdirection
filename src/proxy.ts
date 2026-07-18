@@ -11,6 +11,12 @@ const intlMiddleware = createMiddleware({
 });
 
 export function proxy(request: NextRequest) {
+  // Работы студентов не раздаются статикой: доступ только через
+  // авторизованный /api/files/[fileId] (защита оставшихся в public файлов)
+  if (request.nextUrl.pathname.startsWith("/uploads/homework/")) {
+    return new NextResponse(null, { status: 404 });
+  }
+
   if (request.nextUrl.pathname.startsWith("/api")) {
     const response = NextResponse.next();
     addSecurityHeaders(response);
@@ -103,5 +109,7 @@ function addSecurityHeaders(response: NextResponse) {
 }
 
 export const config = {
-  matcher: ["/((?!_next|.*\\..*).*)"],
+  // Второй паттерн обязателен: первый исключает пути с точкой,
+  // а файлы в /uploads/homework содержат расширения
+  matcher: ["/((?!_next|.*\\..*).*)", "/uploads/homework/:path*"],
 };

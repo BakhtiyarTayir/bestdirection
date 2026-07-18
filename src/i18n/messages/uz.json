@@ -113,7 +113,8 @@
     "resettingPassword": "Parol o'zgartirilmoqda...",
     "userNotFound": "Bunday emailli foydalanuvchi topilmadi",
     "resetFailed": "Parolni o'zgartirib bo'lmadi. Qayta urinib ko'ring",
-    "backToLogin": "Kirishga qaytish"
+    "backToLogin": "Kirishga qaytish",
+    "tooManyRequests": "So'rovlar juda ko'p. Bir daqiqa kutib, qayta urinib ko'ring"
   },
   "nav": {
     "dashboard": "Boshqaruv paneli",

@@ -1,6 +1,6 @@
 import { Bot, InlineKeyboard, type Context } from "grammy";
 import { prisma } from "@/lib/prisma";
-import { submitSolutionInternal } from "@/actions/homework-actions";
+import { submitSolutionInternal } from "@/lib/homework-submission";
 import type { ProgrammingLanguage } from "@/generated/prisma";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";

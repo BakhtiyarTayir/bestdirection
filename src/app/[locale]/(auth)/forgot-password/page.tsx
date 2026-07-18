@@ -52,6 +52,8 @@ export default function ForgotPasswordPage() {
       case "emailSendFailed":
       case "emailNotConfigured":
         return t("emailSendFailed");
+      case "tooManyRequests":
+        return t("tooManyRequests");
       default:
         return t("resetFailed");
     }
