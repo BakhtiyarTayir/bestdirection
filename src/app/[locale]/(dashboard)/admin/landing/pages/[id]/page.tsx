@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
 import { PageEditor } from "./page-editor";
+import { MARKETING_DOMAIN } from "@/lib/marketing-domain";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ export default async function AdminPageEditorPage({ params }: AdminPageEditorPro
   const { id } = await params;
 
   if (id === "new") {
-    return <PageEditor page={null} />;
+    return <PageEditor page={null} marketingDomain={MARKETING_DOMAIN} />;
   }
 
   const page = await prisma.marketingPage.findUnique({ where: { id } });
@@ -22,6 +23,7 @@ export default async function AdminPageEditorPage({ params }: AdminPageEditorPro
 
   return (
     <PageEditor
+      marketingDomain={MARKETING_DOMAIN}
       page={{
         id: page.id,
         slug: page.slug,

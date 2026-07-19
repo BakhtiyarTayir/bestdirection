@@ -133,6 +133,9 @@
     "attendance": "Davomat",
     "leads": "Arizalar",
     "landing": "Lending",
+    "site": "Sayt",
+    "siteLanding": "Lending",
+    "sitePages": "Sahifalar",
     "browseCatalog": "Kurslar katalogi",
     "enrollmentRequests": "Kurslarga arizalar"
   },
@@ -225,7 +228,7 @@
     "copiedFrom": "Nusxa olingan:",
     "goToExams": "Kurs imtihonlariga o'tish",
     "publicationTitle": "Saytda joylashtirish",
-    "isPublicListedLabel": "Landingda ko'rsatish (uportal.uz)",
+    "isPublicListedLabel": "Landingda ko'rsatish",
     "priceLabel": "Narxi, so'm",
     "pricePlaceholder": "Masalan: 1500000",
     "publicSummaryRuLabel": "Landing uchun qisqa tavsif (rus.)",
@@ -1200,11 +1203,10 @@
       "coursesTitle": "Kurslar",
       "pagesTitle": "Sahifalar",
       "contactsTitle": "Kontaktlar",
-      "address": "Toshkent sh., O'zbekiston",
-      "phone": "+998 90 000 00 00",
-      "email": "info@uportal.uz",
+      "address": "Chirchiq sh., Sharof Rashidov ko'chasi, 19",
       "loginLink": "Shaxsiy kabinet",
-      "rights": "Barcha huquqlar himoyalangan."
+      "rights": "Barcha huquqlar himoyalangan.",
+      "telegram": "Telegram: @it_schol_official"
     },
     "leadForm": {
       "title": "Kursga yozilish",
@@ -1241,7 +1243,7 @@
   },
   "landingAdmin": {
     "title": "Lending",
-    "subtitle": "uportal.uz sayti kontenti. O‘zgarishlar saqlangach darhol e’lon qilinadi — deploy shart emas.",
+    "subtitle": "Landing sayti kontenti. O‘zgarishlar saqlangach darhol e’lon qilinadi — deploy shart emas.",
     "seedButton": "Joriy kontentni import qilish",
     "seedDone": "Import qilingan bo‘limlar: {count}. Endi kontentni tahrirlash mumkin.",
     "seedNothing": "Barcha bo‘limlar allaqachon to‘ldirilgan — import kerak emas.",
@@ -1306,7 +1308,7 @@
     "pageAdd": "Sahifa yaratish",
     "pageTitleRu": "Sarlavha (rus)",
     "pageTitleUz": "Sarlavha (o‘zb)",
-    "pageSlug": "Slug — sahifa manzili (uportal.uz/manzil)",
+    "pageSlug": "Slug — sahifa manzili (sayt/manzil)",
     "pageSlugHint": "Faqat lotin harflari, raqamlar va defis. Slug kurs slug'i bilan bir xil bo‘lsa, kurs kartochkasida «Batafsil» tugmasi paydo bo‘ladi.",
     "pageShowInFooter": "Futerdagi havola",
     "pageSeoBlock": "SEO (ixtiyoriy)",
@@ -1319,7 +1321,17 @@
     "pageBack": "Sahifalar ro‘yxatiga",
     "pageOpen": "Saytda ochish",
     "editorLoading": "Muharrir yuklanmoqda…",
-    "pageDraftBadge": "Qoralama"
+    "pageDraftBadge": "Qoralama",
+    "tabMenu": "Menyu",
+    "tabHero": "Hero-bo‘lim",
+    "tabHow": "Qanday ishlaydi",
+    "tabRobotics": "Robototexnika",
+    "tabInstagram": "Instagram",
+    "tabApply": "Yozilish",
+    "tabFooter": "Futer",
+    "sectionTextsHeading": "Bo‘lim matnlari",
+    "pagesTitle": "Sahifalar",
+    "pagesSubtitle": "Saytning alohida sahifalari (masalan, «Biz haqimizda» yoki kursning batafsil sahifasi). Saqlangach darhol e’lon qilinadi."
   },
   "catalogStudent": {
     "title": "Kurslar katalogi",

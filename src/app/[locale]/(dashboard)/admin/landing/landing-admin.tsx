@@ -4,7 +4,6 @@ import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -39,7 +38,6 @@ import {
   deleteMarketingTestimonial,
   saveMarketingTexts,
   seedMarketingContent,
-  deleteMarketingPage,
 } from "@/actions/marketing-content-actions";
 import { Loader2, Pencil, Plus, Trash2, Upload, DownloadCloud } from "lucide-react";
 
@@ -95,29 +93,44 @@ interface TextRow {
   uz: string;
 }
 
-interface PageListRow {
-  id: string;
-  slug: string;
-  titleRu: string;
-  titleUz: string;
-  published: boolean;
-  showInFooter: boolean;
-  sortOrder: number;
-}
-
 interface LandingAdminProps {
   courses: CourseRow[];
   reels: ReelRow[];
   gallery: GalleryRow[];
   testimonials: TestimonialRow[];
   texts: TextRow[];
-  pages: PageListRow[];
   initialTab?: string;
 }
 
+// Вкладки повторяют порядок секций на самом лендинге (сверху вниз).
+// Каждой вкладке соответствуют префиксы ключей MarketingText её секции.
+const TAB_TEXT_PREFIXES: Record<string, string[]> = {
+  menu: ["header.", "meta."],
+  hero: ["hero.", "stats."],
+  how: ["how."],
+  courses: ["courses."],
+  robotics: ["gallery."],
+  instagram: ["instagram."],
+  testimonials: ["testimonials."],
+  apply: ["cta.", "leadForm."],
+  footer: ["footer."],
+};
+
+const TAB_ORDER = [
+  "menu",
+  "hero",
+  "how",
+  "courses",
+  "robotics",
+  "instagram",
+  "testimonials",
+  "apply",
+  "footer",
+] as const;
+
 type ActionResult = { success: true } | { success: false; error: string };
 
-export function LandingAdmin({ courses, reels, gallery, testimonials, texts, pages, initialTab }: LandingAdminProps) {
+export function LandingAdmin({ courses, reels, gallery, testimonials, texts, initialTab }: LandingAdminProps) {
   const t = useTranslations("landingAdmin");
   const { toast } = useToast();
   const router = useRouter();
@@ -182,33 +195,51 @@ export function LandingAdmin({ courses, reels, gallery, testimonials, texts, pag
         </div>
       )}
 
-      <Tabs defaultValue={initialTab === "pages" ? "pages" : "courses"}>
-        <TabsList>
+      <Tabs
+        defaultValue={TAB_ORDER.includes(initialTab as (typeof TAB_ORDER)[number]) ? initialTab : "menu"}
+      >
+        <TabsList className="h-auto flex-wrap">
+          <TabsTrigger value="menu">{t("tabMenu")}</TabsTrigger>
+          <TabsTrigger value="hero">{t("tabHero")}</TabsTrigger>
+          <TabsTrigger value="how">{t("tabHow")}</TabsTrigger>
           <TabsTrigger value="courses">{t("tabCourses")}</TabsTrigger>
-          <TabsTrigger value="pages">{t("tabPages")}</TabsTrigger>
-          <TabsTrigger value="gallery">{t("tabGallery")}</TabsTrigger>
-          <TabsTrigger value="reels">{t("tabReels")}</TabsTrigger>
+          <TabsTrigger value="robotics">{t("tabRobotics")}</TabsTrigger>
+          <TabsTrigger value="instagram">{t("tabInstagram")}</TabsTrigger>
           <TabsTrigger value="testimonials">{t("tabTestimonials")}</TabsTrigger>
-          <TabsTrigger value="texts">{t("tabTexts")}</TabsTrigger>
+          <TabsTrigger value="apply">{t("tabApply")}</TabsTrigger>
+          <TabsTrigger value="footer">{t("tabFooter")}</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="courses">
+        <TabsContent value="menu">
+          <SectionTexts rows={texts} notify={notify} prefixes={TAB_TEXT_PREFIXES.menu} />
+        </TabsContent>
+        <TabsContent value="hero">
+          <SectionTexts rows={texts} notify={notify} prefixes={TAB_TEXT_PREFIXES.hero} />
+        </TabsContent>
+        <TabsContent value="how">
+          <SectionTexts rows={texts} notify={notify} prefixes={TAB_TEXT_PREFIXES.how} />
+        </TabsContent>
+        <TabsContent value="courses" className="space-y-8">
           <CoursesTab rows={courses} notify={notify} />
+          <SectionTexts rows={texts} notify={notify} prefixes={TAB_TEXT_PREFIXES.courses} withHeading />
         </TabsContent>
-        <TabsContent value="pages">
-          <PagesTab rows={pages} notify={notify} />
-        </TabsContent>
-        <TabsContent value="gallery">
+        <TabsContent value="robotics" className="space-y-8">
           <GalleryTab rows={gallery} notify={notify} />
+          <SectionTexts rows={texts} notify={notify} prefixes={TAB_TEXT_PREFIXES.robotics} withHeading />
         </TabsContent>
-        <TabsContent value="reels">
+        <TabsContent value="instagram" className="space-y-8">
           <ReelsTab rows={reels} notify={notify} />
+          <SectionTexts rows={texts} notify={notify} prefixes={TAB_TEXT_PREFIXES.instagram} withHeading />
         </TabsContent>
-        <TabsContent value="testimonials">
+        <TabsContent value="testimonials" className="space-y-8">
           <TestimonialsTab rows={testimonials} notify={notify} />
+          <SectionTexts rows={texts} notify={notify} prefixes={TAB_TEXT_PREFIXES.testimonials} withHeading />
         </TabsContent>
-        <TabsContent value="texts">
-          <TextsTab rows={texts} notify={notify} />
+        <TabsContent value="apply">
+          <SectionTexts rows={texts} notify={notify} prefixes={TAB_TEXT_PREFIXES.apply} />
+        </TabsContent>
+        <TabsContent value="footer">
+          <SectionTexts rows={texts} notify={notify} prefixes={TAB_TEXT_PREFIXES.footer} />
         </TabsContent>
       </Tabs>
     </div>
@@ -552,86 +583,6 @@ function CourseDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-// ─── Страницы ────────────────────────────────────────────────────────────
-
-function PagesTab({ rows, notify }: { rows: PageListRow[]; notify: Notify }) {
-  const t = useTranslations("landingAdmin");
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  const remove = async (id: string) => {
-    setDeletingId(id);
-    notify(await deleteMarketingPage(id), t("deleted"));
-    setDeletingId(null);
-  };
-
-  return (
-    <div className="space-y-4">
-      <Button asChild>
-        <Link href="/admin/landing/pages/new">
-          <Plus className="mr-2 h-4 w-4" />
-          {t("pageAdd")}
-        </Link>
-      </Button>
-
-      {rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t("pagesEmpty")}</p>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t("pageTitleColumn")}</TableHead>
-              <TableHead>{t("pageSlugColumn")}</TableHead>
-              <TableHead>{t("sortOrderField")}</TableHead>
-              <TableHead />
-              <TableHead />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => (
-              <TableRow key={row.id}>
-                <TableCell className="font-medium">
-                  <Link href={`/admin/landing/pages/${row.id}`} className="hover:underline">
-                    {row.titleRu}
-                  </Link>
-                </TableCell>
-                <TableCell className="text-muted-foreground">/{row.slug}</TableCell>
-                <TableCell>{row.sortOrder}</TableCell>
-                <TableCell>
-                  {!row.published && <Badge variant="secondary">{t("pageDraftBadge")}</Badge>}
-                </TableCell>
-                <TableCell>
-                  <div className="flex justify-end gap-2">
-                    <Button asChild size="sm" variant="outline">
-                      <Link href={`/admin/landing/pages/${row.id}`} aria-label={t("save")}>
-                        <Pencil className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={deletingId === row.id}
-                      onClick={() => {
-                        if (window.confirm(t("confirmDelete"))) remove(row.id);
-                      }}
-                      aria-label={t("delete")}
-                    >
-                      {deletingId === row.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
-    </div>
   );
 }
 
@@ -1095,39 +1046,55 @@ function TestimonialDialog({
   );
 }
 
-// ─── Тексты ──────────────────────────────────────────────────────────────
+// ─── Тексты секции ───────────────────────────────────────────────────────
+// Каждая вкладка показывает только тексты своей секции (по префиксам ключей).
 
-function TextsTab({ rows, notify }: { rows: TextRow[]; notify: Notify }) {
+function SectionTexts({
+  rows,
+  notify,
+  prefixes,
+  withHeading = false,
+}: {
+  rows: TextRow[];
+  notify: Notify;
+  prefixes: string[];
+  withHeading?: boolean;
+}) {
   const t = useTranslations("landingAdmin");
   const [search, setSearch] = useState("");
   const [drafts, setDrafts] = useState<Record<string, { ru: string; uz: string }>>({});
   const [saving, setSaving] = useState(false);
 
+  const sectionRows = useMemo(
+    () => rows.filter((r) => prefixes.some((p) => r.key.startsWith(p))),
+    [rows, prefixes]
+  );
+
   const changed = useMemo(
     () =>
       Object.entries(drafts).filter(([key, val]) => {
-        const orig = rows.find((r) => r.key === key);
+        const orig = sectionRows.find((r) => r.key === key);
         return orig && (orig.ru !== val.ru || orig.uz !== val.uz);
       }),
-    [drafts, rows]
+    [drafts, sectionRows]
   );
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter(
+    if (!q) return sectionRows;
+    return sectionRows.filter(
       (r) =>
         r.key.toLowerCase().includes(q) ||
         r.ru.toLowerCase().includes(q) ||
         r.uz.toLowerCase().includes(q)
     );
-  }, [rows, search]);
+  }, [sectionRows, search]);
 
   const value = (row: TextRow) => drafts[row.key] ?? { ru: row.ru, uz: row.uz };
 
   const setValue = (key: string, lang: "ru" | "uz", v: string) => {
     setDrafts((prev) => {
-      const row = rows.find((r) => r.key === key);
+      const row = sectionRows.find((r) => r.key === key);
       const base = prev[key] ?? { ru: row?.ru ?? "", uz: row?.uz ?? "" };
       return { ...prev, [key]: { ...base, [lang]: v } };
     });
@@ -1142,19 +1109,22 @@ function TextsTab({ rows, notify }: { rows: TextRow[]; notify: Notify }) {
     if (ok) setDrafts({});
   };
 
-  if (rows.length === 0) {
+  if (sectionRows.length === 0) {
     return <p className="text-sm text-muted-foreground">{t("textsEmpty")}</p>;
   }
 
   return (
     <div className="space-y-4">
+      {withHeading && <h3 className="text-lg font-semibold">{t("sectionTextsHeading")}</h3>}
       <div className="flex flex-wrap items-center gap-3">
-        <Input
-          className="max-w-sm"
-          placeholder={t("textsSearch")}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        {sectionRows.length > 6 && (
+          <Input
+            className="max-w-sm"
+            placeholder={t("textsSearch")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        )}
         <Button onClick={saveAll} disabled={saving || changed.length === 0}>
           {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {t("textsSaveAll", { count: changed.length })}

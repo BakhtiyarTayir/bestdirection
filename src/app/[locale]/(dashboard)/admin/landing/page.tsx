@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
@@ -14,16 +15,15 @@ export default async function AdminLandingPage({ searchParams }: AdminLandingPag
   const t = await getTranslations("landingAdmin");
   const { tab } = await searchParams;
 
-  const [courses, reels, gallery, testimonials, texts, pages] = await Promise.all([
+  // Страницы переехали в отдельный раздел — старые ссылки ?tab=pages ведём туда
+  if (tab === "pages") redirect("/admin/landing/pages");
+
+  const [courses, reels, gallery, testimonials, texts] = await Promise.all([
     prisma.marketingCourse.findMany({ orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] }),
     prisma.marketingReel.findMany({ orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] }),
     prisma.marketingGalleryItem.findMany({ orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] }),
     prisma.marketingTestimonial.findMany({ orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] }),
     prisma.marketingText.findMany({ orderBy: { key: "asc" } }),
-    prisma.marketingPage.findMany({
-      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-      select: { id: true, slug: true, titleRu: true, titleUz: true, published: true, showInFooter: true, sortOrder: true },
-    }),
   ]);
 
   return (
@@ -36,7 +36,6 @@ export default async function AdminLandingPage({ searchParams }: AdminLandingPag
         gallery={gallery}
         testimonials={testimonials}
         texts={texts}
-        pages={pages}
         initialTab={tab}
       />
     </div>

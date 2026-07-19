@@ -133,6 +133,9 @@
     "attendance": "Посещаемость",
     "leads": "Заявки",
     "landing": "Лендинг",
+    "site": "Сайт",
+    "siteLanding": "Лендинг",
+    "sitePages": "Страницы",
     "browseCatalog": "Каталог курсов",
     "enrollmentRequests": "Заявки на курсы"
   },
@@ -225,7 +228,7 @@
     "copiedFrom": "Скопирован из:",
     "goToExams": "Перейти к экзаменам курса",
     "publicationTitle": "Публикация на сайте",
-    "isPublicListedLabel": "Показывать на лендинге (uportal.uz)",
+    "isPublicListedLabel": "Показывать на лендинге",
     "priceLabel": "Цена, сум",
     "pricePlaceholder": "Например: 1500000",
     "publicSummaryRuLabel": "Краткое описание для лендинга (рус.)",
@@ -1200,11 +1203,10 @@
       "coursesTitle": "Курсы",
       "pagesTitle": "Страницы",
       "contactsTitle": "Контакты",
-      "address": "г. Ташкент, Узбекистан",
-      "phone": "+998 90 000 00 00",
-      "email": "info@uportal.uz",
+      "address": "г. Чирчик, ул. Шараф Рашидова, 19",
       "loginLink": "Личный кабинет",
-      "rights": "Все права защищены."
+      "rights": "Все права защищены.",
+      "telegram": "Telegram: @it_schol_official"
     },
     "leadForm": {
       "title": "Записаться на курс",
@@ -1241,7 +1243,7 @@
   },
   "landingAdmin": {
     "title": "Лендинг",
-    "subtitle": "Контент сайта uportal.uz. Изменения публикуются сразу после сохранения — деплой не нужен.",
+    "subtitle": "Контент лендинга. Изменения публикуются сразу после сохранения — деплой не нужен.",
     "seedButton": "Импортировать текущий контент",
     "seedDone": "Импортировано разделов: {count}. Теперь контент можно редактировать.",
     "seedNothing": "Все разделы уже заполнены — импорт не требуется.",
@@ -1306,7 +1308,7 @@
     "pageAdd": "Создать страницу",
     "pageTitleRu": "Заголовок (рус)",
     "pageTitleUz": "Заголовок (узб)",
-    "pageSlug": "Slug — адрес страницы (uportal.uz/адрес)",
+    "pageSlug": "Slug — адрес страницы (сайт/адрес)",
     "pageSlugHint": "Только латиница, цифры и дефис. Если slug совпадает со slug курса, на карточке курса появится кнопка «Подробнее».",
     "pageShowInFooter": "Ссылка в футере",
     "pageSeoBlock": "SEO (необязательно)",
@@ -1319,7 +1321,17 @@
     "pageBack": "К списку страниц",
     "pageOpen": "Открыть на сайте",
     "editorLoading": "Редактор загружается…",
-    "pageDraftBadge": "Черновик"
+    "pageDraftBadge": "Черновик",
+    "tabMenu": "Меню",
+    "tabHero": "Hero-секция",
+    "tabHow": "Как это работает",
+    "tabRobotics": "Робототехника",
+    "tabInstagram": "Instagram",
+    "tabApply": "Записаться",
+    "tabFooter": "Футер",
+    "sectionTextsHeading": "Тексты секции",
+    "pagesTitle": "Страницы",
+    "pagesSubtitle": "Отдельные страницы сайта (например, «О нас» или детальная страница курса). Публикуются сразу после сохранения."
   },
   "catalogStudent": {
     "title": "Каталог курсов",

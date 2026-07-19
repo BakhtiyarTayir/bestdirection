@@ -1,5 +1,6 @@
 import Image from "next/image";
 import type { LandingCourse, LandingPage } from "@/lib/marketing-content";
+import { LMS_URL } from "@/lib/marketing-domain";
 
 // Общие шапка и футер лендинга: используются главной страницей и
 // произвольными страницами (uportal.uz/<slug>). Серверные компоненты —
@@ -38,7 +39,7 @@ export function MarketingHeader({ mt, anchorBase = "" }: ChromeProps) {
           </a>
         </nav>
         <a
-          href="https://course.uportal.uz"
+          href={LMS_URL}
           className="rounded-full bg-[#F6B93B] px-5 py-2.5 text-sm font-bold text-[#191211] shadow-[0_8px_20px_rgba(25,18,17,0.35)] transition-[transform,box-shadow,background-color] duration-200 motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-95 hover:bg-[#ffc95c] hover:shadow-[0_12px_26px_rgba(25,18,17,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
         >
           {mt("header.cta")}
@@ -93,15 +94,27 @@ export function MarketingFooter({ mt, courses, pages, isUz, anchorBase = "" }: F
                     </a>
                   </li>
                 ))}
-              <li><a href="https://course.uportal.uz" className="hover:text-white">{mt("footer.loginLink")}</a></li>
+              <li><a href={LMS_URL} className="hover:text-white">{mt("footer.loginLink")}</a></li>
             </ul>
           </div>
           <div>
             <h4 className="mb-4 text-sm font-bold uppercase tracking-wide text-white">{mt("footer.contactsTitle")}</h4>
             <ul className="space-y-3 text-sm">
-              <li>{mt("footer.address")}</li>
-              <li>{mt("footer.phone")}</li>
-              <li>{mt("footer.email")}</li>
+              <li>
+                <a
+                  href="https://maps.google.com/maps?q=41.472053,69.589117&ll=41.472053,69.589117&z=16"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white"
+                >
+                  {mt("footer.address")}
+                </a>
+              </li>
+              <li>
+                <a href="https://t.me/it_schol_official" target="_blank" rel="noopener noreferrer" className="hover:text-white">
+                  {mt("footer.telegram")}
+                </a>
+              </li>
             </ul>
           </div>
         </div>

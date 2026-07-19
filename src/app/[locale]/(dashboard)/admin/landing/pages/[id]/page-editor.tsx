@@ -32,6 +32,7 @@ interface PageRow {
 
 interface PageEditorProps {
   page: PageRow | null;
+  marketingDomain: string;
 }
 
 /**
@@ -101,7 +102,7 @@ function useEditor(holderId: string, initial: object | null) {
   return { editorRef, ready };
 }
 
-export function PageEditor({ page }: PageEditorProps) {
+export function PageEditor({ page, marketingDomain }: PageEditorProps) {
   const t = useTranslations("landingAdmin");
   const { toast } = useToast();
   const router = useRouter();
@@ -170,7 +171,7 @@ export function PageEditor({ page }: PageEditorProps) {
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button asChild variant="ghost" size="sm">
-          <Link href="/admin/landing?tab=pages">
+          <Link href="/admin/landing/pages">
             <ArrowLeft className="mr-2 h-4 w-4" />
             {t("pageBack")}
           </Link>
@@ -178,7 +179,7 @@ export function PageEditor({ page }: PageEditorProps) {
         <div className="flex items-center gap-3">
           {page && (
             <Button asChild variant="outline" size="sm">
-              <a href={`https://uportal.uz/${page.slug}`} target="_blank" rel="noopener noreferrer">
+              <a href={`https://${marketingDomain}/${page.slug}`} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="mr-2 h-4 w-4" />
                 {t("pageOpen")}
               </a>
