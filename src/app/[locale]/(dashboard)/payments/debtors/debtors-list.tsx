@@ -1,0 +1,298 @@
+"use client";
+
+import { Fragment, useState, useTransition } from "react";
+import { useRouter, usePathname } from "@/i18n/navigation";
+import { useLocale, useTranslations } from "next-intl";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ChevronDown, ChevronRight, SlidersHorizontal, TriangleAlert } from "lucide-react";
+import { BillingDialog } from "./billing-dialog";
+
+export interface DebtorBreakdown {
+  month: string;
+  amount: number;
+  basis: string;
+  unitsTotal: number;
+  unitsBilled: number;
+}
+
+export interface DebtorRow {
+  enrollmentId: string;
+  student: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    phone: string | null;
+    telegramUsername: string | null;
+  };
+  course: { id: string; title: string };
+  group: { id: string; name: string } | null;
+  monthlyPrice: number;
+  hasSchedule: boolean;
+  charged: number;
+  paid: number;
+  debt: number;
+  billedMonths: number;
+  breakdown: DebtorBreakdown[];
+}
+
+interface DebtorsListProps {
+  month: string;
+  debtors: DebtorRow[];
+  totalDebt: number;
+  prepaidCount: number;
+  prepaidTotal: number;
+  withoutSchedule: number;
+  courseId?: string;
+  courses: { id: string; title: string }[];
+}
+
+const ALL = "all";
+
+export function DebtorsList({
+  month,
+  debtors,
+  totalDebt,
+  prepaidCount,
+  prepaidTotal,
+  withoutSchedule,
+  courseId,
+  courses,
+}: DebtorsListProps) {
+  const t = useTranslations("debtors");
+  const locale = useLocale();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+
+  const money = new Intl.NumberFormat(locale === "uz" ? "uz-UZ" : "ru-RU");
+
+  const setFilter = (key: string, value: string) => {
+    const next = { month, courseId, [key]: value === ALL ? "" : value };
+    const params = new URLSearchParams();
+    for (const [k, v] of Object.entries(next)) {
+      if (v) params.set(k, v);
+    }
+    const query = params.toString();
+    startTransition(() => {
+      router.replace(query ? `${pathname}?${query}` : pathname);
+    });
+  };
+
+  const basisLabel = (item: DebtorBreakdown) => {
+    switch (item.basis) {
+      case "full":
+        return t("basisFull");
+      case "lessons":
+        return t("basisLessons", { billed: item.unitsBilled, total: item.unitsTotal });
+      case "days":
+        return t("basisDays", { billed: item.unitsBilled, total: item.unitsTotal });
+      case "manual":
+        return t("basisManual");
+      default:
+        return "—";
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="space-y-1">
+          <Label htmlFor="debtors-month" className="text-xs text-muted-foreground">
+            {t("filterMonth")}
+          </Label>
+          <Input
+            id="debtors-month"
+            type="month"
+            className="w-40"
+            value={month}
+            onChange={(e) => setFilter("month", e.target.value)}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">{t("filterCourse")}</Label>
+          <Select value={courseId ?? ALL} onValueChange={(value) => setFilter("courseId", value)}>
+            <SelectTrigger className="w-56">
+              <SelectValue placeholder={t("allCourses")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>{t("allCourses")}</SelectItem>
+              {courses.map((course) => (
+                <SelectItem key={course.id} value={course.id}>
+                  {course.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-lg border bg-muted/40 px-4 py-3">
+          <div className="text-sm text-muted-foreground">{t("totalDebt")}</div>
+          <div className="text-2xl font-bold">{money.format(totalDebt)} UZS</div>
+          <div className="text-sm text-muted-foreground">
+            {t("debtorsCount", { count: debtors.length })}
+          </div>
+        </div>
+        <div className="rounded-lg border px-4 py-3">
+          <div className="text-sm text-muted-foreground">{t("prepaid")}</div>
+          <div className="text-2xl font-bold">{money.format(prepaidTotal)} UZS</div>
+          <div className="text-sm text-muted-foreground">
+            {t("prepaidCount", { count: prepaidCount })}
+          </div>
+        </div>
+        {withoutSchedule > 0 && (
+          <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <TriangleAlert className="h-4 w-4 text-amber-600" />
+              {t("noScheduleTitle")}
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t("noScheduleHint", { count: withoutSchedule })}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {debtors.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
+          {t("empty")}
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-8" />
+                <TableHead>{t("colStudent")}</TableHead>
+                <TableHead>{t("colCourse")}</TableHead>
+                <TableHead className="text-right">{t("colCharged")}</TableHead>
+                <TableHead className="text-right">{t("colPaid")}</TableHead>
+                <TableHead className="text-right">{t("colDebt")}</TableHead>
+                <TableHead className="text-right">{t("colActions")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {debtors.map((row) => {
+                const isOpen = expanded === row.enrollmentId;
+                return (
+                  <Fragment key={row.enrollmentId}>
+                    <TableRow>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          aria-label={t("toggleBreakdown")}
+                          aria-expanded={isOpen}
+                          onClick={() => setExpanded(isOpen ? null : row.enrollmentId)}
+                        >
+                          {isOpen ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium">
+                          {row.student.lastName} {row.student.firstName}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {row.student.phone ?? t("noPhone")}
+                          {row.student.telegramUsername && ` · @${row.student.telegramUsername}`}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>{row.course.title}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {row.group?.name ?? t("noGroup")} · {money.format(row.monthlyPrice)}{" "}
+                          {t("perMonth")}
+                        </div>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-right">
+                        {money.format(row.charged)}
+                        <div className="text-xs text-muted-foreground">
+                          {t("monthsBilled", { count: row.billedMonths })}
+                        </div>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-right">
+                        {money.format(row.paid)}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-right">
+                        <Badge variant="destructive">{money.format(row.debt)}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={t("billingSettings")}
+                          onClick={() => setEditing(row.enrollmentId)}
+                        >
+                          <SlidersHorizontal className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                    {isOpen && (
+                      <TableRow className="bg-muted/30">
+                        <TableCell />
+                        <TableCell colSpan={6}>
+                          <div className="space-y-1 py-1">
+                            <div className="text-sm font-medium">{t("breakdownTitle")}</div>
+                            {row.breakdown.map((item) => (
+                              <div
+                                key={item.month}
+                                className="flex flex-wrap justify-between gap-2 text-sm"
+                              >
+                                <span className="text-muted-foreground">
+                                  {item.month} · {basisLabel(item)}
+                                </span>
+                                <span>{money.format(item.amount)} UZS</span>
+                              </div>
+                            ))}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {editing && (
+        <BillingDialog
+          enrollmentId={editing}
+          open
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            router.refresh();
+          }}
+        />
+      )}
+    </div>
+  );
+}

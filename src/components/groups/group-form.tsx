@@ -22,13 +22,26 @@ interface GroupFormProps {
     name: string;
     description: string | null;
     schedule: string | null;
+    scheduleDays: number[];
     startDate: Date | null;
     endDate: Date | null;
   };
 }
 
+/** ISO: 1 = понедельник … 7 = воскресенье */
+const WEEKDAYS = [
+  { iso: 1, key: "mon" },
+  { iso: 2, key: "tue" },
+  { iso: 3, key: "wed" },
+  { iso: 4, key: "thu" },
+  { iso: 5, key: "fri" },
+  { iso: 6, key: "sat" },
+  { iso: 7, key: "sun" },
+] as const;
+
 export function GroupForm({ courseId, courseSlug, group }: GroupFormProps) {
   const t = useTranslations("groups");
+  const tWeekdays = useTranslations("weekdays");
   const tCommon = useTranslations("common");
   const tErrors = useTranslations("errors");
   const tDatePicker = useTranslations("datePicker");
@@ -48,6 +61,7 @@ export function GroupForm({ courseId, courseSlug, group }: GroupFormProps) {
       name: group?.name || "",
       description: group?.description || "",
       schedule: group?.schedule || "",
+      scheduleDays: group?.scheduleDays ?? [],
       startDate: group?.startDate || undefined,
       endDate: group?.endDate || undefined,
     },
@@ -100,6 +114,44 @@ export function GroupForm({ courseId, courseSlug, group }: GroupFormProps) {
           {...register("schedule")}
           placeholder={t("schedulePlaceholder")}
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label>{t("scheduleDays")}</Label>
+        <Controller
+          name="scheduleDays"
+          control={control}
+          render={({ field }) => {
+            const selected = field.value ?? [];
+            return (
+              <div className="flex flex-wrap gap-2">
+                {WEEKDAYS.map((day) => {
+                  const isOn = selected.includes(day.iso);
+                  return (
+                    <Button
+                      key={day.iso}
+                      type="button"
+                      variant={isOn ? "default" : "outline"}
+                      size="sm"
+                      aria-pressed={isOn}
+                      className="w-14"
+                      onClick={() =>
+                        field.onChange(
+                          isOn
+                            ? selected.filter((iso) => iso !== day.iso)
+                            : [...selected, day.iso].sort((a, b) => a - b)
+                        )
+                      }
+                    >
+                      {tWeekdays(day.key)}
+                    </Button>
+                  );
+                })}
+              </div>
+            );
+          }}
+        />
+        <p className="text-sm text-muted-foreground">{t("scheduleDaysHint")}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

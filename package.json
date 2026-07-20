@@ -9,6 +9,7 @@
     "lint": "eslint",
     "db:migrate": "npx prisma migrate dev",
     "db:seed": "npx tsx prisma/seed.ts",
+    "check:billing": "npx tsx scripts/check-billing.ts",
     "db:reset": "npx prisma migrate reset"
   },
   "prisma": {

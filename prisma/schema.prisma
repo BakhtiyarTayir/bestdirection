@@ -259,6 +259,20 @@ model Enrollment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // ─── Биллинг ────────────────────────────────────────────────────────────
+  // Первый учебный день. Отдельно от createdAt: строку в базе могли завести
+  // раньше или позже, чем студент реально начал ходить.
+  startsAt DateTime?
+  // Последний оплачиваемый день: студент ушёл или встал на паузу. Начисления
+  // после этой даты прекращаются, история оплат остаётся.
+  billingEndsAt DateTime?
+  // Индивидуальная цена за месяц вместо Course.price (скидка/надбавка)
+  priceOverride Int?
+  // Начисление за первый неполный месяц. Считается по занятиям, но хранится
+  // отдельно: админ округляет сумму рукой, иначе дробный остаток навсегда
+  // повесит студента в должниках (Payment.amount — целое число сумов).
+  firstMonthCharge Int?
+
   studentId String
   student   User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
@@ -277,7 +291,12 @@ model Group {
   id          String    @id @default(cuid())
   name        String
   description String?
+  // Расписание в свободной форме — для показа («Пн/Ср/Пт 18:00»)
   schedule    String?
+  // Дни занятий по ISO (1 = понедельник … 7 = воскресенье). Нужны для
+  // пропорционального начисления за неполный месяц: считаем занятия, а не дни.
+  // Пустой массив — расписание не задано, пропорцию админ вводит вручную.
+  scheduleDays Int[]
   startDate   DateTime?
   endDate     DateTime?
   settings    Json?

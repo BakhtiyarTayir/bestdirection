@@ -138,7 +138,17 @@
     "sitePages": "Страницы",
     "browseCatalog": "Каталог курсов",
     "enrollmentRequests": "Заявки на курсы",
-    "payments": "Оплаты"
+    "payments": "Оплаты",
+    "debtors": "Должники"
+  },
+  "weekdays": {
+    "mon": "Пн",
+    "tue": "Вт",
+    "wed": "Ср",
+    "thu": "Чт",
+    "fri": "Пт",
+    "sat": "Сб",
+    "sun": "Вс"
   },
   "roles": {
     "ADMIN": "Администратор",
@@ -720,7 +730,9 @@
     "completed": "{done} из {total}",
     "passed": "{done} из {total} сдано",
     "noStatistics": "Нет данных для статистики",
-    "studentName": "Студент"
+    "studentName": "Студент",
+    "scheduleDays": "Дни занятий",
+    "scheduleDaysHint": "Нужны для расчёта неполного месяца при оплате: считаются занятия, а не дни. Можно не заполнять."
   },
   "profile": {
     "title": "Мой профиль",
@@ -1424,5 +1436,52 @@
       "CLICK": "Click",
       "TRANSFER": "Перечисление"
     }
+  },
+  "debtors": {
+    "title": "Должники",
+    "subtitle": "Начислено по занятиям минус оплачено — накопительно с начала обучения",
+    "filterMonth": "По конец месяца",
+    "filterCourse": "Курс",
+    "allCourses": "Все курсы",
+    "totalDebt": "Общий долг",
+    "debtorsCount": "{count, plural, one {# должник} few {# должника} other {# должников}}",
+    "prepaid": "Переплата",
+    "prepaidCount": "{count, plural, one {# студент} few {# студента} other {# студентов}} с авансом",
+    "noScheduleTitle": "Не у всех групп заданы дни занятий",
+    "noScheduleHint": "У {count, plural, one {# записи} other {# записей}} неполный месяц считается по дням, а не по занятиям. Задайте дни недели в настройках группы.",
+    "empty": "Должников нет",
+    "colStudent": "Студент",
+    "colCourse": "Курс",
+    "colCharged": "Начислено",
+    "colPaid": "Оплачено",
+    "colDebt": "Долг",
+    "colActions": "Действия",
+    "noPhone": "телефон не указан",
+    "noGroup": "без группы",
+    "perMonth": "в месяц",
+    "monthsBilled": "{count, plural, one {# месяц} few {# месяца} other {# месяцев}}",
+    "toggleBreakdown": "Показать разбивку по месяцам",
+    "breakdownTitle": "Начисления по месяцам",
+    "basisFull": "полный месяц",
+    "basisLessons": "{billed} из {total} занятий",
+    "basisDays": "{billed} из {total} дней (нет расписания)",
+    "basisManual": "сумма задана вручную",
+    "billingSettings": "Настройки оплаты",
+    "billingSaved": "Настройки сохранены",
+    "billingSaveFailed": "Не удалось сохранить настройки",
+    "endBeforeStart": "Дата окончания раньше даты начала",
+    "invalidAmounts": "Суммы должны быть целыми числами",
+    "startsAt": "Первый учебный день",
+    "startsAtHint": "С этой даты идут начисления. Пусто — берётся дата записи на курс.",
+    "billingEndsAt": "Последний оплачиваемый день",
+    "billingEndsAtHint": "Студент ушёл или на паузе. Пусто — начисления продолжаются.",
+    "priceOverride": "Индивидуальная цена за месяц",
+    "priceOverrideHint": "Скидка или особая цена. Пусто — берётся цена курса.",
+    "firstMonthCharge": "Начисление за первый месяц ({month})",
+    "firstMonthChargeHint": "Округлите сумму, иначе дробный остаток навсегда оставит студента должником на копейки.",
+    "useSuggestion": "Подставить",
+    "suggestionLessons": "По расписанию: {billed} из {total} занятий → {amount} UZS",
+    "suggestionDays": "У группы нет дней занятий, считаем по дням: {billed} из {total} → {amount} UZS",
+    "suggestionFull": "Студент начал с первого числа — месяц полный"
   }
 }

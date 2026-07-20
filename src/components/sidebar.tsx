@@ -27,6 +27,7 @@ import {
   Inbox,
   Megaphone,
   Wallet,
+  TriangleAlert,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Button } from "./ui/button";
@@ -50,7 +51,9 @@ interface NavItem {
   labelKey: string;
   icon: React.ElementType;
   roles: string[];
-  badge?: "homework" | "enrollmentRequests";
+  badge?: "homework" | "enrollmentRequests" | "debtors";
+  /** Подсвечивать только на самом href: иначе родитель горит на вложенном пути */
+  exact?: boolean;
   /** Подпункты: родитель становится раскрывающимся разделом */
   children?: { href: string; labelKey: string }[];
 }
@@ -64,7 +67,8 @@ const navItems: NavItem[] = [
   { href: "/courses/catalog", labelKey: "catalog", icon: Copy, roles: ["ADMIN", "TEACHER"] },
   { href: "/courses/browse", labelKey: "browseCatalog", icon: BookOpen, roles: ["STUDENT"] },
   { href: "/courses/requests", labelKey: "enrollmentRequests", icon: Inbox, roles: ["ADMIN", "TEACHER"], badge: "enrollmentRequests" },
-  { href: "/payments", labelKey: "payments", icon: Wallet, roles: ["ADMIN"] },
+  { href: "/payments", labelKey: "payments", icon: Wallet, roles: ["ADMIN"], exact: true },
+  { href: "/payments/debtors", labelKey: "debtors", icon: TriangleAlert, roles: ["ADMIN"], badge: "debtors" },
   { href: "/admin/compare", labelKey: "compare", icon: GitCompare, roles: ["ADMIN"] },
   { href: "/admin/leads", labelKey: "leads", icon: Inbox, roles: ["ADMIN"] },
   {
@@ -121,7 +125,12 @@ export function Sidebar({ role, userName }: SidebarProps) {
     "/api/enrollment-requests/count",
     role === "ADMIN" || role === "TEACHER"
   );
-  const badgeCounts = { homework: homeworkCount, enrollmentRequests: requestsCount } as const;
+  const debtorsCount = useBadgeCount("/api/debtors/count", role === "ADMIN");
+  const badgeCounts = {
+    homework: homeworkCount,
+    enrollmentRequests: requestsCount,
+    debtors: debtorsCount,
+  } as const;
 
   const filteredItems = navItems.filter((item) => item.roles.includes(role));
 
@@ -135,7 +144,9 @@ export function Sidebar({ role, userName }: SidebarProps) {
       <nav className={cn("flex-1 space-y-1", collapsed ? "p-2" : "p-4")}>
         <TooltipProvider delayDuration={0}>
           {filteredItems.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+            const isActive = item.exact
+              ? pathname === item.href
+              : pathname === item.href || pathname.startsWith(item.href + "/");
             const badgeCount = item.badge ? badgeCounts[item.badge] : 0;
 
             if (item.children && !collapsed) {

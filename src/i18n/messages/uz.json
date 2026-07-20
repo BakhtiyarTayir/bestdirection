@@ -138,7 +138,17 @@
     "sitePages": "Sahifalar",
     "browseCatalog": "Kurslar katalogi",
     "enrollmentRequests": "Kurslarga arizalar",
-    "payments": "To'lovlar"
+    "payments": "To'lovlar",
+    "debtors": "Qarzdorlar"
+  },
+  "weekdays": {
+    "mon": "Du",
+    "tue": "Se",
+    "wed": "Ch",
+    "thu": "Pa",
+    "fri": "Ju",
+    "sat": "Sh",
+    "sun": "Ya"
   },
   "roles": {
     "ADMIN": "Administrator",
@@ -720,7 +730,9 @@
     "completed": "{done} / {total}",
     "passed": "{done} / {total} topshirildi",
     "noStatistics": "Statistika uchun ma'lumot yo'q",
-    "studentName": "Talaba"
+    "studentName": "Talaba",
+    "scheduleDays": "Dars kunlari",
+    "scheduleDaysHint": "To'lovda to'liqsiz oyni hisoblash uchun kerak: kunlar emas, darslar sanaladi. Bo'sh qoldirsa ham bo'ladi."
   },
   "profile": {
     "title": "Mening profilim",
@@ -1424,5 +1436,52 @@
       "CLICK": "Click",
       "TRANSFER": "O'tkazma"
     }
+  },
+  "debtors": {
+    "title": "Qarzdorlar",
+    "subtitle": "Darslar bo'yicha hisoblangan summa minus to'langani — o'qish boshidan jamlab",
+    "filterMonth": "Oy oxirigacha",
+    "filterCourse": "Kurs",
+    "allCourses": "Barcha kurslar",
+    "totalDebt": "Umumiy qarz",
+    "debtorsCount": "{count, plural, other {# qarzdor}}",
+    "prepaid": "Ortiqcha to'lov",
+    "prepaidCount": "{count, plural, other {# talaba}} avans bilan",
+    "noScheduleTitle": "Hamma guruhlarda dars kunlari belgilanmagan",
+    "noScheduleHint": "{count, plural, other {# yozuv}} uchun to'liqsiz oy darslar emas, kunlar bo'yicha hisoblanadi. Guruh sozlamalarida hafta kunlarini belgilang.",
+    "empty": "Qarzdorlar yo'q",
+    "colStudent": "Talaba",
+    "colCourse": "Kurs",
+    "colCharged": "Hisoblangan",
+    "colPaid": "To'langan",
+    "colDebt": "Qarz",
+    "colActions": "Amallar",
+    "noPhone": "telefon ko'rsatilmagan",
+    "noGroup": "guruhsiz",
+    "perMonth": "oyiga",
+    "monthsBilled": "{count, plural, other {# oy}}",
+    "toggleBreakdown": "Oylar bo'yicha ko'rsatish",
+    "breakdownTitle": "Oylar bo'yicha hisob",
+    "basisFull": "to'liq oy",
+    "basisLessons": "{total} darsdan {billed} tasi",
+    "basisDays": "{total} kundan {billed} tasi (jadval yo'q)",
+    "basisManual": "summa qo'lda kiritilgan",
+    "billingSettings": "To'lov sozlamalari",
+    "billingSaved": "Sozlamalar saqlandi",
+    "billingSaveFailed": "Sozlamalarni saqlab bo'lmadi",
+    "endBeforeStart": "Tugash sanasi boshlanish sanasidan oldin",
+    "invalidAmounts": "Summalar butun son bo'lishi kerak",
+    "startsAt": "Birinchi o'quv kuni",
+    "startsAtHint": "Shu sanadan hisob boshlanadi. Bo'sh bo'lsa — kursga yozilgan sana olinadi.",
+    "billingEndsAt": "Oxirgi to'lanadigan kun",
+    "billingEndsAtHint": "Talaba ketdi yoki pauzada. Bo'sh bo'lsa — hisob davom etadi.",
+    "priceOverride": "Individual oylik narx",
+    "priceOverrideHint": "Chegirma yoki maxsus narx. Bo'sh bo'lsa — kurs narxi olinadi.",
+    "firstMonthCharge": "Birinchi oy uchun hisob ({month})",
+    "firstMonthChargeHint": "Summani yaxlitlang, aks holda kasr qoldiq talabani abadiy qarzdor qoldiradi.",
+    "useSuggestion": "Qo'yish",
+    "suggestionLessons": "Jadval bo'yicha: {total} darsdan {billed} tasi → {amount} UZS",
+    "suggestionDays": "Guruhda dars kunlari yo'q, kunlar bo'yicha: {total} dan {billed} → {amount} UZS",
+    "suggestionFull": "Talaba oyning birinchi kunidan boshlagan — oy to'liq"
   }
 }
