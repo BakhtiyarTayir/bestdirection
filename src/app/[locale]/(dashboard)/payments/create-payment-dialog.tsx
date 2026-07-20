@@ -267,8 +267,10 @@ export function CreatePaymentDialog({
               <Input
                 id="payment-amount"
                 type="number"
+                // step задаёт не только шаг стрелок, но и сетку валидации min + n*step:
+                // при step=1000 браузер отвергал любую сумму, не кончающуюся на 001
                 min={1}
-                step={1000}
+                step={1}
                 inputMode="numeric"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
