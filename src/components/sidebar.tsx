@@ -26,6 +26,7 @@ import {
   CalendarCheck,
   Inbox,
   Megaphone,
+  Wallet,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Button } from "./ui/button";
@@ -63,6 +64,7 @@ const navItems: NavItem[] = [
   { href: "/courses/catalog", labelKey: "catalog", icon: Copy, roles: ["ADMIN", "TEACHER"] },
   { href: "/courses/browse", labelKey: "browseCatalog", icon: BookOpen, roles: ["STUDENT"] },
   { href: "/courses/requests", labelKey: "enrollmentRequests", icon: Inbox, roles: ["ADMIN", "TEACHER"], badge: "enrollmentRequests" },
+  { href: "/payments", labelKey: "payments", icon: Wallet, roles: ["ADMIN"] },
   { href: "/admin/compare", labelKey: "compare", icon: GitCompare, roles: ["ADMIN"] },
   { href: "/admin/leads", labelKey: "leads", icon: Inbox, roles: ["ADMIN"] },
   {

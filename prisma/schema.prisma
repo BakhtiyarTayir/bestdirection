@@ -82,6 +82,15 @@ enum EnrollmentRequestStatus {
   REJECTED
 }
 
+// Способ приёма оплаты в офлайн-центре
+enum PaymentMethod {
+  CASH
+  CARD
+  PAYME
+  CLICK
+  TRANSFER
+}
+
 model User {
   id           String    @id @default(cuid())
   email        String?   @unique
@@ -106,6 +115,8 @@ model User {
   reviewedSubmissions  Submission[]  @relation("ReviewedSubmissions")
   enrollmentRequests         EnrollmentRequest[] @relation("StudentEnrollmentRequests")
   reviewedEnrollmentRequests EnrollmentRequest[] @relation("ReviewedEnrollmentRequests")
+  payments                   Payment[]           @relation("StudentPayments")
+  recordedPayments           Payment[]           @relation("RecordedPayments")
   telegramChatId       String?   @unique
   telegramUsername     String?
 
@@ -156,6 +167,7 @@ model Course {
   attendanceSessions AttendanceSession[]
   groups             Group[]
   enrollmentRequests EnrollmentRequest[]
+  payments           Payment[]
 
   @@index([teacherId])
   @@index([isPublished])
@@ -187,6 +199,44 @@ model EnrollmentRequest {
   @@unique([courseId, studentId])
   @@index([status])
   @@index([studentId])
+}
+
+// Оплата студента, принятая офлайн (касса учебного центра).
+// Журнал внесений: одна запись = один платёж, правок суммы нет — ошибочную
+// запись помечают deletedAt и вносят заново.
+model Payment {
+  id        String        @id @default(cuid())
+  amount    Int // UZS, без копеек — как Course.price
+  method    PaymentMethod @default(CASH)
+  paidAt    DateTime // дата приёма денег (полдень UTC, см. payment-actions)
+  // Период, за который платят, в формате "YYYY-MM". Строка, а не @db.Date:
+  // Date-поля срезаются на день назад для таймзон впереди UTC (см. AttendanceSession).
+  forMonth  String?
+  comment   String?
+  deletedAt DateTime?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  studentId String
+  student   User   @relation("StudentPayments", fields: [studentId], references: [id], onDelete: Cascade)
+
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  groupId String?
+  group   Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
+  // Кто принял оплату; запись остаётся при удалении сотрудника
+  createdById String
+  createdBy   User   @relation("RecordedPayments", fields: [createdById], references: [id])
+
+  @@index([studentId])
+  @@index([courseId])
+  @@index([groupId])
+  @@index([paidAt])
+  @@index([forMonth])
+  @@index([deletedAt])
+  @@index([createdById])
 }
 
 model CourseLead {
@@ -241,6 +291,7 @@ model Group {
 
   enrollments        Enrollment[]
   attendanceSessions AttendanceSession[]
+  payments           Payment[]
 
   @@unique([courseId, name])
   @@index([courseId])

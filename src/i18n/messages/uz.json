@@ -137,7 +137,8 @@
     "siteLanding": "Lending",
     "sitePages": "Sahifalar",
     "browseCatalog": "Kurslar katalogi",
-    "enrollmentRequests": "Kurslarga arizalar"
+    "enrollmentRequests": "Kurslarga arizalar",
+    "payments": "To'lovlar"
   },
   "roles": {
     "ADMIN": "Administrator",
@@ -1375,5 +1376,53 @@
     "rejectedToast": "Ariza rad etildi",
     "noSeatsLeft": "Kursda o'rin qolmadi",
     "actionFailed": "Amalga oshmadi. Sahifani yangilab, qayta urinib ko'ring"
+  },
+  "payments": {
+    "title": "To'lovlar",
+    "subtitle": "O'quv markazida qabul qilingan to'lovlar jurnali",
+    "addPayment": "To'lov kiritish",
+    "newPayment": "Yangi to'lov",
+    "newPaymentDescription": "Talaba va kursni tanlang — summa kurs narxidan olinadi",
+    "searchStudent": "Familiya yoki telefon bo'yicha qidirish",
+    "noStudentsFound": "Talabalar topilmadi",
+    "changeStudent": "O'zgartirish",
+    "selectCourse": "Kursni tanlang",
+    "groupLabel": "Guruh",
+    "commentOptional": "Izoh (ixtiyoriy)",
+    "commentPlaceholder": "Masalan: iyun uchun qo'shimcha to'lov",
+    "savePayment": "To'lovni saqlash",
+    "fillRequiredFields": "Talaba, kurs, summa va sanani to'ldiring",
+    "createdToast": "To'lov kiritildi",
+    "createFailed": "To'lovni kiritib bo'lmadi",
+    "notEnrolled": "Talaba bu kursga yozilmagan",
+    "deletePayment": "To'lovni o'chirish",
+    "deleteConfirm": "{student} talabaning {amount} UZS to'lovi o'chirilsinmi? Yozuv jurnaldan yashiriladi, ammo auditda qoladi.",
+    "cancelDelete": "Bekor qilish",
+    "confirmDelete": "O'chirish",
+    "deletedToast": "To'lov o'chirildi",
+    "deleteFailed": "To'lovni o'chirib bo'lmadi",
+    "filterMonth": "Oy",
+    "filterCourse": "Kurs",
+    "filterMethod": "Usul",
+    "allCourses": "Barcha kurslar",
+    "allMethods": "Barcha usullar",
+    "totalLabel": "Davr uchun jami",
+    "paymentsCount": "{count, plural, other {# ta to'lov}}",
+    "empty": "Hozircha to'lovlar yo'q",
+    "colPaidAt": "Sana",
+    "colStudent": "Talaba",
+    "colCourse": "Kurs",
+    "colForMonth": "Oy uchun",
+    "colMethod": "Usul",
+    "colAmount": "Summa",
+    "colRecordedBy": "Qabul qildi",
+    "colActions": "Amallar",
+    "method": {
+      "CASH": "Naqd",
+      "CARD": "Karta",
+      "PAYME": "Payme",
+      "CLICK": "Click",
+      "TRANSFER": "O'tkazma"
+    }
   }
 }

@@ -137,7 +137,8 @@
     "siteLanding": "Лендинг",
     "sitePages": "Страницы",
     "browseCatalog": "Каталог курсов",
-    "enrollmentRequests": "Заявки на курсы"
+    "enrollmentRequests": "Заявки на курсы",
+    "payments": "Оплаты"
   },
   "roles": {
     "ADMIN": "Администратор",
@@ -1375,5 +1376,53 @@
     "rejectedToast": "Заявка отклонена",
     "noSeatsLeft": "На курсе не осталось мест",
     "actionFailed": "Не получилось. Обновите страницу и попробуйте снова"
+  },
+  "payments": {
+    "title": "Оплаты",
+    "subtitle": "Журнал оплат, принятых в учебном центре",
+    "addPayment": "Внести оплату",
+    "newPayment": "Новая оплата",
+    "newPaymentDescription": "Выберите студента и курс — сумма подставится из цены курса",
+    "searchStudent": "Поиск по фамилии или телефону",
+    "noStudentsFound": "Студенты не найдены",
+    "changeStudent": "Изменить",
+    "selectCourse": "Выберите курс",
+    "groupLabel": "Группа",
+    "commentOptional": "Комментарий (необязательно)",
+    "commentPlaceholder": "Например: доплата за июнь",
+    "savePayment": "Сохранить оплату",
+    "fillRequiredFields": "Заполните студента, курс, сумму и дату",
+    "createdToast": "Оплата внесена",
+    "createFailed": "Не удалось внести оплату",
+    "notEnrolled": "Студент не записан на этот курс",
+    "deletePayment": "Удалить оплату",
+    "deleteConfirm": "Удалить оплату {amount} UZS от студента {student}? Запись скроется из журнала, но останется в аудите.",
+    "cancelDelete": "Отмена",
+    "confirmDelete": "Удалить",
+    "deletedToast": "Оплата удалена",
+    "deleteFailed": "Не удалось удалить оплату",
+    "filterMonth": "Месяц",
+    "filterCourse": "Курс",
+    "filterMethod": "Способ",
+    "allCourses": "Все курсы",
+    "allMethods": "Все способы",
+    "totalLabel": "Итого за период",
+    "paymentsCount": "{count, plural, one {# оплата} few {# оплаты} other {# оплат}}",
+    "empty": "Оплат пока нет",
+    "colPaidAt": "Дата",
+    "colStudent": "Студент",
+    "colCourse": "Курс",
+    "colForMonth": "За месяц",
+    "colMethod": "Способ",
+    "colAmount": "Сумма",
+    "colRecordedBy": "Принял",
+    "colActions": "Действия",
+    "method": {
+      "CASH": "Наличные",
+      "CARD": "Карта",
+      "PAYME": "Payme",
+      "CLICK": "Click",
+      "TRANSFER": "Перечисление"
+    }
   }
 }
