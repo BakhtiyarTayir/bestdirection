@@ -7,9 +7,8 @@ const roleEnum = RoleEnum;
 
 export const createUserSchema = z.object({
   email: z
-    .string()
-    .min(1, "emailRequired")
-    .email("emailInvalid"),
+    .union([z.string().email("emailInvalid"), z.literal("")])
+    .optional(),
   password: z
     .string()
     .min(8, "passwordMinLength"),
@@ -30,8 +29,7 @@ export type CreateUserInput = z.infer<typeof createUserSchema>;
 export const updateUserSchema = z.object({
   id: z.string().min(1, "userIdRequired"),
   email: z
-    .string()
-    .email("emailInvalid")
+    .union([z.string().email("emailInvalid"), z.literal("")])
     .optional(),
   password: z
     .string()

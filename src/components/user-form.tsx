@@ -30,7 +30,7 @@ import { Loader2 } from "lucide-react";
 
 interface UserData {
   id: string;
-  email: string;
+  email: string | null;
   firstName: string;
   lastName: string;
   phone: string | null;
@@ -61,7 +61,7 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
     defaultValues: isEditing
       ? {
           id: user.id,
-          email: user.email,
+          email: user.email ?? "",
           firstName: user.firstName,
           lastName: user.lastName,
           phone: user.phone ?? "",

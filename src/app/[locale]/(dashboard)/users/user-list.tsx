@@ -36,6 +36,7 @@ const roleBadgeVariant: Record<string, "destructive" | "default" | "secondary"> 
 
 interface User {
   id: string;
+  number: number;
   firstName: string;
   lastName: string;
   email: string | null;
@@ -108,7 +109,7 @@ export function UserList({ initialUsers, canManageUsers = true }: UserListProps)
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{tCommon("id")}</TableHead>
+              <TableHead className="w-16">{tCommon("number")}</TableHead>
               <TableHead>{tCommon("firstName")}</TableHead>
               <TableHead>{tCommon("email")}</TableHead>
               <TableHead>{tCommon("role")}</TableHead>
@@ -126,13 +127,8 @@ export function UserList({ initialUsers, canManageUsers = true }: UserListProps)
             ) : (
               optimisticUsers.map((user) => (
                 <TableRow key={user.id}>
-                  <TableCell>
-                    <span
-                      className="font-mono text-xs text-muted-foreground select-all"
-                      title={user.id}
-                    >
-                      {user.id}
-                    </span>
+                  <TableCell className="font-mono text-muted-foreground tabular-nums">
+                    {user.number}
                   </TableCell>
                   <TableCell className="font-medium">
                     {user.firstName} {user.lastName}

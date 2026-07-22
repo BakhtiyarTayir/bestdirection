@@ -29,6 +29,7 @@ export async function getUsers() {
         orderBy: { createdAt: "desc" },
         select: {
           id: true,
+          number: true,
           email: true,
           firstName: true,
           lastName: true,
@@ -354,7 +355,7 @@ export async function getUserById(id: string) {
 
 // ---------- createUser ----------
 export async function createUser(data: {
-  email: string;
+  email?: string;
   password: string;
   firstName: string;
   lastName: string;
@@ -363,19 +364,25 @@ export async function createUser(data: {
 }) {
   return withAuth(
     async (session) => {
-      const existingUser = await prisma.user.findUnique({
-        where: { email: data.email },
-      });
+      // Email необязателен (офлайн-студенты без входа по почте).
+      // Пустая строка → null, иначе уникальный индекс словит коллизию по "".
+      const email = data.email?.trim() ? data.email.trim() : null;
 
-      if (existingUser) {
-        return { success: false, error: "User with this email already exists" };
+      if (email) {
+        const existingUser = await prisma.user.findUnique({
+          where: { email },
+        });
+
+        if (existingUser) {
+          return { success: false, error: "User with this email already exists" };
+        }
       }
 
       const passwordHash = await bcrypt.hash(data.password, 10);
 
       const user = await prisma.user.create({
         data: {
-          email: data.email,
+          email,
           passwordHash,
           firstName: data.firstName,
           lastName: data.lastName,
@@ -429,9 +436,14 @@ export async function updateUser(
       });
       if (!existing) return { success: false, error: "User not found" };
 
-      if (data.email) {
+      // Email необязателен: пустую строку сохраняем как null (иначе коллизия
+      // уникального индекса по ""). undefined значит «поле не меняем».
+      const email =
+        data.email !== undefined ? (data.email.trim() || null) : undefined;
+
+      if (email) {
         const existingUser = await prisma.user.findUnique({
-          where: { email: data.email },
+          where: { email },
         });
 
         if (existingUser && existingUser.id !== id) {
@@ -442,7 +454,7 @@ export async function updateUser(
       const user = await prisma.user.update({
         where: { id },
         data: {
-          ...(data.email !== undefined && { email: data.email }),
+          ...(email !== undefined && { email }),
           ...(data.firstName !== undefined && { firstName: data.firstName }),
           ...(data.lastName !== undefined && { lastName: data.lastName }),
           ...(data.phone !== undefined && { phone: data.phone }),
