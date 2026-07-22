@@ -1,5 +1,6 @@
 {
   "common": {
+    "id": "ID",
     "siteTitle": "LMS — O'quv markaz",
     "siteDescription": "O'quv markaz platformasi",
     "save": "Saqlash",

@@ -108,6 +108,7 @@ export function UserList({ initialUsers, canManageUsers = true }: UserListProps)
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>{tCommon("id")}</TableHead>
               <TableHead>{tCommon("firstName")}</TableHead>
               <TableHead>{tCommon("email")}</TableHead>
               <TableHead>{tCommon("role")}</TableHead>
@@ -118,13 +119,21 @@ export function UserList({ initialUsers, canManageUsers = true }: UserListProps)
           <TableBody>
             {optimisticUsers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={canManageUsers ? 5 : 4} className="text-center text-muted-foreground">
+                <TableCell colSpan={canManageUsers ? 6 : 5} className="text-center text-muted-foreground">
                   {t("noUsersFound")}
                 </TableCell>
               </TableRow>
             ) : (
               optimisticUsers.map((user) => (
                 <TableRow key={user.id}>
+                  <TableCell>
+                    <span
+                      className="font-mono text-xs text-muted-foreground select-all"
+                      title={user.id}
+                    >
+                      {user.id}
+                    </span>
+                  </TableCell>
                   <TableCell className="font-medium">
                     {user.firstName} {user.lastName}
                   </TableCell>

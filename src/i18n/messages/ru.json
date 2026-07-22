@@ -1,5 +1,6 @@
 {
   "common": {
+    "id": "ID",
     "siteTitle": "LMS — Учебный центр",
     "siteDescription": "Платформа учебного центра",
     "save": "Сохранить",
