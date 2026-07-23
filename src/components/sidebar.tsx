@@ -141,7 +141,7 @@ export function Sidebar({ role, userName }: SidebarProps) {
         {!collapsed && <span className="text-lg font-semibold">IT School official</span>}
       </div>
 
-      <nav className={cn("flex-1 space-y-1", collapsed ? "p-2" : "p-4")}>
+      <nav className={cn("flex-1 min-h-0 overflow-y-auto space-y-1", collapsed ? "p-2" : "p-4")}>
         <TooltipProvider delayDuration={0}>
           {filteredItems.map((item) => {
             const isActive = item.exact
@@ -296,7 +296,7 @@ export function Sidebar({ role, userName }: SidebarProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 border-r bg-card transition-all md:translate-x-0 md:static md:z-auto",
+          "fixed inset-y-0 left-0 z-40 border-r bg-card transition-all md:translate-x-0 md:static md:z-auto md:h-screen",
           collapsed ? "w-16" : "w-64",
           mobileOpen ? "translate-x-0 w-64" : "-translate-x-full"
         )}
