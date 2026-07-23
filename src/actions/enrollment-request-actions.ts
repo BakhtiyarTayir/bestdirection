@@ -16,6 +16,7 @@ export async function getCatalogCourses() {
         where: {
           isPublished: true,
           isTemplate: false,
+          deletedAt: null,
           accessType: { in: ["FREE", "PAID"] },
         },
         select: {

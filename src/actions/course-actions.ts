@@ -16,6 +16,7 @@ export async function getCourses() {
 
     if (role === "ADMIN") {
       courses = await prisma.course.findMany({
+        where: { deletedAt: null },
         include: {
           teacher: {
             select: { id: true, firstName: true, lastName: true, email: true },
@@ -26,7 +27,7 @@ export async function getCourses() {
       });
     } else if (role === "TEACHER") {
       courses = await prisma.course.findMany({
-        where: { teacherId: userId },
+        where: { teacherId: userId, deletedAt: null },
         include: {
           teacher: {
             select: { id: true, firstName: true, lastName: true, email: true },
@@ -39,6 +40,7 @@ export async function getCourses() {
       courses = await prisma.course.findMany({
         where: {
           isPublished: true,
+          deletedAt: null,
           enrollments: { some: { studentId: userId } },
         },
         include: {
@@ -59,7 +61,7 @@ export async function getCourses() {
 export async function getCourseById(id: string) {
   return withAuth(async () => {
     const course = await prisma.course.findUnique({
-      where: { id },
+      where: { id, deletedAt: null },
       include: {
         teacher: {
           select: { id: true, firstName: true, lastName: true, email: true },
@@ -245,21 +247,40 @@ export async function updateCourse(
 export async function deleteCourse(id: string) {
   return withAuth(
     async (session) => {
-      const existing = await prisma.course.findUnique({ where: { id }, select: { title: true } });
-      await prisma.course.delete({ where: { id } });
+      const existing = await prisma.course.findUnique({
+        where: { id, deletedAt: null },
+        select: { title: true, teacherId: true },
+      });
+      if (!existing) return { success: false, error: "Course not found" };
+
+      // Преподаватель может удалять только свои курсы, админ — любые.
+      if (
+        session.user.role === "TEACHER" &&
+        existing.teacherId !== session.user.id
+      ) {
+        return { success: false, error: "You can only delete your own courses" };
+      }
+
+      // Мягкое удаление: курс уходит в Корзину. Уроки, записи студентов и
+      // оплаты сохраняются; админ может восстановить курс или удалить его
+      // окончательно из Корзины (см. hardDeleteCourse).
+      await prisma.course.update({
+        where: { id },
+        data: { deletedAt: new Date() },
+      });
 
       await createAuditLog({
         userId: session.user.id,
         entityType: "Course",
         entityId: id,
         action: "DELETE",
-        metadata: { title: existing?.title },
+        metadata: { title: existing.title },
       });
 
       revalidateLocalized("/courses");
       return { success: true };
     },
-    { roles: ["ADMIN"] }
+    { roles: ["ADMIN", "TEACHER"] }
   );
 }
 

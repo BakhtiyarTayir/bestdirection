@@ -58,8 +58,8 @@ export async function getUsersHomeworkStatistics(filters: {
     async (session) => {
       const courseWhere =
         session.user.role === "TEACHER"
-          ? { teacherId: session.user.id }
-          : {};
+          ? { teacherId: session.user.id, deletedAt: null }
+          : { deletedAt: null };
 
       const courses = await prisma.course.findMany({
         where: courseWhere,

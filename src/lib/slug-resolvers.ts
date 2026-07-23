@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 export async function resolveCourseSlug(courseSlug: string): Promise<string> {
   const course = await prisma.course.findUnique({
-    where: { slug: courseSlug },
+    where: { slug: courseSlug, deletedAt: null },
     select: { id: true },
   });
   if (!course) notFound();
