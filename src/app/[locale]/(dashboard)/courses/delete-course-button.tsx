@@ -47,6 +47,8 @@ export function DeleteCourseButton({
           title: t("courseDeleted"),
           description: t("courseDeletedDescription", { title: courseTitle }),
         });
+        // Курс уехал в Корзину — на этой странице его больше нет, уводим в список.
+        router.push("/courses");
         router.refresh();
       } else {
         toast({
@@ -70,8 +72,9 @@ export function DeleteCourseButton({
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button variant="outline" size="icon" aria-label={t("deleteCourse")}>
-          <Trash2 className="h-4 w-4 text-destructive" />
+        <Button variant="outline">
+          <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+          {t("deleteCourse")}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>

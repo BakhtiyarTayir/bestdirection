@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, BookOpen, Users, ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { DeleteCourseButton } from "./delete-course-button";
 
 export const dynamic = "force-dynamic";
 
@@ -143,20 +142,13 @@ async function CoursesPageAsync({
                   </div>
                 </div>
               </CardContent>
-              <CardFooter className="gap-2">
-                <Link href={`/courses/${course.slug}`} className="flex-1">
+              <CardFooter>
+                <Link href={`/courses/${course.slug}`} className="w-full">
                   <Button variant="outline" className="w-full">
                     {t("details")}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
-                {(role === "ADMIN" || role === "TEACHER") && (
-                  <DeleteCourseButton
-                    courseId={course.id}
-                    courseTitle={course.title}
-                    enrollmentsCount={course._count.enrollments}
-                  />
-                )}
               </CardFooter>
             </Card>
           ))}

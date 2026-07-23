@@ -7,6 +7,7 @@ import { Link } from "@/i18n/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DeleteCourseButton } from "../delete-course-button";
 import {
   Card,
   CardContent,
@@ -194,6 +195,11 @@ async function CourseDetailPageAsync({
                 {tCommon("edit")}
               </Button>
             </Link>
+            <DeleteCourseButton
+              courseId={course.id}
+              courseTitle={course.title}
+              enrollmentsCount={course._count.enrollments}
+            />
           </div>
         )}
       </div>
