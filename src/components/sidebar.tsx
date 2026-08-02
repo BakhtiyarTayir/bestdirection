@@ -40,6 +40,16 @@ import {
   TooltipTrigger,
 } from "./ui/tooltip";
 import { LanguageSwitcher } from "./language-switcher";
+import { LessonSidebarNav } from "./lesson-sidebar-nav";
+
+/** На странице урока сайдбар показывает уроки курса вместо общего меню. */
+function matchLessonRoute(pathname: string): { courseSlug: string; lessonSlug: string } | null {
+  const match = pathname.match(/^\/courses\/([^/]+)\/lessons\/([^/]+)/);
+  if (!match) return null;
+  const [, courseSlug, lessonSlug] = match;
+  if (lessonSlug === "new") return null;
+  return { courseSlug, lessonSlug };
+}
 
 interface SidebarProps {
   role: string;
@@ -133,6 +143,7 @@ export function Sidebar({ role, userName }: SidebarProps) {
   } as const;
 
   const filteredItems = navItems.filter((item) => item.roles.includes(role));
+  const lessonRoute = matchLessonRoute(pathname);
 
   const sidebarContent = (
     <div className="flex h-full flex-col">
@@ -141,6 +152,14 @@ export function Sidebar({ role, userName }: SidebarProps) {
         {!collapsed && <span className="text-lg font-semibold">IT School official</span>}
       </div>
 
+      {lessonRoute ? (
+        <LessonSidebarNav
+          courseSlug={lessonRoute.courseSlug}
+          activeLessonSlug={lessonRoute.lessonSlug}
+          collapsed={collapsed}
+          onNavigate={() => setMobileOpen(false)}
+        />
+      ) : (
       <nav className={cn("flex-1 min-h-0 overflow-y-auto space-y-1", collapsed ? "p-2" : "p-4")}>
         <TooltipProvider delayDuration={0}>
           {filteredItems.map((item) => {
@@ -242,6 +261,7 @@ export function Sidebar({ role, userName }: SidebarProps) {
           })}
         </TooltipProvider>
       </nav>
+      )}
 
       <div className={cn("border-t", collapsed ? "p-2" : "p-4")}>
         {!collapsed && (

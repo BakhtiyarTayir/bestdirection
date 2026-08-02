@@ -31,6 +31,44 @@ export async function getLessons(courseId: string) {
   });
 }
 
+// ---------- getCourseLessonNav ----------
+/** Список уроков курса для левого сайдбара на странице урока. */
+export async function getCourseLessonNav(courseSlug: string) {
+  return withAuth(async (session) => {
+    const course = await prisma.course.findUnique({
+      where: { slug: courseSlug },
+      select: { id: true, title: true },
+    });
+    if (!course) return { success: false as const, error: "Course not found" };
+
+    const isStudent = session.user.role === "STUDENT";
+
+    const lessons = await prisma.lesson.findMany({
+      where: { courseId: course.id, ...(isStudent ? { isPublished: true } : {}) },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      select: { id: true, slug: true, title: true, isPublished: true },
+    });
+
+    let completedIds: string[] = [];
+    if (isStudent && lessons.length > 0) {
+      const progress = await prisma.lessonProgress.findMany({
+        where: {
+          studentId: session.user.id,
+          lessonId: { in: lessons.map((l) => l.id) },
+          completedAt: { not: null },
+        },
+        select: { lessonId: true },
+      });
+      completedIds = progress.map((p) => p.lessonId);
+    }
+
+    return {
+      success: true as const,
+      data: { courseTitle: course.title, lessons, completedIds },
+    };
+  });
+}
+
 // ---------- getLessonById ----------
 export async function getLessonById(id: string) {
   return withAuth(async (session) => {
