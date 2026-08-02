@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { slugify } from "@/lib/slugify";
+import { useEffect, useState, useRef, useMemo } from "react";
+import { parseHeadings } from "@/lib/toc";
 import { cn } from "@/lib/utils";
 import { List, ChevronsRight } from "lucide-react";
 import { Button } from "./ui/button";
@@ -13,34 +13,13 @@ import {
 } from "./ui/tooltip";
 import { useTranslations } from "next-intl";
 
-interface TocItem {
-  level: number;
-  text: string;
-  id: string;
-}
-
-function parseHeadings(content: string): TocItem[] {
-  const regex = /^(#{2,3})\s+(.+)$/gm;
-  const items: TocItem[] = [];
-  let match;
-  while ((match = regex.exec(content)) !== null) {
-    const text = match[2].trim().replace(/\*+/g, "").replace(/_+/g, "").replace(/`/g, "").trim();
-    items.push({
-      level: match[1].length,
-      text,
-      id: slugify(text),
-    });
-  }
-  return items;
-}
-
 interface LessonTOCProps {
   content: string;
 }
 
 export function LessonTOC({ content }: LessonTOCProps) {
   const t = useTranslations("toc");
-  const headings = parseHeadings(content);
+  const headings = useMemo(() => parseHeadings(content), [content]);
   const [activeId, setActiveId] = useState<string>("");
   const [collapsed, setCollapsed] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -97,7 +76,7 @@ export function LessonTOC({ content }: LessonTOCProps) {
   }
 
   return (
-    <nav className="sticky top-6 w-64">
+    <nav className="sticky top-6 w-64 max-h-[calc(100vh-4rem)] overflow-y-auto">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
           <List className="h-4 w-4" />

@@ -315,7 +315,19 @@
     "deleteError": "Не удалось удалить урок",
     "testsTab": "Тесты",
     "homeworkTab": "Домашнее задание",
-    "backToLesson": "К уроку"
+    "backToLesson": "К уроку",
+    "lessonPosition": "Урок {index} из {total}",
+    "videoLabel": "Видео",
+    "notesLabel": "Конспект",
+    "homeworkCount": "{count, plural, one {# задание} few {# задания} other {# заданий}}",
+    "passingScoreShort": "Проходной балл {score}%",
+    "timeLimitShort": "{minutes} мин",
+    "attemptsShort": "Попыток: {count}",
+    "bestResult": "Лучший результат: {percent}%",
+    "passed": "Сдано",
+    "notPassed": "Не сдано",
+    "prevLesson": "Предыдущий урок",
+    "nextLesson": "Следующий урок"
   },
   "assessments": {
     "title": "Тесты и экзамены",

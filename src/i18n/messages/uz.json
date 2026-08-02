@@ -315,7 +315,19 @@
     "deleteConfirm": "Bu darsni o'chirasizmi? Bu amalni bekor qilib bo'lmaydi.",
     "lessonDeleted": "Dars o'chirildi",
     "deleteError": "Darsni o'chirib bo'lmadi",
-    "backToLesson": "Darsga"
+    "backToLesson": "Darsga",
+    "lessonPosition": "{total} darsdan {index}-dars",
+    "videoLabel": "Video",
+    "notesLabel": "Konspekt",
+    "homeworkCount": "{count} ta vazifa",
+    "passingScoreShort": "O'tish bali {score}%",
+    "timeLimitShort": "{minutes} daq",
+    "attemptsShort": "Urinishlar: {count}",
+    "bestResult": "Eng yaxshi natija: {percent}%",
+    "passed": "Topshirildi",
+    "notPassed": "Topshirilmadi",
+    "prevLesson": "Oldingi dars",
+    "nextLesson": "Keyingi dars"
   },
   "assessments": {
     "title": "Testlar va imtihonlar",
