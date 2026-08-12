@@ -87,6 +87,9 @@ IT School - Brend Kit/
 # migration backups
 /backups/
 
+# course source material (drafts, not part of the app)
+/lesson_cs/
+
 # local artifacts: DB dumps, exports, design sources
 *.dump
 /export*.csv

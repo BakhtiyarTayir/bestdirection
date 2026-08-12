@@ -1,4 +1,4 @@
-# design-sync notes — lms (uPortal LMS)
+# design-sync notes — lms (IT School LMS)
 
 - App repo, not a packaged DS: no `dist/`, no build for a component package. Converter runs in synth-entry mode over `srcDir: src/components/ui` (26 shadcn/ui components). `cfg.entry` deliberately points at nonexistent `./dist/index.js` — that anchors PKG_DIR at the repo root and drops the converter into synth mode; the `[NO_DIST]` warn on every build is expected.
 - Components import `cn` from `@/lib/utils` — `tsconfig` is set so esbuild resolves the `@/` alias. `tsconfig.json` `exclude` lists `.design-sync`, `.ds-sync`, `ds-bundle` so the app's typecheck ignores preview files (they import from 'lms', which only resolves at preview-compile time).

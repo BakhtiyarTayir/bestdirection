@@ -3,7 +3,7 @@ import type { LandingCourse, LandingPage } from "@/lib/marketing-content";
 import { LMS_URL } from "@/lib/marketing-domain";
 
 // Общие шапка и футер лендинга: используются главной страницей и
-// произвольными страницами (uportal.uz/<slug>). Серверные компоненты —
+// произвольными страницами (it-school-official.uz/<slug>). Серверные компоненты —
 // mt передаётся как функция, клиентской границы здесь нет.
 
 type TextFn = (key: string, values?: Record<string, string | number>) => string;

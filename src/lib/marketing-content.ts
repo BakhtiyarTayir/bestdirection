@@ -153,7 +153,7 @@ export async function findLandingCourse(slug: string): Promise<LandingCourse | u
   return courses.find((c) => c.slug === slug);
 }
 
-// ─── Страницы (uportal.uz/<slug>) ────────────────────────────────────────
+// ─── Страницы (it-school-official.uz/<slug>) ─────────────────────────────
 
 /** Блок Editor.js; data зависит от типа блока */
 export interface EditorBlock {

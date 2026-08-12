@@ -1,4 +1,4 @@
-# uPortal LMS UI — conventions
+# IT School LMS UI — conventions
 
 React + Tailwind v4 + shadcn/ui. All components live on `window.LMS` and need **no global provider** — exceptions below. UI text in this product is Russian (fallback content style: курсы, группы, уроки, студенты).
 

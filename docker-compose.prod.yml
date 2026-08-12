@@ -16,6 +16,22 @@ services:
       timeout: 5s
       retries: 5
 
+  piston:
+    image: ghcr.io/engineer-man/piston
+    restart: unless-stopped
+    privileged: true
+    ports:
+      - "127.0.0.1:2000:2000"
+    environment:
+      PISTON_RUN_TIMEOUT: 30000
+      PISTON_COMPILE_TIMEOUT: 30000
+      PISTON_OUTPUT_MAX_SIZE: 65536
+    mem_limit: 448m
+    volumes:
+      - piston-packages:/piston/packages
+    tmpfs:
+      - /piston/jobs:exec,size=128m
+
   app:
     build: .
     restart: unless-stopped
@@ -24,24 +40,28 @@ services:
     environment:
       DATABASE_URL: postgresql://lms:${DB_PASSWORD:-lmspassword}@db:5432/lms?schema=public
       AUTH_SECRET: ${AUTH_SECRET:-changeme}
-      AUTH_URL: ${AUTH_URL:-https://course.uportal.uz}
+      AUTH_URL: ${AUTH_URL:-https://course.it-school-official.uz}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      NEXTAUTH_URL: ${NEXTAUTH_URL:-https://course.uportal.uz}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-https://course.it-school-official.uz}
       AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-true}
-      MARKETING_DOMAIN: ${MARKETING_DOMAIN:-uportal.uz}
+      MARKETING_DOMAIN: ${MARKETING_DOMAIN:-it-school-official.uz}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
       NEXT_PUBLIC_TELEGRAM_BOT_USERNAME: ${NEXT_PUBLIC_TELEGRAM_BOT_USERNAME:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-}
+      PISTON_API_URL: http://piston:2000/api/v2
     volumes:
       - uploads:/app/public/uploads
       - private_uploads:/app/uploads
     depends_on:
       db:
         condition: service_healthy
+      piston:
+        condition: service_started
 
 volumes:
   pgdata:
   uploads:
   private_uploads:
+  piston-packages:

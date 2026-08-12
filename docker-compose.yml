@@ -39,9 +39,9 @@ services:
     environment:
       DATABASE_URL: postgresql://lms:${DB_PASSWORD:-lmspassword}@db:5432/lms?schema=public
       AUTH_SECRET: ${AUTH_SECRET:-changeme}
-      AUTH_URL: ${AUTH_URL:-https://course.uportal.uz}
+      AUTH_URL: ${AUTH_URL:-https://course.it-school-official.uz}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      NEXTAUTH_URL: ${NEXTAUTH_URL:-https://course.uportal.uz}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-https://course.it-school-official.uz}
       AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-true}
       PISTON_API_URL: http://piston:2000/api/v2
     volumes:

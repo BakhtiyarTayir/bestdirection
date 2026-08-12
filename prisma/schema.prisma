@@ -144,7 +144,7 @@ model Course {
   // PAID — по заявке (оплата оффлайн, цена в поле price)
   accessType CourseAccessType @default(CLOSED)
 
-  // Публичный лендинг (uportal.uz)
+  // Публичный лендинг (it-school-official.uz)
   isPublicListed  Boolean   @default(false)
   price           Int?
   publicSummaryRu String?
@@ -651,7 +651,7 @@ model TestResult {
   @@index([submissionId])
 }
 
-// ─── Контент маркетингового лендинга (uportal.uz) ────────────────────────
+// ─── Контент маркетингового лендинга (it-school-official.uz) ─────────────
 // Отдельные таблицы, не связанные с курсами платформы: лендинг редактируется
 // из админки (/admin/landing) и публикуется без деплоя.
 
@@ -722,7 +722,7 @@ model MarketingText {
   updatedAt DateTime @updatedAt
 }
 
-// Произвольные страницы лендинга (uportal.uz/<slug>): детальные страницы
+// Произвольные страницы лендинга (it-school-official.uz/<slug>): детальные страницы
 // курсов, «О нас», политика и т.п. Контент — JSON блочного редактора Editor.js.
 model MarketingPage {
   id           String   @id @default(cuid())
