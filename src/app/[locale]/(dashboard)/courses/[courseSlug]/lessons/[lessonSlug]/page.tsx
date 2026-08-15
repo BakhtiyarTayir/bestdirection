@@ -23,7 +23,7 @@ import {
 import { LANGUAGE_LABELS } from "@/lib/code-runner/config";
 import { VideoPlayer } from "@/components/video-player";
 import { MarkCompleteButton } from "@/components/mark-complete-button";
-import { MarkdownRenderer } from "@/components/markdown-renderer";
+import { LessonContent } from "@/components/lesson-content";
 import { LessonTOC } from "@/components/lesson-toc";
 import { getTranslations } from "next-intl/server";
 import { resolveFullPath } from "@/lib/slug-resolvers";
@@ -128,7 +128,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
   }
 
   const hasVideo = !!(lesson.videoUrl && lesson.videoSource);
-  const showToc = !!lesson.content && hasToc(lesson.content);
+  const showToc = !!lesson.content && hasToc(lesson.content, lesson.contentFormat);
 
   return (
     <div className="space-y-8">
@@ -212,7 +212,14 @@ export default async function LessonPage({ params }: LessonPageProps) {
           showToc && "lg:grid-cols-[minmax(0,1fr)_16rem]"
         )}
       >
-        <div className="min-w-0 max-w-4xl space-y-6">
+        <div
+          className={cn(
+            "min-w-0 space-y-6",
+            // HTML-урок вёрстан как самостоятельная страница, ему нужна вся ширина;
+            // markdown в prose держим узким для читаемости.
+            lesson.contentFormat === "HTML" ? "w-full" : "max-w-4xl"
+          )}
+        >
           {/* Video (if available) */}
           {hasVideo && (
             <div className="overflow-hidden rounded-xl border bg-black shadow-sm">
@@ -227,11 +234,10 @@ export default async function LessonPage({ params }: LessonPageProps) {
 
           {/* Text content */}
           {lesson.content ? (
-            <Card>
-              <CardContent className="p-6 md:p-8">
-                <MarkdownRenderer content={lesson.content} />
-              </CardContent>
-            </Card>
+            <LessonContent
+              content={lesson.content}
+              format={lesson.contentFormat}
+            />
           ) : (
             !hasVideo && (
               <div className="rounded-xl border border-dashed p-12 text-center text-muted-foreground">
@@ -459,7 +465,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
         {/* Table of Contents */}
         {showToc && (
           <aside className="hidden lg:block">
-            <LessonTOC content={lesson.content} />
+            <LessonTOC content={lesson.content} format={lesson.contentFormat} />
           </aside>
         )}
       </div>

@@ -954,6 +954,16 @@
     "noPreview": "Ko'rish uchun mazmun yo'q",
     "uploading": "Yuklanmoqda..."
   },
+  "htmlLesson": {
+    "formatMarkdown": "Markdown",
+    "formatHtml": "HTML-sahifa",
+    "hint": "Tayyor HTML-hujjatni to'liq joylashtiring — o'z <style> va <script> bilan. U izolyatsiyalangan muhitda ochiladi.",
+    "uploadImage": "Rasm yuklash",
+    "uploadHtml": ".html yuklash",
+    "editTab": "Kod",
+    "previewTab": "Ko'rib chiqish",
+    "noPreview": "Hozircha ko'rsatadigan narsa yo'q"
+  },
   "toc": {
     "showContents": "Mundarijani ko'rsatish",
     "contents": "Mundarija"

@@ -1,7 +1,12 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
-import { parseHeadings } from "@/lib/toc";
+import { useCallback, useEffect, useState, useRef, useMemo } from "react";
+import { parseTocItems, type LessonFormat } from "@/lib/toc";
+import {
+  LESSON_FRAME_ID,
+  LESSON_FRAME_LAYOUT_EVENT,
+  type FrameLayoutMessage,
+} from "@/lib/lesson-frame";
 import { cn } from "@/lib/utils";
 import { List, ChevronsRight } from "lucide-react";
 import { Button } from "./ui/button";
@@ -15,16 +20,29 @@ import { useTranslations } from "next-intl";
 
 interface LessonTOCProps {
   content: string;
+  format?: LessonFormat | null;
 }
 
-export function LessonTOC({ content }: LessonTOCProps) {
+/** Отступ от верха окна, на котором заголовок считается активным. */
+const ACTIVE_OFFSET = 96;
+
+export function LessonTOC({ content, format }: LessonTOCProps) {
   const t = useTranslations("toc");
-  const headings = useMemo(() => parseHeadings(content), [content]);
+  const isHtml = format === "HTML";
+  const headings = useMemo(
+    () => parseTocItems(content, isHtml ? "HTML" : "MARKDOWN"),
+    [content, isHtml]
+  );
   const [activeId, setActiveId] = useState<string>("");
   const [collapsed, setCollapsed] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
+  /** id заголовка → offsetTop внутри документа урока (только для HTML). */
+  const [frameOffsets, setFrameOffsets] = useState<Record<string, number>>({});
 
+  // Markdown: заголовки — обычные узлы страницы, следим за ними напрямую.
   useEffect(() => {
+    if (isHtml) return;
+
     const elements = headings
       .map((h) => document.getElementById(h.id))
       .filter(Boolean) as HTMLElement[];
@@ -49,7 +67,71 @@ export function LessonTOC({ content }: LessonTOCProps) {
     return () => {
       observerRef.current?.disconnect();
     };
-  }, [headings]);
+  }, [headings, isHtml]);
+
+  // HTML: заголовки внутри iframe, до них не дотянуться — iframe сам присылает их позиции.
+  useEffect(() => {
+    if (!isHtml) return;
+
+    function onLayout(event: Event) {
+      const detail = (event as CustomEvent<FrameLayoutMessage>).detail;
+      if (!detail?.headings) return;
+      setFrameOffsets(
+        Object.fromEntries(detail.headings.map((h) => [h.id, h.top]))
+      );
+    }
+
+    window.addEventListener(LESSON_FRAME_LAYOUT_EVENT, onLayout);
+    return () => window.removeEventListener(LESSON_FRAME_LAYOUT_EVENT, onLayout);
+  }, [isHtml]);
+
+  /** Позиция заголовка HTML-урока в координатах страницы. */
+  const framePageTop = useCallback(
+    (id: string): number | null => {
+      const frame = document.getElementById(LESSON_FRAME_ID);
+      const offset = frameOffsets[id];
+      if (!frame || offset === undefined) return null;
+      return frame.getBoundingClientRect().top + window.scrollY + offset;
+    },
+    [frameOffsets]
+  );
+
+  // HTML: активный пункт считаем сами — внутри iframe скролла нет, скроллится страница.
+  useEffect(() => {
+    if (!isHtml || headings.length === 0) return;
+
+    function onScroll() {
+      const probe = window.scrollY + ACTIVE_OFFSET;
+      let current = "";
+      for (const heading of headings) {
+        const top = framePageTop(heading.id);
+        if (top === null) continue;
+        if (top <= probe) current = heading.id;
+      }
+      setActiveId(current);
+    }
+
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [isHtml, headings, framePageTop]);
+
+  const scrollToHeading = useCallback(
+    (id: string) => {
+      if (!isHtml) {
+        document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+        return;
+      }
+      const top = framePageTop(id);
+      if (top === null) return;
+      window.scrollTo({ top: top - 24, behavior: "smooth" });
+    },
+    [isHtml, framePageTop]
+  );
 
   if (headings.length < 2) return null;
 
@@ -98,9 +180,7 @@ export function LessonTOC({ content }: LessonTOCProps) {
               href={`#${heading.id}`}
               onClick={(e) => {
                 e.preventDefault();
-                document.getElementById(heading.id)?.scrollIntoView({
-                  behavior: "smooth",
-                });
+                scrollToHeading(heading.id);
               }}
               className={cn(
                 "block py-1 border-l-2 -ml-px transition-colors",

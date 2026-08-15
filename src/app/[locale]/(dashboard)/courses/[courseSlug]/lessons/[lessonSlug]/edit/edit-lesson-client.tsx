@@ -28,6 +28,7 @@ interface EditLessonClientProps {
     id: string;
     title: string;
     content: string | null;
+    contentFormat: "MARKDOWN" | "HTML" | null;
     videoUrl: string | null;
     videoSource: "YOUTUBE" | "UPLOAD" | null;
     sortOrder: number;
@@ -44,6 +45,7 @@ export function EditLessonClient({ courseId, courseSlug, lessonSlug, lesson, ass
     const result = await updateLesson(lesson.id, {
       title: data.title,
       content: data.content,
+      contentFormat: data.contentFormat,
       videoUrl: data.videoUrl,
       videoSource: data.videoSource,
       sortOrder: data.sortOrder,

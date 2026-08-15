@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Поток и позиционирование — интерактивный урок CSS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#101A28;
+  --ink-2:#465771;
+  --paper:#E4E9EF;
+  --panel:#FFFFFF;
+  --line:#C6D0DC;
+  --anchor:#1F49D8;
+  --moving:#E11D66;
+  --sun:#F2B705;
+  --ghost:rgba(16,26,40,.30);
+  --r:10px;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  background:var(--paper);
+  background-image:
+    linear-gradient(to right, rgba(16,26,40,.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(16,26,40,.045) 1px, transparent 1px);
+  background-size:26px 26px;
+  color:var(--ink);
+  font-family:"IBM Plex Sans","Segoe UI",Roboto,Arial,sans-serif;
+  font-size:16px;
+  line-height:1.6;
+}
+
+.shell{max-width:1080px;margin:0 auto;padding:0 20px 90px}
+
+/* ---------- типографика ---------- */
+h1,h2,h3{font-family:"Unbounded","IBM Plex Sans",sans-serif;margin:0;line-height:1.12;letter-spacing:-.02em}
+h1{font-size:clamp(30px,6vw,58px);font-weight:800}
+h2{font-size:clamp(22px,3.4vw,32px);font-weight:700}
+h3{font-size:17px;font-weight:600;letter-spacing:0}
+code,kbd,.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace}
+.eyebrow{
+  font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-2)
+}
+
+/* ---------- шапка ---------- */
+header{padding:64px 0 40px;border-bottom:1px solid var(--line)}
+.lede{max-width:56ch;margin-top:22px;font-size:clamp(17px,2vw,20px);color:var(--ink-2)}
+.lede b{color:var(--ink);font-weight:600}
+
+/* ---------- секции ---------- */
+section{padding:56px 0;border-bottom:1px solid var(--line)}
+.sec-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:8px}
+.sec-num{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--moving);font-weight:500}
+.sec-sub{color:var(--ink-2);max-width:62ch;margin:10px 0 30px}
+
+/* ---------- сетка лаборатории ---------- */
+.lab{display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:start}
+@media(max-width:840px){.lab{grid-template-columns:1fr}}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.card + .card{margin-top:14px}
+.card-title{
+  font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-2);margin-bottom:12px
+}
+
+/* сегментированный переключатель */
+.seg{display:flex;flex-direction:column;gap:7px}
+.seg button{
+  font-family:"IBM Plex Mono",monospace;font-size:14px;
+  text-align:left;padding:11px 13px;border-radius:8px;cursor:pointer;
+  border:1px solid var(--line);background:#F7F9FB;color:var(--ink);
+  transition:background .18s,border-color .18s,color .18s,transform .12s;
+}
+.seg button:hover{background:#EDF1F6}
+.seg button:active{transform:translateY(1px)}
+.seg button[aria-pressed="true"]{
+  background:var(--ink);border-color:var(--ink);color:#fff
+}
+.seg button small{display:block;font-family:"IBM Plex Sans",sans-serif;font-size:11.5px;opacity:.6;margin-top:2px}
+
+/* слайдеры */
+.ctrl{margin-top:15px}
+.ctrl-row{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;margin-bottom:5px}
+.ctrl-row .mono{color:var(--moving);font-size:13px}
+input[type=range]{width:100%;accent-color:var(--moving);cursor:pointer}
+.ctrl.off{opacity:.32;pointer-events:none}
+
+/* чекбоксы */
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14px;cursor:pointer;margin-top:14px;line-height:1.4}
+.check input{margin:2px 0 0;accent-color:var(--anchor);width:16px;height:16px;cursor:pointer;flex:none}
+.check span small{display:block;color:var(--ink-2);font-size:12px;margin-top:2px}
+
+/* ---------- сцена ---------- */
+.stage-outer{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px;overflow-x:auto}
+.stage{
+  position:relative;height:310px;min-width:430px;
+  border:1px dashed var(--line);border-radius:8px;background:
+    repeating-linear-gradient(45deg,rgba(16,26,40,.022) 0 8px,transparent 8px 16px);
+  padding:34px 22px 22px;
+}
+.tag{
+  position:absolute;font-family:"IBM Plex Mono",monospace;font-size:11px;
+  padding:2px 7px;border-radius:5px;white-space:nowrap;letter-spacing:.02em
+}
+.stage > .tag{top:8px;left:10px;color:var(--ink-2);background:#EEF2F6;border:1px solid var(--line)}
+
+.parent{
+  position:relative;height:190px;border:2px solid var(--line);border-radius:8px;
+  padding:30px 16px 16px;display:flex;align-items:flex-start;background:#fff;
+  transition:border-color .25s,background .25s;
+}
+.parent.anchored{border-color:var(--anchor);background:rgba(31,73,216,.045)}
+.parent > .tag{
+  top:-1px;left:-1px;border-radius:8px 0 8px 0;background:var(--line);color:#fff;
+  transition:background .25s;
+}
+.parent.anchored > .tag{background:var(--anchor)}
+
+.box{
+  width:88px;height:88px;border-radius:8px;flex:none;margin-right:14px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:"IBM Plex Mono",monospace;font-size:22px;
+  transition:transform .38s cubic-bezier(.2,.75,.2,1);
+}
+.sib{background:#DDE4EC;color:var(--ink-2);border:1px solid var(--line)}
+
+.slot{
+  width:88px;height:88px;flex:none;margin-right:14px;position:static;
+  border-radius:8px;transition:width .42s cubic-bezier(.2,.75,.2,1),margin-right .42s,border-color .3s;
+  border:1px dashed transparent;
+}
+.slot.hole{border-color:var(--ghost);background:repeating-linear-gradient(-45deg,rgba(16,26,40,.05) 0 5px,transparent 5px 10px)}
+.slot.collapsed{width:0;margin-right:0;border-color:transparent;background:none}
+
+#target{
+  background:var(--moving);color:#fff;border:none;box-shadow:0 6px 18px rgba(225,29,102,.28);
+  transition:top .28s,left .28s,box-shadow .3s;
+  width:88px;height:88px;
+}
+
+/* линии-выноски */
+.leader{position:absolute;pointer-events:none;z-index:5}
+.leader.v{width:0;border-left:1px dashed var(--moving)}
+.leader.h{height:0;border-top:1px dashed var(--moving)}
+.coord{
+  position:absolute;z-index:6;pointer-events:none;
+  font-family:"IBM Plex Mono",monospace;font-size:11px;
+  background:var(--moving);color:#fff;padding:2px 7px;border-radius:5px;white-space:nowrap
+}
+.hidden{display:none!important}
+
+/* ---------- код ---------- */
+pre.code{
+  margin:14px 0 0;background:var(--ink);color:#D8E2EF;border-radius:var(--r);
+  padding:16px 18px;overflow-x:auto;font-size:13.5px;line-height:1.75;
+  font-family:"IBM Plex Mono",monospace;
+}
+.s{color:#7FE3C0}.k{color:#8FB6FF}.v{color:#FFD98A}.c{color:#6B7C93;font-style:italic}.p{color:#8494A8}
+
+/* ---------- пояснение ---------- */
+.explain{border-left:3px solid var(--moving);padding:2px 0 2px 16px;margin-top:16px}
+.explain h3{margin-bottom:6px}
+.explain p{margin:0;color:var(--ink-2);font-size:14.5px}
+.explain .flow-note{
+  display:inline-block;margin-top:10px;font-family:"IBM Plex Mono",monospace;
+  font-size:12px;padding:3px 9px;border-radius:20px
+}
+.in-flow{background:rgba(31,73,216,.1);color:var(--anchor)}
+.out-flow{background:rgba(225,29,102,.1);color:var(--moving)}
+
+/* ---------- мини-браузер ---------- */
+.scroll-lab{display:grid;grid-template-columns:280px 1fr;gap:22px;align-items:start}
+@media(max-width:840px){.scroll-lab{grid-template-columns:1fr}}
+.browser{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--panel)}
+.chrome{
+  display:flex;align-items:center;gap:8px;padding:9px 12px;background:#EEF2F6;
+  border-bottom:1px solid var(--line);font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-2)
+}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--line);flex:none}
+.viewport{
+  height:340px;overflow-y:auto;position:relative;
+  transform:translateZ(0); /* делает viewport точкой отсчёта для fixed внутри демо */
+}
+.doc{padding:16px 18px}
+.doc p{margin:0 0 14px;color:var(--ink-2);font-size:14px}
+.doc h4{margin:0 0 8px;font-size:15px;font-family:"IBM Plex Sans",sans-serif}
+#bar{
+  background:var(--anchor);color:#fff;padding:13px 18px;font-weight:600;font-size:14.5px;
+  display:flex;justify-content:space-between;align-items:center;z-index:20;
+}
+#bar .mono{font-size:11.5px;opacity:.75;font-weight:400}
+#bar.is-fixed{position:fixed;top:0;left:0;right:0}
+#bar.is-sticky{position:sticky;top:0}
+.wrap.clipped{overflow:hidden}
+
+/* ---------- z-index ---------- */
+.z-stage{position:relative;height:240px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.zc{
+  position:absolute;width:150px;height:130px;border-radius:10px;padding:12px;cursor:pointer;
+  font-family:"IBM Plex Mono",monospace;font-size:13px;color:#fff;
+  transition:transform .2s,box-shadow .2s;user-select:none;
+  border:2px solid rgba(255,255,255,.35);
+}
+.zc:hover{transform:translateY(-3px)}
+.zc b{display:block;font-size:26px;font-weight:500;margin-top:6px}
+.z-stage.flat .zc{position:static;display:inline-block;margin:14px 0 0 14px;vertical-align:top}
+
+/* ---------- таблица ---------- */
+.tbl{width:100%;border-collapse:collapse;font-size:14.5px;margin-top:8px}
+.tbl th,.tbl td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl th{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);font-weight:500}
+.tbl td:first-child{font-family:"IBM Plex Mono",monospace;color:var(--moving);white-space:nowrap}
+.tbl-wrap{overflow-x:auto}
+
+/* ---------- задания ---------- */
+.tasks{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin-top:8px}
+.task{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--sun);border-radius:var(--r);padding:16px}
+.task .mono{font-size:11px;color:var(--sun);letter-spacing:.1em;text-transform:uppercase}
+.task p{margin:8px 0 0;font-size:14px;color:var(--ink-2)}
+
+.warn{
+  background:rgba(242,183,5,.12);border:1px solid rgba(242,183,5,.5);
+  border-radius:var(--r);padding:14px 16px;font-size:14px;margin-top:16px
+}
+.warn b{font-weight:600}
+
+:focus-visible{outline:2px solid var(--moving);outline-offset:2px;border-radius:4px}
+
+footer{padding:40px 0;color:var(--ink-2);font-size:13.5px}
+
+@media(prefers-reduced-motion:reduce){
+  *{transition-duration:.01ms!important;animation-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<header>
+  <div class="eyebrow">CSS · урок · интерактив</div>
+  <h1>Поток<br>и позиционирование</h1>
+  <p class="lede">Поток документа — это очередь: элементы стоят друг за другом в том порядке, в каком написаны в HTML. Свойство <b>position</b> решает две вещи: <b>остаётся ли элемент в очереди</b> и <b>от чего он отсчитывает свои координаты</b>. Всё остальное — следствие.</p>
+</header>
+
+<!-- ===================== 1. ЛАБОРАТОРИЯ ===================== -->
+<section>
+  <div class="sec-head"><span class="sec-num">01</span><h2>Лаборатория потока</h2></div>
+  <p class="sec-sub">Переключайте <code>position</code> у розового блока и следите за двумя вещами: сдвигается ли он сам и <b>двигаются ли соседи</b>. Штриховая рамка показывает место, которое элемент занимает в очереди.</p>
+
+  <div class="lab">
+    <!-- панель управления -->
+    <div>
+      <div class="card">
+        <div class="card-title">position у блока 2</div>
+        <div class="seg" id="seg">
+          <button data-pos="static" aria-pressed="true">static<small>как есть, по умолчанию</small></button>
+          <button data-pos="relative" aria-pressed="false">relative<small>сдвиг от себя самого</small></button>
+          <button data-pos="absolute" aria-pressed="false">absolute<small>координаты от предка</small></button>
+        </div>
+
+        <div class="ctrl off" id="ctrlTop">
+          <div class="ctrl-row"><label for="rTop">top</label><span class="mono" id="vTop">40px</span></div>
+          <input type="range" id="rTop" min="0" max="110" value="40">
+        </div>
+        <div class="ctrl off" id="ctrlLeft">
+          <div class="ctrl-row"><label for="rLeft">left</label><span class="mono" id="vLeft">130px</span></div>
+          <input type="range" id="rLeft" min="0" max="300" value="130">
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">якорь</div>
+        <label class="check">
+          <input type="checkbox" id="cbAnchor" checked>
+          <span>У родителя <code>position: relative</code>
+            <small>Снимите галочку и посмотрите, куда улетит блок при <code>absolute</code>. Это ошибка №1 у новичков.</small>
+          </span>
+        </label>
+      </div>
+    </div>
+
+    <!-- сцена -->
+    <div>
+      <div class="stage-outer">
+        <div class="stage" id="stage">
+          <span class="tag">условная страница (body)</span>
+          <div class="parent anchored" id="parent">
+            <span class="tag">.parent</span>
+            <div class="box sib">1</div>
+            <div class="slot" id="slot"><div class="box" id="target">2</div></div>
+            <div class="box sib">3</div>
+          </div>
+          <div class="leader v hidden" id="lv"></div>
+          <div class="leader h hidden" id="lh"></div>
+          <div class="coord hidden" id="coord"></div>
+        </div>
+      </div>
+
+      <pre class="code" id="code"></pre>
+
+      <div class="explain">
+        <h3 id="exTitle"></h3>
+        <p id="exText"></p>
+        <span class="flow-note" id="exFlow"></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 2. СКРОЛЛ ===================== -->
+<section>
+  <div class="sec-head"><span class="sec-num">02</span><h2>Полигон прокрутки</h2></div>
+  <p class="sec-sub"><code>fixed</code> и <code>sticky</code> нельзя понять на неподвижной странице — им нужен скролл. Прокрутите содержимое окошка и посмотрите, как ведёт себя синяя шапка.</p>
+
+  <div class="scroll-lab">
+    <div>
+      <div class="card">
+        <div class="card-title">position у шапки</div>
+        <div class="seg" id="segBar">
+          <button data-bar="static" aria-pressed="true">static<small>уезжает вместе с текстом</small></button>
+          <button data-bar="fixed" aria-pressed="false">fixed<small>приклеена к экрану</small></button>
+          <button data-bar="sticky" aria-pressed="false">sticky<small>прилипает при прокрутке</small></button>
+        </div>
+        <label class="check" id="clipRow" style="display:none">
+          <input type="checkbox" id="cbClip">
+          <span>Дать родителю <code>overflow: hidden</code>
+            <small>Проверьте: sticky перестанет прилипать. Это причина 90% вопросов «почему sticky не работает».</small>
+          </span>
+        </label>
+      </div>
+      <div class="card">
+        <div class="card-title">заметка</div>
+        <p style="margin:0;font-size:14px;color:var(--ink-2)" id="barNote"></p>
+      </div>
+    </div>
+
+    <div class="browser">
+      <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span>&nbsp;lesson.html</div>
+      <div class="viewport" id="viewport">
+        <div class="wrap" id="wrap">
+          <div id="bar">Шапка сайта <span class="mono">position: static</span></div>
+          <div class="doc">
+            <h4>Раздел первый</h4>
+            <p>Прокручивайте это окно вниз. Пока у шапки <code>static</code>, она — обычный элемент потока и уезжает вверх вместе со всем текстом.</p>
+            <p>Переключите на <code>fixed</code>: шапка выпадет из потока и приклеится к верхнему краю окна. Обратите внимание — первая строка текста уехала под неё. Так и происходит на реальных сайтах, поэтому контейнеру добавляют <code>padding-top</code>.</p>
+            <h4>Раздел второй</h4>
+            <p>Теперь <code>sticky</code>. Пока шапка не дошла до верхнего края, она ведёт себя как обычный элемент в потоке и место под ней занято. Как только доскроллила до порога <code>top: 0</code> — прилипает.</p>
+            <p>Ключевая разница: <code>fixed</code> прилипает сразу и навсегда, <code>sticky</code> — только после того, как доскроллит до заданной границы, и только в пределах своего родителя.</p>
+            <h4>Раздел третий</h4>
+            <p>Ещё один нюанс sticky: без указанного порога (<code>top</code>, <code>bottom</code>, <code>left</code> или <code>right</code>) свойство просто ничего не делает. Браузер не знает, к чему прилипать.</p>
+            <p>И третий: если у любого родителя стоит <code>overflow: hidden</code> или <code>overflow: auto</code>, прилипание ломается. Проверьте это галочкой слева.</p>
+            <h4>Раздел четвёртый</h4>
+            <p>Конец документа. Прокрутите обратно наверх и попробуйте другой режим.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="warn"><b>Честная оговорка про демо.</b> Настоящий <code>fixed</code> считает координаты от окна браузера. Чтобы удержать его внутри этого окошка, окошку задан <code>transform: translateZ(0)</code> — и он перехватил роль точки отсчёта. Это та самая редкая ловушка: <b>если у любого предка есть <code>transform</code>, <code>filter</code> или <code>perspective</code>, <code>fixed</code> начинает вести себя как <code>absolute</code></b> относительно этого предка.</div>
+</section>
+
+<!-- ===================== 3. Z-INDEX ===================== -->
+<section>
+  <div class="sec-head"><span class="sec-num">03</span><h2>Кто выше: z-index</h2></div>
+  <p class="sec-sub">Когда элементы накладываются, порядок слоёв задаёт <code>z-index</code>. Кликните по карточке — она получит верхний слой. Снимите позиционирование и посмотрите, что произойдёт.</p>
+
+  <div class="z-stage" id="zStage">
+    <div class="zc" data-i="0" style="background:#1F49D8;top:30px;left:24px">.card-1<b>z 1</b></div>
+    <div class="zc" data-i="1" style="background:#E11D66;top:62px;left:120px">.card-2<b>z 2</b></div>
+    <div class="zc" data-i="2" style="background:#0F8F6F;top:94px;left:216px">.card-3<b>z 3</b></div>
+  </div>
+
+  <label class="check" style="max-width:520px">
+    <input type="checkbox" id="cbFlat">
+    <span>Убрать <code>position</code> (сделать все <code>static</code>)
+      <small>z-index работает только с позиционированными элементами. Без него слои определяет порядок в HTML.</small>
+    </span>
+  </label>
+</section>
+
+<!-- ===================== 4. ШПАРГАЛКА ===================== -->
+<section>
+  <div class="sec-head"><span class="sec-num">04</span><h2>Шпаргалка</h2></div>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>position</th><th>в потоке?</th><th>точка отсчёта</th><th>типичный кейс</th></tr></thead>
+      <tbody>
+        <tr><td>static</td><td>да</td><td>—<span style="color:var(--ink-2)"> (top/left не работают)</span></td><td>значение по умолчанию</td></tr>
+        <tr><td>relative</td><td>да, место остаётся</td><td>своё исходное место</td><td>якорь для absolute</td></tr>
+        <tr><td>absolute</td><td>нет</td><td>ближайший позиционированный предок</td><td>бейдж, крестик, оверлей</td></tr>
+        <tr><td>fixed</td><td>нет</td><td>окно браузера</td><td>шапка, кнопка «наверх»</td></tr>
+        <tr><td>sticky</td><td>да, потом прилипает</td><td>ближайший прокручиваемый предок</td><td>липкий заголовок раздела</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===================== 5. ЗАДАНИЯ ===================== -->
+<section style="border-bottom:none">
+  <div class="sec-head"><span class="sec-num">05</span><h2>Задания для практики</h2></div>
+  <p class="sec-sub">Каждое задание — на 5–10 минут и проверяет ровно одну идею.</p>
+  <div class="tasks">
+    <div class="task"><span class="mono">Задание 1</span><p>Сделайте карточку товара с бейджем «−30%» в правом верхнем углу. Затем уберите <code>relative</code> у карточки и объясните вслух, почему бейдж улетел.</p></div>
+    <div class="task"><span class="mono">Задание 2</span><p>Отцентрируйте модальное окно по центру страницы двумя способами: через <code>top/left: 50%</code> с <code>transform</code> и через <code>inset: 0</code> с <code>margin: auto</code>.</p></div>
+    <div class="task"><span class="mono">Задание 3</span><p>Сделайте фиксированную шапку. Найдите, почему первый заголовок оказался под ней, и исправьте это.</p></div>
+    <div class="task"><span class="mono">Задание 4</span><p>Сделайте кнопку «наверх» в правом нижнем углу экрана. Она не должна двигаться при прокрутке и не должна перекрываться шапкой.</p></div>
+    <div class="task"><span class="mono">Задание 5</span><p>Сделайте липкие заголовки разделов в длинном списке. Затем намеренно сломайте их через <code>overflow: hidden</code> у обёртки и почините обратно.</p></div>
+    <div class="task"><span class="mono">Задание 6</span><p>Три перекрывающиеся карточки. Расставьте <code>z-index</code> так, чтобы средняя оказалась сверху, не меняя порядок в HTML.</p></div>
+  </div>
+</section>
+
+<footer>Интерактивный конспект · CSS: поток и позиционирование</footer>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ================= ЛАБОРАТОРИЯ ================= */
+  var state={pos:'static',top:40,left:130,anchored:true};
+
+  var seg=document.getElementById('seg'),
+      slot=document.getElementById('slot'),
+      target=document.getElementById('target'),
+      parent=document.getElementById('parent'),
+      stage=document.getElementById('stage'),
+      lv=document.getElementById('lv'),lh=document.getElementById('lh'),
+      coord=document.getElementById('coord'),
+      rTop=document.getElementById('rTop'),rLeft=document.getElementById('rLeft'),
+      vTop=document.getElementById('vTop'),vLeft=document.getElementById('vLeft'),
+      ctrlTop=document.getElementById('ctrlTop'),ctrlLeft=document.getElementById('ctrlLeft'),
+      cbAnchor=document.getElementById('cbAnchor'),
+      codeEl=document.getElementById('code'),
+      exTitle=document.getElementById('exTitle'),
+      exText=document.getElementById('exText'),
+      exFlow=document.getElementById('exFlow');
+
+  var TEXTS={
+    static:{
+      t:'Элемент стоит в очереди',
+      d:'Значение по умолчанию. Блок занимает своё место в потоке, сразу после первого и перед третьим. Свойства top и left ему заданы, но он их полностью игнорирует — они оживают только при position, отличном от static.',
+      f:'в потоке',c:'in-flow'
+    },
+    relative:{
+      t:'Сдвиг от самого себя',
+      d:'Блок визуально уехал, но его место в очереди осталось занято — соседи не сдвинулись, видна штриховая дыра. Как человек в очереди, который сделал шаг вбок: место за ним никто не занял. Именно поэтому relative чаще используют не ради сдвига, а как якорь для дочерних absolute.',
+      f:'в потоке, место остаётся',c:'in-flow'
+    },
+    absolute:{
+      t:'Выпал из потока',
+      d:'Блок как будто вырезали со страницы: соседи сомкнулись, дыры нет. Теперь top и left отсчитываются от ближайшего предка с position, отличным от static. Уберите галочку «якорь» — и точкой отсчёта станет вся страница.',
+      f:'вне потока',c:'out-flow'
+    }
+  };
+
+  function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+
+  function renderCode(){
+    var L=[];
+    L.push('<span class="s">.parent</span> <span class="p">{</span>');
+    if(state.anchored){
+      L.push('  <span class="k">position</span><span class="p">:</span> <span class="v">relative</span><span class="p">;</span>  <span class="c">/* якорь */</span>');
+    }else{
+      L.push('  <span class="c">/* position не задан → static */</span>');
+    }
+    L.push('<span class="p">}</span>');
+    L.push('');
+    L.push('<span class="s">.box-2</span> <span class="p">{</span>');
+    L.push('  <span class="k">position</span><span class="p">:</span> <span class="v">'+state.pos+'</span><span class="p">;</span>');
+    if(state.pos==='static'){
+      L.push('  <span class="c">/* top и left ниже не сработают */</span>');
+      L.push('  <span class="c">top: '+state.top+'px;</span>');
+      L.push('  <span class="c">left: '+state.left+'px;</span>');
+    }else{
+      L.push('  <span class="k">top</span><span class="p">:</span> <span class="v">'+state.top+'px</span><span class="p">;</span>');
+      L.push('  <span class="k">left</span><span class="p">:</span> <span class="v">'+state.left+'px</span><span class="p">;</span>');
+    }
+    L.push('<span class="p">}</span>');
+    codeEl.innerHTML=L.join('\n');
+  }
+
+  function clampLeft(){
+    var box=state.anchored?parent:stage;
+    var cs=getComputedStyle(box);
+    var inner=box.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
+    var max=Math.max(40,Math.round(inner-96));
+    rLeft.max=max;
+    if(state.left>max){state.left=max;rLeft.value=max;}
+  }
+
+  function drawLeaders(){
+    if(state.pos==='static'){
+      lv.classList.add('hidden');lh.classList.add('hidden');coord.classList.add('hidden');
+      return;
+    }
+    lv.classList.remove('hidden');lh.classList.remove('hidden');coord.classList.remove('hidden');
+
+    var sr=stage.getBoundingClientRect(),
+        tr=target.getBoundingClientRect(),
+        or_;
+
+    if(state.pos==='relative'){
+      or_=slot.getBoundingClientRect();          // отсчёт от исходного места
+    }else{
+      var host=state.anchored?parent:stage;
+      var hr=host.getBoundingClientRect(),hs=getComputedStyle(host);
+      or_={left:hr.left+parseFloat(hs.borderLeftWidth)+parseFloat(hs.paddingLeft),
+           top: hr.top +parseFloat(hs.borderTopWidth) +parseFloat(hs.paddingTop)};
+    }
+
+    var x0=or_.left-sr.left, y0=or_.top-sr.top,
+        x1=tr.left-sr.left,  y1=tr.top-sr.top;
+
+    lv.style.left=x0+'px';
+    lv.style.top =Math.min(y0,y1)+'px';
+    lv.style.height=Math.abs(y1-y0)+'px';
+
+    lh.style.top =y1+'px';
+    lh.style.left=Math.min(x0,x1)+'px';
+    lh.style.width=Math.abs(x1-x0)+'px';
+
+    coord.textContent='top '+state.top+' · left '+state.left;
+    coord.style.left=(x1+4)+'px';
+    coord.style.top =Math.max(0,y1-20)+'px';
+  }
+
+  var ticker=null;
+  function animateLeaders(){
+    if(ticker)clearTimeout(ticker);
+    var end=Date.now()+520;
+    (function loop(){
+      drawLeaders();
+      if(Date.now()<end) ticker=setTimeout(function(){requestAnimationFrame(loop);},16);
+    })();
+  }
+
+  function render(){
+    clampLeft();
+
+    // кнопки
+    Array.prototype.forEach.call(seg.querySelectorAll('button'),function(b){
+      b.setAttribute('aria-pressed', String(b.dataset.pos===state.pos));
+    });
+
+    // слайдеры
+    var live=state.pos!=='static';
+    ctrlTop.classList.toggle('off',!live);
+    ctrlLeft.classList.toggle('off',!live);
+    vTop.textContent=state.top+'px';
+    vLeft.textContent=state.left+'px';
+
+    // слот и блок
+    slot.classList.toggle('hole',state.pos==='relative');
+    slot.classList.toggle('collapsed',state.pos==='absolute');
+    parent.classList.toggle('anchored',state.anchored);
+
+    target.style.position=state.pos;
+    if(live){target.style.top=state.top+'px';target.style.left=state.left+'px';}
+    else{target.style.top='';target.style.left='';}
+
+    // absolute должен «жить» в предке, а не в слоте
+    var host=(state.pos==='absolute')?(state.anchored?parent:stage):slot;
+    if(target.parentNode!==host) host.appendChild(target);
+
+    var T=TEXTS[state.pos];
+    exTitle.textContent=T.t;
+    exText.textContent=T.d;
+    exFlow.textContent=T.f;
+    exFlow.className='flow-note '+T.c;
+
+    renderCode();
+    animateLeaders();
+  }
+
+  seg.addEventListener('click',function(e){
+    var b=e.target.closest('button'); if(!b)return;
+    state.pos=b.dataset.pos; render();
+  });
+  rTop.addEventListener('input',function(){state.top=+this.value;render();});
+  rLeft.addEventListener('input',function(){state.left=+this.value;render();});
+  cbAnchor.addEventListener('change',function(){state.anchored=this.checked;render();});
+  window.addEventListener('resize',function(){clampLeft();drawLeaders();});
+
+  render();
+
+  /* ================= ПОЛИГОН ПРОКРУТКИ ================= */
+  var segBar=document.getElementById('segBar'),
+      bar=document.getElementById('bar'),
+      wrap=document.getElementById('wrap'),
+      vp=document.getElementById('viewport'),
+      clipRow=document.getElementById('clipRow'),
+      cbClip=document.getElementById('cbClip'),
+      barNote=document.getElementById('barNote'),
+      barLabel=bar.querySelector('.mono');
+
+  var BAR={
+    static:'Шапка — обычный элемент потока. Прокрутите вниз: она уезжает вместе с текстом.',
+    fixed:'Шапка выпала из потока и приклеилась к краю окна. Место под ней освободилось, поэтому текст уехал под шапку — на реальном сайте это лечат отступом у контейнера.',
+    sticky:'Шапка остаётся в потоке и место под ней занято. Прокрутите вниз: дойдя до порога top: 0, она прилипнет.'
+  };
+
+  function setBar(mode){
+    bar.className = mode==='static' ? '' : 'is-'+mode;
+    barLabel.textContent='position: '+mode;
+    barNote.textContent=BAR[mode];
+    clipRow.style.display = mode==='sticky' ? 'flex' : 'none';
+    if(mode!=='sticky'){cbClip.checked=false;wrap.classList.remove('clipped');}
+    Array.prototype.forEach.call(segBar.querySelectorAll('button'),function(b){
+      b.setAttribute('aria-pressed',String(b.dataset.bar===mode));
+    });
+    vp.scrollTop=0;
+  }
+  segBar.addEventListener('click',function(e){
+    var b=e.target.closest('button'); if(!b)return; setBar(b.dataset.bar);
+  });
+  cbClip.addEventListener('change',function(){
+    wrap.classList.toggle('clipped',this.checked);
+    barNote.textContent=this.checked
+      ? 'Родитель получил overflow: hidden — и стал для sticky «прокручиваемым предком», который не прокручивается. Прилипание больше не срабатывает.'
+      : BAR.sticky;
+  });
+  setBar('static');
+
+  /* ================= Z-INDEX ================= */
+  var zStage=document.getElementById('zStage'),
+      cards=Array.prototype.slice.call(zStage.querySelectorAll('.zc')),
+      cbFlat=document.getElementById('cbFlat'),
+      top=3;
+
+  cards.forEach(function(c,i){c.style.zIndex=i+1;});
+  zStage.addEventListener('click',function(e){
+    var c=e.target.closest('.zc'); if(!c||cbFlat.checked)return;
+    top+=1; c.style.zIndex=top;
+    c.querySelector('b').textContent='z '+top;
+  });
+  cbFlat.addEventListener('change',function(){
+    zStage.classList.toggle('flat',this.checked);
+  });
+})();
+</script>
+</body>
+</html>

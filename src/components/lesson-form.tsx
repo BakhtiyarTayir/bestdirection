@@ -12,16 +12,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { MarkdownEditor } from "@/components/markdown-editor";
+import { HtmlEditor } from "@/components/html-editor";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/components/ui/use-toast";
-import { Upload, Youtube } from "lucide-react";
+import { Upload, Youtube, Code2, FileText } from "lucide-react";
 
 type VideoSource = "YOUTUBE" | "UPLOAD";
+type LessonContentFormat = "MARKDOWN" | "HTML";
 
 function createFormSchema(tValidation: (key: string) => string) {
   return z.object({
     title: z.string().min(1, tValidation("titleRequired")),
     content: z.string().min(1, tValidation("lessonContentRequired")),
+    contentFormat: z.enum(["MARKDOWN", "HTML"]),
     hasVideo: z.boolean(),
     videoUrl: z.string().optional(),
     videoSource: z.enum(["YOUTUBE", "UPLOAD"]).optional(),
@@ -35,6 +38,7 @@ type FormData = z.infer<ReturnType<typeof createFormSchema>>;
 export interface LessonFormSubmitData {
   title: string;
   content: string;
+  contentFormat: LessonContentFormat;
   videoUrl?: string;
   videoSource?: VideoSource;
   sortOrder: number;
@@ -46,6 +50,7 @@ interface LessonFormProps {
     id: string;
     title: string;
     content?: string | null;
+    contentFormat?: LessonContentFormat | null;
     videoUrl?: string | null;
     videoSource?: VideoSource | null;
     sortOrder: number;
@@ -57,6 +62,7 @@ interface LessonFormProps {
 
 export function LessonForm({ lesson, courseSlug, onSubmit }: LessonFormProps) {
   const t = useTranslations("lessons");
+  const tHtml = useTranslations("htmlLesson");
   const tCommon = useTranslations("common");
   const tSuccess = useTranslations("success");
   const tErrors = useTranslations("errors");
@@ -84,6 +90,7 @@ export function LessonForm({ lesson, courseSlug, onSubmit }: LessonFormProps) {
     defaultValues: {
       title: lesson?.title ?? "",
       content: lesson?.content ?? "",
+      contentFormat: lesson?.contentFormat ?? "MARKDOWN",
       hasVideo: hasExistingVideo,
       videoUrl: lesson?.videoUrl ?? "",
       videoSource: lesson?.videoSource ?? "YOUTUBE",
@@ -93,6 +100,7 @@ export function LessonForm({ lesson, courseSlug, onSubmit }: LessonFormProps) {
   });
 
   const hasVideo = watch("hasVideo");
+  const contentFormat = watch("contentFormat");
   const videoSource = watch("videoSource");
   const isPublished = watch("isPublished");
 
@@ -164,6 +172,7 @@ export function LessonForm({ lesson, courseSlug, onSubmit }: LessonFormProps) {
       const submitData: LessonFormSubmitData = {
         title: data.title,
         content: data.content,
+        contentFormat: data.contentFormat,
         sortOrder: data.sortOrder,
         isPublished: data.isPublished,
       };
@@ -325,14 +334,54 @@ export function LessonForm({ lesson, courseSlug, onSubmit }: LessonFormProps) {
 
       {/* Lesson content (required) */}
       <div className="space-y-2">
-        <Label htmlFor="content">{t("lessonContent")}</Label>
-        <MarkdownEditor
-          id="content"
-          value={watch("content")}
-          onChange={(val) => setValue("content", val, { shouldValidate: true })}
-          placeholder={t("contentPlaceholder")}
-          rows={15}
-        />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Label htmlFor="content">{t("lessonContent")}</Label>
+          <RadioGroup
+            className="flex items-center gap-4"
+            value={contentFormat}
+            onValueChange={(value: string) =>
+              setValue("contentFormat", value as LessonContentFormat)
+            }
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="MARKDOWN" id="format-markdown" />
+              <Label
+                htmlFor="format-markdown"
+                className="cursor-pointer flex items-center gap-1 font-normal"
+              >
+                <FileText className="h-4 w-4" />
+                {tHtml("formatMarkdown")}
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="HTML" id="format-html" />
+              <Label
+                htmlFor="format-html"
+                className="cursor-pointer flex items-center gap-1 font-normal"
+              >
+                <Code2 className="h-4 w-4" />
+                {tHtml("formatHtml")}
+              </Label>
+            </div>
+          </RadioGroup>
+        </div>
+        {contentFormat === "HTML" ? (
+          <HtmlEditor
+            id="content"
+            value={watch("content")}
+            onChange={(val) => setValue("content", val, { shouldValidate: true })}
+            imageUploadEndpoint="/api/v1/upload/image"
+          />
+        ) : (
+          <MarkdownEditor
+            id="content"
+            value={watch("content")}
+            onChange={(val) => setValue("content", val, { shouldValidate: true })}
+            placeholder={t("contentPlaceholder")}
+            rows={15}
+            imageUploadEndpoint="/api/v1/upload/image"
+          />
+        )}
         {errors.content && (
           <p className="text-sm text-destructive">{errors.content.message}</p>
         )}

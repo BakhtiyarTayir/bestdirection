@@ -954,6 +954,16 @@
     "noPreview": "Нет содержимого для предпросмотра",
     "uploading": "Загрузка..."
   },
+  "htmlLesson": {
+    "formatMarkdown": "Markdown",
+    "formatHtml": "HTML-страница",
+    "hint": "Вставьте готовый HTML-документ целиком — со своими <style> и <script>. Он откроется в изолированной песочнице.",
+    "uploadImage": "Загрузить картинку",
+    "uploadHtml": "Загрузить .html",
+    "editTab": "Код",
+    "previewTab": "Превью",
+    "noPreview": "Пока нечего показать"
+  },
   "toc": {
     "showContents": "Показать содержание",
     "contents": "Содержание"

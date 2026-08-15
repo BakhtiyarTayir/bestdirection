@@ -14,6 +14,7 @@ export function NewLessonClient({ courseSlug, courseId }: NewLessonClientProps) 
     const result = await createLesson({
       title: data.title,
       content: data.content,
+      contentFormat: data.contentFormat,
       videoUrl: data.videoUrl,
       videoSource: data.videoSource,
       sortOrder: data.sortOrder,

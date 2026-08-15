@@ -5,7 +5,7 @@ import { withAuth } from "@/lib/action-utils";
 import { revalidateLocalized } from "@/lib/revalidate";
 import { createAuditLog, computeChanges } from "@/lib/audit";
 import { slugify, generateUniqueSlug } from "@/lib/slugify";
-import type { VideoSource } from "@/validators/lesson";
+import type { VideoSource, LessonContentFormat } from "@/validators/lesson";
 
 // ---------- getLessons ----------
 export async function getLessons(courseId: string) {
@@ -117,6 +117,7 @@ export async function getLessonById(id: string) {
 export async function createLesson(data: {
   title: string;
   content: string;
+  contentFormat?: LessonContentFormat;
   videoUrl?: string;
   videoSource?: VideoSource;
   sortOrder: number;
@@ -147,6 +148,7 @@ export async function createLesson(data: {
           title: data.title,
           slug,
           content: data.content,
+          ...(data.contentFormat !== undefined && { contentFormat: data.contentFormat }),
           videoUrl: data.videoUrl,
           videoSource: data.videoSource,
           sortOrder: data.sortOrder,
@@ -176,6 +178,7 @@ export async function updateLesson(
   data: {
     title?: string;
     content?: string;
+    contentFormat?: LessonContentFormat;
     videoUrl?: string;
     videoSource?: VideoSource;
     sortOrder?: number;
@@ -215,6 +218,7 @@ export async function updateLesson(
           ...(data.title !== undefined && { title: data.title }),
           ...slugUpdate,
           ...(data.content !== undefined && { content: data.content }),
+          ...(data.contentFormat !== undefined && { contentFormat: data.contentFormat }),
           ...(data.videoUrl !== undefined && { videoUrl: data.videoUrl }),
           ...(data.videoSource !== undefined && { videoSource: data.videoSource }),
           ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),

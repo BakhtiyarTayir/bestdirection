@@ -3,7 +3,7 @@ import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { MarkdownRenderer } from "@/components/markdown-renderer";
+import { LessonContent } from "@/components/lesson-content";
 import { LessonTOC } from "@/components/lesson-toc";
 import { LANGUAGE_LABELS } from "@/lib/code-runner/config";
 import { getTranslations } from "next-intl/server";
@@ -35,6 +35,7 @@ export default async function PublicLessonPage({ params }: PublicLessonPageProps
       id: true,
       title: true,
       content: true,
+      contentFormat: true,
       courseId: true,
       course: { select: { title: true } },
       homeworks: {
@@ -66,10 +67,17 @@ export default async function PublicLessonPage({ params }: PublicLessonPageProps
       : null;
 
   const callbackPath = `/courses/${courseSlug}/lessons/${lessonSlug}`;
-  const showToc = !!lesson.content && hasToc(lesson.content);
+  const showToc = !!lesson.content && hasToc(lesson.content, lesson.contentFormat);
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-8 md:px-6 md:py-10">
+    <div
+      className={cn(
+        "mx-auto w-full space-y-8 px-4 py-8 md:px-6 md:py-10",
+        // HTML-уроки вёрстаны под ~1000px: на узкой колонке их внутренние
+        // сетки схлопываются в мобильный вид.
+        lesson.contentFormat === "HTML" ? "max-w-7xl" : "max-w-6xl"
+      )}
+    >
       {/* Header */}
       <div className="space-y-3">
         <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -121,13 +129,19 @@ export default async function PublicLessonPage({ params }: PublicLessonPageProps
           showToc && "lg:grid-cols-[minmax(0,1fr)_16rem]"
         )}
       >
-        <div className="min-w-0 max-w-4xl space-y-6">
+        <div
+          className={cn(
+            "min-w-0 space-y-6",
+            // HTML-урок вёрстан как самостоятельная страница, ему нужна вся ширина;
+            // markdown в prose держим узким для читаемости.
+            lesson.contentFormat === "HTML" ? "w-full" : "max-w-4xl"
+          )}
+        >
           {lesson.content ? (
-            <Card>
-              <CardContent className="p-6 md:p-8">
-                <MarkdownRenderer content={lesson.content} />
-              </CardContent>
-            </Card>
+            <LessonContent
+              content={lesson.content}
+              format={lesson.contentFormat}
+            />
           ) : (
             <div className="rounded-xl border border-dashed p-12 text-center text-muted-foreground">
               <FileText className="mx-auto mb-4 h-12 w-12 opacity-50" />
@@ -232,7 +246,7 @@ export default async function PublicLessonPage({ params }: PublicLessonPageProps
         {/* Table of Contents */}
         {showToc && (
           <aside className="hidden lg:block">
-            <LessonTOC content={lesson.content} />
+            <LessonTOC content={lesson.content} format={lesson.contentFormat} />
           </aside>
         )}
       </div>

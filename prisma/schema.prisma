@@ -19,6 +19,13 @@ enum VideoSource {
   UPLOAD
 }
 
+// Формат конспекта урока: markdown рендерится в prose,
+// HTML — как самодостаточный документ в изолированном iframe.
+enum LessonContentFormat {
+  MARKDOWN
+  HTML
+}
+
 enum QuestionType {
   SINGLE_CHOICE
   MULTIPLE_CHOICE
@@ -319,11 +326,12 @@ model Group {
 }
 
 model Lesson {
-  id          String       @id @default(cuid())
-  slug        String
-  title       String
-  content     String       @default("")
-  videoUrl    String?
+  id            String              @id @default(cuid())
+  slug          String
+  title         String
+  content       String              @default("")
+  contentFormat LessonContentFormat @default(MARKDOWN)
+  videoUrl      String?
   videoSource VideoSource?
   sortOrder   Int          @default(0)
   isPublished Boolean      @default(false)
