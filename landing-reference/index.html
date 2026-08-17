@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>John Doe — Creative Technologist</title>
+  <meta name="description" content="Портфолио Джона Доу: интерфейсы, иллюстрация и типографика. Проекты, статьи и контакты.">
+
+  <!-- Open Graph — превью при отправке ссылки в мессенджер -->
+  <meta property="og:title" content="John Doe — Creative Technologist">
+  <meta property="og:description" content="Портфолио: интерфейсы, иллюстрация и типографика.">
+  <meta property="og:image" content="images/avatar.jpg">
+  <meta property="og:type" content="website">
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ===== Шапка: прилипает к верху при прокрутке ===== -->
+  <header class="header">
+    <div class="container header__inner">
+      <a class="header__logo" href="#hero">John<span>.</span></a>
+      <nav class="nav" aria-label="Основная навигация">
+        <ul class="nav__list">
+          <li><a class="nav__link" href="#works">Works</a></li>
+          <li><a class="nav__link" href="#posts">Blog</a></li>
+          <li><a class="nav__link" href="#contact">Contact</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ===== Hero ===== -->
+    <section class="hero" id="hero">
+      <div class="container hero__inner">
+        <div class="hero__text">
+          <h1 class="hero__title">Hi, I am John,<br>Creative Technologist</h1>
+          <p class="hero__lead">
+            Проектирую интерфейсы и рисую иллюстрации восьмой год. Собираю дизайн-системы,
+            люблю типографику и аккуратные сетки. Сейчас ищу команду, где дизайн и код живут рядом.
+          </p>
+          <a class="button" href="documents/resume.pdf" download>Download Resume</a>
+        </div>
+
+        <div class="hero__photo">
+          <img src="images/avatar.jpg" alt="Портрет Джона Доу" width="243" height="243">
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Последние статьи ===== -->
+    <section class="posts" id="posts">
+      <div class="container">
+        <div class="section-head">
+          <h2 class="section-head__title">Recent posts</h2>
+          <a class="section-head__link" href="#posts">View all</a>
+        </div>
+
+        <div class="posts__grid">
+          <article class="post">
+            <h3 class="post__title"><a href="#posts">Making a design system from scratch</a></h3>
+            <p class="post__meta">
+              <time datetime="2020-02-12">12 Feb 2020</time>
+              <span class="post__sep" aria-hidden="true"></span>
+              <span>Design, Pattern</span>
+            </p>
+            <p class="post__excerpt">
+              Как собрать библиотеку компонентов, когда в команде три дизайнера и никто не помнит,
+              сколько у вас оттенков серого. История одного наведения порядка.
+            </p>
+          </article>
+
+          <article class="post">
+            <h3 class="post__title"><a href="#posts">Creating pixel perfect icons in Figma</a></h3>
+            <p class="post__meta">
+              <time datetime="2020-02-12">12 Feb 2020</time>
+              <span class="post__sep" aria-hidden="true"></span>
+              <span>Figma, Icon Design</span>
+            </p>
+            <p class="post__excerpt">
+              Сетка, толщина штриха и оптическое выравнивание — почему иконка в 24 пикселя
+              выглядит криво, даже когда все размеры «правильные».
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Избранные работы ===== -->
+    <section class="works" id="works">
+      <div class="container">
+        <h2 class="works__title">Featured works</h2>
+
+        <div class="works__list">
+
+          <article class="work">
+            <a class="work__preview" href="#works">
+              <img src="images/work-1.jpg" alt="Тёмный интерфейс дашборда с графиками" width="640" height="480">
+            </a>
+            <div class="work__body">
+              <h3 class="work__name"><a href="#works">Designing Dashboards</a></h3>
+              <p class="work__meta">
+                <span class="badge">2020</span>
+                <span class="work__category">Dashboard</span>
+              </p>
+              <p class="work__text">
+                Аналитическая панель для сервиса доставки: 40 экранов, тёмная тема
+                и таблицы, которые не разъезжаются на ноутбуке.
+              </p>
+            </div>
+          </article>
+
+          <article class="work">
+            <a class="work__preview" href="#works">
+              <img src="images/work-2.jpg" alt="Яркая иллюстрация женского портрета" width="640" height="480">
+            </a>
+            <div class="work__body">
+              <h3 class="work__name"><a href="#works">Vibrant Portraits of 2020</a></h3>
+              <p class="work__meta">
+                <span class="badge">2018</span>
+                <span class="work__category">Illustration</span>
+              </p>
+              <p class="work__text">
+                Серия из двенадцати портретов для календаря: плотные цвета,
+                минимум линий и много воздуха вокруг лица.
+              </p>
+            </div>
+          </article>
+
+          <article class="work">
+            <a class="work__preview" href="#works">
+              <img src="images/work-3.jpg" alt="Кремовая буквица на тёмном фоне" width="640" height="480">
+            </a>
+            <div class="work__body">
+              <h3 class="work__name"><a href="#works">36 Days of Malayalam type</a></h3>
+              <p class="work__meta">
+                <span class="badge">2018</span>
+                <span class="work__category">Typography</span>
+              </p>
+              <p class="work__text">
+                Тридцать шесть дней, тридцать шесть знаков малаяльского алфавита.
+                Каждый — отдельный эксперимент с формой и контрастом.
+              </p>
+            </div>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Контакты (этап 9: закрепляет стилизацию форм) ===== -->
+    <section class="contact" id="contact">
+      <div class="container contact__inner">
+        <div class="contact__intro">
+          <h2 class="contact__title">Напишите мне</h2>
+          <p class="contact__text">
+            Расскажите про задачу — отвечу в течение пары дней.
+            Или просто напишите в Telegram, если так удобнее.
+          </p>
+        </div>
+
+        <form class="form" action="#" method="post">
+          <div class="form__row">
+            <label class="form__label" for="name">Имя</label>
+            <input class="form__input" type="text" id="name" name="name"
+                   placeholder="Как к вам обращаться" required minlength="2">
+          </div>
+
+          <div class="form__row">
+            <label class="form__label" for="email">Email</label>
+            <input class="form__input" type="email" id="email" name="email"
+                   placeholder="you@example.com" required>
+          </div>
+
+          <div class="form__row">
+            <label class="form__label" for="topic">Тема</label>
+            <select class="form__input" id="topic" name="topic">
+              <option value="project">Проект</option>
+              <option value="job">Работа</option>
+              <option value="other">Другое</option>
+            </select>
+          </div>
+
+          <div class="form__row">
+            <label class="form__label" for="message">Сообщение</label>
+            <textarea class="form__input form__input--area" id="message" name="message"
+                      rows="4" placeholder="Пара слов о задаче" required></textarea>
+          </div>
+
+          <button class="button button--wide" type="submit">Отправить</button>
+        </form>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== Подвал ===== -->
+  <footer class="footer">
+    <div class="container">
+      <ul class="socials">
+        <li>
+          <a class="socials__link" href="https://facebook.com" aria-label="Facebook">
+            <!-- Иконки: Lucide (lucide.dev), лицензия ISC -->
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+            </svg>
+          </a>
+        </li>
+        <li>
+          <a class="socials__link" href="https://instagram.com" aria-label="Instagram">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect width="20" height="20" x="2" y="2" rx="5" ry="5"/>
+              <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+              <line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/>
+            </svg>
+          </a>
+        </li>
+        <li>
+          <a class="socials__link" href="https://twitter.com" aria-label="Twitter">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/>
+            </svg>
+          </a>
+        </li>
+        <li>
+          <a class="socials__link" href="https://linkedin.com" aria-label="LinkedIn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/>
+              <rect width="4" height="12" x="2" y="9"/>
+              <circle cx="4" cy="4" r="2"/>
+            </svg>
+          </a>
+        </li>
+      </ul>
+
+      <p class="footer__copy">Copyright &copy;2020 All rights reserved</p>
+    </div>
+  </footer>
+
+</body>
+</html>

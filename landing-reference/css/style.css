@@ -1,0 +1,618 @@
+/* =============================================================
+   Эталонная вёрстка лендинга — проект курса «HTML и CSS»
+   Порядок секций совпадает с этапами проекта:
+   1) переменные  2) сброс  3) типографика  4) утилиты
+   5) шапка  6) hero  7) посты  8) работы  9) форма  10) подвал
+   11) адаптив   12) анимации
+   ============================================================= */
+
+
+/* ---------- 1. Переменные (этап 3) ---------- */
+
+:root {
+  /* Цвета сняты пипеткой с макета */
+  --color-accent:        #FD6564;   /* кнопка, акценты */
+  --color-accent-dark:   #E44F4E;   /* та же кнопка при наведении */
+  --color-heading:       #1B2950;   /* заголовки и бейджи */
+  --color-text:          #6E7180;   /* основной текст */
+  --color-muted:         #8C9197;   /* категории, подписи */
+  --color-link:          #5CC9DA;   /* ссылка «View all» */
+  --color-bg:            #FFFFFF;   /* фон страницы */
+  --color-bg-soft:       #EDF7F9;   /* голубая подложка секции постов */
+  --color-border:        #EDEFF2;   /* разделители и рамки */
+
+  /* Типографика */
+  --font-base: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+
+  /* Размеры и ритм */
+  --container: 1100px;
+  --radius:    6px;
+  --radius-lg: 12px;
+
+  /* Тени (этап 8) */
+  --shadow-card:  0 2px 12px rgba(27, 41, 80, .06);
+  --shadow-hover: 0 12px 28px rgba(27, 41, 80, .12);
+
+  /* Плавность (этап 13) */
+  --transition: .25s ease;
+}
+
+
+/* ---------- 2. Сброс браузерных стилей (этап 17) ---------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body,
+h1, h2, h3,
+p, ul, figure {
+  margin: 0;
+  padding: 0;
+}
+
+ul {
+  list-style: none;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+
+/* ---------- 3. Типографика (этапы 2, 10, 12) ---------- */
+
+body {
+  font-family: var(--font-base);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+}
+
+h1, h2, h3 {
+  color: var(--color-heading);
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+/* clamp: минимум 1.75rem, идеал 4vw, максимум 2.75rem */
+h1 {
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+}
+
+h2 {
+  font-size: clamp(1.25rem, 2.4vw, 1.5rem);
+}
+
+h3 {
+  font-size: 1.15rem;
+}
+
+
+/* ---------- 4. Утилиты ---------- */
+
+.container {
+  width: 100%;
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Кнопка (этапы 5, 8, 13) */
+.button {
+  display: inline-block;
+  padding: 12px 24px;
+  border: none;
+  border-radius: var(--radius);
+  background-color: var(--color-accent);
+  color: #FFFFFF;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(253, 101, 100, .3);
+  transition: background-color var(--transition),
+              transform var(--transition),
+              box-shadow var(--transition);
+}
+
+.button:hover {
+  background-color: var(--color-accent-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(253, 101, 100, .38);
+}
+
+.button:active {
+  transform: translateY(0);
+}
+
+.button--wide {
+  width: 100%;
+}
+
+/* Единый видимый фокус для клавиатуры */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+/* Бейдж года (этап 8) */
+.badge {
+  display: inline-block;
+  padding: 3px 14px;
+  border-radius: 999px;
+  background-color: var(--color-heading);
+  color: #FFFFFF;
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+
+/* Шапка секции: заголовок слева, ссылка справа */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.section-head__title {
+  font-weight: 600;
+}
+
+.section-head__link {
+  color: var(--color-link);
+  font-size: .9rem;
+  transition: color var(--transition);
+}
+
+.section-head__link:hover {
+  color: var(--color-heading);
+}
+
+
+/* ---------- 5. Шапка (этап 6) ---------- */
+
+.header {
+  position: sticky;         /* прилипает к верху при прокрутке */
+  top: 0;
+  z-index: 100;             /* поверх остального контента */
+  background-color: rgba(255, 255, 255, .92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid transparent;
+}
+
+.header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 72px;
+}
+
+.header__logo {
+  color: var(--color-heading);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.header__logo span {
+  color: var(--color-accent);
+}
+
+.nav__list {
+  display: flex;
+  gap: 28px;
+}
+
+.nav__link {
+  position: relative;
+  color: var(--color-heading);
+  font-size: .95rem;
+  font-weight: 600;
+  padding: 6px 0;
+  transition: color var(--transition);
+}
+
+/* Подчёркивание, которое растёт от нуля (этап 5) */
+.nav__link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  height: 2px;
+  background-color: var(--color-accent);
+  transition: width var(--transition);
+}
+
+.nav__link:hover {
+  color: var(--color-accent);
+}
+
+.nav__link:hover::after {
+  width: 100%;
+}
+
+
+/* ---------- 6. Hero (этапы 4, 7, 14) ---------- */
+
+.hero {
+  padding: 72px 0 96px;
+}
+
+.hero__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 48px;
+}
+
+.hero__text {
+  max-width: 480px;         /* строка не длиннее ~65 символов */
+}
+
+.hero__lead {
+  margin: 20px 0 28px;
+}
+
+.hero__photo img {
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;       /* круглый аватар */
+  object-fit: cover;        /* фото не деформируется */
+  border: 10px solid var(--color-bg-soft);
+}
+
+
+/* ---------- 7. Секция постов (этапы 7, 8, 16) ---------- */
+
+.posts {
+  padding: 56px 0 64px;
+  background-color: var(--color-bg-soft);
+}
+
+.posts__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.post {
+  background-color: var(--color-bg);
+  border-radius: var(--radius);
+  padding: 28px;
+  box-shadow: var(--shadow-card);
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.post:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-hover);
+}
+
+.post__title {
+  margin-bottom: 16px;
+}
+
+.post__title a {
+  transition: color var(--transition);
+}
+
+.post__title a:hover {
+  color: var(--color-accent);
+}
+
+.post__meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+  font-size: .88rem;
+  color: var(--color-muted);
+}
+
+/* Вертикальная чёрточка между датой и рубриками */
+.post__sep {
+  width: 1px;
+  height: 14px;
+  background-color: var(--color-border);
+}
+
+.post__excerpt {
+  font-size: .95rem;
+}
+
+
+/* ---------- 8. Избранные работы (этапы 7, 13, 15) ---------- */
+
+.works {
+  padding: 64px 0 72px;
+}
+
+.works__title {
+  margin-bottom: 28px;
+  font-weight: 600;
+}
+
+.works__list {
+  display: flex;
+  flex-direction: column;
+}
+
+.work {
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
+  padding: 28px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.work:last-child {
+  border-bottom: none;
+}
+
+/* Обёртка обрезает картинку при увеличении */
+.work__preview {
+  flex: 0 0 200px;
+  overflow: hidden;
+  border-radius: var(--radius);
+}
+
+.work__preview img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  transition: transform .4s ease;
+}
+
+.work__preview:hover img {
+  transform: scale(1.06);
+}
+
+.work__name {
+  font-size: 1.35rem;
+  margin-bottom: 12px;
+}
+
+.work__name a {
+  transition: color var(--transition);
+}
+
+.work__name a:hover {
+  color: var(--color-accent);
+}
+
+.work__meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.work__category {
+  color: var(--color-muted);
+  font-size: .95rem;
+}
+
+.work__text {
+  font-size: .95rem;
+  max-width: 62ch;
+}
+
+
+/* ---------- 9. Контакты и форма (этап 9) ---------- */
+
+.contact {
+  padding: 64px 0 80px;
+  background-color: var(--color-bg-soft);
+}
+
+.contact__inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: start;
+}
+
+.contact__title {
+  margin-bottom: 16px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form__row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form__label {
+  color: var(--color-heading);
+  font-size: .88rem;
+  font-weight: 600;
+}
+
+.form__input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background-color: var(--color-bg);
+  font: inherit;
+  color: var(--color-heading);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.form__input::placeholder {
+  color: var(--color-muted);
+}
+
+.form__input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(253, 101, 100, .15);
+}
+
+.form__input--area {
+  resize: vertical;
+  min-height: 120px;
+}
+
+
+/* ---------- 10. Подвал (этап 15) ---------- */
+
+.footer {
+  padding: 48px 0 40px;
+  text-align: center;
+}
+
+.socials {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.socials__link {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--color-heading);
+  transition: color var(--transition),
+              background-color var(--transition),
+              transform var(--transition);
+}
+
+.socials__link svg {
+  width: 22px;
+  height: 22px;
+}
+
+.socials__link:hover {
+  color: var(--color-accent);
+  background-color: var(--color-bg-soft);
+  transform: translateY(-2px);
+}
+
+.footer__copy {
+  color: var(--color-muted);
+  font-size: .85rem;
+}
+
+
+/* ---------- 11. Адаптив (этап 11) ---------- */
+
+/* Планшет: работы и контакты перестраиваются */
+@media (max-width: 900px) {
+  .contact__inner {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .hero__photo img {
+    width: 180px;
+    height: 180px;
+  }
+}
+
+/* Мобильный: всё в одну колонку */
+@media (max-width: 640px) {
+  .hero {
+    padding: 40px 0 56px;
+  }
+
+  .hero__inner {
+    flex-direction: column-reverse;   /* фото сверху, текст под ним */
+    align-items: flex-start;
+    gap: 28px;
+  }
+
+  .posts__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .work {
+    flex-direction: column;           /* превью над текстом */
+    gap: 16px;
+  }
+
+  .work__preview {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+
+  .work__preview img {
+    height: 200px;
+  }
+
+  .nav__list {
+    gap: 18px;
+  }
+
+  .header__inner {
+    min-height: 60px;
+  }
+}
+
+
+/* ---------- 12. Появление при загрузке (этап 14) ---------- */
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero__text,
+.hero__photo {
+  animation: fade-in-up .7s ease both;
+}
+
+.hero__photo {
+  animation-delay: .15s;
+}
+
+/* Каскад: каждая следующая работа появляется чуть позже */
+.work {
+  animation: fade-in-up .6s ease both;
+}
+
+.work:nth-child(1) { animation-delay: .05s; }
+.work:nth-child(2) { animation-delay: .15s; }
+.work:nth-child(3) { animation-delay: .25s; }
+
+/* Уважаем настройку «уменьшить движение» */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
