@@ -94,3 +94,9 @@
 .prose pre code {
   border: 0;
 }
+/* Typography-плагин добавляет обратные кавычки вокруг inline `code` —
+   в конспектах они видны как лишние символы */
+.prose :where(code):not(:where([class~="not-prose"] *))::before,
+.prose :where(code):not(:where([class~="not-prose"] *))::after {
+  content: none;
+}
