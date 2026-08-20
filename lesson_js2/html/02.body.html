@@ -1,0 +1,575 @@
+<div class="shell">
+
+<header>
+  <div class="eyebrow">JavaScript 2 · урок 02 · интерактив</div>
+  <h1>this<br>и контекст вызова</h1>
+  <p class="lede">В уроке 8 первого курса мы договорились: <code>this</code> — это «текущий объект». Формулировка рабочая, но неполная. Одна и та же функция при разных <b>формах вызова</b> получает разный <code>this</code> — и на этом ломаются обработчики, колбэки и таймеры.</p>
+</header>
+
+<section>
+  <div class="sec-head"><span class="sec-num">00</span><h2>Цели урока</h2></div>
+  <ul class="goals">
+    <li>понимать, что <code>this</code> определяется в момент вызова, а не при объявлении;</li>
+    <li>знать четыре правила определения <code>this</code> и применять их к незнакомому коду;</li>
+    <li>узнавать три типичных сценария потери контекста и уметь их чинить;</li>
+    <li>владеть <code>call</code>, <code>apply</code> и <code>bind</code>;</li>
+    <li>объяснять, чем <code>this</code> в стрелочной функции отличается от обычной;</li>
+    <li>отвечать на типовые вопросы собеседования о контексте.</li>
+  </ul>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">01</span><h2>Проблема</h2></div>
+  <p class="sec-sub">Функция одна и та же. Меняется только способ вызова — и <code>this</code> меняется вместе с ним.</p>
+
+<pre class="code"><span class="k">const</span> user = {
+  name: <span class="s">"Али"</span>,
+  <span class="v">sayHi</span>() {
+    console.<span class="v">log</span>(<span class="s">"Привет, я "</span> + <span class="k">this</span>.name);
+  }
+};
+
+user.<span class="v">sayHi</span>();                 <span class="c">// "Привет, я Али" — работает</span>
+
+<span class="k">const</span> greet = user.sayHi;     <span class="c">// взяли ту же функцию в переменную</span>
+<span class="v">greet</span>();                      <span class="c">// "Привет, я undefined" 😱</span></pre>
+
+  <div class="lab">
+    <div class="lab-head">
+      <span class="lab-title">Демо · одна функция, два вызова</span>
+      <span class="lab-hint">Нажмите обе кнопки и сравните вывод</span>
+    </div>
+    <div class="field" style="margin-bottom:0">
+      <button class="act" id="p-method">user.sayHi()</button>
+      <button class="act pink" id="p-torn">const greet = user.sayHi; greet()</button>
+      <button class="act ghost" id="p-clear">очистить</button>
+    </div>
+    <div class="console" id="p-console"><span class="empty">Вызовите функцию любым из двух способов</span></div>
+  </div>
+
+  <div class="explain">
+    <h3>Ключевое правило урока</h3>
+    <p><code>this</code> определяется <b>не там, где функция объявлена, а там, где она вызвана</b>. Этим он отличается от обычных переменных: их функция берёт из лексического окружения (урок 1), а <code>this</code> получает заново при каждом вызове.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">02</span><h2>Четыре правила</h2></div>
+  <p class="sec-sub">Чтобы определить <code>this</code>, посмотрите на форму вызова — на то, что стоит слева от скобок. Переключайте формы и следите за результатом.</p>
+
+  <div class="lab">
+    <div class="lab-head">
+      <span class="lab-title">Демо · определитель контекста</span>
+      <span class="lab-hint">Один и тот же <code>show()</code>, пять форм вызова</span>
+    </div>
+    <div class="field">
+      <div class="seg" id="rule-seg">
+        <button data-rule="plain" class="on">fn()</button>
+        <button data-rule="method">obj.fn()</button>
+        <button data-rule="nested">app.admin.fn()</button>
+        <button data-rule="call">fn.call(obj)</button>
+        <button data-rule="new">new Fn()</button>
+      </div>
+      <button class="act" id="rule-run">Вызвать</button>
+    </div>
+<pre class="code" id="rule-code"></pre>
+    <div class="console" id="rule-console"><span class="empty">Выберите форму вызова и нажмите «Вызвать»</span></div>
+    <p class="lab-hint" id="rule-note" style="margin-top:12px"></p>
+  </div>
+
+  <h3 style="margin-top:30px">Значение имеет только последняя точка</h3>
+  <p class="body-copy">В цепочке <code>app.admin.show()</code> контекстом станет <code>admin</code>, а не <code>app</code>. Проверьте это третьей кнопкой демо выше.</p>
+
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>Форма вызова</th><th>Чему равен this</th></tr></thead>
+      <tbody>
+        <tr><td>fn()</td><td><code>undefined</code> в strict mode (в модулях — всегда)</td></tr>
+        <tr><td>obj.fn()</td><td><code>obj</code> — объект перед последней точкой</td></tr>
+        <tr><td>fn.call(obj)</td><td><code>obj</code> — явная привязка</td></tr>
+        <tr><td>new Fn()</td><td>новый создаваемый объект</td></tr>
+        <tr><td>() =&gt; {}</td><td>берётся из внешнего кода, своего нет</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="warn">
+    <b>Про <code>new</code>.</b> Такая форма вызова создаёт пустой объект и делает его контекстом. Подробно разберём в разделе «Организация кода», когда дойдём до классов; сейчас достаточно знать, что она существует.
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">03</span><h2>Потеря контекста: три сценария</h2></div>
+  <p class="sec-sub">Это 90% всех багов с <code>this</code>. Каждый сценарий — в отдельном демо.</p>
+
+  <h3>Сценарий 1. Метод передали как колбэк</h3>
+  <p class="body-copy">Метод оторвали от объекта и передали как значение — колбэк вызывается обычным вызовом, объект потерян. Так ломаются <code>forEach</code>, <code>addEventListener</code> и таймеры из следующего урока.</p>
+
+<pre class="code"><span class="k">const</span> timer = { name: <span class="s">"Таймер"</span>, <span class="v">start</span>() { console.<span class="v">log</span>(<span class="k">this</span>.name); } };
+
+[<span class="v">1</span>].<span class="v">forEach</span>(timer.start);              <span class="c">// ❌ undefined</span>
+[<span class="v">1</span>].<span class="v">forEach</span>(() =&gt; timer.<span class="v">start</span>());       <span class="c">// ✅ Таймер</span>
+[<span class="v">1</span>].<span class="v">forEach</span>(timer.start.<span class="v">bind</span>(timer));  <span class="c">// ✅ Таймер</span></pre>
+
+  <div class="lab">
+    <div class="lab-head">
+      <span class="lab-title">Демо · три способа передать метод</span>
+      <span class="lab-hint">Один сломанный, два рабочих</span>
+    </div>
+    <div class="field" style="margin-bottom:0">
+      <button class="act pink" id="s1-broken">forEach(timer.start)</button>
+      <button class="act" id="s1-arrow">forEach(() =&gt; timer.start())</button>
+      <button class="act" id="s1-bind">forEach(timer.start.bind(timer))</button>
+    </div>
+    <div class="console" id="s1-console"><span class="empty">Нажмите любую кнопку</span></div>
+  </div>
+
+  <h3 style="margin-top:32px">Сценарий 2. Вложенная обычная функция</h3>
+  <p class="body-copy">Внешний метод вызван правильно, но колбэк внутри — обычная функция, у неё свой <code>this</code> по первому правилу. Лечится стрелочной функцией: у неё своего <code>this</code> нет, она берёт его у метода.</p>
+
+  <div class="lab">
+    <div class="lab-head">
+      <span class="lab-title">Демо · колбэк внутри метода</span>
+      <span class="lab-hint">Обычная функция теряет объект, стрелочная — нет</span>
+    </div>
+    <div class="field" style="margin-bottom:0">
+      <button class="act pink" id="s2-regular">showRegular() — обычная функция</button>
+      <button class="act" id="s2-arrow">showArrow() — стрелочная</button>
+    </div>
+<pre class="code" id="s2-code"></pre>
+    <div class="console" id="s2-console"><span class="empty">Выберите вариант метода</span></div>
+  </div>
+
+  <h3 style="margin-top:32px">Сценарий 3. Стрелочная функция как метод</h3>
+  <p class="body-copy">Обратная ошибка — ею мы уже пугались в первом курсе. У стрелки нет своего <code>this</code>, она берёт его из окружающего кода, а вокруг литерала объекта лежит внешняя область, а не сам объект.</p>
+
+<pre class="code"><span class="k">const</span> user = {
+  name: <span class="s">"Али"</span>,
+  <span class="v">sayHi</span>: () =&gt; console.<span class="v">log</span>(<span class="k">this</span>.name)  <span class="c">// ❌ undefined</span>
+};</pre>
+
+  <div class="warn">
+    <b>Короткое правило.</b> Метод объекта — обычная функция. Всё, что вызывается <i>внутри</i> метода, — стрелочная.
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">04</span><h2>call, apply и bind</h2></div>
+  <p class="sec-sub">Все три позволяют задать <code>this</code> явно. Разница — в моменте вызова и в форме аргументов.</p>
+
+<pre class="code"><span class="k">function</span> <span class="v">introduce</span>(city, job) {
+  console.<span class="v">log</span>(<span class="s">`${this.name}, ${city}, ${job}`</span>);
+}
+
+introduce.<span class="v">call</span>(ali, <span class="s">"Ташкент"</span>, <span class="s">"разработчик"</span>);      <span class="c">// аргументы через запятую</span>
+introduce.<span class="v">apply</span>(gulya, [<span class="s">"Самарканд"</span>, <span class="s">"дизайнер"</span>]);  <span class="c">// аргументы массивом</span>
+
+<span class="k">const</span> introduceAli = introduce.<span class="v">bind</span>(ali);           <span class="c">// НЕ вызывает — создаёт функцию</span>
+<span class="v">introduceAli</span>(<span class="s">"Ташкент"</span>, <span class="s">"разработчик"</span>);</pre>
+
+  <div class="lab">
+    <div class="lab-head">
+      <span class="lab-title">Демо · привязка контекста</span>
+      <span class="lab-hint">«call — Comma, apply — Array»</span>
+    </div>
+    <div class="field">
+      <label>Контекст</label>
+      <div class="seg" id="bind-ctx">
+        <button data-name="Али" class="on">ali</button>
+        <button data-name="Гуля">gulya</button>
+      </div>
+      <label for="bind-city" style="margin-left:8px">city</label>
+      <input id="bind-city" type="text" value="Ташкент" maxlength="14">
+    </div>
+    <div class="field" style="margin-bottom:0">
+      <button class="act" id="bind-call">.call()</button>
+      <button class="act" id="bind-apply">.apply()</button>
+      <button class="act" id="bind-make">.bind() → создать</button>
+      <button class="act ghost" id="bind-run" disabled>вызвать привязанную</button>
+    </div>
+    <div class="console" id="bind-console"><span class="empty">Выберите контекст и нажмите одну из кнопок</span></div>
+  </div>
+
+  <p class="body-copy">Привязка через <code>bind</code> окончательная: повторный <code>bind</code> или вызов через <code>call</code> её уже не изменят — проверьте это в демо, создав привязанную функцию и переключив контекст.</p>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">05</span><h2>this в обработчиках событий</h2></div>
+  <p class="sec-sub">В обработчике-обычной функции <code>this</code> — это элемент, на котором висит обработчик. В стрелочной — берётся снаружи, поэтому элемент достают из события.</p>
+
+<pre class="code">btn.<span class="v">addEventListener</span>(<span class="s">"click"</span>, <span class="k">function</span> () {
+  <span class="k">this</span>.classList.<span class="v">toggle</span>(<span class="s">"active"</span>);              <span class="c">// this = сама кнопка</span>
+});
+
+btn.<span class="v">addEventListener</span>(<span class="s">"click"</span>, (event) =&gt; {
+  event.currentTarget.classList.<span class="v">toggle</span>(<span class="s">"active"</span>);  <span class="c">// надёжнее</span>
+});</pre>
+
+  <div class="lab">
+    <div class="lab-head">
+      <span class="lab-title">Демо · обработчик на реальной кнопке</span>
+      <span class="lab-hint">Обе кнопки переключают класс, но разными путями</span>
+    </div>
+    <div class="field" style="margin-bottom:0">
+      <button class="act ghost" id="ev-regular">обычная функция · this</button>
+      <button class="act ghost" id="ev-arrow">стрелочная · event.currentTarget</button>
+    </div>
+    <div class="console" id="ev-console"><span class="empty">Нажмите любую из двух кнопок выше</span></div>
+  </div>
+
+  <p class="body-copy"><b>Практический совет:</b> пишите обработчики стрелочными и обращайтесь к элементу через <code>event.currentTarget</code> — тогда поведение одинаково и внутри объекта, и снаружи. К разнице <code>target</code> и <code>currentTarget</code> вернёмся в уроке про делегирование.</p>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">06</span><h2>Когда какая функция</h2></div>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>Ситуация</th><th>обычная функция</th><th>стрелочная</th></tr></thead>
+      <tbody>
+        <tr><td>свой this</td><td>есть, зависит от вызова</td><td>нет, берёт из окружения</td></tr>
+        <tr><td>метод объекта</td><td>✅ да</td><td>❌ нет</td></tr>
+        <tr><td>колбэк внутри метода</td><td>❌ теряет контекст</td><td>✅ да</td></tr>
+        <tr><td>обработчик события</td><td>this = элемент</td><td>элемент через event.currentTarget</td></tr>
+        <tr><td>call / apply / bind</td><td>работают</td><td>контекст не меняют</td></tr>
+        <tr><td>объект arguments</td><td>есть</td><td>нет, используйте ...rest</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">07</span><h2>Практика на уроке</h2></div>
+  <div class="tasks">
+    <div class="task">
+      <div class="mono">Задание 1</div>
+      <p><b>Определи this.</b> Не запуская, скажите, что выведет каждая строка:</p>
+<pre class="code"><span class="k">const</span> obj = {
+  name: <span class="s">"obj"</span>,
+  <span class="v">regular</span>() { console.<span class="v">log</span>(<span class="k">this</span>?.name); },
+  <span class="v">arrow</span>: () =&gt; console.<span class="v">log</span>(<span class="k">this</span>?.name),
+  <span class="v">nested</span>() {
+    <span class="k">function</span> <span class="v">inner</span>() { console.<span class="v">log</span>(<span class="k">this</span>?.name); }
+    <span class="v">inner</span>();
+  }
+};
+obj.<span class="v">regular</span>(); obj.<span class="v">arrow</span>(); obj.<span class="v">nested</span>();
+<span class="k">const</span> fn = obj.regular; <span class="v">fn</span>();</pre>
+    </div>
+    <div class="task">
+      <div class="mono">Задание 2</div>
+      <p><b>Три починки.</b> Дан сломанный код — почините его тремя способами (стрелочная функция, <code>bind</code>, обёртка) и объясните, чем варианты отличаются:</p>
+<pre class="code"><span class="k">const</span> user = { name: <span class="s">"Али"</span>, <span class="v">greet</span>(){ console.<span class="v">log</span>(<span class="k">this</span>.name); } };
+[<span class="s">"a"</span>].<span class="v">forEach</span>(user.greet);</pre>
+    </div>
+    <div class="task">
+      <div class="mono">Задание 3</div>
+      <p><b>Плейлист.</b> Объект <code>player</code> со свойствами <code>title</code> и <code>tracks</code> и методом <code>showTracks()</code>, который через <code>forEach</code> печатает «Название плейлиста — трек». Название должно браться из <code>this</code>.</p>
+    </div>
+    <div class="task">
+      <div class="mono">Задание 4</div>
+      <p><b>call и apply.</b> Функция <code>sum(a, b, c)</code> возвращает <code>this.label + ": " + (a + b + c)</code>. Вызовите её с двумя разными контекстами — через <code>call</code> и через <code>apply</code>. Затем создайте привязанную версию через <code>bind</code> и вызовите дважды.</p>
+    </div>
+    <div class="task">
+      <div class="mono">Задание 5</div>
+      <p><b>Кнопка-переключатель.</b> На странице три кнопки. Одним циклом навесьте обработчик, который переключает класс <code>active</code> — сначала обычной функцией через <code>this</code>, потом стрелочной через <code>event.currentTarget</code>. Убедитесь, что оба варианта работают одинаково.</p>
+    </div>
+    <div class="task">
+      <div class="mono">Задание 6*</div>
+      <p><b>Свой bind.</b> Напишите функцию <code>myBind(fn, context)</code>, которая возвращает новую функцию, вызывающую <code>fn</code> с нужным контекстом (используйте <code>call</code> и <code>...rest</code>). Проверьте на примере из задания 2.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">08</span><h2>Вопросы с собеседований</h2></div>
+  <p class="sec-sub">Отвечайте вслух, потом раскрывайте ответ.</p>
+
+  <details class="q"><summary>Что такое this и когда оно определяется?</summary>
+    <div class="answer"><p>Ссылка на контекст выполнения функции. Определяется в момент ВЫЗОВА, а не при объявлении: одна и та же функция при разных формах вызова получит разный <code>this</code>. Этим он отличается от обычных переменных, которые берутся из лексического окружения.</p></div>
+  </details>
+
+  <details class="q"><summary>Перечислите правила определения this.</summary>
+    <div class="answer"><p>Обычный вызов <code>fn()</code> — <code>undefined</code> в strict mode (в нестрогом — глобальный объект). Вызов как метода <code>obj.fn()</code> — объект перед последней точкой. Явная привязка <code>call</code>/<code>apply</code>/<code>bind</code> — переданный объект. Вызов через <code>new</code> — новый создаваемый объект. Отдельно: у стрелочных функций своего <code>this</code> нет, они берут его из окружающего кода.</p></div>
+  </details>
+
+  <details class="q"><summary>В чём разница между call, apply и bind?</summary>
+    <div class="answer"><p><code>call</code> и <code>apply</code> вызывают функцию немедленно с указанным контекстом; отличаются формой передачи аргументов: <code>call</code> — через запятую, <code>apply</code> — массивом. <code>bind</code> не вызывает функцию, а возвращает новую с навсегда привязанным контекстом (и, если нужно, с заранее подставленными аргументами).</p></div>
+  </details>
+
+  <details class="q"><summary>Что такое потеря контекста? Приведите пример.</summary>
+    <div class="answer"><p>Ситуация, когда метод отрывают от объекта и вызывают отдельно — контекст перестаёт быть объектом. Классика: <code>setTimeout(user.greet, 1000)</code> или <code>arr.forEach(user.greet)</code> — метод передан как значение и вызывается обычным вызовом. Лечится обёрткой в стрелочную функцию или <code>bind</code>.</p></div>
+  </details>
+
+  <details class="q"><summary>Почему методы объекта не пишут стрелочными функциями?</summary>
+    <div class="answer"><p>У стрелочной функции нет собственного <code>this</code> — она берёт его из окружающего лексического окружения. Для метода, объявленного прямо в литерале объекта, окружением будет внешний код, а не сам объект, поэтому <code>this.name</code> даст undefined. Обратная ситуация — колбэк внутри метода: там стрелочная функция как раз нужна.</p></div>
+  </details>
+
+  <details class="q"><summary>Чему равен this в обработчике события?</summary>
+    <div class="answer"><p>В обработчике-обычной функции <code>this</code> — это элемент, на котором висит обработчик (то же, что <code>event.currentTarget</code>). В стрелочном обработчике <code>this</code> берётся из внешнего кода, поэтому к элементу обращаются через <code>event.currentTarget</code>. Второй вариант предсказуемее.</p></div>
+  </details>
+
+  <details class="q"><summary>Практическая задача: что выведет showRegular и showArrow?</summary>
+    <div class="answer"><p><code>showRegular</code> выведет <code>undefined A</code> и <code>undefined B</code>: колбэк — обычная функция, вызванная внутри forEach обычным вызовом, поэтому у неё свой <code>this</code>, равный undefined.</p><p><code>showArrow</code> выведет <code>Магазин A</code> и <code>Магазин B</code>: у стрелочной функции своего <code>this</code> нет, она берёт его у метода <code>showArrow</code>, а тот вызван через точку от <code>shop</code>. Проверьте это в демо раздела 03.</p></div>
+  </details>
+</section>
+
+<section style="border-bottom:none">
+  <div class="sec-head"><span class="sec-num">09</span><h2>Домашнее задание</h2></div>
+  <ol class="hw">
+    <li><b>«Разбор полётов».</b> Составьте пять фрагментов кода с <code>this</code> по мотивам урока (метод, оторванный метод, вложенная функция, стрелочный «метод», обработчик события). Для каждого запишите ожидаемый вывод, проверьте в консоли и объясните комментарием, какое правило сработало.</li>
+    <li><b>«Корзина».</b> Объект <code>cart</code> с массивом товаров <code>{ title, price, qty }</code> и методами: <code>total()</code> — сумма через <code>reduce</code>, <code>list()</code> — вывод строк через <code>forEach</code> с названием корзины из <code>this</code>, <code>add(item)</code>. Все внутренние колбэки — стрелочные.</li>
+    <li><b>«Привязка».</b> Передайте <code>cart.total</code> в <code>[1].forEach(...)</code> напрямую — получите ошибку. Затем почините тремя способами: стрелочной обёрткой, <code>bind</code> и сохранением метода как привязанного поля. Запишите плюсы и минусы каждого.</li>
+    <li><b>«Свой bind».</b> Доделайте <code>myBind</code> из практики и напишите три проверки: без аргументов, с аргументами, с попыткой переопределить контекст через <code>call</code>.</li>
+    <li>Подготовьте ответы на вопросы собеседования; последнюю задачу — уметь объяснить построчно.</li>
+  </ol>
+</section>
+
+<footer>
+  JavaScript 2 · Раздел 1 «Функции на глубину» · Урок 2 из 3 → далее: <b>Таймеры и планирование</b>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  function $(id){ return document.getElementById(id); }
+
+  function log(box, text, cls){
+    var empty = box.querySelector('.empty');
+    if (empty) box.innerHTML = '';
+    var line = document.createElement('span');
+    line.className = 'ln out' + (cls ? ' ' + cls : '');
+    line.textContent = text;
+    box.appendChild(line);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function clear(box, placeholder){
+    box.innerHTML = '<span class="empty">' + placeholder + '</span>';
+  }
+
+  function show(ctx){
+    // Обычная функция: this зависит от формы вызова.
+    return this === undefined ? 'undefined' : (this && this.name ? this.name : String(this));
+  }
+
+  /* ---------- 01 проблема ---------- */
+  (function(){
+    var box = $('p-console');
+    var user = { name: 'Али', sayHi: function(){ return this === undefined ? undefined : this.name; } };
+
+    $('p-method').addEventListener('click', function(){
+      log(box, 'user.sayHi()  → "Привет, я ' + user.sayHi() + '"', 'ok');
+    });
+
+    $('p-torn').addEventListener('click', function(){
+      var greet = user.sayHi;
+      var result = greet();
+      log(box, 'const greet = user.sayHi; greet()  → "Привет, я ' + result + '"', 'err');
+    });
+
+    $('p-clear').addEventListener('click', function(){
+      clear(box, 'Вызовите функцию любым из двух способов');
+    });
+  })();
+
+  /* ---------- 02 определитель контекста ---------- */
+  (function(){
+    var seg = $('rule-seg'), codeBox = $('rule-code'), box = $('rule-console'), note = $('rule-note');
+    var rule = 'plain';
+
+    var SNIPPETS = {
+      plain: '<span class="k">function</span> <span class="v">show</span>() { <span class="k">return</span> <span class="k">this</span>?.name; }\n\n<span class="v">show</span>();',
+      method: '<span class="k">const</span> user = { name: <span class="s">"Али"</span>, show };\n\nuser.<span class="v">show</span>();',
+      nested: '<span class="k">const</span> app = {\n  name: <span class="s">"LMS"</span>,\n  admin: { name: <span class="s">"Панель"</span>, show }\n};\n\napp.admin.<span class="v">show</span>();',
+      call: '<span class="k">const</span> gulya = { name: <span class="s">"Гуля"</span> };\n\nshow.<span class="v">call</span>(gulya);',
+      "new": '<span class="k">function</span> <span class="v">User</span>(name) { <span class="k">this</span>.name = name; }\n\n<span class="k">new</span> <span class="v">User</span>(<span class="s">"Bobur"</span>);'
+    };
+
+    var NOTES = {
+      plain: 'Правило 1 — обычный вызов. Слева от скобок ничего нет, контекста нет.',
+      method: 'Правило 2 — вызов как метода. Слева от точки объект user.',
+      nested: 'Правило 2 — важна только ПОСЛЕДНЯЯ точка: контекст это admin, а не app.',
+      call: 'Правило 3 — явная привязка. Контекст задали сами.',
+      "new": 'Правило 4 — вызов через new. Контекстом стал новый создаваемый объект.'
+    };
+
+    function paint(){
+      codeBox.innerHTML = SNIPPETS[rule];
+      note.textContent = '';
+    }
+
+    seg.addEventListener('click', function(e){
+      var btn = e.target.closest('button');
+      if (!btn) return;
+      rule = btn.dataset.rule;
+      Array.prototype.forEach.call(seg.querySelectorAll('button'), function(b){
+        b.classList.toggle('on', b === btn);
+      });
+      paint();
+      clear(box, 'Нажмите «Вызвать»');
+    });
+
+    $('rule-run').addEventListener('click', function(){
+      var result, form;
+
+      if (rule === 'plain') {
+        form = 'show()';
+        result = show();                      // обычный вызов
+      } else if (rule === 'method') {
+        form = 'user.show()';
+        result = { name: 'Али', show: show }.show();
+      } else if (rule === 'nested') {
+        form = 'app.admin.show()';
+        result = { name: 'LMS', admin: { name: 'Панель', show: show } }.admin.show();
+      } else if (rule === 'call') {
+        form = 'show.call(gulya)';
+        result = show.call({ name: 'Гуля' });
+      } else {
+        form = 'new User("Bobur")';
+        function User(name){ this.name = name; }
+        var created = new User('Bobur');
+        result = created.name;
+      }
+
+      log(box, form + '  → this.name = ' + result, result === 'undefined' ? 'err' : 'ok');
+      note.textContent = NOTES[rule];
+    });
+
+    paint();
+  })();
+
+  /* ---------- 03 сценарий 1 ---------- */
+  (function(){
+    var box = $('s1-console');
+    var timer = { name: 'Таймер', start: function(){ return this === undefined ? 'undefined' : this.name; } };
+
+    $('s1-broken').addEventListener('click', function(){
+      var out = [1].map(timer.start);
+      log(box, '[1].forEach(timer.start)  → ' + out[0] + '   контекст потерян', 'err');
+    });
+
+    $('s1-arrow').addEventListener('click', function(){
+      var out = [1].map(function(){ return timer.start(); });
+      log(box, '[1].forEach(() => timer.start())  → ' + out[0], 'ok');
+    });
+
+    $('s1-bind').addEventListener('click', function(){
+      var out = [1].map(timer.start.bind(timer));
+      log(box, '[1].forEach(timer.start.bind(timer))  → ' + out[0], 'ok');
+    });
+  })();
+
+  /* ---------- 03 сценарий 2 ---------- */
+  (function(){
+    var box = $('s2-console'), codeBox = $('s2-code');
+
+    var shop = {
+      name: 'Магазин',
+      products: ['A', 'B'],
+      showRegular: function(){
+        var out = [];
+        this.products.forEach(function (p) {
+          out.push((this === undefined ? 'undefined' : this.name) + ' ' + p);
+        });
+        return out;
+      },
+      showArrow: function(){
+        var out = [];
+        this.products.forEach((p) => {
+          out.push(this.name + ' ' + p);
+        });
+        return out;
+      }
+    };
+
+    var CODE = {
+      regular: '<span class="v">showRegular</span>() {\n  <span class="k">this</span>.products.<span class="v">forEach</span>(<span class="k">function</span> (p) {\n    console.<span class="v">log</span>(<span class="k">this</span>?.name, p);   <span class="c">// свой this</span>\n  });\n}',
+      arrow: '<span class="v">showArrow</span>() {\n  <span class="k">this</span>.products.<span class="v">forEach</span>(p =&gt; {\n    console.<span class="v">log</span>(<span class="k">this</span>.name, p);    <span class="c">// this метода</span>\n  });\n}'
+    };
+
+    $('s2-regular').addEventListener('click', function(){
+      codeBox.innerHTML = CODE.regular;
+      clear(box, '');
+      shop.showRegular().forEach(function(line){ log(box, line, 'err'); });
+    });
+
+    $('s2-arrow').addEventListener('click', function(){
+      codeBox.innerHTML = CODE.arrow;
+      clear(box, '');
+      shop.showArrow().forEach(function(line){ log(box, line, 'ok'); });
+    });
+
+    codeBox.innerHTML = CODE.regular;
+  })();
+
+  /* ---------- 04 call / apply / bind ---------- */
+  (function(){
+    var box = $('bind-console'), ctxSeg = $('bind-ctx'), runBtn = $('bind-run');
+    var contextName = 'Али';
+    var bound = null, boundTo = null;
+
+    function introduce(city, job){
+      return this.name + ', ' + city + ', ' + job;
+    }
+
+    function ctx(){ return { name: contextName }; }
+    function city(){ return $('bind-city').value.trim() || 'город'; }
+
+    ctxSeg.addEventListener('click', function(e){
+      var btn = e.target.closest('button');
+      if (!btn) return;
+      contextName = btn.dataset.name;
+      Array.prototype.forEach.call(ctxSeg.querySelectorAll('button'), function(b){
+        b.classList.toggle('on', b === btn);
+      });
+      if (bound) log(box, 'переключили контекст на ' + contextName + ' — привязанная функция помнит ' + boundTo);
+    });
+
+    $('bind-call').addEventListener('click', function(){
+      log(box, 'introduce.call(' + contextName + ', "' + city() + '", "разработчик")  → ' +
+        introduce.call(ctx(), city(), 'разработчик'), 'ok');
+    });
+
+    $('bind-apply').addEventListener('click', function(){
+      log(box, 'introduce.apply(' + contextName + ', ["' + city() + '", "дизайнер"])  → ' +
+        introduce.apply(ctx(), [city(), 'дизайнер']), 'ok');
+    });
+
+    $('bind-make').addEventListener('click', function(){
+      boundTo = contextName;
+      bound = introduce.bind({ name: boundTo });
+      runBtn.disabled = false;
+      log(box, 'const f = introduce.bind(' + boundTo + ')  → функция создана, не вызвана');
+    });
+
+    runBtn.addEventListener('click', function(){
+      log(box, 'f("' + city() + '", "тестировщик")  → ' + bound(city(), 'тестировщик') +
+        '   (привязка к ' + boundTo + ' не меняется)', 'ok');
+    });
+  })();
+
+  /* ---------- 05 обработчики ---------- */
+  (function(){
+    var box = $('ev-console');
+    var regular = $('ev-regular'), arrow = $('ev-arrow');
+
+    regular.addEventListener('click', function () {
+      this.classList.toggle('act');
+      this.classList.toggle('ghost');
+      log(box, 'обычная функция → this = <button> "' + this.textContent.trim() + '"', 'ok');
+    });
+
+    arrow.addEventListener('click', (event) => {
+      var el = event.currentTarget;
+      el.classList.toggle('act');
+      el.classList.toggle('ghost');
+      log(box, 'стрелочная → this не кнопка, элемент взят из event.currentTarget = <button> "' +
+        el.textContent.trim() + '"', 'ok');
+    });
+  })();
+
+})();
+</script>

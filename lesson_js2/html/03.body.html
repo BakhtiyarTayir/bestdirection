@@ -1,0 +1,643 @@
+<div class="shell">
+
+<header>
+  <div class="eyebrow">JavaScript 2 · урок 03 · интерактив</div>
+  <h1>Таймеры<br>и планирование</h1>
+  <p class="lede">В домашнем задании последнего урока первого курса было честно написано «пока без таймеров». Снимаем ограничение: учимся откладывать выполнение, повторять его и — самое важное на практике — <b>ограничивать частоту вызовов</b>.</p>
+</header>
+
+<section>
+  <div class="sec-head"><span class="sec-num">00</span><h2>Цели урока</h2></div>
+  <ul class="goals">
+    <li>откладывать выполнение через <code>setTimeout</code> и повторять через <code>setInterval</code>;</li>
+    <li>отменять запланированное через <code>clearTimeout</code> и <code>clearInterval</code>;</li>
+    <li>понимать, чем рекурсивный <code>setTimeout</code> лучше интервала;</li>
+    <li>знать, почему задержка — это «не раньше чем», а не «ровно через»;</li>
+    <li>писать <code>debounce</code> и <code>throttle</code> и понимать, где какой нужен;</li>
+    <li>отвечать на типовые вопросы собеседования о таймерах.</li>
+  </ul>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">01</span><h2>setTimeout — выполнить позже</h2></div>
+  <p class="sec-sub">Первый аргумент — функция (снова колбэк), второй — задержка в <b>миллисекундах</b>: 1000 мс = 1 секунда. Программа не останавливается и не ждёт: она регистрирует задачу «выполнить позже» и идёт дальше.</p>
+
+<pre class="code"><span class="v">setTimeout</span>(<span class="k">function</span> () {
+  console.<span class="v">log</span>(<span class="s">"Прошла секунда"</span>);
+}, <span class="v">1000</span>);
+
+console.<span class="v">log</span>(<span class="s">"Эта строка выведется ПЕРВОЙ"</span>);</pre>
+
+  <p class="body-copy">Аргументы для колбэка передаются третьим и далее: <code>setTimeout(greet, 2000, "Али", "Салом")</code>.</p>
+
+  <div class="warn">
+    <b>Частая ошибка</b> — вызвать функцию вместо того, чтобы передать её. <code>setTimeout(greet("Али"), 2000)</code> выполнит <code>greet</code> немедленно и передаст таймеру её результат. Правильно: <code>setTimeout(() =&gt; greet("Али"), 2000)</code>. Та же ловушка, что с колбэками в <code>map</code> и <code>forEach</code>: скобки означают вызов.
+  </div>
+
+  <div class="lab">
+    <div class="lab-head">
+      <span class="lab-title">Демо · отложенный вызов и его отмена</span>
+      <span class="lab-hint">Запустите и успейте нажать «Отменить»</span>
+    </div>
+    <div class="field">
+      <label for="d-delay">задержка, мс</label>
+      <input id="d-delay" type="number" value="3000" step="500" min="500" max="10000">
+      <button class="act" id="d-run">setTimeout(...)</button>
+      <button class="act pink" id="d-cancel" disabled>clearTimeout(id)</button>
+      <span class="badge" id="d-state">таймер не запущен</span>
+    </div>
+    <div class="console" id="d-console"><span class="empty">Запустите таймер</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">02</span><h2>Задержка — это «не раньше чем»</h2></div>
+  <p class="sec-sub">Даже с нулевой задержкой колбэк выполнится <b>после</b> текущего кода. JavaScript однопоточен: сначала доделывается всё, что выполняется сейчас, и только потом берётся отложенная задача.</p>
+
+  <div class="lab">
+    <div class="lab-head">
+      <span class="lab-title">Демо · порядок вывода</span>
+      <span class="lab-hint">Что напечатается первым?</span>
+    </div>
+<pre class="code">console.<span class="v">log</span>(<span class="s">"A"</span>);
+<span class="v">setTimeout</span>(() =&gt; console.<span class="v">log</span>(<span class="s">"B"</span>), <span class="v">0</span>);
+<span class="k">for</span> (<span class="k">let</span> i = <span class="v">0</span>; i &lt; <span class="v">3</span>; i++) console.<span class="v">log</span>(i);
+console.<span class="v">log</span>(<span class="s">"C"</span>);</pre>
+    <div class="field" style="margin-top:16px;margin-bottom:0">
+      <button class="act" id="order-run">Запустить</button>
+      <button class="act ghost" id="order-heavy">Запустить с тяжёлым циклом</button>
+    </div>
+    <div class="console" id="order-console"><span class="empty">Нажмите «Запустить»</span></div>
+  </div>
+
+  <div class="explain">
+    <h3>Следствие</h3>
+    <p>Если основной код занят тяжёлым циклом, таймер <b>опоздает</b> — вторая кнопка это показывает: задержка была 0 мс, а колбэк выполнился только после цикла. Задержка гарантирует минимум, а не точность. Почему это так устроено — тема урока про event loop в третьем разделе.</p>
+  </div>
+
+  <p class="body-copy">Практический вывод: не полагайтесь на <code>setInterval</code> при отсчёте времени. Секундомер, который просто прибавляет по единице каждые 1000 мс, за минуту заметно уплывёт. Правильно — запомнить время старта и каждый тик считать разницу.</p>
+
+<pre class="code"><span class="k">const</span> start = Date.<span class="v">now</span>();                <span class="c">// миллисекунды с 1970 года</span>
+
+<span class="v">setInterval</span>(() =&gt; {
+  <span class="k">const</span> seconds = Math.<span class="v">floor</span>((Date.<span class="v">now</span>() - start) / <span class="v">1000</span>);
+  console.<span class="v">log</span>(seconds);                <span class="c">// всегда точно</span>
+}, <span class="v">1000</span>);</pre>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">03</span><h2>setInterval — повторять</h2></div>
+  <p class="sec-sub"><code>setInterval</code> работает <b>бесконечно</b>, пока его не остановят через <code>clearInterval</code>. Всегда сохраняйте идентификатор и всегда предусматривайте условие остановки — забытый интервал так же опасен, как бесконечный цикл <code>while</code>.</p>
+
+  <div class="lab">
+    <div class="lab-head">
+      <span class="lab-title">Демо · секундомер на Date.now()</span>
+      <span class="lab-hint">Повторный «Старт» не должен создавать второй интервал</span>
+    </div>
+    <div class="counter" style="max-width:320px">
+      <div class="name">const start = Date.now()</div>
+      <div class="val" id="sw-val">00:00.0</div>
+      <div class="env" id="sw-env">интервалов запущено: 0</div>
+      <div class="row">
+        <button class="act" id="sw-start">Старт</button>
+        <button class="act ghost" id="sw-stop">Стоп</button>
+        <button class="act ghost" id="sw-reset">Сброс</button>
+      </div>
+    </div>
+    <div class="console" id="sw-console"><span class="empty">Нажмите «Старт»</span></div>
+  </div>
+
+  <div class="lab">
+    <div class="lab-head">
+      <span class="lab-title">Демо · обратный отсчёт с остановкой</span>
+      <span class="lab-hint">clearInterval внутри самого колбэка</span>
+    </div>
+<pre class="code"><span class="k">let</span> count = <span class="v">5</span>;
+
+<span class="k">const</span> id = <span class="v">setInterval</span>(() =&gt; {
+  console.<span class="v">log</span>(count);
+  count--;
+
+  <span class="k">if</span> (count === <span class="v">0</span>) {
+    <span class="v">clearInterval</span>(id);      <span class="c">// ← без этого цикл никогда не кончится</span>
+    console.<span class="v">log</span>(<span class="s">"Поехали! 🚀"</span>);
+  }
+}, <span class="v">1000</span>);</pre>
+    <div class="field" style="margin-top:16px;margin-bottom:0">
+      <button class="act" id="cd-run">Запустить отсчёт</button>
+      <button class="act ghost" id="cd-stop" disabled>прервать</button>
+    </div>
+    <div class="console" id="cd-console"><span class="empty">Нажмите «Запустить отсчёт»</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">04</span><h2>Рекурсивный setTimeout</h2></div>
+  <p class="sec-sub">Второй способ повторения — таймер, который в конце планирует сам себя. Разница видна, когда колбэк выполняется <b>дольше</b> интервала.</p>
+
+<pre class="code"><span class="k">function</span> <span class="v">tick</span>() {
+  console.<span class="v">log</span>(<span class="s">"тик"</span>);
+  <span class="v">setTimeout</span>(tick, <span class="v">1000</span>);   <span class="c">// планируем следующий ПОСЛЕ завершения</span>
+}
+<span class="v">setTimeout</span>(tick, <span class="v">1000</span>);</pre>
+
+  <div class="lab">
+    <div class="lab-head">
+      <span class="lab-title">Демо · интервал против рекурсивного таймера</span>
+      <span class="lab-hint">Колбэк «работает» 400 мс, интервал задан 500 мс</span>
+    </div>
+    <div class="field">
+      <div class="seg" id="rt-seg">
+        <button data-mode="interval" class="on">setInterval</button>
+        <button data-mode="recursive">рекурсивный setTimeout</button>
+      </div>
+      <label for="rt-work">работа колбэка, мс</label>
+      <input id="rt-work" type="number" value="400" step="100" min="0" max="900">
+      <button class="act" id="rt-run">6 тиков</button>
+    </div>
+    <div class="console" id="rt-console"><span class="empty">Запустите и сравните паузы между тиками</span></div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th></th><th>setInterval</th><th>рекурсивный setTimeout</th></tr></thead>
+      <tbody>
+        <tr><td>отсчёт паузы</td><td>от старта предыдущего запуска</td><td>после завершения предыдущего</td></tr>
+        <tr><td>долгий колбэк</td><td>вызовы «слипаются», очередь копится</td><td>пауза всегда соблюдается</td></tr>
+        <tr><td>менять задержку</td><td>нельзя</td><td>можно на каждом шаге</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="body-copy">Поэтому для повторных сетевых запросов (третий раздел) используют именно рекурсивный <code>setTimeout</code>.</p>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">05</span><h2>this в таймере</h2></div>
+  <p class="sec-sub">Помните потерю контекста из прошлого урока? Таймер — её главный источник: колбэк вызывается обычным вызовом, объект теряется.</p>
+
+<pre class="code"><span class="k">const</span> user = {
+  name: <span class="s">"Али"</span>,
+  <span class="v">greetLater</span>() {
+    <span class="v">setTimeout</span>(<span class="k">function</span> () {
+      console.<span class="v">log</span>(<span class="s">"Привет, "</span> + <span class="k">this</span>.name);   <span class="c">// ❌ undefined</span>
+    }, <span class="v">1000</span>);
+  }
+};
+
+<span class="c">// ✅ стрелочная берёт this у метода:</span>
+<span class="v">setTimeout</span>(() =&gt; console.<span class="v">log</span>(<span class="s">"Привет, "</span> + <span class="k">this</span>.name), <span class="v">1000</span>);
+
+<span class="c">// ❌ метод, переданный напрямую, теряет объект:</span>
+<span class="v">setTimeout</span>(user.greetLater, <span class="v">1000</span>);
+<span class="v">setTimeout</span>(() =&gt; user.<span class="v">greetLater</span>(), <span class="v">1000</span>);         <span class="c">// ✅</span>
+<span class="v">setTimeout</span>(user.greetLater.<span class="v">bind</span>(user), <span class="v">1000</span>);      <span class="c">// ✅</span></pre>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">06</span><h2>debounce — «подожди, пока перестанут»</h2></div>
+  <p class="sec-sub">Пользователь печатает «телефон» — событие <code>input</code> срабатывает 7 раз. Делать 7 запросов не нужно, нужен один — когда человек закончил печатать.</p>
+
+<pre class="code"><span class="k">function</span> <span class="v">debounce</span>(fn, delay) {
+  <span class="k">let</span> timerId = <span class="k">null</span>;                  <span class="c">// живёт в замыкании (урок 1)</span>
+
+  <span class="k">return</span> <span class="k">function</span> (...args) {
+    <span class="v">clearTimeout</span>(timerId);           <span class="c">// отменяем предыдущий план</span>
+    timerId = <span class="v">setTimeout</span>(() =&gt; <span class="v">fn</span>(...args), delay);
+  };
+}</pre>
+
+  <p class="body-copy">Обратите внимание, как складываются темы раздела: замыкание хранит <code>timerId</code>, стрелочная функция сохраняет контекст, таймер откладывает вызов.</p>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">07</span><h2>throttle — «не чаще, чем раз в N»</h2></div>
+  <p class="sec-sub">Задача другая: обработчик прокрутки срабатывает сотни раз в секунду. Ждать тишины нельзя — нужно реагировать, но реже. <code>throttle</code> пропускает вызов и на заданное время блокирует следующие.</p>
+
+<pre class="code"><span class="k">function</span> <span class="v">throttle</span>(fn, delay) {
+  <span class="k">let</span> isWaiting = <span class="k">false</span>;
+
+  <span class="k">return</span> <span class="k">function</span> (...args) {
+    <span class="k">if</span> (isWaiting) <span class="k">return</span>;             <span class="c">// ещё рано — игнорируем</span>
+    <span class="v">fn</span>(...args);
+    isWaiting = <span class="k">true</span>;
+    <span class="v">setTimeout</span>(() =&gt; { isWaiting = <span class="k">false</span>; }, delay);
+  };
+}</pre>
+
+  <div class="lab">
+    <div class="lab-head">
+      <span class="lab-title">Демо · три счётчика на одно поле</span>
+      <span class="lab-hint">Печатайте быстро и смотрите, сколько вызовов дошло до функции</span>
+    </div>
+    <div class="field">
+      <label for="dt-input">Поиск</label>
+      <input id="dt-input" type="text" placeholder="печатайте здесь…" style="width:260px" maxlength="40">
+      <label for="dt-delay">задержка, мс</label>
+      <input id="dt-delay" type="number" value="500" step="100" min="100" max="2000">
+      <button class="act ghost" id="dt-reset">сброс счётчиков</button>
+    </div>
+    <div class="counters">
+      <div class="counter">
+        <div class="name">без ограничений</div>
+        <div class="val" id="dt-raw">0</div>
+        <div class="env">вызов на каждый символ</div>
+      </div>
+      <div class="counter">
+        <div class="name">debounce(delay)</div>
+        <div class="val" id="dt-deb">0</div>
+        <div class="env" id="dt-deb-env">ждёт паузы в наборе</div>
+      </div>
+      <div class="counter">
+        <div class="name">throttle(delay)</div>
+        <div class="val" id="dt-thr">0</div>
+        <div class="env" id="dt-thr-env">не чаще раза в delay</div>
+      </div>
+    </div>
+    <div class="console" id="dt-console"><span class="empty">Начните печатать в поле выше</span></div>
+  </div>
+
+  <div class="explain">
+    <h3>Разница на одном примере</h3>
+    <p>Пользователь 10 раз подряд быстро нажал кнопку. <b>debounce</b>: ничего… ничего… ничего… → один вызов через N мс после последнего. <b>throttle</b>: вызов сразу → пауза → вызов → пауза → …</p>
+  </div>
+
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th></th><th>debounce</th><th>throttle</th></tr></thead>
+      <tbody>
+        <tr><td>когда вызывает</td><td>после паузы в событиях</td><td>сразу и потом не чаще N мс</td></tr>
+        <tr><td>вызовов из серии</td><td>один, последний</td><td>несколько, равномерно</td></tr>
+        <tr><td>типичные задачи</td><td>поиск, автосохранение, resize</td><td>scroll, mousemove, перетаскивание</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">08</span><h2>Практика на уроке</h2></div>
+  <div class="tasks">
+    <div class="task">
+      <div class="mono">Задание 1</div>
+      <p><b>Обратный отсчёт.</b> Выведите на страницу числа от 10 до 1 с интервалом в секунду, затем «Старт!». Не забудьте <code>clearInterval</code>. Бонус: последние три числа красные.</p>
+    </div>
+    <div class="task">
+      <div class="mono">Задание 2</div>
+      <p><b>Секундомер.</b> Кнопки «Старт», «Стоп», «Сброс» и поле времени в формате <code>мм:сс</code>. Считайте от <code>Date.now()</code>, а не прибавлением по единице. Проверьте, что повторный «Старт» не запускает второй интервал.</p>
+    </div>
+    <div class="task">
+      <div class="mono">Задание 3</div>
+      <p><b>Отменяемая отправка.</b> Кнопка «Удалить» показывает «Удаление через 5 секунд» и кнопку «Отменить». Нажали отмену — <code>clearTimeout</code> и «Отменено», не нажали — «Удалено».</p>
+    </div>
+    <div class="task">
+      <div class="mono">Задание 4</div>
+      <p><b>Живой поиск с debounce.</b> Массив из 20 городов, поле ввода и список результатов. Фильтрация запускается через 400 мс после последней буквы. Выведите в консоль каждый реальный вызов.</p>
+    </div>
+    <div class="task">
+      <div class="mono">Задание 5</div>
+      <p><b>Счётчик прокрутки с throttle.</b> Обработчик <code>scroll</code> выводит <code>window.scrollY</code> не чаще раза в 300 мс. Рядом покажите счётчик срабатываний без throttle — сравните числа.</p>
+    </div>
+    <div class="task">
+      <div class="mono">Задание 6*</div>
+      <p><b>Автосохранение.</b> Поле <code>textarea</code>: через секунду после того, как пользователь перестал печатать, выводится «Черновик сохранён». Индикатор «Сохранение…» должен появляться сразу при вводе.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">09</span><h2>Вопросы с собеседований</h2></div>
+  <p class="sec-sub">Отвечайте вслух, потом раскрывайте ответ.</p>
+
+  <details class="q"><summary>Чем setTimeout отличается от setInterval?</summary>
+    <div class="answer"><p><code>setTimeout</code> планирует одно выполнение через заданную задержку, <code>setInterval</code> — повторяет вызов каждые N миллисекунд, пока его не остановят через <code>clearInterval</code>. Оба возвращают идентификатор таймера, по которому его можно отменить.</p></div>
+  </details>
+
+  <details class="q"><summary>Гарантирует ли setTimeout(fn, 100), что функция выполнится ровно через 100 мс?</summary>
+    <div class="answer"><p>Нет. Задержка означает «не раньше чем»: колбэк попадёт в очередь через 100 мс, но выполнится только тогда, когда освободится основной поток. Если в этот момент выполняется тяжёлый синхронный код, вызов опоздает. Даже <code>setTimeout(fn, 0)</code> выполняется после завершения текущего кода.</p></div>
+  </details>
+
+  <details class="q"><summary>Чем рекурсивный setTimeout лучше setInterval?</summary>
+    <div class="answer"><p><code>setInterval</code> отсчитывает паузу от старта предыдущего вызова, поэтому при долгом колбэке вызовы «слипаются» и идут подряд. Рекурсивный <code>setTimeout</code> планирует следующий запуск только после завершения текущего — пауза соблюдается всегда. Плюс он позволяет менять задержку на каждом шаге, что нужно при повторных попытках запроса.</p></div>
+  </details>
+
+  <details class="q"><summary>Что произойдёт, если не вызвать clearInterval?</summary>
+    <div class="answer"><p>Интервал продолжит работать до перезагрузки страницы — даже если элемент, ради которого он запускался, уже удалён. Это лишняя нагрузка и источник утечек памяти: колбэк держит замыкание со всеми переменными, на которые ссылается. Идентификатор интервала нужно сохранять и очищать, когда он больше не нужен.</p></div>
+  </details>
+
+  <details class="q"><summary>Что такое debounce и throttle? В чём разница?</summary>
+    <div class="answer"><p>Обе техники ограничивают частоту вызовов. <code>debounce</code> откладывает вызов и сбрасывает отсчёт при каждом новом событии — функция сработает один раз, когда события прекратятся; подходит для поиска и автосохранения. <code>throttle</code> вызывает функцию сразу и затем блокирует вызовы на заданное время — она срабатывает регулярно, но не чаще N миллисекунд; подходит для scroll и mousemove.</p></div>
+  </details>
+
+  <details class="q"><summary>Почему this внутри setTimeout не работает как ожидается?</summary>
+    <div class="answer"><p>Таймер вызывает переданный колбэк обычным вызовом, без объекта — срабатывает первое правило определения <code>this</code>, и контекст теряется. Решения: стрелочная функция (берёт <code>this</code> из окружения) или <code>bind</code> при передаче метода.</p></div>
+  </details>
+
+  <details class="q"><summary>Практическая задача: что выведет код и почему?</summary>
+    <div class="answer"><p>Для кода <code>console.log("A"); setTimeout(() =&gt; console.log("B"), 0); for (…) console.log(i); console.log("C");</code> вывод будет: <code>A</code>, <code>0</code>, <code>1</code>, <code>2</code>, <code>C</code>, <code>B</code>.</p><p>Даже с нулевой задержкой колбэк не выполняется сразу: он попадает в очередь и берётся оттуда, только когда закончится весь текущий синхронный код. Поэтому <code>B</code> выводится последним. Проверьте это в демо раздела 02.</p></div>
+  </details>
+</section>
+
+<section style="border-bottom:none">
+  <div class="sec-head"><span class="sec-num">10</span><h2>Домашнее задание</h2></div>
+  <ol class="hw">
+    <li><b>«Таймер помидора».</b> Обратный отсчёт 25 минут с кнопками «Старт», «Пауза», «Сброс». Время в формате <code>мм:сс</code>, отсчёт от <code>Date.now()</code>. По окончании — сообщение и смена цвета. Повторное нажатие «Старт» не должно создавать второй интервал.</li>
+    <li><b>«Слайдер».</b> Массив из 4 слайдов меняется автоматически каждые 3 секунды по кругу. Стрелки «вперёд»/«назад» переключают вручную и <b>перезапускают</b> отсчёт. Наведение мыши ставит автопрокрутку на паузу.</li>
+    <li><b>«Поиск с debounce».</b> Доделать живой поиск из практики: показывать «Ищем…» сразу при вводе и результат — после паузы. Добавьте счётчик реальных вызовов функции поиска и сравните его с количеством нажатий.</li>
+    <li><b>«Свой throttle с хвостом».</b> Улучшите <code>throttle</code> так, чтобы последний вызов из серии не терялся: если события шли во время паузы, после её окончания функция вызывается ещё раз с последними аргументами.</li>
+    <li>Подготовьте ответы на вопросы собеседования; последнюю задачу — уметь объяснить порядок вывода.</li>
+  </ol>
+</section>
+
+<footer>
+  JavaScript 2 · Раздел 1 «Функции на глубину» · Урок 3 из 3 → далее раздел 2: <b>Браузер: события, формы, хранилище</b>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  function $(id){ return document.getElementById(id); }
+
+  function log(box, text, cls){
+    var empty = box.querySelector('.empty');
+    if (empty) box.innerHTML = '';
+    var line = document.createElement('span');
+    line.className = 'ln out' + (cls ? ' ' + cls : '');
+    line.textContent = text;
+    box.appendChild(line);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function clear(box, placeholder){
+    box.innerHTML = '<span class="empty">' + placeholder + '</span>';
+  }
+
+  function pad(n, size){
+    return String(n).padStart(size, '0');
+  }
+
+  /* ---------- 01 setTimeout / clearTimeout ---------- */
+  (function(){
+    var box = $('d-console'), state = $('d-state');
+    var runBtn = $('d-run'), cancelBtn = $('d-cancel');
+    var timerId = null;
+
+    runBtn.addEventListener('click', function(){
+      var delay = Number($('d-delay').value) || 1000;
+      clearTimeout(timerId);
+      var started = Date.now();
+
+      timerId = setTimeout(function(){
+        var real = Date.now() - started;
+        log(box, 'колбэк выполнен  → реально прошло ' + real + ' мс', 'ok');
+        state.textContent = 'таймер отработал';
+        cancelBtn.disabled = true;
+        timerId = null;
+      }, delay);
+
+      cancelBtn.disabled = false;
+      state.textContent = 'id таймера: ' + timerId;
+      log(box, 'const id = setTimeout(fn, ' + delay + ')  → задача запланирована, код идёт дальше');
+      log(box, 'эта строка выполнилась ПЕРВОЙ');
+    });
+
+    cancelBtn.addEventListener('click', function(){
+      clearTimeout(timerId);
+      log(box, 'clearTimeout(id)  → колбэк отменён и не выполнится', 'err');
+      state.textContent = 'таймер отменён';
+      cancelBtn.disabled = true;
+      timerId = null;
+    });
+  })();
+
+  /* ---------- 02 порядок вывода ---------- */
+  (function(){
+    var box = $('order-console');
+
+    function run(heavy){
+      clear(box, '');
+      var started = Date.now();
+
+      log(box, 'A');
+      setTimeout(function(){
+        log(box, 'B   ← колбэк setTimeout, задержка 0 мс, реально прошло ' +
+          (Date.now() - started) + ' мс', heavy ? 'err' : 'ok');
+      }, 0);
+
+      for (var i = 0; i < 3; i++) log(box, String(i));
+
+      if (heavy) {
+        var sum = 0;
+        var until = Date.now() + 900;
+        while (Date.now() < until) { sum++; }        // блокируем поток
+        log(box, 'тяжёлый цикл занял поток на ~900 мс');
+      }
+
+      log(box, 'C');
+    }
+
+    $('order-run').addEventListener('click', function(){ run(false); });
+    $('order-heavy').addEventListener('click', function(){ run(true); });
+  })();
+
+  /* ---------- 03 секундомер ---------- */
+  (function(){
+    var box = $('sw-console'), val = $('sw-val'), env = $('sw-env');
+    var intervalId = null, startedAt = 0, elapsed = 0, launches = 0;
+
+    function paint(){
+      var total = elapsed + (intervalId ? Date.now() - startedAt : 0);
+      var m = Math.floor(total / 60000);
+      var s = Math.floor(total / 1000) % 60;
+      var tenth = Math.floor(total / 100) % 10;
+      val.textContent = pad(m, 2) + ':' + pad(s, 2) + '.' + tenth;
+    }
+
+    $('sw-start').addEventListener('click', function(){
+      if (intervalId) {                       // защита от второго интервала
+        log(box, 'Старт нажат повторно  → интервал уже запущен, новый не создаём', 'err');
+        return;
+      }
+      startedAt = Date.now();
+      launches++;
+      intervalId = setInterval(paint, 50);
+      env.textContent = 'интервалов запущено: ' + launches + ' · активен: 1';
+      log(box, 'const start = Date.now(); setInterval(paint, 50)  → id ' + intervalId, 'ok');
+    });
+
+    $('sw-stop').addEventListener('click', function(){
+      if (!intervalId) return;
+      elapsed += Date.now() - startedAt;
+      clearInterval(intervalId);
+      intervalId = null;
+      paint();
+      env.textContent = 'интервалов запущено: ' + launches + ' · активен: 0';
+      log(box, 'clearInterval(id)  → отсчёт остановлен');
+    });
+
+    $('sw-reset').addEventListener('click', function(){
+      clearInterval(intervalId);
+      intervalId = null;
+      elapsed = 0;
+      paint();
+      env.textContent = 'интервалов запущено: ' + launches + ' · активен: 0';
+      clear(box, 'Секундомер сброшен');
+    });
+
+    paint();
+  })();
+
+  /* ---------- 03 обратный отсчёт ---------- */
+  (function(){
+    var box = $('cd-console'), runBtn = $('cd-run'), stopBtn = $('cd-stop');
+    var id = null;
+
+    runBtn.addEventListener('click', function(){
+      clearInterval(id);
+      clear(box, '');
+      var count = 5;
+      runBtn.disabled = true;
+      stopBtn.disabled = false;
+
+      id = setInterval(function(){
+        log(box, String(count));
+        count--;
+
+        if (count === 0) {
+          clearInterval(id);
+          id = null;
+          log(box, 'Поехали! 🚀', 'ok');
+          runBtn.disabled = false;
+          stopBtn.disabled = true;
+        }
+      }, 1000);
+    });
+
+    stopBtn.addEventListener('click', function(){
+      clearInterval(id);
+      id = null;
+      log(box, 'clearInterval(id)  → отсчёт прерван досрочно', 'err');
+      runBtn.disabled = false;
+      stopBtn.disabled = true;
+    });
+  })();
+
+  /* ---------- 04 interval против рекурсивного timeout ---------- */
+  (function(){
+    var seg = $('rt-seg'), box = $('rt-console'), runBtn = $('rt-run');
+    var mode = 'interval';
+    var intervalId = null, timeoutId = null;
+    var DELAY = 500, TICKS = 6;
+
+    seg.addEventListener('click', function(e){
+      var btn = e.target.closest('button');
+      if (!btn) return;
+      mode = btn.dataset.mode;
+      Array.prototype.forEach.call(seg.querySelectorAll('button'), function(b){
+        b.classList.toggle('on', b === btn);
+      });
+      clear(box, 'Запустите и сравните паузы между тиками');
+    });
+
+    function work(ms){
+      var until = Date.now() + ms;
+      while (Date.now() < until) { /* имитация долгого колбэка */ }
+    }
+
+    runBtn.addEventListener('click', function(){
+      clearInterval(intervalId);
+      clearTimeout(timeoutId);
+      clear(box, '');
+      runBtn.disabled = true;
+
+      var workMs = Number($('rt-work').value) || 0;
+      var n = 0, last = Date.now();
+      log(box, mode === 'interval'
+        ? 'setInterval(fn, ' + DELAY + ') · колбэк работает ' + workMs + ' мс'
+        : 'рекурсивный setTimeout(' + DELAY + ') · колбэк работает ' + workMs + ' мс');
+
+      function tick(){
+        var gap = Date.now() - last;
+        last = Date.now();
+        n++;
+        work(workMs);
+        log(box, 'тик ' + n + '   пауза с прошлого тика: ' + gap + ' мс',
+          gap < DELAY - 60 ? 'err' : 'ok');
+
+        if (n >= TICKS) {
+          clearInterval(intervalId);
+          runBtn.disabled = false;
+          return;
+        }
+        if (mode === 'recursive') {
+          last = Date.now();
+          timeoutId = setTimeout(tick, DELAY);
+        }
+      }
+
+      if (mode === 'interval') {
+        intervalId = setInterval(tick, DELAY);
+      } else {
+        timeoutId = setTimeout(tick, DELAY);
+      }
+    });
+  })();
+
+  /* ---------- 06-07 debounce и throttle ---------- */
+  (function(){
+    var input = $('dt-input'), box = $('dt-console');
+    var raw = 0, deb = 0, thr = 0;
+
+    function delay(){ return Number($('dt-delay').value) || 500; }
+
+    function debounce(fn){
+      var timerId = null;
+      return function (value) {
+        clearTimeout(timerId);
+        timerId = setTimeout(function(){ fn(value); }, delay());
+      };
+    }
+
+    function throttle(fn){
+      var isWaiting = false;
+      return function (value) {
+        if (isWaiting) return;
+        fn(value);
+        isWaiting = true;
+        setTimeout(function(){ isWaiting = false; }, delay());
+      };
+    }
+
+    var onDebounced = debounce(function(value){
+      deb++;
+      $('dt-deb').textContent = deb;
+      log(box, 'debounce  → поиск "' + value + '"', 'ok');
+    });
+
+    var onThrottled = throttle(function(value){
+      thr++;
+      $('dt-thr').textContent = thr;
+      log(box, 'throttle  → поиск "' + value + '"');
+    });
+
+    input.addEventListener('input', function(){
+      raw++;
+      $('dt-raw').textContent = raw;
+      onDebounced(input.value);
+      onThrottled(input.value);
+    });
+
+    $('dt-reset').addEventListener('click', function(){
+      raw = deb = thr = 0;
+      $('dt-raw').textContent = '0';
+      $('dt-deb').textContent = '0';
+      $('dt-thr').textContent = '0';
+      input.value = '';
+      clear(box, 'Начните печатать в поле выше');
+    });
+  })();
+
+})();
+</script>

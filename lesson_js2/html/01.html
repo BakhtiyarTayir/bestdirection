@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Замыкания и функции высшего порядка — интерактивный урок JavaScript</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#101A28;
+  --ink-2:#465771;
+  --paper:#E4E9EF;
+  --panel:#FFFFFF;
+  --line:#C6D0DC;
+  --anchor:#1F49D8;
+  --moving:#E11D66;
+  --sun:#F2B705;
+  --grid:rgba(16,26,40,.045);
+  --code-bg:#101A28;
+  --r:10px;
+}
+html[data-theme="dark"]{
+  --ink:#E8EEF6;
+  --ink-2:#9FB0C6;
+  --paper:#0D141E;
+  --panel:#161F2C;
+  --line:#2A3646;
+  --anchor:#6E93FF;
+  --moving:#FF6E9E;
+  --sun:#F7C948;
+  --grid:rgba(232,238,246,.045);
+  --code-bg:#080D14;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  background:var(--paper);
+  background-image:
+    linear-gradient(to right, var(--grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+  background-size:26px 26px;
+  color:var(--ink);
+  font-family:"IBM Plex Sans","Segoe UI",Roboto,Arial,sans-serif;
+  font-size:16px;
+  line-height:1.6;
+}
+
+.shell{max-width:1080px;margin:0 auto;padding:0 20px 90px}
+
+h1,h2,h3{font-family:"Unbounded","IBM Plex Sans",sans-serif;margin:0;line-height:1.12;letter-spacing:-.02em}
+h1{font-size:clamp(28px,5.4vw,52px);font-weight:800}
+h2{font-size:clamp(21px,3.2vw,30px);font-weight:700}
+h3{font-size:17px;font-weight:600;letter-spacing:0}
+p{margin:14px 0 0}
+code,kbd,.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace}
+:not(pre)>code{
+  font-size:.9em;background:rgba(31,73,216,.09);color:var(--anchor);
+  padding:2px 6px;border-radius:5px
+}
+html[data-theme="dark"] :not(pre)>code{background:rgba(110,147,255,.14)}
+.eyebrow{
+  font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-2)
+}
+
+header{padding:64px 0 40px;border-bottom:1px solid var(--line)}
+.lede{max-width:58ch;margin-top:22px;font-size:clamp(17px,2vw,20px);color:var(--ink-2)}
+.lede b{color:var(--ink);font-weight:600}
+
+section{padding:52px 0;border-bottom:1px solid var(--line)}
+.sec-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:8px}
+.sec-num{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--moving);font-weight:500}
+.sec-sub{max-width:62ch;color:var(--ink-2);margin-top:10px}
+.body-copy{max-width:62ch}
+
+pre.code{
+  margin:18px 0 0;background:var(--code-bg);color:#D8E2EF;border-radius:var(--r);
+  padding:16px 18px;overflow-x:auto;font-size:13.5px;line-height:1.75;
+  font-family:"IBM Plex Mono",monospace;
+}
+pre.code b{font-weight:400}
+.s{color:#7FE3C0}.k{color:#8FB6FF}.v{color:#FFD98A}.c{color:#6B7C93;font-style:italic}.p{color:#8494A8}.bad{color:#FF8FAE}
+
+.explain{border-left:3px solid var(--moving);padding:2px 0 2px 16px;margin-top:20px;max-width:62ch}
+.explain h3{margin-bottom:6px}
+.explain p{margin:0;color:var(--ink-2);font-size:14.5px}
+
+.warn{
+  background:rgba(242,183,5,.12);border:1px solid rgba(242,183,5,.5);
+  border-radius:var(--r);padding:14px 16px;font-size:14.5px;margin-top:20px;max-width:64ch
+}
+.warn b{font-weight:600}
+
+/* ---------- интерактивные панели ---------- */
+.lab{
+  margin-top:24px;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r);padding:20px
+}
+.lab-head{
+  display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  flex-wrap:wrap;margin-bottom:16px
+}
+.lab-title{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2)}
+.lab-hint{font-size:13px;color:var(--ink-2)}
+
+button.act{
+  font-family:"IBM Plex Sans",sans-serif;font-size:14px;font-weight:500;
+  background:var(--anchor);color:#fff;border:0;border-radius:8px;
+  padding:9px 15px;cursor:pointer;transition:transform .12s,filter .12s
+}
+button.act:hover{filter:brightness(1.1)}
+button.act:active{transform:translateY(1px)}
+button.act.ghost{background:transparent;color:var(--ink-2);border:1px solid var(--line)}
+button.act.pink{background:var(--moving)}
+button.act[disabled]{opacity:.45;cursor:not-allowed}
+
+.counters{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.counter{
+  border:1px solid var(--line);border-radius:var(--r);padding:16px;
+  background:var(--paper);position:relative
+}
+.counter .name{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-2)}
+.counter .val{font-family:"IBM Plex Mono",monospace;font-size:46px;font-weight:500;line-height:1;margin:10px 0 14px;font-variant-numeric:tabular-nums}
+.counter .env{
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--anchor);
+  background:rgba(31,73,216,.08);border-radius:6px;padding:6px 8px;margin-bottom:12px
+}
+html[data-theme="dark"] .counter .env{background:rgba(110,147,255,.12)}
+.counter .row{display:flex;gap:8px}
+
+.console{
+  margin-top:16px;background:var(--code-bg);border-radius:var(--r);padding:14px 16px;
+  font-family:"IBM Plex Mono",monospace;font-size:13px;line-height:1.7;color:#D8E2EF;
+  min-height:76px;max-height:230px;overflow-y:auto
+}
+.console .ln{display:block;white-space:pre-wrap;word-break:break-word}
+.console .ln.out::before{content:"› ";color:#6B7C93}
+.console .ln.err{color:#FF8FAE}
+.console .ln.ok{color:#7FE3C0}
+.console .empty{color:#6B7C93;font-style:italic}
+
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{
+  font-family:"IBM Plex Mono",monospace;font-size:13px;background:transparent;color:var(--ink-2);
+  border:0;padding:8px 14px;cursor:pointer
+}
+.seg button.on{background:var(--anchor);color:#fff}
+
+.field{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.field label{font-size:13.5px;color:var(--ink-2)}
+.field input[type=range]{width:190px;accent-color:var(--anchor)}
+.field input[type=number],.field input[type=text]{
+  font-family:"IBM Plex Mono",monospace;font-size:14px;padding:7px 10px;
+  border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);width:110px
+}
+.badge{
+  font-family:"IBM Plex Mono",monospace;font-size:12px;padding:3px 9px;border-radius:20px;
+  background:rgba(31,73,216,.1);color:var(--anchor)
+}
+.badge.pink{background:rgba(225,29,102,.1);color:var(--moving)}
+.badge.sun{background:rgba(242,183,5,.16);color:#8A6A00}
+html[data-theme="dark"] .badge.sun{color:var(--sun)}
+
+.tbl{width:100%;border-collapse:collapse;font-size:14.5px;margin-top:14px}
+.tbl th,.tbl td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl th{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);font-weight:500}
+.tbl td:first-child{font-family:"IBM Plex Mono",monospace;color:var(--moving);white-space:nowrap}
+.tbl-wrap{overflow-x:auto}
+
+.tasks{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin-top:14px}
+.task{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--sun);border-radius:var(--r);padding:16px}
+.task .mono{font-size:11px;color:#8A6A00;letter-spacing:.1em;text-transform:uppercase}
+html[data-theme="dark"] .task .mono{color:var(--sun)}
+.task p{margin:8px 0 0;font-size:14px;color:var(--ink-2)}
+.task pre.code{font-size:12.5px;margin-top:10px}
+
+details.q{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+  padding:0;margin-top:10px;overflow:hidden
+}
+details.q>summary{
+  cursor:pointer;padding:14px 16px;font-weight:600;font-size:15px;list-style:none;
+  display:flex;gap:10px;align-items:flex-start
+}
+details.q>summary::-webkit-details-marker{display:none}
+details.q>summary::before{
+  content:"+";font-family:"IBM Plex Mono",monospace;color:var(--moving);flex:none;font-weight:500
+}
+details.q[open]>summary::before{content:"–"}
+details.q .answer{padding:0 16px 16px 38px;color:var(--ink-2);font-size:14.5px}
+details.q .answer p:first-child{margin-top:0}
+
+ol.hw{max-width:64ch;padding-left:22px;margin-top:14px}
+ol.hw li{margin-bottom:14px;color:var(--ink-2)}
+ol.hw li b{color:var(--ink)}
+ul.goals{max-width:64ch;padding-left:22px;margin-top:14px;color:var(--ink-2)}
+ul.goals li{margin-bottom:7px}
+
+footer{padding:40px 0;color:var(--ink-2);font-size:13.5px}
+:focus-visible{outline:2px solid var(--moving);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition-duration:.01ms!important;animation-duration:.01ms!important}}
+@media(max-width:640px){
+  .counter .val{font-size:36px}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<header>
+  <div class="eyebrow">JavaScript 2 · урок 01 · интерактив</div>
+  <h1>Замыкания<br>и функции высшего порядка</h1>
+  <p class="lede">В уроке 10 первого курса вы написали «Банкомат» и увидели подпись «поздравляю, вы написали замыкание». Пора разобраться, что это было — и почему <b>функция помнит переменные, которых больше не существует</b>.</p>
+</header>
+
+<section>
+  <div class="sec-head"><span class="sec-num">00</span><h2>Цели урока</h2></div>
+  <ul class="goals">
+    <li>объяснять, что функция запоминает окружение, в котором была создана;</li>
+    <li>писать функции высшего порядка — принимающие и возвращающие функции;</li>
+    <li>создавать независимые счётчики и приватные данные через замыкание;</li>
+    <li>применять замыкания на практике: фабрики функций, мемоизация, «выполнить один раз»;</li>
+    <li>понимать классическую ловушку с <code>var</code> в цикле;</li>
+    <li>отвечать на типовые вопросы собеседования о замыканиях.</li>
+  </ul>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">01</span><h2>Функция высшего порядка</h2></div>
+  <p class="sec-sub">В первом курсе мы уже передавали функции внутрь других функций — <code>filter</code>, <code>map</code>, <code>reduce</code>. Теперь назовём это точнее.</p>
+
+  <p class="body-copy"><b>Функция высшего порядка</b> — функция, которая делает хотя бы одно из двух: принимает другую функцию как аргумент или возвращает функцию как результат. Первое мы умеем. Второе — новое.</p>
+
+<pre class="code"><span class="k">function</span> <span class="v">makeGreeter</span>(greeting) {
+  <span class="k">return</span> <span class="k">function</span> (name) {
+    console.<span class="v">log</span>(<span class="s">`${greeting}, ${name}!`</span>);
+  };
+}
+
+<span class="k">const</span> salom = <span class="v">makeGreeter</span>(<span class="s">"Салом"</span>);
+<span class="k">const</span> hello = <span class="v">makeGreeter</span>(<span class="s">"Hello"</span>);
+
+<span class="v">salom</span>(<span class="s">"Али"</span>);   <span class="c">// "Салом, Али!"</span>
+<span class="v">hello</span>(<span class="s">"Bobur"</span>); <span class="c">// "Hello, Bobur!"</span></pre>
+
+  <p class="body-copy">Обратите внимание: <code>makeGreeter("Салом")</code> не печатает ничего — она <b>возвращает функцию</b>, которую мы сохранили и вызвали позже. Вызовов получилось два: один создаёт, второй выполняет. Можно и сразу, в две пары скобок: <code>makeGreeter("Привет")("Гуля")</code>.</p>
+
+  <div class="lab">
+    <div class="lab-head">
+      <span class="lab-title">Демо · фабрика приветствий</span>
+      <span class="lab-hint">Соберите приветствие и посмотрите, что запомнила функция</span>
+    </div>
+    <div class="field">
+      <label for="g-greeting">Приветствие</label>
+      <input id="g-greeting" type="text" value="Салом" maxlength="16">
+      <button class="act" id="g-make">Создать функцию</button>
+    </div>
+    <div class="field">
+      <label for="g-name">Имя</label>
+      <input id="g-name" type="text" value="Али" maxlength="16">
+      <button class="act ghost" id="g-call" disabled>Вызвать созданную</button>
+      <span class="badge" id="g-state">функция ещё не создана</span>
+    </div>
+    <div class="console" id="g-console"><span class="empty">Нажмите «Создать функцию»</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">02</span><h2>Главный вопрос урока</h2></div>
+  <p class="sec-sub">Посмотрите на <code>salom</code> внимательно. Функция <code>makeGreeter</code> уже <b>завершилась</b> — её переменные должны были исчезнуть. Но <code>salom("Али")</code> всё ещё знает, что <code>greeting</code> это «Салом».</p>
+
+<pre class="code"><span class="c">makeGreeter("Салом") вызвана → создала функцию → ЗАВЕРШИЛАСЬ
+                                    ↓
+                      а функция всё ещё помнит greeting = "Салом"</span></pre>
+
+  <p class="body-copy">Как? Ответ — замыкание.</p>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">03</span><h2>Лексическое окружение</h2></div>
+  <p class="sec-sub">Вспомним scope chain из урока 10 первого курса: JS ищет переменную изнутри наружу. Ключевая деталь, которую мы тогда не проговорили:</p>
+
+  <p class="body-copy"><b>Функция запоминает то место, где она была объявлена, а не то, откуда её вызвали.</b> Это называется лексической областью видимости: при создании к функции «прикрепляется» ссылка на внешнее окружение — набор переменных, которые её окружали.</p>
+
+<pre class="code"><span class="k">const</span> lang = <span class="s">"глобальный"</span>;
+
+<span class="k">function</span> <span class="v">outer</span>() {
+  <span class="k">const</span> lang = <span class="s">"из outer"</span>;
+  <span class="k">return</span> <span class="k">function</span> <span class="v">inner</span>() {
+    console.<span class="v">log</span>(lang); <span class="c">// смотрит туда, где inner была ОБЪЯВЛЕНА</span>
+  };
+}
+
+<span class="k">const</span> fn = <span class="v">outer</span>();
+<span class="v">fn</span>(); <span class="c">// "из outer" — хотя вызвали её из глобальной области</span></pre>
+
+  <div class="explain">
+    <h3>Определение</h3>
+    <p><b>Замыкание (closure)</b> — функция вместе с сохранённым внешним окружением. Пока живёт функция, живут и переменные, которые ей нужны: сборщик мусора не удалит их, даже если внешняя функция давно завершилась. В JavaScript замыкание образует <b>каждая</b> функция — просто обычно мы этого не замечаем.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">04</span><h2>Счётчик: канонический пример</h2></div>
+  <p class="sec-sub">Каждый вызов внешней функции создаёт <b>новое независимое</b> замыкание. Создайте два счётчика и убедитесь сами: у каждого своя переменная <code>count</code>, снаружи её не достать.</p>
+
+<pre class="code"><span class="k">function</span> <span class="v">makeCounter</span>() {
+  <span class="k">let</span> count = <span class="v">0</span>;        <span class="c">// переменная живёт в замыкании</span>
+
+  <span class="k">return</span> <span class="k">function</span> () {
+    count++;
+    <span class="k">return</span> count;
+  };
+}</pre>
+
+  <div class="lab">
+    <div class="lab-head">
+      <span class="lab-title">Демо · два независимых замыкания</span>
+      <span class="lab-hint">Жмите на кнопки вразнобой — счётчики не связаны</span>
+    </div>
+    <div class="counters">
+      <div class="counter">
+        <div class="name">const counterA = makeCounter()</div>
+        <div class="val" id="cA-val">0</div>
+        <div class="env" id="cA-env">окружение A → count: 0</div>
+        <div class="row">
+          <button class="act" id="cA-inc">counterA()</button>
+          <button class="act ghost" id="cA-reset">сброс</button>
+        </div>
+      </div>
+      <div class="counter">
+        <div class="name">const counterB = makeCounter()</div>
+        <div class="val" id="cB-val">0</div>
+        <div class="env" id="cB-env">окружение B → count: 0</div>
+        <div class="row">
+          <button class="act" id="cB-inc">counterB()</button>
+          <button class="act ghost" id="cB-reset">сброс</button>
+        </div>
+      </div>
+    </div>
+    <div class="field" style="margin-top:16px;margin-bottom:0">
+      <button class="act pink" id="c-peek">console.log(count)</button>
+      <span class="lab-hint">попробуйте достать переменную снаружи</span>
+    </div>
+    <div class="console" id="c-console"><span class="empty">Вызовите счётчики и посмотрите вывод</span></div>
+  </div>
+
+  <p class="body-copy">Это как две коробки, собранные по одному чертежу: устройство общее, содержимое у каждой своё.</p>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">05</span><h2>Приватные данные</h2></div>
+  <p class="sec-sub">Из урока 8 первого курса вы помните: свойства объекта доступны снаружи, испортить их может кто угодно — <code>account.balance = -999999</code>, и никто не помешал. Замыкание даёт настоящую приватность.</p>
+
+<pre class="code"><span class="k">function</span> <span class="v">createAccount</span>(owner, startBalance = <span class="v">0</span>) {
+  <span class="k">let</span> balance = startBalance;   <span class="c">// приватная переменная</span>
+
+  <span class="k">return</span> {
+    <span class="v">deposit</span>(sum) {
+      <span class="k">if</span> (sum &lt;= <span class="v">0</span>) <span class="k">return</span> <span class="s">"Сумма должна быть больше нуля"</span>;
+      balance += sum;
+      <span class="k">return</span> balance;
+    },
+    <span class="v">withdraw</span>(sum) {
+      <span class="k">if</span> (sum &gt; balance) <span class="k">return</span> <span class="s">"Недостаточно средств"</span>;
+      balance -= sum;
+      <span class="k">return</span> balance;
+    },
+    <span class="v">check</span>() {
+      <span class="k">return</span> owner + <span class="s">": "</span> + balance;
+    }
+  };
+}</pre>
+
+  <div class="lab">
+    <div class="lab-head">
+      <span class="lab-title">Демо · счёт с приватным балансом</span>
+      <span class="lab-hint">Попробуйте испортить баланс напрямую — не выйдет</span>
+    </div>
+    <div class="counter" style="max-width:340px">
+      <div class="name">const acc = createAccount("Али", 100000)</div>
+      <div class="val" id="acc-val">100 000</div>
+      <div class="env" id="acc-env">приватная balance недоступна снаружи</div>
+    </div>
+    <div class="field" style="margin-top:16px">
+      <label for="acc-sum">Сумма</label>
+      <input id="acc-sum" type="number" value="50000" step="10000" min="0">
+      <button class="act" id="acc-dep">deposit()</button>
+      <button class="act" id="acc-wd">withdraw()</button>
+    </div>
+    <div class="field" style="margin-bottom:0">
+      <button class="act pink" id="acc-hack">acc.balance = -999999</button>
+      <button class="act ghost" id="acc-read">console.log(acc.balance)</button>
+    </div>
+    <div class="console" id="acc-console"><span class="empty">Проведите операцию по счёту</span></div>
+  </div>
+
+  <p class="body-copy">Это тот самый «Банкомат» из первого курса — теперь у приёма есть имя. Такая конструкция называется <b>модульным паттерном</b>: наружу выставлены только методы, состояние спрятано.</p>
+
+  <h3 style="margin-top:28px">IIFE — функция, вызванная сразу</h3>
+  <p class="body-copy">Иногда замыкание нужно один раз и без имени. Тогда функцию объявляют и тут же вызывают:</p>
+
+<pre class="code"><span class="k">const</span> config = (<span class="k">function</span> () {
+  <span class="k">const</span> apiKey = <span class="s">"секрет"</span>;        <span class="c">// снаружи недоступен</span>
+  <span class="k">let</span> requests = <span class="v">0</span>;
+
+  <span class="k">return</span> {
+    <span class="v">makeRequest</span>() {
+      requests++;
+      <span class="k">return</span> <span class="s">`Запрос №${requests} с ключом ${apiKey}`</span>;
+    }
+  };
+})();  <span class="c">// ← скобки в конце вызывают функцию немедленно</span>
+
+console.<span class="v">log</span>(config.<span class="v">makeRequest</span>()); <span class="c">// "Запрос №1 с ключом секрет"</span>
+console.<span class="v">log</span>(config.apiKey);        <span class="c">// undefined</span></pre>
+
+  <p class="body-copy">IIFE — Immediately Invoked Function Expression, «немедленно вызываемое функциональное выражение». До появления модулей так изолировали код целых библиотек. Сегодня встречается в основном в чужом коде — важно узнавать.</p>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">06</span><h2>Замыкания в работе</h2></div>
+  <p class="sec-sub">Три приёма, которые вы будете использовать постоянно.</p>
+
+  <h3>Фабрика функций</h3>
+  <p class="body-copy">Одна фабрика — сколько угодно специализированных функций. Каждая помнит свой множитель.</p>
+
+<pre class="code"><span class="k">function</span> <span class="v">multiplier</span>(factor) {
+  <span class="k">return</span> n =&gt; n * factor;
+}
+
+<span class="k">const</span> double = <span class="v">multiplier</span>(<span class="v">2</span>);
+<span class="k">const</span> withVat = <span class="v">multiplier</span>(<span class="v">1.12</span>);</pre>
+
+  <div class="lab">
+    <div class="lab-head">
+      <span class="lab-title">Демо · фабрика умножителей</span>
+      <span class="lab-hint">Создайте несколько функций с разным множителем</span>
+    </div>
+    <div class="field">
+      <label for="m-factor">factor</label>
+      <input id="m-factor" type="number" value="2" step="0.5">
+      <button class="act" id="m-make">multiplier(factor)</button>
+      <label for="m-input" style="margin-left:8px">применить к</label>
+      <input id="m-input" type="number" value="10">
+    </div>
+    <div id="m-list" class="counters"></div>
+    <div class="console" id="m-console"><span class="empty">Создайте хотя бы одну функцию</span></div>
+  </div>
+
+  <h3 style="margin-top:32px">Выполнить только один раз</h3>
+  <p class="body-copy">Так защищают от двойной отправки формы по двойному клику: флаг живёт в замыкании.</p>
+
+<pre class="code"><span class="k">function</span> <span class="v">once</span>(fn) {
+  <span class="k">let</span> called = <span class="k">false</span>;
+  <span class="k">let</span> result;
+
+  <span class="k">return</span> <span class="k">function</span> (...args) {
+    <span class="k">if</span> (called) <span class="k">return</span> result;
+    called = <span class="k">true</span>;
+    result = <span class="v">fn</span>(...args);
+    <span class="k">return</span> result;
+  };
+}</pre>
+
+  <div class="lab">
+    <div class="lab-head">
+      <span class="lab-title">Демо · once()</span>
+      <span class="lab-hint">Жмите сколько угодно — регистрация случится один раз</span>
+    </div>
+    <div class="field" style="margin-bottom:0">
+      <input id="once-name" type="text" value="Али" maxlength="16">
+      <button class="act" id="once-run">register(name)</button>
+      <button class="act ghost" id="once-reset">создать заново</button>
+      <span class="badge pink" id="once-count">вызовов: 0 · выполнений: 0</span>
+    </div>
+    <div class="console" id="once-console"><span class="empty">Нажмите «register»</span></div>
+  </div>
+
+  <h3 style="margin-top:32px">Мемоизация — запоминание результатов</h3>
+  <p class="body-copy">Хранилище результатов живёт в замыкании. Первый вызов считает долго, повторный — мгновенно берёт из кэша.</p>
+
+<pre class="code"><span class="k">function</span> <span class="v">memoize</span>(fn) {
+  <span class="k">const</span> cache = {};                 <span class="c">// хранилище в замыкании</span>
+
+  <span class="k">return</span> <span class="k">function</span> (n) {
+    <span class="k">if</span> (n <span class="k">in</span> cache) <span class="k">return</span> cache[n];
+    cache[n] = <span class="v">fn</span>(n);
+    <span class="k">return</span> cache[n];
+  };
+}</pre>
+
+  <div class="lab">
+    <div class="lab-head">
+      <span class="lab-title">Демо · memoize() с замером времени</span>
+      <span class="lab-hint">Посчитайте одно и то же число дважды</span>
+    </div>
+    <div class="field" style="margin-bottom:0">
+      <label for="memo-n">n</label>
+      <input id="memo-n" type="number" value="9" min="1" max="40">
+      <button class="act" id="memo-run">fastSquare(n)</button>
+      <button class="act ghost" id="memo-clear">очистить кэш</button>
+      <span class="badge" id="memo-keys">в кэше: —</span>
+    </div>
+    <div class="console" id="memo-console"><span class="empty">Нажмите «fastSquare»</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">07</span><h2>Ловушка: замыкание в цикле</h2></div>
+  <p class="sec-sub">Классическая задача с собеседований. Что выведет код — <code>0 1 2</code> или <code>3 3 3</code>? Переключите объявление и проверьте.</p>
+
+  <div class="lab">
+    <div class="lab-head">
+      <span class="lab-title">Демо · var против let в цикле</span>
+      <span class="lab-hint">Одна переменная на весь цикл или новая на каждой итерации</span>
+    </div>
+    <div class="field">
+      <div class="seg" id="loop-seg">
+        <button data-kw="var" class="on">var</button>
+        <button data-kw="let">let</button>
+      </div>
+      <button class="act" id="loop-run">Запустить</button>
+      <span class="badge" id="loop-env">окружений: 1</span>
+    </div>
+<pre class="code" id="loop-code"></pre>
+    <div class="console" id="loop-console"><span class="empty">Нажмите «Запустить»</span></div>
+  </div>
+
+  <div class="explain">
+    <h3>Почему так</h3>
+    <p>У <code>var</code> нет блочной области видимости, поэтому <code>i</code> <b>одна на весь цикл</b>. Все три функции замкнулись на одну и ту же переменную, а к моменту вызова она давно равна 3. <code>let</code> создаёт новую переменную на каждой итерации — и каждая функция замыкается на свою. Вот и ещё один аргумент против <code>var</code>, теперь понятный до конца.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">08</span><h2>Замыкания вокруг нас</h2></div>
+  <p class="sec-sub">Вы пользовались ими весь первый курс, не зная названия.</p>
+
+<pre class="code"><span class="k">const</span> limit = <span class="v">100</span>;
+<span class="k">const</span> cheap = prices.<span class="v">filter</span>(p =&gt; p &lt; limit);   <span class="c">// колбэк замкнулся на limit</span>
+
+<span class="k">const</span> name = <span class="s">"Али"</span>;
+btn.<span class="v">addEventListener</span>(<span class="s">"click"</span>, () =&gt; {
+  console.<span class="v">log</span>(<span class="s">`Привет, ${name}`</span>);            <span class="c">// обработчик замкнулся на name</span>
+});</pre>
+
+  <p class="body-copy">Именно поэтому обработчик события, назначенный один раз, помнит переменные из момента подписки. В третьем разделе это станет ещё важнее: асинхронный код выполняется позже, а данные ему нужны те, что были в момент запуска.</p>
+
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>Приём</th><th>Что живёт в замыкании</th><th>Зачем</th></tr></thead>
+      <tbody>
+        <tr><td>makeCounter</td><td>счётчик <code>count</code></td><td>состояние между вызовами без глобальных переменных</td></tr>
+        <tr><td>createAccount</td><td><code>balance</code> и методы</td><td>приватные данные, модульный паттерн</td></tr>
+        <tr><td>multiplier</td><td>параметр <code>factor</code></td><td>фабрика специализированных функций</td></tr>
+        <tr><td>once</td><td>флаг <code>called</code></td><td>защита от повторного выполнения</td></tr>
+        <tr><td>memoize</td><td>объект <code>cache</code></td><td>ускорение повторных вычислений</td></tr>
+        <tr><td>debounce</td><td><code>timerId</code></td><td>урок 3 — ограничение частоты вызовов</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">09</span><h2>Практика на уроке</h2></div>
+  <div class="tasks">
+    <div class="task">
+      <div class="mono">Задание 1</div>
+      <p><b>Разминка.</b> Напишите <code>makePower(exponent)</code>, возвращающую функцию возведения в степень. Создайте <code>square</code> и <code>cube</code>, проверьте на числах 2, 3 и 5.</p>
+    </div>
+    <div class="task">
+      <div class="mono">Задание 2</div>
+      <p><b>Два счётчика.</b> Создайте два счётчика через <code>makeCounter</code>, вызовите первый три раза, второй один. Докажите выводом, что они независимы. Затем добавьте в возвращаемый объект методы <code>reset()</code> и <code>value()</code>.</p>
+    </div>
+    <div class="task">
+      <div class="mono">Задание 3</div>
+      <p><b>Копилка.</b> Функция <code>createWallet(owner)</code> возвращает объект с методами <code>add(sum)</code>, <code>spend(sum)</code> (с проверкой) и <code>report()</code>. Баланс должен быть недоступен снаружи — докажите это выводом в консоль.</p>
+    </div>
+    <div class="task">
+      <div class="mono">Задание 4</div>
+      <p><b>Предсказание.</b> Не запуская, скажите, что выведет каждый фрагмент, потом проверьте:</p>
+<pre class="code"><span class="c">// A</span>
+<span class="k">function</span> <span class="v">f</span>(){ <span class="k">let</span> x=<span class="v">1</span>; <span class="k">return</span> ()=&gt;++x; }
+<span class="k">const</span> g = <span class="v">f</span>();
+console.<span class="v">log</span>(<span class="v">g</span>(), <span class="v">g</span>(), <span class="v">f</span>()());
+
+<span class="c">// B</span>
+<span class="k">const</span> a=[];
+<span class="k">for</span>(<span class="k">var</span> i=<span class="v">0</span>;i&lt;<span class="v">3</span>;i++){ a.<span class="v">push</span>(()=&gt;i); }
+console.<span class="v">log</span>(a[<span class="v">0</span>](), a[<span class="v">1</span>]());</pre>
+    </div>
+    <div class="task">
+      <div class="mono">Задание 5</div>
+      <p><b>Лимит попыток.</b> Функция <code>limitCalls(fn, max)</code> возвращает функцию, которую можно вызвать не более <code>max</code> раз; дальше она выводит «Лимит исчерпан». Проверьте на пяти вызовах при <code>max = 3</code>.</p>
+    </div>
+    <div class="task">
+      <div class="mono">Задание 6*</div>
+      <p><b>Мемоизация факториала.</b> Напишите <code>factorial(n)</code> циклом, оберните в <code>memoize</code> и замерьте разницу между первым и вторым вызовом через <code>console.time("calc")</code> / <code>console.timeEnd("calc")</code>.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">10</span><h2>Вопросы с собеседований</h2></div>
+  <p class="sec-sub">Отвечайте вслух, потом раскрывайте ответ.</p>
+
+  <details class="q"><summary>Что такое замыкание?</summary>
+    <div class="answer"><p>Замыкание — функция вместе с сохранённым внешним лексическим окружением. Функция запоминает переменные того места, где была объявлена, и продолжает иметь к ним доступ даже после того, как внешняя функция завершилась. В JavaScript замыкание образует каждая функция, просто чаще всего это незаметно.</p></div>
+  </details>
+
+  <details class="q"><summary>Что такое функция высшего порядка?</summary>
+    <div class="answer"><p>Функция, которая принимает другую функцию как аргумент и/или возвращает функцию. Примеры из стандартной библиотеки — <code>map</code>, <code>filter</code>, <code>reduce</code>, <code>addEventListener</code>. Это возможно потому, что функции в JS — обычные значения, которые можно передавать и возвращать.</p></div>
+  </details>
+
+  <details class="q"><summary>Зачем нужны замыкания на практике?</summary>
+    <div class="answer"><p>Приватные данные и модульный паттерн (состояние спрятано, наружу выставлены методы), фабрики функций, мемоизация и кэширование, функции-обёртки вроде <code>once</code>, <code>debounce</code>, <code>throttle</code>, а также счётчики и любое сохранение состояния между вызовами без глобальных переменных.</p></div>
+  </details>
+
+  <details class="q"><summary>Будут ли счётчики, созданные одной фабрикой, независимы?</summary>
+    <div class="answer"><p>Да. Каждый вызов внешней функции создаёт новое лексическое окружение, поэтому у каждого счётчика своя переменная. Общим остаётся только устройство «по чертежу», данные не пересекаются.</p></div>
+  </details>
+
+  <details class="q"><summary>Что такое IIFE и зачем оно нужно?</summary>
+    <div class="answer"><p>Immediately Invoked Function Expression — функция, которая объявляется и тут же вызывается: <code>(function () { … })()</code>. Создаёт изолированную область видимости, чтобы переменные не попали в глобальную. До появления ES-модулей это был основной способ изолировать код библиотеки; сегодня используется редко, но часто встречается в старом коде.</p></div>
+  </details>
+
+  <details class="q"><summary>Могут ли замыкания привести к утечке памяти?</summary>
+    <div class="answer"><p>Да. Пока существует функция-замыкание, сборщик мусора не может освободить переменные, на которые она ссылается. Если такая функция висит в долгоживущем обработчике события или в таймере и удерживает большой объект, память не освободится. Лечится снятием обработчика и очисткой ссылок, когда они больше не нужны.</p></div>
+  </details>
+
+  <details class="q"><summary>Практическая задача: почему выводится 3 3 3 и как починить?</summary>
+    <div class="answer"><p><code>var</code> не имеет блочной области видимости — переменная <code>i</code> одна на весь цикл, и все три функции замкнулись именно на неё. К моменту вызова цикл давно закончился и <code>i</code> равна 3.</p><p>Починка: заменить <code>var</code> на <code>let</code> — тогда на каждой итерации создаётся отдельная переменная и каждая функция замыкается на свою копию. Исторический вариант до ES6 — обернуть тело цикла в IIFE с параметром.</p></div>
+  </details>
+</section>
+
+<section style="border-bottom:none">
+  <div class="sec-head"><span class="sec-num">11</span><h2>Домашнее задание</h2></div>
+  <ol class="hw">
+    <li><b>«Банкомат 2.0».</b> Переписать <code>createAtm</code> из первого курса: приватный баланс, методы <code>deposit</code>, <code>withdraw</code>, <code>check</code> и <b>история операций</b> — приватный массив, доступный только через метод <code>history()</code>. Докажите выводом, что ни баланс, ни массив снаружи не достать.</li>
+    <li><b>«Генератор ID».</b> Функция <code>makeIdGenerator(prefix)</code> возвращает функцию, выдающую <code>"user-1"</code>, <code>"user-2"</code>, … Создайте два генератора с разными префиксами и покажите, что их счётчики независимы.</li>
+    <li><b>«Кэш запросов».</b> Функция <code>withCache(fn)</code> кэширует результаты по строковому аргументу. Оберните функцию, которая «долго» ищет город в массиве, и покажите разницу между первым и повторным вызовом.</li>
+    <li><b>Разбор ловушки.</b> Воспроизведите пример <code>3 3 3</code>, почините его двумя способами: через <code>let</code> и через IIFE. Запишите комментарием, что именно меняется в каждом случае.</li>
+    <li>Подготовьте ответы на вопросы собеседования; последнюю задачу — уметь объяснить у доски со схемой окружений.</li>
+  </ol>
+</section>
+
+<footer>
+  JavaScript 2 · Раздел 1 «Функции на глубину» · Урок 1 из 3 → далее: <b>this и контекст вызова</b>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  function $(id){ return document.getElementById(id); }
+
+  function log(box, text, cls){
+    var empty = box.querySelector('.empty');
+    if (empty) box.innerHTML = '';
+    var line = document.createElement('span');
+    line.className = 'ln out' + (cls ? ' ' + cls : '');
+    line.textContent = text;
+    box.appendChild(line);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function clear(box, placeholder){
+    box.innerHTML = '<span class="empty">' + placeholder + '</span>';
+  }
+
+  /* ---------- 01 фабрика приветствий ---------- */
+  (function(){
+    var greeting = $('g-greeting'), name = $('g-name');
+    var make = $('g-make'), call = $('g-call');
+    var state = $('g-state'), box = $('g-console');
+    var greeter = null;
+
+    function makeGreeter(text){
+      return function (who){ return text + ', ' + who + '!'; };
+    }
+
+    make.addEventListener('click', function(){
+      var text = greeting.value.trim() || 'Привет';
+      greeter = makeGreeter(text);
+      call.disabled = false;
+      state.textContent = 'функция помнит greeting = "' + text + '"';
+      log(box, 'const salom = makeGreeter("' + text + '")  → функция создана, ничего не напечатала');
+    });
+
+    call.addEventListener('click', function(){
+      if (!greeter) return;
+      var who = name.value.trim() || 'гость';
+      log(box, 'salom("' + who + '")  → ' + greeter(who), 'ok');
+    });
+  })();
+
+  /* ---------- 04 два счётчика ---------- */
+  (function(){
+    var box = $('c-console');
+
+    function makeCounter(){
+      var count = 0;
+      return { inc: function(){ count++; return count; },
+               reset: function(){ count = 0; },
+               peek: function(){ return count; } };
+    }
+
+    function wire(letter){
+      var counter = makeCounter();
+      var val = $('c' + letter + '-val');
+      var env = $('c' + letter + '-env');
+
+      function paint(){
+        val.textContent = counter.peek();
+        env.textContent = 'окружение ' + letter + ' → count: ' + counter.peek();
+      }
+
+      $('c' + letter + '-inc').addEventListener('click', function(){
+        var result = counter.inc();
+        paint();
+        log(box, 'counter' + letter + '()  → ' + result, 'ok');
+      });
+
+      $('c' + letter + '-reset').addEventListener('click', function(){
+        counter.reset();
+        paint();
+        log(box, 'counter' + letter + '.reset()  → 0');
+      });
+    }
+
+    wire('A');
+    wire('B');
+
+    $('c-peek').addEventListener('click', function(){
+      log(box, 'console.log(count)  → ReferenceError: count is not defined', 'err');
+    });
+  })();
+
+  /* ---------- 05 приватный счёт ---------- */
+  (function(){
+    var box = $('acc-console'), val = $('acc-val'), env = $('acc-env');
+    var sumInput = $('acc-sum');
+
+    function createAccount(owner, start){
+      var balance = start;
+      return {
+        deposit: function(sum){
+          if (!(sum > 0)) return { ok:false, msg:'Сумма должна быть больше нуля' };
+          balance += sum;
+          return { ok:true, msg:'баланс: ' + balance };
+        },
+        withdraw: function(sum){
+          if (!(sum > 0)) return { ok:false, msg:'Сумма должна быть больше нуля' };
+          if (sum > balance) return { ok:false, msg:'Недостаточно средств' };
+          balance -= sum;
+          return { ok:true, msg:'баланс: ' + balance };
+        },
+        check: function(){ return balance; }
+      };
+    }
+
+    var acc = createAccount('Али', 100000);
+
+    function paint(){
+      val.textContent = acc.check().toLocaleString('ru-RU');
+    }
+
+    function amount(){ return Number(sumInput.value); }
+
+    $('acc-dep').addEventListener('click', function(){
+      var r = acc.deposit(amount());
+      paint();
+      log(box, 'acc.deposit(' + amount() + ')  → ' + r.msg, r.ok ? 'ok' : 'err');
+    });
+
+    $('acc-wd').addEventListener('click', function(){
+      var r = acc.withdraw(amount());
+      paint();
+      log(box, 'acc.withdraw(' + amount() + ')  → ' + r.msg, r.ok ? 'ok' : 'err');
+    });
+
+    $('acc-hack').addEventListener('click', function(){
+      acc.balance = -999999;   // создаётся ПОСТОРОННЕЕ свойство
+      paint();
+      log(box, 'acc.balance = -999999  → создано новое свойство объекта, приватная balance не тронута', 'err');
+      log(box, 'acc.check()  → ' + acc.check(), 'ok');
+      env.textContent = 'acc.balance это чужое свойство, метод check() читает приватную переменную';
+    });
+
+    $('acc-read').addEventListener('click', function(){
+      log(box, 'console.log(acc.balance)  → ' + acc.balance, 'err');
+    });
+
+    paint();
+  })();
+
+  /* ---------- 06 фабрика умножителей ---------- */
+  (function(){
+    var list = $('m-list'), box = $('m-console');
+    var made = 0;
+
+    function multiplier(factor){
+      return function (n){ return n * factor; };
+    }
+
+    $('m-make').addEventListener('click', function(){
+      var factor = Number($('m-factor').value);
+      if (Number.isNaN(factor)) { log(box, 'factor должен быть числом', 'err'); return; }
+      made++;
+
+      var fn = multiplier(factor);
+      var card = document.createElement('div');
+      card.className = 'counter';
+      card.innerHTML =
+        '<div class="name">const fn' + made + ' = multiplier(' + factor + ')</div>' +
+        '<div class="val">—</div>' +
+        '<div class="env">окружение помнит factor: ' + factor + '</div>' +
+        '<div class="row"><button class="act">fn' + made + '(n)</button></div>';
+
+      var out = card.querySelector('.val');
+      card.querySelector('button').addEventListener('click', function(){
+        var n = Number($('m-input').value);
+        var result = fn(n);
+        out.textContent = Number.isInteger(result) ? result : result.toFixed(2);
+        log(box, 'fn' + made + '(' + n + ')  → ' + out.textContent + '   (factor = ' + factor + ')', 'ok');
+      });
+
+      list.appendChild(card);
+      log(box, 'создана функция, замкнувшая factor = ' + factor);
+    });
+  })();
+
+  /* ---------- 06 once ---------- */
+  (function(){
+    var box = $('once-console'), counter = $('once-count');
+    var calls = 0, runs = 0, wrapped = null;
+
+    function once(fn){
+      var called = false, result;
+      return function (arg){
+        if (called) return result;
+        called = true;
+        result = fn(arg);
+        return result;
+      };
+    }
+
+    function build(){
+      calls = 0; runs = 0;
+      wrapped = once(function (name){
+        runs++;
+        return 'Пользователь ' + name + ' создан';
+      });
+      paint();
+    }
+
+    function paint(){
+      counter.textContent = 'вызовов: ' + calls + ' · выполнений: ' + runs;
+    }
+
+    $('once-run').addEventListener('click', function(){
+      calls++;
+      var name = $('once-name').value.trim() || 'гость';
+      var result = wrapped(name);
+      paint();
+      log(box, 'register("' + name + '")  → ' + result, runs === 1 && calls === 1 ? 'ok' : '');
+    });
+
+    $('once-reset').addEventListener('click', function(){
+      build();
+      clear(box, 'Создана новая обёртка — флаг called снова false');
+    });
+
+    build();
+  })();
+
+  /* ---------- 06 memoize ---------- */
+  (function(){
+    var box = $('memo-console'), keys = $('memo-keys');
+    var cache = {};
+
+    function slowSquare(n){
+      var sum = 0;
+      for (var i = 0; i < 4e6; i++) { sum += i % 3; }   // имитация долгих вычислений
+      return n * n + (sum > -1 ? 0 : 1);
+    }
+
+    function paintKeys(){
+      var list = Object.keys(cache);
+      keys.textContent = 'в кэше: ' + (list.length ? list.join(', ') : '—');
+    }
+
+    $('memo-run').addEventListener('click', function(){
+      var n = Number($('memo-n').value);
+      if (Number.isNaN(n)) { log(box, 'n должен быть числом', 'err'); return; }
+
+      var start = performance.now();
+      var fromCache = n in cache;
+      if (!fromCache) cache[n] = slowSquare(n);
+      var result = cache[n];
+      var ms = (performance.now() - start).toFixed(1);
+
+      paintKeys();
+      log(box,
+        'fastSquare(' + n + ')  → ' + result + '   ' +
+        (fromCache ? 'из кэша, ' : 'посчитано, ') + ms + ' мс',
+        fromCache ? 'ok' : '');
+    });
+
+    $('memo-clear').addEventListener('click', function(){
+      cache = {};
+      paintKeys();
+      clear(box, 'Кэш очищен — следующий вызов снова будет долгим');
+    });
+
+    paintKeys();
+  })();
+
+  /* ---------- 07 var / let ---------- */
+  (function(){
+    var seg = $('loop-seg'), codeBox = $('loop-code'), box = $('loop-console'), envBadge = $('loop-env');
+    var keyword = 'var';
+
+    function paintCode(){
+      codeBox.innerHTML =
+        '<span class="k">const</span> fns = [];\n\n' +
+        '<span class="k">for</span> (<span class="k">' + keyword + '</span> i = <span class="v">0</span>; i &lt; <span class="v">3</span>; i++) {\n' +
+        '  fns.<span class="v">push</span>(() =&gt; console.<span class="v">log</span>(i));\n}\n\n' +
+        'fns.<span class="v">forEach</span>(fn =&gt; <span class="v">fn</span>());';
+      envBadge.textContent = keyword === 'var'
+        ? 'окружений: 1 — переменная одна на весь цикл'
+        : 'окружений: 3 — своя переменная на каждой итерации';
+    }
+
+    seg.addEventListener('click', function(e){
+      var btn = e.target.closest('button');
+      if (!btn) return;
+      keyword = btn.dataset.kw;
+      Array.prototype.forEach.call(seg.querySelectorAll('button'), function(b){
+        b.classList.toggle('on', b === btn);
+      });
+      paintCode();
+      clear(box, 'Нажмите «Запустить»');
+    });
+
+    $('loop-run').addEventListener('click', function(){
+      var fns = [];
+
+      if (keyword === 'var') {
+        var i;                                  // одна переменная на весь цикл
+        for (i = 0; i < 3; i++) {
+          fns.push(function(){ return i; });    // все три замкнулись на неё же
+        }
+      } else {
+        for (let j = 0; j < 3; j++) {           // своя переменная на каждой итерации
+          fns.push(function(){ return j; });
+        }
+      }
+
+      clear(box, '');
+      var results = fns.map(function(fn){ return fn(); });
+      results.forEach(function(value, index){
+        log(box, 'fns[' + index + ']()  → ' + value, keyword === 'let' ? 'ok' : 'err');
+      });
+      log(box, 'итого: ' + results.join(' '), keyword === 'let' ? 'ok' : 'err');
+    });
+
+    paintCode();
+  })();
+
+})();
+</script>
+</body>
+</html>
