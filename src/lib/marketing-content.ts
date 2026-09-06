@@ -156,7 +156,7 @@ export async function findLandingCourse(slug: string): Promise<LandingCourse | u
   return courses.find((c) => c.slug === slug);
 }
 
-// ─── Страницы (bestdirection.uz/<slug>) ──────────────────────────────────
+// ─── Страницы (best-direction.uz/<slug>) ──────────────────────────────────
 
 /** Блок Editor.js; data зависит от типа блока */
 export interface EditorBlock {

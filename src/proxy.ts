@@ -2,7 +2,7 @@ import createMiddleware from "next-intl/middleware";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { locales, defaultLocale, localePrefix } from "./i18n/config";
-import { isMarketingHost, MARKETING_DEFAULT_LOCALE } from "./lib/marketing-domain";
+import { isMarketingHost, MARKETING_DEFAULT_LOCALE, MARKETING_HOST_HEADER } from "./lib/marketing-domain";
 
 const intlMiddleware = createMiddleware({
   locales,
@@ -29,10 +29,36 @@ export function proxy(request: NextRequest) {
     return rewriteToMarketing;
   }
 
+  // Пути лендинга уже несут локаль сегментом (/marketing/<locale>/...), поэтому
+  // intl-middleware им противопоказан: с localePrefix:'as-needed' он дописывает
+  // префикс локали и превращает /marketing/ru в /ru/marketing/ru, под который
+  // роута нет. Важно в проде: Next прогоняет proxy повторно на внутреннем
+  // rewrite, причём с подменённым Host (localhost вместо публичного домена),
+  // так что проверка isMarketingHost на втором проходе уже не спасает и без
+  // этого выхода запрос уходит в бесконечный редирект.
+  if (request.nextUrl.pathname.startsWith("/marketing")) {
+    const response = NextResponse.next();
+    addSecurityHeaders(response);
+    return response;
+  }
+
   const rewriteToPublicHomework = getPublicHomeworkRewrite(request);
   if (rewriteToPublicHomework) {
     addSecurityHeaders(rewriteToPublicHomework);
     return rewriteToPublicHomework;
+  }
+
+  // Next 16 прогоняет proxy повторно на внутреннем rewrite. Для intl-middleware
+  // с localePrefix:'as-needed' это фатально: он переписывает /login в /ru/login,
+  // на втором проходе видит префикс локали по умолчанию и редиректит обратно на
+  // /login — получается бесконечный цикл (в dev его нет, повторного прогона там
+  // не происходит). Путь, где локаль уже стоит первым сегментом, повторно
+  // обрабатывать не нужно — локаль берётся из параметра маршрута.
+  const localeSegment = request.nextUrl.pathname.split("/")[1];
+  if (locales.includes(localeSegment as (typeof locales)[number])) {
+    const passthrough = NextResponse.next();
+    addSecurityHeaders(passthrough);
+    return passthrough;
   }
 
   const response = intlMiddleware(request);
@@ -51,9 +77,16 @@ function getMarketingRewrite(request: NextRequest): NextResponse | null {
   const locale = hasLocalePrefix ? firstSegment! : MARKETING_DEFAULT_LOCALE;
   const rest = (hasLocalePrefix ? segments.slice(1) : segments).join("/");
 
+  // Next перезапускает proxy на внутреннем rewrite и подменяет Host на
+  // localhost, поэтому исходный домен layout лендинга получает отдельным
+  // заголовком. Значение всё равно проверяется через isMarketingHost, а сам
+  // лендинг — публичная страница, так что подделка заголовка ничего не открывает.
+  const headers = new Headers(request.headers);
+  headers.set(MARKETING_HOST_HEADER, host);
+
   const rewriteUrl = request.nextUrl.clone();
   rewriteUrl.pathname = `/marketing/${locale}${rest ? `/${rest}` : ""}`;
-  return NextResponse.rewrite(rewriteUrl);
+  return NextResponse.rewrite(rewriteUrl, { request: { headers } });
 }
 
 function getPublicHomeworkRewrite(request: NextRequest): NextResponse | null {

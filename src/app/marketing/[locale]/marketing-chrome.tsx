@@ -4,7 +4,7 @@ import { LMS_URL } from "@/lib/marketing-domain";
 import { CONTACT_PHONE, CONTACT_TELEGRAM_URL } from "@/lib/marketing-contacts";
 
 // Общие шапка и футер лендинга: используются главной страницей и
-// произвольными страницами (bestdirection.uz/<slug>). Серверные компоненты —
+// произвольными страницами (best-direction.uz/<slug>). Серверные компоненты —
 // mt передаётся как функция, клиентской границы здесь нет.
 
 type TextFn = (key: string, values?: Record<string, string | number>) => string;

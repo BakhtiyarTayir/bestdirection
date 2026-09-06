@@ -1,7 +1,7 @@
 const RESEND_API_URL = "https://api.resend.com/emails";
 
 const FROM =
-  process.env.EMAIL_FROM || "Best Direction <no-reply@bestdirection.uz>";
+  process.env.EMAIL_FROM || "Best Direction <no-reply@best-direction.uz>";
 
 interface VerificationEmailTexts {
   subject: string;

@@ -29,8 +29,13 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
-# Prisma schema + migrations kept for reference / manual migrate steps (tiny).
+# Схема и миграции + CLI Prisma: entrypoint накатывает migrate deploy при старте.
+# Standalone-сборка тянет только @prisma/client, поэтому CLI копируем отдельно.
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Ensure uploads + Next.js image cache dirs exist and are writable by the app user.
 # /app/uploads — приватные файлы (сдачи ДЗ), НЕ раздаются статикой
@@ -41,4 +46,5 @@ USER nextjs
 
 EXPOSE 3000
 
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", "server.js"]
