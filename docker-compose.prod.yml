@@ -15,53 +15,43 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
-  piston:
-    image: ghcr.io/engineer-man/piston
-    restart: unless-stopped
-    privileged: true
-    ports:
-      - "127.0.0.1:2000:2000"
-    environment:
-      PISTON_RUN_TIMEOUT: 30000
-      PISTON_COMPILE_TIMEOUT: 30000
-      PISTON_OUTPUT_MAX_SIZE: 65536
-    mem_limit: 448m
-    volumes:
-      - piston-packages:/piston/packages
-    tmpfs:
-      - /piston/jobs:exec,size=128m
+    # На сервере 956 МБ RAM — Postgres надо ограничить, иначе он съест кэш
+    # под себя и приложению не останется места.
+    mem_limit: 256m
+    shm_size: 128m
 
   app:
-    build: .
+    # Образ собирается на раннере GitHub и приезжает готовым: next build берёт
+    # до 2 ГБ, на 1 CPU / 956 МБ он бы не прошёл. Локальную сборку можно
+    # включить, раскомментировав build.
+    image: ${APP_IMAGE:-bestdirection-app:latest}
+    # build: .
     restart: unless-stopped
     ports:
-      - "127.0.0.1:3000:3000"
+      # Наружу отдаёт Caddy; пока его нет — слушаем 80 напрямую
+      - "${APP_BIND:-127.0.0.1:3000}:3000"
     environment:
       DATABASE_URL: postgresql://bestdirection:${DB_PASSWORD:-bestdirectionpassword}@db:5432/bestdirection?schema=public
-      AUTH_SECRET: ${AUTH_SECRET:-changeme}
-      AUTH_URL: ${AUTH_URL:-https://course.it-school-official.uz}
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      NEXTAUTH_URL: ${NEXTAUTH_URL:-https://course.it-school-official.uz}
+      AUTH_SECRET: ${AUTH_SECRET:?нужен AUTH_SECRET}
+      AUTH_URL: ${AUTH_URL:?нужен AUTH_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-${AUTH_SECRET}}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-${AUTH_URL}}
       AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-true}
-      MARKETING_DOMAIN: ${MARKETING_DOMAIN:-it-school-official.uz}
+      MARKETING_DOMAIN: ${MARKETING_DOMAIN:?нужен MARKETING_DOMAIN}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
       NEXT_PUBLIC_TELEGRAM_BOT_USERNAME: ${NEXT_PUBLIC_TELEGRAM_BOT_USERNAME:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-}
-      PISTON_API_URL: http://piston:2000/api/v2
     volumes:
       - uploads:/app/public/uploads
       - private_uploads:/app/uploads
     depends_on:
       db:
         condition: service_healthy
-      piston:
-        condition: service_started
+    mem_limit: 512m
 
 volumes:
   pgdata:
   uploads:
   private_uploads:
-  piston-packages:
