@@ -37,7 +37,8 @@ COPY --from=builder /app/prisma ./prisma
 # (effect и другие), без которых он падает с MODULE_NOT_FOUND. Отдельный
 # каталог — чтобы не перемешивать с node_modules приложения.
 COPY package.json /tmp/package.json
-RUN PRISMA_VER="$(node -p "require('/tmp/package.json').devDependencies.prisma")" \
+RUN PRISMA_VER="$(node -p "const p=require('/tmp/package.json'); p.dependencies?.prisma || p.devDependencies?.prisma")" \
+ && echo "Prisma CLI: ${PRISMA_VER}" \
  && npm install --no-save --no-audit --no-fund --prefix /opt/prisma-cli "prisma@${PRISMA_VER}" \
  && rm -f /tmp/package.json \
  && npm cache clean --force
