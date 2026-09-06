@@ -29,11 +29,19 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
-# Схема и миграции + CLI Prisma: entrypoint накатывает migrate deploy при старте.
-# Standalone-сборка тянет только @prisma/client, поэтому CLI копируем отдельно.
+# Схема и миграции: entrypoint накатывает migrate deploy при старте.
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
+# Prisma CLI ставится в отдельный префикс, а не копированием из builder:
+# standalone-сборка содержит только @prisma/client, а у CLI свои зависимости
+# (effect и другие), без которых он падает с MODULE_NOT_FOUND. Отдельный
+# каталог — чтобы не перемешивать с node_modules приложения.
+COPY package.json /tmp/package.json
+RUN PRISMA_VER="$(node -p "require('/tmp/package.json').devDependencies.prisma")" \
+ && npm install --no-save --no-audit --no-fund --prefix /opt/prisma-cli "prisma@${PRISMA_VER}" \
+ && rm -f /tmp/package.json \
+ && npm cache clean --force
+
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
