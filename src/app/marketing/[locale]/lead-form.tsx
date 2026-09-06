@@ -57,7 +57,7 @@ export function LeadForm({ courses }: LeadFormProps) {
 
   if (submitted) {
     return (
-      <p role="status" className="rounded-lg bg-[#f9f3e8] px-6 py-8 text-center text-[#191211] font-medium">
+      <p role="status" className="rounded-lg bg-[#F8F3E7] px-6 py-8 text-center text-[#1F3260] font-medium">
         {t("success")}
       </p>
     );
@@ -104,7 +104,7 @@ export function LeadForm({ courses }: LeadFormProps) {
         <Textarea id="message" name="message" placeholder={t("messagePlaceholder")} maxLength={1000} />
       </div>
 
-      <Button type="submit" disabled={submitting} className="w-full bg-[#8C120C] text-white transition-[transform,box-shadow,background-color] duration-200 motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-95 hover:bg-[#a81a12] hover:shadow-[0_10px_22px_rgba(140,18,12,0.5)]">
+      <Button type="submit" disabled={submitting} className="w-full bg-[#0F7CAF] text-white transition-[transform,box-shadow,background-color] duration-200 motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-95 hover:bg-[#1296D2] hover:shadow-[0_10px_22px_rgba(18,150,210,0.5)]">
         {submitting ? (
           <>
             <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />

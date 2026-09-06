@@ -17,7 +17,7 @@ function normalizeListItems(items: Array<string | ListItem>): ListItem[] {
 function ListBlock({ items, ordered }: { items: ListItem[]; ordered: boolean }) {
   const Tag = ordered ? "ol" : "ul";
   return (
-    <Tag className={`mb-5 space-y-2 pl-6 ${ordered ? "list-decimal" : "list-disc"} marker:text-[#8C120C]`}>
+    <Tag className={`mb-5 space-y-2 pl-6 ${ordered ? "list-decimal" : "list-disc"} marker:text-[#0F7CAF]`}>
       {items.map((item, i) => (
         <li key={i} className="leading-relaxed">
           <span dangerouslySetInnerHTML={{ __html: item.content ?? "" }} />
@@ -38,7 +38,7 @@ function Block({ block }: { block: EditorBlock }) {
       const sizes = { h2: "mt-10 text-2xl md:text-3xl", h3: "mt-8 text-xl md:text-2xl", h4: "mt-6 text-lg" };
       return (
         <Tag
-          className={`mb-4 font-bold text-[#191211] ${sizes[Tag]}`}
+          className={`mb-4 font-bold text-[#1F3260] ${sizes[Tag]}`}
           dangerouslySetInnerHTML={{ __html: String(block.data.text ?? "") }}
         />
       );
@@ -46,7 +46,7 @@ function Block({ block }: { block: EditorBlock }) {
     case "paragraph":
       return (
         <p
-          className="mb-5 leading-relaxed text-[#33201d]"
+          className="mb-5 leading-relaxed text-[#2C5385]"
           dangerouslySetInnerHTML={{ __html: String(block.data.text ?? "") }}
         />
       );
@@ -66,11 +66,11 @@ function Block({ block }: { block: EditorBlock }) {
             width={1200}
             height={800}
             unoptimized
-            className="h-auto w-full rounded-xl shadow-[0_10px_30px_rgba(25,18,17,0.08)]"
+            className="h-auto w-full rounded-xl shadow-[0_10px_30px_rgba(21,35,68,0.08)]"
           />
           {caption && (
             <figcaption
-              className="mt-2 text-center text-sm text-[#6f6660]"
+              className="mt-2 text-center text-sm text-[#5A6A85]"
               dangerouslySetInnerHTML={{ __html: caption }}
             />
           )}
@@ -79,21 +79,21 @@ function Block({ block }: { block: EditorBlock }) {
     }
     case "quote":
       return (
-        <blockquote className="mb-6 rounded-r-lg border-l-4 border-[#F6B93B] bg-[#f9f3e8] px-6 py-4">
+        <blockquote className="mb-6 rounded-r-lg border-l-4 border-[#4FC3F7] bg-[#F8F3E7] px-6 py-4">
           <p
-            className="mb-1 leading-relaxed text-[#33201d]"
+            className="mb-1 leading-relaxed text-[#2C5385]"
             dangerouslySetInnerHTML={{ __html: String(block.data.text ?? "") }}
           />
           {block.data.caption ? (
             <cite
-              className="text-sm not-italic text-[#6f6660]"
+              className="text-sm not-italic text-[#5A6A85]"
               dangerouslySetInnerHTML={{ __html: String(block.data.caption) }}
             />
           ) : null}
         </blockquote>
       );
     case "delimiter":
-      return <div className="my-8 text-center text-2xl tracking-[0.6em] text-[#F6B93B]">•••</div>;
+      return <div className="my-8 text-center text-2xl tracking-[0.6em] text-[#4FC3F7]">•••</div>;
     default:
       return null;
   }

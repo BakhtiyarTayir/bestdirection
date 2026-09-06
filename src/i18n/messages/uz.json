@@ -1148,41 +1148,41 @@
   },
   "marketing": {
     "meta": {
-      "title": "Best Direction — O'quv markazi",
-      "description": "Best Direction — o'quv markazi. Onlayn kurslar, qabul va sertifikat bilan o'qitish."
+      "title": "Best Direction — til markazi",
+      "description": "Bolalar va kattalar uchun ingliz tili kurslari: General English, IELTS, suhbat klubi. A1–C1 darajalari, 10 kishigacha guruhlar, birinchi dars bepul."
     },
     "header": {
       "brand": "Best Direction",
-      "how": "Bu qanday ishlaydi",
+      "how": "Qanday boshlash",
       "courses": "Kurslar",
       "reviews": "Fikrlar",
       "contacts": "Kontaktlar",
       "cta": "Shaxsiy kabinet"
     },
     "hero": {
-      "eyebrow": "O'quv markazi",
-      "title": "Yangicha uslubda o'qing —",
-      "titleAccent": "Best Direction",
-      "subtitle": "O'qituvchilar, uy vazifalari va yakunida sertifikat beriladigan amaliy onlayn kurslar.",
-      "ctaPrimary": "Kursga yozilish",
-      "ctaSecondary": "Bu qanday ishlaydi"
+      "eyebrow": "Til markazi",
+      "title": "Ingliz tilida haqiqatan",
+      "titleAccent": "gapiring",
+      "subtitle": "A1 dan C1 gacha darajalar, 10 kishigacha guruhlar va har darsda suhbat amaliyoti. Birinchi dars — bepul.",
+      "ctaPrimary": "Sinov darsiga yozilish",
+      "ctaSecondary": "Ta'lim qanday o'tadi"
     },
     "how": {
-      "eyebrow": "O'quv jarayoni",
-      "title": "Bu qanday ishlaydi?",
-      "subtitle": "Arizadan sertifikatgacha uch oddiy qadam",
+      "eyebrow": "Qanday boshlash",
+      "title": "Birinchi darsgacha uch qadam",
+      "subtitle": "Arizadan o'z darajangizdagi guruhgacha — odatda bir necha kunda",
       "step1Title": "Ariza qoldiring",
-      "step1Text": "Qisqa formani to'ldiring — biz siz bilan bog'lanib, yaqin qabul haqida ma'lumot beramiz.",
-      "step2Title": "Kursni tanlang va to'lang",
-      "step2Text": "Sizning jadvalingizga mos kurs va guruhni tanlab beramiz.",
-      "step3Title": "O'qing va sertifikat oling",
-      "step3Text": "Darslar va uy vazifalarini bajaring, kurs yakunida sertifikat oling."
+      "step1Text": "Qisqa shaklni to'ldiring — administrator qo'ng'iroq qilib, qulay vaqtni tanlaydi.",
+      "step2Title": "Sinov darsiga keling",
+      "step2Text": "Bepul test darajangizni CEFR shkalasi bo'yicha aniqlaydi, siz esa o'qituvchi bilan tanishasiz.",
+      "step3Title": "Guruhda shug'ullaning",
+      "step3Text": "10 kishigacha guruhlar, haftasiga 2–3 marta dars, daraja yakunida sertifikat."
     },
     "courses": {
-      "eyebrow": "Bizning kurslar",
+      "eyebrow": "Yo'nalishlar",
       "title": "O'z kursingizni tanlang",
-      "subtitle": "Qabul ochiq bo'lgan dolzarb dasturlar",
-      "empty": "Tez orada bu yerda kurslar paydo bo'ladi — yangilanishlarni kuzatib boring.",
+      "subtitle": "Bolalar, o'smirlar va kattalar uchun dasturlar — guruhlarga qabul ochiq",
+      "empty": "Tez orada bu yerda kurslar paydo bo'ladi — yangiliklarni kuzatib boring.",
       "priceOnRequest": "Narxi so'rov bo'yicha",
       "intakeSeatsLeft": "Qolgan o'rinlar: {count}",
       "intakeStarts": "Qabul boshlanishi: {date}",
@@ -1190,31 +1190,31 @@
       "detailsButton": "Batafsil"
     },
     "gallery": {
-      "eyebrow": "Galereya",
-      "title": "Robototexnika darslari qanday o‘tadi",
-      "subtitle": "Bolalar o‘z robotlarini yig‘adi, dasturlaydi va sinovdan o‘tkazadi — kursdagi mashg‘ulotlar shunday o‘tadi.",
-      "item1Title": "Robot yig‘ish",
-      "item1Text": "Konstruksiya va mexanizmlarni o‘z qo‘limiz bilan yig‘amiz",
-      "item2Title": "Dasturlash",
-      "item2Text": "Robotni Python kodi bilan jonlantiramiz",
-      "item3Title": "Trassada sinov",
-      "item3Text": "Robot marshrutni qanday bosib o‘tishini tekshiramiz",
-      "item4Title": "Jamoaviy loyihalar",
-      "item4Text": "Jamoada ishlaymiz va loyihalarimizni himoya qilamiz"
+      "eyebrow": "O'quv jarayoni",
+      "title": "Darslar qanday o'tadi",
+      "subtitle": "Birinchi darsdan suhbat amaliyoti, kichik guruhlar va har bir xatoning tahlili",
+      "item1Title": "Kichik guruhlar",
+      "item1Text": "10 kishigacha: har darsda hammaga gapirishga vaqt yetadi",
+      "item2Title": "Suhbat amaliyoti",
+      "item2Text": "Doskadagi nazariya o'rniga dialog, rolli o'yin va muhokamalar",
+      "item3Title": "Daraja testi",
+      "item3Text": "CEFR bo'yicha darajani aniqlaymiz va uch oyga maqsad qo'yamiz",
+      "item4Title": "Daraja sertifikati",
+      "item4Text": "Kurs yakunida — imtihon va daraja ko'rsatilgan sertifikat"
     },
     "instagram": {
       "eyebrow": "Instagram",
       "title": "Biz Instagramda",
-      "subtitle": "Darslar, o‘quvchilar va maktab hayoti haqidagi reels — hech narsani o‘tkazib yubormaslik uchun obuna bo‘ling.",
-      "follow": "@it_school_official sahifasiga obuna bo‘lish",
-      "prev": "Oldingi video",
-      "next": "Keyingi video"
+      "subtitle": "Darslar qanday o'tishi, markaz hayoti va talabalar fikri — obuna bo'ling.",
+      "follow": "@bestdirection ga obuna bo'lish",
+      "prev": "Oldingi rolik",
+      "next": "Keyingi rolik"
     },
     "stats": {
-      "eyebrow": "Markaz yutuqlari",
+      "eyebrow": "Markaz haqida",
       "title": "Bizga ishonishadi",
       "graduatesLabel": "Bitiruvchilar",
-      "lessonsLabel": "O'tilgan darslar",
+      "lessonsLabel": "O'tkazilgan darslar",
       "studentsLabel": "Hozirgi talabalar",
       "teachersLabel": "O'qituvchilar"
     },
@@ -1223,37 +1223,37 @@
       "title": "Talabalarimiz nima deydi",
       "items": [
         {
-          "quote": "Kurs menga ishda allaqachon qo'llayotgan real ko'nikmalar berdi. O'qituvchilarga tushunarli tushuntirishlari uchun alohida rahmat.",
-          "author": "Aziz Karimov",
-          "role": "Kurs bitiruvchisi"
+          "quote": "Yarim yilda A2 dan B1 ga chiqdim va nihoyat gapirishdan qo'rqmay qoldim. Darsda ma'ruza tinglamaysiz, deyarli doim gapirasiz.",
+          "author": "Malika Rahimova",
+          "role": "General English"
         },
         {
-          "quote": "Format yoqdi: birinchi darsdan amaliyot, uy vazifalari bo'yicha jonli fikr-mulohaza va yakunida sertifikat.",
-          "author": "Madina Yusupova",
-          "role": "Kurs bitiruvchisi"
+          "quote": "IELTS ga uch oy tayyorlandim, 7.0 oldim. Eng ko'p sinov imtihonlari va Writing ni mezonlar bo'yicha tahlil qilish yordam berdi.",
+          "author": "Aziz Karimov",
+          "role": "IELTS Preparation"
         }
       ]
     },
     "cta": {
-      "title": "Vaqt keldi",
-      "titleAccent": "o'zingizga sarmoya",
-      "titleEnd": "kiritishga",
-      "subtitle": "Hozir ariza qoldiring — yaqin qabul haqida gapirib beramiz va kurs tanlashda yordam beramiz.",
-      "button": "Kursga yozilish"
+      "title": "Boshlash vaqti keldi —",
+      "titleAccent": "ingliz tilida",
+      "titleEnd": "gapiring",
+      "subtitle": "Ariza qoldiring — yaqin qabul haqida aytamiz va bepul daraja testini o'tkazamiz.",
+      "button": "Sinov darsiga yozilish"
     },
     "footer": {
-      "about": "Best Direction — amaliy onlayn kurslar va sertifikat bilan o'qitadigan o'quv markazi.",
+      "about": "Best Direction — til markazi: bolalar va kattalar uchun ingliz tili, A1–C1 darajalari, IELTS ga tayyorgarlik.",
       "coursesTitle": "Kurslar",
       "pagesTitle": "Sahifalar",
       "contactsTitle": "Kontaktlar",
-      "address": "Chirchiq sh., Sharof Rashidov ko'chasi, 19",
+      "address": "Manzil aniqlanmoqda",
       "loginLink": "Shaxsiy kabinet",
       "rights": "Barcha huquqlar himoyalangan.",
-      "telegram": "Telegram: @it_schol_official"
+      "telegram": "Telegram: @bestdirection"
     },
     "leadForm": {
-      "title": "Kursga yozilish",
-      "subtitle": "Kontaktlaringizni qoldiring — biz bog'lanib, yaqin qabul haqida gapirib beramiz",
+      "title": "Sinov darsiga yozilish",
+      "subtitle": "Kontaktlaringizni qoldiring — qo'ng'iroq qilamiz, daraja testini o'tkazamiz va guruh tanlaymiz",
       "nameLabel": "Ism",
       "namePlaceholder": "Ismingiz",
       "phoneLabel": "Telefon",
@@ -1265,8 +1265,8 @@
       "success": "Rahmat! Tez orada siz bilan bog'lanamiz.",
       "invalidInput": "Iltimos, to'ldirilgan maydonlarni tekshiring.",
       "tooManyRequests": "Juda ko'p urinish. Keyinroq qayta urinib ko'ring.",
-      "courseNotFound": "Bu kurs hozircha yozilish uchun mavjud emas.",
-      "genericError": "Arizani yuborib bo'lmadi. Qayta urinib ko'ring.",
+      "courseNotFound": "Bu kursga hozircha yozilib bo'lmaydi.",
+      "genericError": "Arizani yuborib bo'lmadi. Yana bir bor urinib ko'ring.",
       "courseLabel": "Kurs"
     }
   },

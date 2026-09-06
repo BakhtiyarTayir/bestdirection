@@ -30,7 +30,7 @@ export function InstagramReels({ urls, prevLabel, nextLabel }: InstagramReelsPro
   };
 
   const arrowClass =
-    "flex h-11 w-11 items-center justify-center rounded-full bg-[#8C120C] text-white shadow-[0_8px_20px_rgba(140,18,12,0.4)] transition-[transform,box-shadow,background-color] duration-200 motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-95 hover:bg-[#a81a12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#191211]";
+    "flex h-11 w-11 items-center justify-center rounded-full bg-[#0F7CAF] text-white shadow-[0_8px_20px_rgba(18,150,210,0.4)] transition-[transform,box-shadow,background-color] duration-200 motion-safe:hover:-translate-y-0.5 motion-safe:active:scale-95 hover:bg-[#1296D2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1F3260]";
 
   return (
     <div className="relative">

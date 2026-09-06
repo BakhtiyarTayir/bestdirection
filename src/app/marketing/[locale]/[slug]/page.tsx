@@ -48,7 +48,7 @@ export default async function MarketingContentPage({ params }: LandingPageProps)
   const content = (isUz ? page.contentUz : page.contentRu) ?? (isUz ? page.contentRu : page.contentUz);
 
   return (
-    <div className="min-h-screen bg-white text-[#191211]">
+    <div className="min-h-screen bg-white text-[#1F3260]">
       <MarketingHeader mt={mt} anchorBase={anchorBase} />
       <main>
         <article className="mx-auto max-w-3xl px-6 py-16">

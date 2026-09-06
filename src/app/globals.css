@@ -6,29 +6,29 @@
 
 :root {
   --background: 0 0% 100%;
-  --foreground: 8 19% 8%;
+  --foreground: 221 44% 14%;
   --card: 0 0% 100%;
-  --card-foreground: 8 19% 8%;
+  --card-foreground: 221 44% 14%;
   --popover: 0 0% 100%;
-  --popover-foreground: 8 19% 8%;
-  --primary: 3 84% 30%;
-  --primary-foreground: 30 40% 98%;
-  --secondary: 24 25% 95.5%;
-  --secondary-foreground: 8 19% 11%;
-  --muted: 24 25% 95.5%;
-  --muted-foreground: 12 8% 45%;
-  --accent: 24 25% 95.5%;
-  --accent-foreground: 8 19% 11%;
+  --popover-foreground: 221 44% 14%;
+  --primary: 199 84% 37%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 214 33% 96%;
+  --secondary-foreground: 222 44% 18%;
+  --muted: 214 33% 96%;
+  --muted-foreground: 218 19% 44%;
+  --accent: 214 33% 96%;
+  --accent-foreground: 222 44% 18%;
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
-  --border: 20 18% 90%;
-  --input: 20 18% 90%;
-  --ring: 3 84% 30%;
+  --border: 215 27% 91%;
+  --input: 215 27% 91%;
+  --ring: 199 84% 37%;
   --radius: 0.5rem;
   --success: 142.1 76.2% 36.3%;
   --success-foreground: 355.7 100% 97.3%;
   --warning: 40 91% 60%;
-  --warning-foreground: 8 19% 8%;
+  --warning-foreground: 221 44% 14%;
 }
 
 @theme inline {

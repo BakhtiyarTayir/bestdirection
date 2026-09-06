@@ -37,34 +37,37 @@ export interface LandingTestimonial {
   roleUz: string;
 }
 
+// Карточки об учебном процессе. Иллюстрации — фирменная графика с мотивом
+// дуг из логотипа; когда появятся фотографии занятий, они меняются через
+// /admin/landing без правки кода.
 export const defaultGalleryItems: LandingGalleryItem[] = [
   {
-    image: "/marketing/gallery/robotics-build.png",
-    titleRu: "Сборка робота",
-    titleUz: "Robot yig‘ish",
-    textRu: "Собираем конструкции и механизмы своими руками",
-    textUz: "Konstruksiya va mexanizmlarni o‘z qo‘limiz bilan yig‘amiz",
+    image: "/marketing/process/small-groups.png",
+    titleRu: "Малые группы",
+    titleUz: "Kichik guruhlar",
+    textRu: "До 10 человек: каждый успевает говорить на каждом занятии",
+    textUz: "10 kishigacha: har darsda hammaga gapirishga vaqt yetadi",
   },
   {
-    image: "/marketing/gallery/robotics-code.png",
-    titleRu: "Программирование",
-    titleUz: "Dasturlash",
-    textRu: "Оживляем робота кодом на Python",
-    textUz: "Robotni Python kodi bilan jonlantiramiz",
+    image: "/marketing/process/speaking.png",
+    titleRu: "Разговорная практика",
+    titleUz: "Suhbat amaliyoti",
+    textRu: "Диалоги, ролевые игры и обсуждения вместо теории у доски",
+    textUz: "Doskadagi nazariya o‘rniga dialog, rolli o‘yin va muhokamalar",
   },
   {
-    image: "/marketing/gallery/robotics-test.png",
-    titleRu: "Испытания на трассе",
-    titleUz: "Trassada sinov",
-    textRu: "Проверяем, как робот проходит маршрут",
-    textUz: "Robot marshrutni qanday bosib o‘tishini tekshiramiz",
+    image: "/marketing/process/level-test.png",
+    titleRu: "Тест на уровень",
+    titleUz: "Daraja testi",
+    textRu: "Определяем уровень по CEFR и ставим цель на ближайшие три месяца",
+    textUz: "CEFR bo‘yicha darajani aniqlaymiz va uch oyga maqsad qo‘yamiz",
   },
   {
-    image: "/marketing/gallery/robotics-team.png",
-    titleRu: "Командные проекты",
-    titleUz: "Jamoaviy loyihalar",
-    textRu: "Работаем в команде и защищаем свои проекты",
-    textUz: "Jamoada ishlaymiz va loyihalarimizni himoya qilamiz",
+    image: "/marketing/process/certificate.png",
+    titleRu: "Сертификат уровня",
+    titleUz: "Daraja sertifikati",
+    textRu: "По итогам курса — экзамен и сертификат с указанием уровня",
+    textUz: "Kurs yakunida — imtihon va daraja ko‘rsatilgan sertifikat",
   },
 ];
 
@@ -153,7 +156,7 @@ export async function findLandingCourse(slug: string): Promise<LandingCourse | u
   return courses.find((c) => c.slug === slug);
 }
 
-// ─── Страницы (it-school-official.uz/<slug>) ─────────────────────────────
+// ─── Страницы (bestdirection.uz/<slug>) ──────────────────────────────────
 
 /** Блок Editor.js; data зависит от типа блока */
 export interface EditorBlock {

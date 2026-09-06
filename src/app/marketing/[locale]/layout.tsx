@@ -41,7 +41,7 @@ export default async function MarketingLayout({
   }
 
   // This route tree is only meant to be reached via the host-based rewrite in
-  // src/proxy.ts. A direct hit on the LMS domain (course.it-school-official.uz/marketing/...)
+  // src/proxy.ts. A direct hit on the CRM domain (crm.bestdirection.uz/marketing/...)
   // should 404 instead of leaking the marketing site onto the wrong domain.
   const headersList = await headers();
   const host = headersList.get("host");

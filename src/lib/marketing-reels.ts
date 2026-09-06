@@ -1,12 +1,8 @@
 // Reels лендинга — статичный список ссылок на посты Instagram.
-// Чтобы добавить/убрать ролик, отредактируйте массив и задеплойте сайт.
-export const instagramProfileUrl = "https://www.instagram.com/it_school_official/";
+// Пока список пуст, секция «Мы в Instagram» на лендинге не показывается:
+// показывать чужие ролики нельзя, а пустая карусель выглядит поломкой.
+// Чтобы включить секцию, заведите аккаунт центра, впишите его ниже и
+// добавьте ссылки на посты.
+export const instagramProfileUrl = "https://www.instagram.com/bestdirection/";
 
-export const marketingReels: string[] = [
-  "https://www.instagram.com/p/DZako2eO-vM/",
-  "https://www.instagram.com/p/DZalMDFuhx0/",
-  "https://www.instagram.com/p/DaV9h3BB4Qo/",
-  "https://www.instagram.com/p/DaV6ujQBC01/",
-  "https://www.instagram.com/p/DaV6_xABI3O/",
-  "https://www.instagram.com/p/DaKxEoChO0X/",
-];
+export const marketingReels: string[] = [];

@@ -1,6 +1,6 @@
-// Курсы маркетингового лендинга (it-school-official.uz). Статичный список — НЕ зависит
+// Курсы маркетингового лендинга (bestdirection.uz). Статичный список — НЕ зависит
 // от курсов платформы: здесь можно анонсировать набор до того, как курс
-// заведён в LMS. Заявки (CourseLead) хранят название курса строкой.
+// заведён в CRM. Заявки (CourseLead) хранят название курса строкой.
 export interface MarketingCourse {
   slug: string;
   title: string;
@@ -15,15 +15,18 @@ export interface MarketingCourse {
   intakeNoteUz: string | null;
 }
 
+// Обложек нет: карточка сама рисует градиент с первой буквой названия — это
+// честнее пяти одинаковых стоковых картинок. Фото занятий загружаются
+// позже через /admin/landing.
 export const marketingCourses: MarketingCourse[] = [
   {
-    slug: "html-css",
-    title: "HTML va CSS",
-    cover: "/marketing/courses/html-css.png",
-    summaryUz:
-      "Noldan zamonaviy saytlar yaratish: HTML5, CSS3, Flexbox va Grid, adaptiv dizayn va birinchi portfolio loyihalaringiz.",
+    slug: "general-english",
+    title: "General English",
+    cover: "",
     summaryRu:
-      "Создание современных сайтов с нуля: HTML5, CSS3, Flexbox и Grid, адаптивная вёрстка и первые проекты в портфолио.",
+      "Базовый курс от A1 до C1: грамматика, лексика, аудирование и говорение. Три занятия в неделю в группах до 10 человек.",
+    summaryUz:
+      "A1 dan C1 gacha asosiy kurs: grammatika, leksika, tinglash va gapirish. Haftasiga uch marta, 10 kishigacha guruhlarda.",
     price: null,
     intakeStartDate: null,
     intakeSeats: null,
@@ -31,13 +34,13 @@ export const marketingCourses: MarketingCourse[] = [
     intakeNoteUz: null,
   },
   {
-    slug: "robototexnika-python",
-    title: "Robototexnika va Python",
-    cover: "/marketing/courses/robototexnika-python.png",
-    summaryUz:
-      "Robotlarni yig'ish va ularni Python tilida dasturlash: mantiq, algoritmlar va qiziqarli amaliy loyihalar.",
+    slug: "ielts",
+    title: "IELTS Preparation",
+    cover: "",
     summaryRu:
-      "Сборка роботов и программирование их на Python: логика, алгоритмы и увлекательные практические проекты.",
+      "Подготовка к IELTS Academic и General: все четыре модуля, пробные экзамены и разбор ошибок. Цель — 6.5 и выше.",
+    summaryUz:
+      "IELTS Academic va General ga tayyorgarlik: to'rtala modul, sinov imtihonlari va xatolar tahlili. Maqsad — 6.5 va undan yuqori.",
     price: null,
     intakeStartDate: null,
     intakeSeats: null,
@@ -45,13 +48,13 @@ export const marketingCourses: MarketingCourse[] = [
     intakeNoteUz: null,
   },
   {
-    slug: "wordpress",
-    title: "WordPress",
-    cover: "/marketing/courses/wordpress.png",
-    summaryUz:
-      "WordPress'da tayyor saytlar: mavzular va plaginlar, internet-do'kon, buyurtmachilar bilan ishlash va saytni yuritish.",
+    slug: "english-for-kids",
+    title: "English for Kids",
+    cover: "",
     summaryRu:
-      "Сайты на WordPress: темы и плагины, интернет-магазин, работа с заказчиками и сопровождение сайта.",
+      "Английский для детей 7–12 лет: игры, песни и проекты вместо зубрёжки. Мягкий вход в язык и первые уверенные фразы.",
+    summaryUz:
+      "7–12 yoshli bolalar uchun ingliz tili: yodlash o'rniga o'yin, qo'shiq va loyihalar. Tilga yumshoq kirish va birinchi ishonchli iboralar.",
     price: null,
     intakeStartDate: null,
     intakeSeats: null,
@@ -59,13 +62,13 @@ export const marketingCourses: MarketingCourse[] = [
     intakeNoteUz: null,
   },
   {
-    slug: "django",
-    title: "Django",
-    cover: "/marketing/courses/django-framework.png",
-    summaryUz:
-      "Python va Django'da backend: ma'lumotlar bazalari, API yaratish va to'liq veb-ilovalarni ishga tushirish.",
+    slug: "speaking-club",
+    title: "Speaking Club",
+    cover: "",
     summaryRu:
-      "Backend на Python и Django: базы данных, создание API и запуск полноценных веб-приложений.",
+      "Разговорный клуб для уровня B1 и выше: дискуссии, дебаты и тема недели. Один вечер в неделю полностью на английском.",
+    summaryUz:
+      "B1 va undan yuqori daraja uchun suhbat klubi: munozara, debat va hafta mavzusi. Haftada bir kecha butunlay ingliz tilida.",
     price: null,
     intakeStartDate: null,
     intakeSeats: null,
@@ -73,13 +76,13 @@ export const marketingCourses: MarketingCourse[] = [
     intakeNoteUz: null,
   },
   {
-    slug: "javascript",
-    title: "JavaScript",
-    cover: "/marketing/courses/javascript.png",
-    summaryUz:
-      "Interaktiv saytlar uchun JavaScript: DOM bilan ishlash, so'rovlar, amaliy loyihalar va kuchli portfolio.",
+    slug: "business-english",
+    title: "Business English",
+    cover: "",
     summaryRu:
-      "JavaScript для интерактивных сайтов: работа с DOM, запросы к серверу, практические проекты и сильное портфолио.",
+      "Английский для работы: переписка, переговоры, презентации и собеседования. Практика на реальных рабочих ситуациях.",
+    summaryUz:
+      "Ish uchun ingliz tili: yozishmalar, muzokaralar, taqdimotlar va suhbatlar. Haqiqiy ish vaziyatlarida amaliyot.",
     price: null,
     intakeStartDate: null,
     intakeSeats: null,
