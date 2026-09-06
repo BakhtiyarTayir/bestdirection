@@ -1,0 +1,26 @@
+# Caddy терминирует TLS и раздаёт оба имени на одно приложение: лендинг и CRM
+# разводятся внутри Next по заголовку Host (см. src/proxy.ts), поэтому важно
+# передавать его как есть — Caddy делает это по умолчанию.
+#
+# Сертификаты Let's Encrypt выпускаются и продлеваются автоматически.
+
+{
+	email {$ACME_EMAIL}
+}
+
+# Лендинг
+{$MARKETING_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:3000
+}
+
+# www — на канонический адрес без www
+www.{$MARKETING_DOMAIN} {
+	redir https://{$MARKETING_DOMAIN}{uri} permanent
+}
+
+# Личный кабинет / CRM
+{$APP_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:3000
+}

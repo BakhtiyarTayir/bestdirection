@@ -20,6 +20,25 @@ services:
     mem_limit: 256m
     shm_size: 128m
 
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      MARKETING_DOMAIN: ${MARKETING_DOMAIN:?нужен MARKETING_DOMAIN}
+      APP_DOMAIN: ${APP_DOMAIN:?нужен APP_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?нужен ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    mem_limit: 128m
+
   app:
     # Образ собирается на раннере GitHub и приезжает готовым: next build берёт
     # до 2 ГБ, на 1 CPU / 956 МБ он бы не прошёл. Локальную сборку можно
@@ -27,9 +46,9 @@ services:
     image: ${APP_IMAGE:-bestdirection-app:latest}
     # build: .
     restart: unless-stopped
-    ports:
-      # Наружу отдаёт Caddy; пока его нет — слушаем 80 напрямую
-      - "${APP_BIND:-127.0.0.1:3000}:3000"
+    # Порт наружу не публикуется: снаружи приложение доступно только через Caddy
+    expose:
+      - "3000"
     environment:
       DATABASE_URL: postgresql://bestdirection:${DB_PASSWORD:-bestdirectionpassword}@db:5432/bestdirection?schema=public
       AUTH_SECRET: ${AUTH_SECRET:?нужен AUTH_SECRET}
@@ -55,3 +74,5 @@ volumes:
   pgdata:
   uploads:
   private_uploads:
+  caddy_data:
+  caddy_config:

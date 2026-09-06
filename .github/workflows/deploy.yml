@@ -59,6 +59,16 @@ jobs:
           chmod 600 ~/.ssh/id_deploy
           ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
 
+      - uses: actions/checkout@v4
+
+      - name: Обновить конфигурацию на сервере
+        # .env на сервере не трогаем — там секреты, сгенерированные на месте
+        run: |
+          scp -i ~/.ssh/id_deploy docker-compose.prod.yml \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/bestdirection/docker-compose.yml"
+          scp -i ~/.ssh/id_deploy Caddyfile \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/bestdirection/Caddyfile"
+
       - name: Забрать образ и перезапустить
         # GITHUB_TOKEN живёт только на время задания — его хватает, чтобы
         # сервер стянул образ прямо сейчас, и хранить пароль на сервере не надо.
@@ -83,11 +93,13 @@ jobs:
 
       - name: Проверка, что сайт поднялся
         run: |
-          for i in $(seq 1 30); do
-            code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' "http://${{ secrets.SSH_HOST }}/ru" || true)
-            if [ "$code" = "200" ]; then echo "сайт отвечает 200"; exit 0; fi
+          # Домен, а не IP: наружу теперь отвечает Caddy, и по IP сертификата нет
+          URL="https://${{ secrets.SITE_DOMAIN }}/ru"
+          for i in $(seq 1 40); do
+            code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' "$URL" || true)
+            if [ "$code" = "200" ]; then echo "сайт отвечает 200: $URL"; exit 0; fi
             echo "попытка $i: HTTP $code"
             sleep 5
           done
-          echo "сайт не ответил 200 за 150 секунд" >&2
+          echo "сайт не ответил 200 за 200 секунд" >&2
           exit 1
