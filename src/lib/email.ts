@@ -1,7 +1,7 @@
 const RESEND_API_URL = "https://api.resend.com/emails";
 
 const FROM =
-  process.env.EMAIL_FROM || "IT School official <no-reply@it-school-official.uz>";
+  process.env.EMAIL_FROM || "Best Direction <no-reply@bestdirection.uz>";
 
 interface VerificationEmailTexts {
   subject: string;
@@ -65,7 +65,7 @@ export async function sendVerificationEmail(
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
-      <h2 style="color: #7f1d1d; margin-bottom: 8px;">IT School official</h2>
+      <h2 style="color: #7f1d1d; margin-bottom: 8px;">Best Direction</h2>
       <p>${t.greeting}</p>
       <p>${t.codeIntro}</p>
       <p style="font-size: 32px; font-weight: bold; letter-spacing: 8px; background: #f5f5f5; border-radius: 8px; padding: 16px; text-align: center;">${code}</p>

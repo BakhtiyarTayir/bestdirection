@@ -1,7 +1,7 @@
 {
   "common": {
     "number": "№",
-    "siteTitle": "LMS — O'quv markaz",
+    "siteTitle": "Best Direction — ingliz tili kurslari",
     "siteDescription": "O'quv markaz platformasi",
     "save": "Saqlash",
     "saveChanges": "O'zgarishlarni saqlash",
@@ -1148,11 +1148,11 @@
   },
   "marketing": {
     "meta": {
-      "title": "IT School official — O'quv markazi",
-      "description": "IT School official — o'quv markazi. Onlayn kurslar, qabul va sertifikat bilan o'qitish."
+      "title": "Best Direction — O'quv markazi",
+      "description": "Best Direction — o'quv markazi. Onlayn kurslar, qabul va sertifikat bilan o'qitish."
     },
     "header": {
-      "brand": "IT School official",
+      "brand": "Best Direction",
       "how": "Bu qanday ishlaydi",
       "courses": "Kurslar",
       "reviews": "Fikrlar",
@@ -1162,7 +1162,7 @@
     "hero": {
       "eyebrow": "O'quv markazi",
       "title": "Yangicha uslubda o'qing —",
-      "titleAccent": "IT School official",
+      "titleAccent": "Best Direction",
       "subtitle": "O'qituvchilar, uy vazifalari va yakunida sertifikat beriladigan amaliy onlayn kurslar.",
       "ctaPrimary": "Kursga yozilish",
       "ctaSecondary": "Bu qanday ishlaydi"
@@ -1242,7 +1242,7 @@
       "button": "Kursga yozilish"
     },
     "footer": {
-      "about": "IT School official — amaliy onlayn kurslar va sertifikat bilan o'qitadigan o'quv markazi.",
+      "about": "Best Direction — amaliy onlayn kurslar va sertifikat bilan o'qitadigan o'quv markazi.",
       "coursesTitle": "Kurslar",
       "pagesTitle": "Sahifalar",
       "contactsTitle": "Kontaktlar",

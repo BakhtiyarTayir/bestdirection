@@ -5,13 +5,13 @@ services:
     ports:
       - "5433:5432"
     environment:
-      POSTGRES_USER: lms
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-lmspassword}
-      POSTGRES_DB: lms
+      POSTGRES_USER: bestdirection
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-bestdirectionpassword}
+      POSTGRES_DB: bestdirection
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U lms"]
+      test: ["CMD-SHELL", "pg_isready -U bestdirection"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -37,7 +37,7 @@ services:
     ports:
       - "127.0.0.1:3000:3000"
     environment:
-      DATABASE_URL: postgresql://lms:${DB_PASSWORD:-lmspassword}@db:5432/lms?schema=public
+      DATABASE_URL: postgresql://bestdirection:${DB_PASSWORD:-bestdirectionpassword}@db:5432/bestdirection?schema=public
       AUTH_SECRET: ${AUTH_SECRET:-changeme}
       AUTH_URL: ${AUTH_URL:-https://course.it-school-official.uz}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}

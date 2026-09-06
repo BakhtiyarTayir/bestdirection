@@ -1,8 +1,8 @@
 {
   "common": {
     "number": "№",
-    "siteTitle": "LMS — Учебный центр",
-    "siteDescription": "Платформа учебного центра",
+    "siteTitle": "Best Direction — курсы английского языка",
+    "siteDescription": "CRM центра изучения английского языка",
     "save": "Сохранить",
     "saveChanges": "Сохранить изменения",
     "saving": "Сохранение...",
@@ -1148,11 +1148,11 @@
   },
   "marketing": {
     "meta": {
-      "title": "IT School official — Учебный центр",
-      "description": "IT School official — учебный центр. Онлайн-курсы, наборы и обучение с сертификатом."
+      "title": "Best Direction — Учебный центр",
+      "description": "Best Direction — учебный центр. Онлайн-курсы, наборы и обучение с сертификатом."
     },
     "header": {
-      "brand": "IT School official",
+      "brand": "Best Direction",
       "how": "Как это работает",
       "courses": "Курсы",
       "reviews": "Отзывы",
@@ -1162,7 +1162,7 @@
     "hero": {
       "eyebrow": "Учебный центр",
       "title": "Учитесь по-новому вместе с",
-      "titleAccent": "IT School official",
+      "titleAccent": "Best Direction",
       "subtitle": "Практические онлайн-курсы с преподавателями, домашними заданиями и сертификатом по итогам обучения.",
       "ctaPrimary": "Записаться на курс",
       "ctaSecondary": "Как это работает"
@@ -1242,7 +1242,7 @@
       "button": "Записаться на курс"
     },
     "footer": {
-      "about": "IT School official — учебный центр с практическими онлайн-курсами и обучением с сертификатом.",
+      "about": "Best Direction — учебный центр с практическими онлайн-курсами и обучением с сертификатом.",
       "coursesTitle": "Курсы",
       "pagesTitle": "Страницы",
       "contactsTitle": "Контакты",

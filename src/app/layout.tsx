@@ -19,8 +19,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "IT School official",
-  description: "IT School official — учебный центр",
+  title: "Best Direction",
+  description: "Best Direction — центр изучения английского языка",
 };
 
 export default function RootLayout({
