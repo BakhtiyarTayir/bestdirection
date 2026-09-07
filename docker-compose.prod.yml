@@ -59,6 +59,10 @@ services:
       MARKETING_DOMAIN: ${MARKETING_DOMAIN:?нужен MARKETING_DOMAIN}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+      # Без префикса NEXT_PUBLIC_: username отдаётся серверным действием в
+      # рантайме, потому что NEXT_PUBLIC_-переменные Next вшивает при сборке,
+      # а образ собирается без .env. См. src/actions/telegram-auth-actions.ts.
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
       NEXT_PUBLIC_TELEGRAM_BOT_USERNAME: ${NEXT_PUBLIC_TELEGRAM_BOT_USERNAME:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-}
