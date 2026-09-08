@@ -357,17 +357,6 @@ export async function getUserById(id: string) {
 }
 
 // ---------- createUser ----------
-const CREATED_USER_SELECT = {
-  id: true,
-  email: true,
-  firstName: true,
-  lastName: true,
-  phone: true,
-  role: true,
-  isActive: true,
-  createdAt: true,
-} as const;
-
 export async function createUser(data: {
   email?: string;
   password: string;
@@ -382,55 +371,22 @@ export async function createUser(data: {
       // Пустая строка → null, иначе уникальный индекс словит коллизию по "".
       const email = data.email?.trim() ? data.email.trim() : null;
 
-      // Ищем без soft-delete-фильтра: уникальный индекс в БД про deletedAt не
-      // знает, и почта удалённого пользователя остаётся занятой. Обычный
-      // prisma.user.findUnique такую запись не видит — и create падал с P2002.
-      const existingUser = email
+      // Проверяем без soft-delete-фильтра: уникальный индекс в БД про deletedAt
+      // не знает, поэтому почту держит занятой любая строка — деактивированная
+      // или помеченная удалённой старой логикой. Обычный prisma.user.findUnique
+      // такую запись не видит, и create падал бы с P2002.
+      const emailTaken = email
         ? await prismaUnscoped.user.findUnique({
             where: { email },
-            select: { id: true, deletedAt: true },
+            select: { id: true },
           })
         : null;
 
-      if (existingUser && !existingUser.deletedAt) {
+      if (emailTaken) {
         return { success: false, error: "User with this email already exists" };
       }
 
       const passwordHash = await bcrypt.hash(data.password, 10);
-
-      // Почту удалённого аккаунта не освободить, поэтому восстанавливаем его
-      // на месте: id и все связи (оплаты, посещаемость, работы) сохраняются,
-      // остальные поля перезаписываются тем, что администратор ввёл в форме.
-      if (existingUser) {
-        const restored = await prisma.user.update({
-          where: { id: existingUser.id },
-          data: {
-            passwordHash,
-            firstName: data.firstName,
-            lastName: data.lastName,
-            phone: data.phone ?? null,
-            role: data.role,
-            isActive: true,
-            deletedAt: null,
-          },
-          select: CREATED_USER_SELECT,
-        });
-
-        await createAuditLog({
-          userId: session.user.id,
-          entityType: "User",
-          entityId: restored.id,
-          action: "CREATE",
-          metadata: {
-            email: restored.email,
-            role: restored.role,
-            restoredFromDeleted: true,
-          },
-        });
-
-        revalidateLocalized("/users");
-        return { success: true, data: restored };
-      }
 
       let user;
       try {
@@ -443,7 +399,16 @@ export async function createUser(data: {
             phone: data.phone,
             role: data.role,
           },
-          select: CREATED_USER_SELECT,
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            role: true,
+            isActive: true,
+            createdAt: true,
+          },
         });
       } catch (error) {
         // Гонка: между проверкой и вставкой почту мог занять другой админ.
@@ -498,21 +463,14 @@ export async function updateUser(
         data.email !== undefined ? (data.email.trim() || null) : undefined;
 
       // Без soft-delete-фильтра — по той же причине, что и в createUser.
-      // Восстановление здесь не подходит: это две разные записи, слить их
-      // нельзя, поэтому просто говорим, чем именно занята почта.
       if (email) {
-        const existingUser = await prismaUnscoped.user.findUnique({
+        const emailTaken = await prismaUnscoped.user.findUnique({
           where: { email },
-          select: { id: true, deletedAt: true },
+          select: { id: true },
         });
 
-        if (existingUser && existingUser.id !== id) {
-          return {
-            success: false,
-            error: existingUser.deletedAt
-              ? "Email is used by a deleted user"
-              : "Email is already in use",
-          };
+        if (emailTaken && emailTaken.id !== id) {
+          return { success: false, error: "Email is already in use" };
         }
       }
 
