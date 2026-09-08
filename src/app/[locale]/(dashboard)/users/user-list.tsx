@@ -25,8 +25,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { deleteUser } from "@/actions/user-actions";
-import { Pencil, Trash2, Loader2 } from "lucide-react";
+import { deactivateUser } from "@/actions/user-actions";
+import { Pencil, UserX, Loader2 } from "lucide-react";
 
 const roleBadgeVariant: Record<string, "destructive" | "default" | "secondary"> = {
   ADMIN: "destructive",
@@ -61,31 +61,31 @@ export function UserList({ initialUsers, canManageUsers = true }: UserListProps)
     (state: User[], removedId: string) =>
       state.filter((u) => u.id !== removedId)
   );
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
-  const handleDelete = async () => {
+  const handleDeactivate = async () => {
     if (!selectedUser) return;
     const userId = selectedUser.id;
     const userName = `${selectedUser.firstName} ${selectedUser.lastName}`;
 
-    setDeletingId(userId);
+    setDeactivatingId(userId);
     setDialogOpen(false);
     removeUser(userId);
 
     try {
-      const result = await deleteUser(userId);
+      const result = await deactivateUser(userId);
       if (result.success) {
         toast({
-          title: t("userDeleted"),
-          description: t("userDeletedDescription", { name: userName }),
+          title: t("userDeactivated"),
+          description: t("userDeactivatedDescription", { name: userName }),
         });
         router.refresh();
       } else {
         toast({
           title: tErrors("error"),
-          description: result.error ?? t("deleteFailed"),
+          description: t("deactivateFailed"),
           variant: "destructive",
         });
         router.refresh();
@@ -98,7 +98,7 @@ export function UserList({ initialUsers, canManageUsers = true }: UserListProps)
       });
       router.refresh();
     } finally {
-      setDeletingId(null);
+      setDeactivatingId(null);
       setSelectedUser(null);
     }
   };
@@ -155,16 +155,16 @@ export function UserList({ initialUsers, canManageUsers = true }: UserListProps)
                         <Button
                           variant="outline"
                           size="sm"
-                          disabled={deletingId === user.id}
+                          disabled={deactivatingId === user.id}
                           onClick={() => {
                             setSelectedUser(user);
                             setDialogOpen(true);
                           }}
                         >
-                          {deletingId === user.id ? (
+                          {deactivatingId === user.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <UserX className="h-4 w-4 text-destructive" />
                           )}
                         </Button>
                       </div>
@@ -180,19 +180,16 @@ export function UserList({ initialUsers, canManageUsers = true }: UserListProps)
       <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("deleteUser")}</AlertDialogTitle>
+            <AlertDialogTitle>{t("deactivateUser")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("deleteUserConfirm", { name: `${selectedUser?.firstName} ${selectedUser?.lastName}` })}
-              {" "}{t("deleteIrreversible")}
+              {t("deactivateUserConfirm", { name: `${selectedUser?.firstName} ${selectedUser?.lastName}` })}
+              {" "}{t("deactivateReversible")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {tCommon("delete")}
+            <AlertDialogAction onClick={handleDeactivate}>
+              {t("deactivate")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

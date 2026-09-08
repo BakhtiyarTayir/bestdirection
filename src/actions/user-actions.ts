@@ -556,25 +556,162 @@ export async function updateUser(
   );
 }
 
-// ---------- deleteUser (soft delete) ----------
-export async function deleteUser(id: string) {
+// ---------- getDeactivatedUsers ----------
+/**
+ * Вкладка «Деактивированные». Мимо soft-delete-фильтра: кроме выключенных
+ * (`isActive: false`) сюда попадают записи, помеченные `deletedAt` старой
+ * логикой удаления, — иначе они остались бы невидимыми навсегда.
+ */
+export async function getDeactivatedUsers() {
+  return withAuth(
+    async () => {
+      const users = await prismaUnscoped.user.findMany({
+        where: { OR: [{ isActive: false }, { deletedAt: { not: null } }] },
+        orderBy: { updatedAt: "desc" },
+        select: {
+          id: true,
+          number: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          telegramChatId: true,
+        },
+      });
+
+      return { success: true, data: users };
+    },
+    { roles: ["ADMIN"] }
+  );
+}
+
+// ---------- deactivateUser ----------
+/**
+ * Кнопка «Удалить» в списке: пользователь только выключается. Строка остаётся
+ * в таблице, поэтому почта и telegramChatId продолжают быть занятыми, а сам
+ * он виден на вкладке деактивированных — восстановить или стереть насовсем.
+ */
+export async function deactivateUser(id: string) {
   return withAuth(
     async (session) => {
       if (session.user.id === id) {
-        return { success: false, error: "Cannot deactivate your own account" };
+        return { success: false, error: "cannotDeactivateSelf" };
       }
 
       await prisma.user.update({
         where: { id },
-        data: { isActive: false, deletedAt: new Date() },
+        data: { isActive: false },
       });
 
       await createAuditLog({
         userId: session.user.id,
         entityType: "User",
         entityId: id,
+        action: "UPDATE",
+        metadata: { deactivated: true },
+      });
+
+      revalidateLocalized("/users");
+      return { success: true };
+    },
+    { roles: ["ADMIN"] }
+  );
+}
+
+// ---------- restoreUser ----------
+/** Возвращает пользователя в строй. `deletedAt` снимаем заодно: у записей,
+ *  удалённых старой логикой, он остался проставленным. */
+export async function restoreUser(id: string) {
+  return withAuth(
+    async (session) => {
+      const existing = await prismaUnscoped.user.findUnique({
+        where: { id },
+        select: { id: true },
+      });
+      if (!existing) return { success: false, error: "userNotFound" };
+
+      await prisma.user.update({
+        where: { id },
+        data: { isActive: true, deletedAt: null },
+      });
+
+      await createAuditLog({
+        userId: session.user.id,
+        entityType: "User",
+        entityId: id,
+        action: "UPDATE",
+        metadata: { restored: true },
+      });
+
+      revalidateLocalized("/users");
+      return { success: true };
+    },
+    { roles: ["ADMIN"] }
+  );
+}
+
+// ---------- purgeUser ----------
+/**
+ * Полное удаление строки. Освобождает почту и telegramChatId и каскадом
+ * уносит всё, что на пользователя завязано: оплаты, посещаемость, работы,
+ * прогресс, привязки к родителям и его собственные записи в журнале аудита.
+ */
+export async function purgeUser(id: string) {
+  return withAuth(
+    async (session) => {
+      if (session.user.id === id) {
+        return { success: false, error: "cannotPurgeSelf" };
+      }
+
+      const target = await prismaUnscoped.user.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          isActive: true,
+          deletedAt: true,
+          email: true,
+          role: true,
+          firstName: true,
+          lastName: true,
+        },
+      });
+      if (!target) return { success: false, error: "userNotFound" };
+
+      // Стирать можно только с вкладки деактивированных: активного
+      // пользователя нельзя снести запросом мимо интерфейса.
+      if (target.isActive && !target.deletedAt) {
+        return { success: false, error: "userIsActive" };
+      }
+
+      try {
+        // Мимо расширения soft-delete: обычный prisma.user.delete оно
+        // подменяет на простановку deletedAt, а нужна именно строка.
+        await prismaUnscoped.user.delete({ where: { id } });
+      } catch (error) {
+        // Часть связей стоит на RESTRICT: свои курсы у преподавателя,
+        // принятые платежи и СМС-рассылки у администратора.
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2003"
+        ) {
+          return { success: false, error: "userHasProtectedRecords" };
+        }
+        throw error;
+      }
+
+      // Журнал пишем после удаления: записи самого пользователя каскад уже
+      // унёс, а эта принадлежит администратору и останется.
+      await createAuditLog({
+        userId: session.user.id,
+        entityType: "User",
+        entityId: id,
         action: "DELETE",
-        metadata: { softDelete: true },
+        metadata: {
+          permanent: true,
+          email: target.email,
+          role: target.role,
+          name: `${target.firstName} ${target.lastName}`,
+        },
       });
 
       revalidateLocalized("/users");
