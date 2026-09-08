@@ -140,7 +140,10 @@
     "browseCatalog": "Каталог курсов",
     "enrollmentRequests": "Заявки на курсы",
     "payments": "Оплаты",
-    "debtors": "Должники"
+    "debtors": "Должники",
+    "myChildren": "Мои дети",
+    "teacherAttendance": "Преподаватели",
+    "sms": "СМС"
   },
   "weekdays": {
     "mon": "Пн",
@@ -1575,11 +1578,6 @@
       "GUARDIAN": "Опекун",
       "OTHER": "Другое"
     }
-  },
-  "navigation": {
-    "myChildren": "Мои дети",
-    "teacherAttendance": "Посещаемость преподавателей",
-    "sms": "СМС"
   },
   "sms": {
     "title": "СМС",

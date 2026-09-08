@@ -140,7 +140,10 @@
     "browseCatalog": "Kurslar katalogi",
     "enrollmentRequests": "Kurslarga arizalar",
     "payments": "To'lovlar",
-    "debtors": "Qarzdorlar"
+    "debtors": "Qarzdorlar",
+    "myChildren": "Farzandlarim",
+    "teacherAttendance": "O‘qituvchilar",
+    "sms": "SMS"
   },
   "weekdays": {
     "mon": "Du",
@@ -1575,11 +1578,6 @@
       "GUARDIAN": "Vasiy",
       "OTHER": "Boshqa"
     }
-  },
-  "navigation": {
-    "myChildren": "Mening farzandlarim",
-    "teacherAttendance": "O‘qituvchilar davomati",
-    "sms": "SMS"
   },
   "sms": {
     "title": "SMS",
