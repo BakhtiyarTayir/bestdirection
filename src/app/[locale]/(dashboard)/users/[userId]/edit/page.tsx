@@ -3,6 +3,7 @@ import { getUserById } from "@/actions/user-actions";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { EditUserForm } from "./edit-user-form";
+import { ParentsPanel } from "@/components/parents-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -30,9 +31,11 @@ async function EditUserPageContent({ user }: { user: any }) {
   const t = await getTranslations("users");
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-6">{t("editUser")}</h1>
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold">{t("editUser")}</h1>
       <EditUserForm user={user} />
+      {/* Родители — только у учеников: у остальных ролей связь не имеет смысла */}
+      {user.role === "STUDENT" && <ParentsPanel studentId={user.id} />}
     </div>
   );
 }

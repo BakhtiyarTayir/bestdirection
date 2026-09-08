@@ -12,6 +12,16 @@ enum Role {
   ADMIN
   TEACHER
   STUDENT
+  PARENT
+}
+
+// Кем родитель приходится ученику. Нужно администратору при звонке,
+// а в тексте СМС — чтобы обратиться правильно.
+enum ParentRelation {
+  MOTHER
+  FATHER
+  GUARDIAN
+  OTHER
 }
 
 enum VideoSource {
@@ -128,10 +138,40 @@ model User {
   telegramChatId       String?   @unique
   telegramUsername     String?
 
+  // Родитель ↔ ученик. Связь многие-ко-многим: у ученика может быть двое
+  // родителей, у родителя — несколько детей в разных группах.
+  childLinks  ParentStudent[] @relation("ParentOf")
+  parentLinks ParentStudent[] @relation("ChildOf")
+
   @@index([role])
   @@index([isActive])
   @@index([lastSeenAt])
   @@index([deletedAt])
+}
+
+// Связь родителя с учеником. Отдельная таблица, а не массив id: у связи
+// есть собственные атрибуты — кем приходится и основной ли это контакт.
+model ParentStudent {
+  id String @id @default(cuid())
+
+  parentId String
+  parent   User   @relation("ParentOf", fields: [parentId], references: [id], onDelete: Cascade)
+
+  studentId String
+  student   User   @relation("ChildOf", fields: [studentId], references: [id], onDelete: Cascade)
+
+  relation ParentRelation @default(OTHER)
+
+  // Кому звонить и слать СМС первым, если родителей несколько.
+  // Уникальности на уровне БД нет: «основных» может не быть вовсе,
+  // а частичные индексы Prisma не выражает — следит серверное действие.
+  isPrimary Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@unique([parentId, studentId])
+  @@index([studentId])
+  @@index([parentId])
 }
 
 model Course {

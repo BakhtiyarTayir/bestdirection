@@ -96,7 +96,8 @@ const navItems: NavItem[] = [
   { href: "/homework", labelKey: "homework", icon: ClipboardList, roles: ["ADMIN", "TEACHER", "STUDENT"], badge: "homework" },
   { href: "/attendance", labelKey: "attendance", icon: CalendarCheck, roles: ["ADMIN", "TEACHER", "STUDENT"] },
   { href: "/my-results", labelKey: "myResults", icon: FileText, roles: ["STUDENT"] },
-  { href: "/profile", labelKey: "profile", icon: User, roles: ["ADMIN", "TEACHER", "STUDENT"] },
+  { href: "/my-children", labelKey: "myChildren", icon: UsersRound, roles: ["PARENT"] },
+  { href: "/profile", labelKey: "profile", icon: User, roles: ["ADMIN", "TEACHER", "STUDENT", "PARENT"] },
 ];
 
 function useBadgeCount(endpoint: string, enabled: boolean) {

@@ -154,7 +154,8 @@
   "roles": {
     "ADMIN": "Administrator",
     "TEACHER": "O'qituvchi",
-    "STUDENT": "Talaba"
+    "STUDENT": "Talaba",
+    "PARENT": "Ota-ona"
   },
   "breadcrumb": {
     "home": "Bosh sahifa",
@@ -1006,7 +1007,7 @@
     "noCopyAccess": "Bu kursni nusxalash uchun ruxsat yo'q",
     "onlyOwnCourses": "Siz faqat o'z kurslaringizni boshqarishingiz mumkin",
     "testNotFound": "Test topilmadi",
-    "emailAlreadyExists": "Bunday emailli foydalanuvchi allaqachon mavjud",
+    "emailAlreadyExists": "Bunday pochtali foydalanuvchi mavjud",
     "onlyStudentsCanTake": "Faqat talabalar tadbirlarni topshirishi mumkin",
     "assessmentNotPublished": "Tadbir nashr qilinmagan",
     "notEnrolled": "Siz bu kursga yozilmagansiz",
@@ -1026,7 +1027,13 @@
     "fileReadError": "Faylni o'qishda xatolik",
     "invalidHomeworkImportFormat": "Uy vazifalarini import qilish uchun faqat JSON qo'llab-quvvatlanadi",
     "invalidHomeworkImportPayload": "Uy vazifasini import qilish uchun JSON tuzilmasi noto'g'ri",
-    "homeworkImportEmpty": "Faylda import qilish uchun to'g'ri uy vazifalari topilmadi"
+    "homeworkImportEmpty": "Faylda import qilish uchun to'g'ri uy vazifalari topilmadi",
+    "parentCannotBeOwnChild": "Ota-onani o‘ziga biriktirib bo‘lmaydi",
+    "notAParent": "Bu foydalanuvchining roli «Ota-ona» emas",
+    "notAStudent": "Bu foydalanuvchi o‘quvchi emas",
+    "linkAlreadyExists": "Bunday bog‘lanish allaqachon mavjud",
+    "linkNotFound": "Bog‘lanish topilmadi",
+    "phoneRequired": "Telefonni kiriting"
   },
   "success": {
     "saved": "Saqlandi",
@@ -1513,5 +1520,45 @@
     "suggestionLessons": "Jadval bo'yicha: {total} darsdan {billed} tasi → {amount} UZS",
     "suggestionDays": "Guruhda dars kunlari yo'q, kunlar bo'yicha: {total} dan {billed} → {amount} UZS",
     "suggestionFull": "Talaba oyning birinchi kunidan boshlagan — oy to'liq"
+  },
+  "parents": {
+    "title": "Ota-onalar",
+    "description": "O‘quvchi ota-onasining kontaktlari. Asosiy kontakt SMS xabarlarni birinchi oladi.",
+    "empty": "Ota-onalar hali biriktirilmagan",
+    "primary": "Asosiy",
+    "makePrimary": "Asosiy qilish",
+    "addNew": "Ota-ona qo‘shish",
+    "linkExisting": "Mavjudini biriktirish",
+    "linkExistingHint": "Agar ota-ona allaqachon kiritilgan bo‘lsa — masalan, ikkinchi farzandi o‘qiyotgan bo‘lsa",
+    "searchPlaceholder": "Familiya, ism yoki telefon",
+    "link": "Biriktirish",
+    "unlink": "Uzish",
+    "firstName": "Ism",
+    "lastName": "Familiya",
+    "phone": "Telefon",
+    "phoneHint": "SMS xabarlar uchun kerak — usiz ota-ona ro‘yxatga tushmaydi",
+    "relationLabel": "Kim bo‘ladi",
+    "primaryHint": "Aloqa va SMS uchun asosiy kontakt",
+    "noPhone": "Telefon ko‘rsatilmagan",
+    "noPhoneCannotBePrimary": "Telefonsiz asosiy qilib bo‘lmaydi",
+    "childrenCount": "farzandlar: {count}",
+    "parentAdded": "Ota-ona qo‘shildi",
+    "parentLinked": "Ota-ona biriktirildi",
+    "parentUnlinked": "Bog‘lanish o‘chirildi",
+    "myChildren": "Mening farzandlarim",
+    "noChildren": "Hisobingizga birorta o‘quvchi biriktirilmagan",
+    "childrenDescription": "Hisobingizga biriktirilgan o‘quvchilar",
+    "groupLabel": "Guruh",
+    "courseLabel": "Kurs",
+    "noGroup": "Guruhsiz",
+    "relation": {
+      "MOTHER": "Ona",
+      "FATHER": "Ota",
+      "GUARDIAN": "Vasiy",
+      "OTHER": "Boshqa"
+    }
+  },
+  "navigation": {
+    "myChildren": "Mening farzandlarim"
   }
 }

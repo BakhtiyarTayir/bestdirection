@@ -154,7 +154,8 @@
   "roles": {
     "ADMIN": "Администратор",
     "TEACHER": "Преподаватель",
-    "STUDENT": "Студент"
+    "STUDENT": "Студент",
+    "PARENT": "Родитель"
   },
   "breadcrumb": {
     "home": "Главная",
@@ -1006,7 +1007,7 @@
     "noCopyAccess": "Нет доступа для копирования этого курса",
     "onlyOwnCourses": "Вы можете управлять только своими курсами",
     "testNotFound": "Тест не найден",
-    "emailAlreadyExists": "Пользователь с таким email уже существует",
+    "emailAlreadyExists": "Пользователь с такой почтой уже есть",
     "onlyStudentsCanTake": "Только студенты могут проходить мероприятия",
     "assessmentNotPublished": "Мероприятие не опубликовано",
     "notEnrolled": "Вы не записаны на этот курс",
@@ -1026,7 +1027,13 @@
     "fileReadError": "Ошибка чтения файла",
     "invalidHomeworkImportFormat": "Для импорта домашних заданий поддерживается только JSON",
     "invalidHomeworkImportPayload": "Некорректная структура JSON для импорта домашних заданий",
-    "homeworkImportEmpty": "Файл не содержит корректных домашних заданий для импорта"
+    "homeworkImportEmpty": "Файл не содержит корректных домашних заданий для импорта",
+    "parentCannotBeOwnChild": "Родитель не может быть привязан сам к себе",
+    "notAParent": "У этого пользователя не роль «Родитель»",
+    "notAStudent": "Этот пользователь не ученик",
+    "linkAlreadyExists": "Такая связь уже есть",
+    "linkNotFound": "Связь не найдена",
+    "phoneRequired": "Укажите телефон"
   },
   "success": {
     "saved": "Сохранено",
@@ -1513,5 +1520,45 @@
     "suggestionLessons": "По расписанию: {billed} из {total} занятий → {amount} UZS",
     "suggestionDays": "У группы нет дней занятий, считаем по дням: {billed} из {total} → {amount} UZS",
     "suggestionFull": "Студент начал с первого числа — месяц полный"
+  },
+  "parents": {
+    "title": "Родители",
+    "description": "Контакты родителей ученика. Основной получает СМС-рассылки первым.",
+    "empty": "Родители пока не привязаны",
+    "primary": "Основной",
+    "makePrimary": "Сделать основным",
+    "addNew": "Добавить родителя",
+    "linkExisting": "Привязать существующего",
+    "linkExistingHint": "Если родитель уже заведён — например, у него учится второй ребёнок",
+    "searchPlaceholder": "Фамилия, имя или телефон",
+    "link": "Привязать",
+    "unlink": "Отвязать",
+    "firstName": "Имя",
+    "lastName": "Фамилия",
+    "phone": "Телефон",
+    "phoneHint": "Нужен для СМС-рассылок — без него родитель в них не попадёт",
+    "relationLabel": "Кем приходится",
+    "primaryHint": "Основной контакт для связи и СМС",
+    "noPhone": "Телефон не указан",
+    "noPhoneCannotBePrimary": "Без телефона нельзя сделать основным",
+    "childrenCount": "детей: {count}",
+    "parentAdded": "Родитель добавлен",
+    "parentLinked": "Родитель привязан",
+    "parentUnlinked": "Связь удалена",
+    "myChildren": "Мои дети",
+    "noChildren": "К вашему аккаунту не привязан ни один ученик",
+    "childrenDescription": "Ученики, привязанные к вашему аккаунту",
+    "groupLabel": "Группа",
+    "courseLabel": "Курс",
+    "noGroup": "Без группы",
+    "relation": {
+      "MOTHER": "Мать",
+      "FATHER": "Отец",
+      "GUARDIAN": "Опекун",
+      "OTHER": "Другое"
+    }
+  },
+  "navigation": {
+    "myChildren": "Мои дети"
   }
 }
