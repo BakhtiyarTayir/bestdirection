@@ -645,7 +645,18 @@
     "manageAttendance": "Davomatni boshqarish",
     "groupOptional": "Guruh (ixtiyoriy)",
     "allGroups": "Barcha guruhlar",
-    "editSession": "Sessiyani tahrirlash"
+    "editSession": "Sessiyani tahrirlash",
+    "teacherRow": "O‘qituvchi",
+    "teacherNotePlaceholder": "Almashtirish, kechikish, sabab…",
+    "teacherReport": "O‘qituvchilar davomati",
+    "teacherReportDescription": "O‘qituvchi zimmasidagi darslar soni va ular qanday belgilangan",
+    "conducted": "O‘tkazilgan",
+    "missed": "O‘tkazib yuborilgan",
+    "unmarked": "Belgilanmagan",
+    "totalSessions": "Jami darslar",
+    "noTeacherData": "Statistika hisoblash uchun darslar hali yo‘q",
+    "periodFrom": "Dan",
+    "periodTo": "Gacha"
   },
   "users": {
     "title": "Foydalanuvchilar",
@@ -753,7 +764,10 @@
     "noStatistics": "Statistika uchun ma'lumot yo'q",
     "studentName": "Talaba",
     "scheduleDays": "Dars kunlari",
-    "scheduleDaysHint": "To'lovda to'liqsiz oyni hisoblash uchun kerak: kunlar emas, darslar sanaladi. Bo'sh qoldirsa ham bo'ladi."
+    "scheduleDaysHint": "To'lovda to'liqsiz oyni hisoblash uchun kerak: kunlar emas, darslar sanaladi. Bo'sh qoldirsa ham bo'ladi.",
+    "teacher": "O‘qituvchi",
+    "teacherFromCourse": "Kurs o‘qituvchisi",
+    "teacherHint": "Guruhni kurs o‘qituvchisi olib borsa, bo‘sh qoldiring"
   },
   "profile": {
     "title": "Mening profilim",
@@ -1559,6 +1573,7 @@
     }
   },
   "navigation": {
-    "myChildren": "Mening farzandlarim"
+    "myChildren": "Mening farzandlarim",
+    "teacherAttendance": "O‘qituvchilar davomati"
   }
 }

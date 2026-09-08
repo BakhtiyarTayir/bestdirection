@@ -23,9 +23,12 @@ interface GroupFormProps {
     description: string | null;
     schedule: string | null;
     scheduleDays: number[];
+    teacherId: string | null;
     startDate: Date | null;
     endDate: Date | null;
   };
+  /** Кандидаты в преподаватели группы; пустой список прячет поле */
+  teachers?: { id: string; firstName: string; lastName: string }[];
 }
 
 /** ISO: 1 = понедельник … 7 = воскресенье */
@@ -39,7 +42,7 @@ const WEEKDAYS = [
   { iso: 7, key: "sun" },
 ] as const;
 
-export function GroupForm({ courseId, courseSlug, group }: GroupFormProps) {
+export function GroupForm({ courseId, courseSlug, group, teachers = [] }: GroupFormProps) {
   const t = useTranslations("groups");
   const tWeekdays = useTranslations("weekdays");
   const tCommon = useTranslations("common");
@@ -61,6 +64,7 @@ export function GroupForm({ courseId, courseSlug, group }: GroupFormProps) {
       name: group?.name || "",
       description: group?.description || "",
       schedule: group?.schedule || "",
+      teacherId: group?.teacherId || "",
       scheduleDays: group?.scheduleDays ?? [],
       startDate: group?.startDate || undefined,
       endDate: group?.endDate || undefined,
@@ -106,6 +110,27 @@ export function GroupForm({ courseId, courseSlug, group }: GroupFormProps) {
           <p className="text-sm text-destructive">{errors.description.message}</p>
         )}
       </div>
+
+      {teachers.length > 0 && (
+        <div className="space-y-2">
+          <Label htmlFor="teacherId">{t("teacher")}</Label>
+          {/* Обычный select, а не Radix: значение "" осмысленное — «взять
+              преподавателя курса», а SelectItem пустую строку не принимает */}
+          <select
+            id="teacherId"
+            {...register("teacherId")}
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <option value="">{t("teacherFromCourse")}</option>
+            {teachers.map((teacher) => (
+              <option key={teacher.id} value={teacher.id}>
+                {teacher.lastName} {teacher.firstName}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground">{t("teacherHint")}</p>
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="schedule">{t("schedule")}</Label>

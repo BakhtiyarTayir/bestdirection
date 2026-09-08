@@ -1,5 +1,6 @@
 import { requireAuth } from "@/lib/auth-guard";
 import { GroupForm } from "@/components/groups/group-form";
+import { getTeacherOptions } from "@/actions/group-actions";
 import { getTranslations } from "next-intl/server";
 import { resolveCourseSlug } from "@/lib/slug-resolvers";
 
@@ -15,10 +16,13 @@ export default async function NewGroupPage({ params }: NewGroupPageProps) {
   const courseId = await resolveCourseSlug(courseSlug);
   await requireAuth();
 
+  const teacherResult = await getTeacherOptions();
+  const teachers = teacherResult.success ? teacherResult.data : [];
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">{t("createGroup")}</h1>
-      <GroupForm courseId={courseId} courseSlug={courseSlug} />
+      <GroupForm courseId={courseId} courseSlug={courseSlug} teachers={teachers} />
     </div>
   );
 }

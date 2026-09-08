@@ -2,6 +2,7 @@ import { requireAuth } from "@/lib/auth-guard";
 import { getGroupDetails } from "@/actions/group-actions";
 import { notFound } from "next/navigation";
 import { GroupForm } from "@/components/groups/group-form";
+import { getTeacherOptions } from "@/actions/group-actions";
 import { getTranslations } from "next-intl/server";
 import { resolveCourseSlug } from "@/lib/slug-resolvers";
 
@@ -22,10 +23,13 @@ export default async function GroupDetailPage({ params }: GroupDetailPageProps) 
 
   const group = result.data;
 
+  const teacherResult = await getTeacherOptions();
+  const teachers = teacherResult.success ? teacherResult.data : [];
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">{t("editGroup")}</h1>
-      <GroupForm courseId={courseId} courseSlug={courseSlug} group={group} />
+      <GroupForm courseId={courseId} courseSlug={courseSlug} group={group} teachers={teachers} />
     </div>
   );
 }

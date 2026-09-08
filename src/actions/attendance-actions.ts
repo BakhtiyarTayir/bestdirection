@@ -16,6 +16,29 @@ async function revalidateCourseAttendance(courseId: string) {
   }
 }
 
+/**
+ * Кто по умолчанию ведёт занятие: преподаватель группы, а если у неё не
+ * задан — преподаватель курса. Group.teacherId появился позже Course.teacherId,
+ * поэтому у части групп он пустой.
+ */
+async function resolveDefaultTeacherId(
+  courseId: string,
+  groupId: string | null
+): Promise<string | null> {
+  if (groupId) {
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      select: { teacherId: true },
+    });
+    if (group?.teacherId) return group.teacherId;
+  }
+  const course = await prisma.course.findUnique({
+    where: { id: courseId },
+    select: { teacherId: true },
+  });
+  return course?.teacherId ?? null;
+}
+
 // ---------- getAttendanceSessions ----------
 export async function getAttendanceSessions(courseId: string) {
   return withAuth(async () => {
@@ -23,6 +46,7 @@ export async function getAttendanceSessions(courseId: string) {
       where: { courseId },
       include: {
         _count: { select: { records: true } },
+        teacher: { select: { id: true, firstName: true, lastName: true } },
         records: {
           include: {
             student: {
@@ -61,6 +85,13 @@ export async function createAttendanceSession(data: {
 
       const dateValue = new Date(data.date);
 
+      // Преподаватель подставляется заранее: у группы свой, иначе педагог
+      // курса. Администратор при желании поменяет — например, при замене.
+      const defaultTeacherId = await resolveDefaultTeacherId(
+        data.courseId,
+        data.groupId || null
+      );
+
       try {
         const attendanceSession = await prisma.attendanceSession.create({
           data: {
@@ -68,6 +99,7 @@ export async function createAttendanceSession(data: {
             date: dateValue,
             note: data.note,
             groupId: data.groupId || null,
+            teacherId: defaultTeacherId,
           },
         });
 
@@ -99,6 +131,16 @@ export async function createAttendanceSession(data: {
 export async function updateAttendanceRecords(data: {
   sessionId: string;
   records: { studentId: string; status: AttendanceStatus; note?: string }[];
+  // Отметка преподавателя приходит тем же запросом, что и ученики: это одна
+  // операция для пользователя, и разделять её на два действия значило бы
+  // допустить состояние «учеников отметили, педагога нет».
+  teacher?: {
+    teacherId?: string | null;
+    status?: AttendanceStatus | null;
+    note?: string | null;
+    startedAt?: Date | string | null;
+    endedAt?: Date | string | null;
+  };
 }) {
   return withAuth(
     async (session) => {
@@ -119,8 +161,22 @@ export async function updateAttendanceRecords(data: {
         return { success: false, error: "You can only update attendance for your own courses" };
       }
 
-      await prisma.$transaction(
-        data.records.map((record) =>
+      await prisma.$transaction([
+        ...(data.teacher
+          ? [
+              prisma.attendanceSession.update({
+                where: { id: data.sessionId },
+                data: {
+                  teacherId: data.teacher.teacherId ?? undefined,
+                  teacherStatus: data.teacher.status ?? undefined,
+                  teacherNote: data.teacher.note ?? undefined,
+                  startedAt: data.teacher.startedAt ? new Date(data.teacher.startedAt) : undefined,
+                  endedAt: data.teacher.endedAt ? new Date(data.teacher.endedAt) : undefined,
+                },
+              }),
+            ]
+          : []),
+        ...data.records.map((record) =>
           prisma.attendanceRecord.upsert({
             where: {
               sessionId_studentId: {
@@ -139,8 +195,8 @@ export async function updateAttendanceRecords(data: {
               note: record.note,
             },
           })
-        )
-      );
+        ),
+      ]);
 
       await createAuditLog({
         userId: session.user.id,
@@ -149,6 +205,9 @@ export async function updateAttendanceRecords(data: {
         action: "UPDATE",
         metadata: {
           courseId: attendanceSession.course.id,
+          teacher: data.teacher
+            ? { teacherId: data.teacher.teacherId, status: data.teacher.status }
+            : undefined,
           records: data.records.map((r) => ({
             studentId: r.studentId,
             status: r.status,
@@ -320,6 +379,131 @@ export async function deleteAttendanceSession(id: string) {
 
       await revalidateCourseAttendance(existing.course.id);
       return { success: true };
+    },
+    { roles: ["ADMIN", "TEACHER"] }
+  );
+}
+
+// ---------- getTeacherAttendanceReport ----------
+/**
+ * Сводка по преподавателям за период: сколько занятий числится, сколько
+ * проведено, пропущено и не отмечено.
+ *
+ * Занятия без teacherId (все, что были до появления отметки) считаются по
+ * преподавателю группы, а при его отсутствии — по преподавателю курса.
+ * Иначе вся история выпала бы из отчёта.
+ */
+export async function getTeacherAttendanceReport(params?: {
+  from?: Date | string;
+  to?: Date | string;
+  teacherId?: string;
+}) {
+  return withAuth(
+    async (session) => {
+      const role = session.user.role;
+      // Преподаватель видит только свою статистику, администратор — всю
+      const teacherFilter =
+        role === "TEACHER" ? session.user.id : params?.teacherId;
+
+      const dateWhere =
+        params?.from || params?.to
+          ? {
+              date: {
+                ...(params.from ? { gte: new Date(params.from) } : {}),
+                ...(params.to ? { lte: new Date(params.to) } : {}),
+              },
+            }
+          : {};
+
+      const sessions = await prisma.attendanceSession.findMany({
+        where: dateWhere,
+        select: {
+          id: true,
+          date: true,
+          teacherId: true,
+          teacherStatus: true,
+          startedAt: true,
+          endedAt: true,
+          group: { select: { id: true, name: true, teacherId: true } },
+          course: { select: { id: true, title: true, teacherId: true } },
+        },
+        orderBy: { date: "desc" },
+      });
+
+      type Row = {
+        teacherId: string;
+        firstName: string;
+        lastName: string;
+        total: number;
+        present: number;
+        absent: number;
+        late: number;
+        excused: number;
+        unmarked: number;
+      };
+      const rows = new Map<string, Row>();
+
+      for (const s of sessions) {
+        const responsibleId =
+          s.teacherId ?? s.group?.teacherId ?? s.course.teacherId ?? null;
+        if (!responsibleId) continue;
+        if (teacherFilter && responsibleId !== teacherFilter) continue;
+
+        let row = rows.get(responsibleId);
+        if (!row) {
+          row = {
+            teacherId: responsibleId,
+            firstName: "",
+            lastName: "",
+            total: 0,
+            present: 0,
+            absent: 0,
+            late: 0,
+            excused: 0,
+            unmarked: 0,
+          };
+          rows.set(responsibleId, row);
+        }
+
+        row.total += 1;
+        switch (s.teacherStatus) {
+          case "PRESENT":
+            row.present += 1;
+            break;
+          case "ABSENT":
+            row.absent += 1;
+            break;
+          case "LATE":
+            row.late += 1;
+            break;
+          case "EXCUSED":
+            row.excused += 1;
+            break;
+          default:
+            row.unmarked += 1;
+        }
+      }
+
+      if (rows.size === 0) return { success: true as const, data: [] };
+
+      const teachers = await prisma.user.findMany({
+        where: { id: { in: [...rows.keys()] } },
+        select: { id: true, firstName: true, lastName: true },
+      });
+      for (const t of teachers) {
+        const row = rows.get(t.id);
+        if (row) {
+          row.firstName = t.firstName;
+          row.lastName = t.lastName;
+        }
+      }
+
+      return {
+        success: true as const,
+        data: [...rows.values()].sort((a, b) =>
+          `${a.lastName}${a.firstName}`.localeCompare(`${b.lastName}${b.firstName}`, "ru")
+        ),
+      };
     },
     { roles: ["ADMIN", "TEACHER"] }
   );

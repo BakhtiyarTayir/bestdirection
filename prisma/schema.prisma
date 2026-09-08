@@ -143,6 +143,10 @@ model User {
   childLinks  ParentStudent[] @relation("ParentOf")
   parentLinks ParentStudent[] @relation("ChildOf")
 
+  // Преподавание: группы под ведением и проведённые занятия
+  taughtGroups   Group[]             @relation("GroupTeacher")
+  taughtSessions AttendanceSession[] @relation("SessionTeacher")
+
   @@index([role])
   @@index([isActive])
   @@index([lastSeenAt])
@@ -356,11 +360,18 @@ model Group {
   courseId String
   course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
+  // Преподаватель группы. Course.teacherId задаёт одного педагога на весь
+  // курс — этого мало: две группы одного курса могут вести разные люди.
+  // Необязательный: пока не заполнен, отчёты берут преподавателя курса.
+  teacherId String?
+  teacher   User?   @relation("GroupTeacher", fields: [teacherId], references: [id], onDelete: SetNull)
+
   enrollments        Enrollment[]
   attendanceSessions AttendanceSession[]
   payments           Payment[]
 
   @@unique([courseId, name])
+  @@index([teacherId])
   @@index([courseId])
   @@index([isActive])
 }
@@ -422,6 +433,19 @@ model AttendanceSession {
   date DateTime @db.Date
   note String?
 
+  // ─── Преподаватель ──────────────────────────────────────────────────────
+  // Кто фактически вёл занятие. Может отличаться от преподавателя группы:
+  // замена, второй педагог, смена в середине курса.
+  teacherId     String?
+  teacher       User?             @relation("SessionTeacher", fields: [teacherId], references: [id], onDelete: SetNull)
+  teacherStatus AttendanceStatus?
+  teacherNote   String?
+
+  // Фактическое время занятия. Заполняется по желанию и нужно не отметке,
+  // а будущему учёту часов — чтобы не заводить под него ещё одну миграцию.
+  startedAt DateTime?
+  endedAt   DateTime?
+
   courseId String
   course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
@@ -433,6 +457,8 @@ model AttendanceSession {
   @@unique([courseId, date, groupId])
   @@index([courseId])
   @@index([groupId])
+  @@index([teacherId])
+  @@index([date])
 }
 
 model AttendanceRecord {

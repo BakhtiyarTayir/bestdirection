@@ -86,6 +86,9 @@ export default async function SessionPage({ params }: SessionPageProps) {
             sessionId={sessionId}
             students={students}
             existingRecords={existingRecords}
+            teacher={currentSession.teacher}
+            teacherStatus={currentSession.teacherStatus}
+            teacherNote={currentSession.teacherNote}
           />
         </CardContent>
       </Card>

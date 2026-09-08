@@ -28,6 +28,7 @@ export async function getGroupDetails(groupId: string) {
       where: { id: groupId },
       include: {
         course: { select: { id: true, title: true, teacherId: true } },
+        teacher: { select: { id: true, firstName: true, lastName: true } },
         enrollments: {
           include: {
             student: {
@@ -88,6 +89,9 @@ export async function createGroup(courseId: string, data: CreateGroupInput) {
         data: {
           ...data,
           courseId,
+          // Не указан явно — ведёт преподаватель курса. Отчёт по занятиям
+          // опирается на это поле, и пустое значение выкинуло бы группу из него.
+          teacherId: data.teacherId?.trim() ? data.teacherId : course.teacherId,
           sortOrder: (maxSort._max.sortOrder ?? -1) + 1,
         },
       });
@@ -135,7 +139,14 @@ export async function updateGroup(groupId: string, data: UpdateGroupInput) {
 
       const updated = await prisma.group.update({
         where: { id: groupId },
-        data,
+        data: {
+          ...data,
+          // Пустая строка из формы = «убрать преподавателя», undefined = «не менять»
+          teacherId:
+            data.teacherId === undefined
+              ? undefined
+              : data.teacherId.trim() || null,
+        },
       });
 
       const changes = computeChanges(group, updated);
@@ -575,6 +586,24 @@ export async function getAllGroups() {
       });
 
       return { success: true as const, data: groups };
+    },
+    { roles: ["ADMIN", "TEACHER"] }
+  );
+}
+
+// ---------- getTeacherOptions ----------
+/** Кандидаты в преподаватели группы: активные пользователи с ролью TEACHER или ADMIN. */
+export async function getTeacherOptions() {
+  return withAuth(
+    async () => {
+      const teachers = await prisma.user.findMany({
+        // ADMIN включён намеренно: в небольшом центре занятия нередко ведёт
+        // сам администратор, и без него список окажется пустым.
+        where: { role: { in: ["TEACHER", "ADMIN"] }, isActive: true, deletedAt: null },
+        select: { id: true, firstName: true, lastName: true },
+        orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      });
+      return { success: true as const, data: teachers };
     },
     { roles: ["ADMIN", "TEACHER"] }
   );

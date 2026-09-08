@@ -44,6 +44,10 @@ interface AttendanceMarkingProps {
   sessionId: string;
   students: Student[];
   existingRecords: ExistingRecord[];
+  /** Кто числится ведущим занятие; null — преподаватель не определён */
+  teacher?: { id: string; firstName: string; lastName: string } | null;
+  teacherStatus?: AttendanceStatus | null;
+  teacherNote?: string | null;
 }
 
 interface StudentRecord {
@@ -56,6 +60,9 @@ export function AttendanceMarking({
   sessionId,
   students,
   existingRecords,
+  teacher,
+  teacherStatus,
+  teacherNote,
 }: AttendanceMarkingProps) {
   const t = useTranslations("attendance");
   const tCommon = useTranslations("common");
@@ -71,6 +78,13 @@ export function AttendanceMarking({
   ];
   const [isLoading, setIsLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"saved" | "unsaved" | "idle">("idle");
+
+  // Отметка преподавателя. По умолчанию PRESENT: занятие обычно состоялось,
+  // а отсутствие — исключение, которое отмечают руками.
+  const [tStatus, setTStatus] = useState<AttendanceStatus>(
+    (teacherStatus ?? "PRESENT") as AttendanceStatus
+  );
+  const [tNote, setTNote] = useState(teacherNote ?? "");
 
   // Build initial records from existing data or defaults
   const existingMap = new Map(
@@ -115,6 +129,9 @@ export function AttendanceMarking({
           status: r.status as AttendanceStatus,
           note: r.note.trim() || undefined,
         })),
+        // Преподавателя отмечаем только когда он известен: иначе запись
+        // повисла бы без адресата и отчёт посчитал бы её пропуском.
+        teacher: teacher ? { status: tStatus, note: tNote.trim() || null } : undefined,
       });
 
       if (result.success) {
@@ -177,6 +194,46 @@ export function AttendanceMarking({
           </Button>
         ))}
       </div>
+
+      {teacher && (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+          <div className="min-w-[180px] flex-1">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("teacherRow")}
+            </div>
+            <div className="font-medium">
+              {teacher.lastName} {teacher.firstName}
+            </div>
+          </div>
+          <Select
+            value={tStatus}
+            onValueChange={(v) => {
+              setTStatus(v as AttendanceStatus);
+              setSaveStatus("unsaved");
+            }}
+          >
+            <SelectTrigger className="w-[170px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            value={tNote}
+            onChange={(e) => {
+              setTNote(e.target.value);
+              setSaveStatus("unsaved");
+            }}
+            placeholder={t("teacherNotePlaceholder")}
+            className="w-[220px]"
+          />
+        </div>
+      )}
 
       <div className="border rounded-lg">
         <Table>

@@ -19,6 +19,10 @@ export const createGroupSchema = z.object({
     .array(z.number().int().min(1).max(7))
     .max(7)
     .optional(),
+  // Преподаватель группы. Пустая строка из <select> означает «взять
+  // преподавателя курса»; в null её превращает серверное действие —
+  // transform здесь ломает типы react-hook-form, разводя вход и выход схемы.
+  teacherId: z.string().optional(),
   startDate: z
     .coerce
     .date()
