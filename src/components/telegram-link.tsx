@@ -22,6 +22,7 @@ export function TelegramLink() {
   const [username, setUsername] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLinking, setIsLinking] = useState(false);
+  const [linkUrl, setLinkUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -50,10 +51,20 @@ export function TelegramLink() {
 
   const handleLink = async () => {
     setIsLinking(true);
+    setLinkUrl(null);
+
+    // Вкладку открываем синхронно, ещё внутри жеста: WebKit блокирует
+    // window.open, вызванный после await, — на iOS Telegram не открывался.
+    // Без "noopener": с ним window.open возвращает null и вкладку не направить.
+    const popup = window.open("", "_blank");
+    if (popup) popup.opener = null;
+
     const result = await generateTelegramLinkCode();
     if (result.success && result.data) {
       const botUrl = `https://t.me/${botUsername}?start=${result.data.code}`;
-      window.open(botUrl, "_blank");
+      // Ссылка на случай заблокированного попапа: переход по <a> не блокируют.
+      setLinkUrl(botUrl);
+      if (popup) popup.location.href = botUrl;
       toast({
         title: t("telegramOpenTitle"),
         description: t("telegramOpenDescription"),
@@ -66,6 +77,7 @@ export function TelegramLink() {
           setUsername(status.data.username);
           clearInterval(interval);
           setIsLinking(false);
+          setLinkUrl(null);
           toast({ title: t("telegramLinkedToast") });
         }
       }, 3000);
@@ -73,8 +85,10 @@ export function TelegramLink() {
       setTimeout(() => {
         clearInterval(interval);
         setIsLinking(false);
+        setLinkUrl(null);
       }, 120000);
     } else {
+      popup?.close();
       setIsLinking(false);
     }
   };
@@ -123,23 +137,35 @@ export function TelegramLink() {
             </Button>
           </div>
         ) : (
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              {t("telegramHint")}
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLink}
-              disabled={isLinking || !botUsername}
-            >
-              {isLinking ? (
-                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              ) : (
-                <Link2 className="h-4 w-4 mr-1" />
-              )}
-              {t("telegramLink")}
-            </Button>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                {t("telegramHint")}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLink}
+                disabled={isLinking || !botUsername}
+              >
+                {isLinking ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <Link2 className="h-4 w-4 mr-1" />
+                )}
+                {t("telegramLink")}
+              </Button>
+            </div>
+            {isLinking && linkUrl && (
+              <a
+                href={linkUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block rounded-md border border-input px-3 py-2 text-center text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              >
+                {t("telegramOpenManually")}
+              </a>
+            )}
           </div>
         )}
       </CardContent>
