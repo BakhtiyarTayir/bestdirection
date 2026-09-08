@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import { prisma, prismaUnscoped } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
 import { revalidateLocalized } from "@/lib/revalidate";
 import { createAuditLog } from "@/lib/audit";
@@ -211,10 +211,17 @@ export async function createParentForStudent(data: {
       if (!student) return { success: false as const, error: "userNotFound" };
       if (student.role !== "STUDENT") return { success: false as const, error: "notAStudent" };
 
+      // Без soft-delete-фильтра: почта удалённого аккаунта остаётся занятой
+      // в уникальном индексе, хотя обычный findUnique его уже не видит.
       const email = data.email?.trim() ? data.email.trim() : null;
-      if (email) {
-        const taken = await prisma.user.findUnique({ where: { email }, select: { id: true } });
-        if (taken) return { success: false as const, error: "emailAlreadyExists" };
+      const taken = email
+        ? await prismaUnscoped.user.findUnique({
+            where: { email },
+            select: { id: true, deletedAt: true },
+          })
+        : null;
+      if (taken && !taken.deletedAt) {
+        return { success: false as const, error: "emailAlreadyExists" };
       }
 
       // Пароль случайный: родителя заводит администратор, вход — через
@@ -223,17 +230,26 @@ export async function createParentForStudent(data: {
       const passwordHash = await bcrypt.hash(randomBytes(24).toString("hex"), 10);
 
       const result = await prisma.$transaction(async (tx) => {
-        const parent = await tx.user.create({
-          data: {
-            email,
-            passwordHash,
-            firstName: data.firstName,
-            lastName: data.lastName,
-            phone: data.phone,
-            role: "PARENT",
-          },
-          select: PARENT_SELECT,
-        });
+        const parentData = {
+          passwordHash,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phone: data.phone,
+          role: "PARENT" as const,
+        };
+
+        // Почту удалённого аккаунта не освободить — восстанавливаем его
+        // вместо дубля, как это делает createUser.
+        const parent = taken
+          ? await tx.user.update({
+              where: { id: taken.id },
+              data: { ...parentData, isActive: true, deletedAt: null },
+              select: PARENT_SELECT,
+            })
+          : await tx.user.create({
+              data: { ...parentData, email },
+              select: PARENT_SELECT,
+            });
 
         if (data.isPrimary) {
           await tx.parentStudent.updateMany({
@@ -242,10 +258,22 @@ export async function createParentForStudent(data: {
           });
         }
 
-        const link = await tx.parentStudent.create({
-          data: {
+        // Восстановленный родитель мог быть привязан к этому ученику и раньше,
+        // а на паре (parentId, studentId) стоит уникальный индекс.
+        const link = await tx.parentStudent.upsert({
+          where: {
+            parentId_studentId: {
+              parentId: parent.id,
+              studentId: data.studentId,
+            },
+          },
+          create: {
             parentId: parent.id,
             studentId: data.studentId,
+            relation: data.relation ?? "OTHER",
+            isPrimary: data.isPrimary ?? false,
+          },
+          update: {
             relation: data.relation ?? "OTHER",
             isPrimary: data.isPrimary ?? false,
           },
@@ -260,7 +288,11 @@ export async function createParentForStudent(data: {
         entityType: "User",
         entityId: result.parent.id,
         action: "CREATE",
-        metadata: { role: "PARENT", linkedStudentId: data.studentId },
+        metadata: {
+          role: "PARENT",
+          linkedStudentId: data.studentId,
+          ...(taken ? { restoredFromDeleted: true } : {}),
+        },
       });
 
       revalidateLocalized("/users");

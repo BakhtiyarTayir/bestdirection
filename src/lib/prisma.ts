@@ -10,13 +10,13 @@ function isSoftDeleteModel(model: string | undefined): boolean {
 type AnyWhere = Record<string, any>;
 
 const globalForPrisma = globalThis as unknown as {
-  prisma: ReturnType<typeof createPrismaClient> | undefined;
+  prisma: ReturnType<typeof createPrismaClients> | undefined;
 };
 
-function createPrismaClient() {
+function createPrismaClients() {
   const client = new PrismaClient();
 
-  return client.$extends({
+  const extended = client.$extends({
     query: {
       $allModels: {
         async findFirst({ model, args, query }) {
@@ -80,8 +80,20 @@ function createPrismaClient() {
       },
     },
   });
+
+  return { client, extended };
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+const clients = globalForPrisma.prisma ?? createPrismaClients();
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+export const prisma = clients.extended;
+
+/**
+ * Тот же клиент, но без фильтра soft-delete. Нужен там, где важна вся таблица
+ * целиком, — прежде всего проверки уникальности: индексы в БД про `deletedAt`
+ * не знают, и почта (как и telegramChatId) удалённого пользователя остаётся
+ * занятой. Обычный `prisma` таких записей не видит, и вставка падает на P2002.
+ */
+export const prismaUnscoped = clients.client;
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = clients;

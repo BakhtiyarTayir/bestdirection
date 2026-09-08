@@ -1,5 +1,5 @@
 import { createHash, createHmac, timingSafeEqual } from "crypto";
-import { prisma } from "@/lib/prisma";
+import { prisma, prismaUnscoped } from "@/lib/prisma";
 
 const AUTH_DATE_MAX_AGE_SECONDS = 10 * 60;
 
@@ -51,7 +51,10 @@ export function verifyTelegramWidgetPayload(
  * или регистрирует нового студента.
  */
 export async function findOrCreateTelegramUser(profile: TelegramProfile) {
-  const existing = await prisma.user.findUnique({
+  // Без soft-delete-фильтра: chatId остаётся занятым в уникальном индексе и
+  // у удалённого аккаунта. Обычный findUnique его не видел, и следующий за
+  // ним create падал с P2002 вместо отказа во входе.
+  const existing = await prismaUnscoped.user.findUnique({
     where: { telegramChatId: profile.telegramId },
   });
 
