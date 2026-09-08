@@ -100,6 +100,20 @@ enum EnrollmentRequestStatus {
 }
 
 // Способ приёма оплаты в офлайн-центре
+enum SmsStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+}
+
+enum SmsTemplateStatus {
+  DRAFT
+  MODERATION
+  APPROVED
+  REJECTED
+}
+
 enum PaymentMethod {
   CASH
   CARD
@@ -146,6 +160,9 @@ model User {
   // Преподавание: группы под ведением и проведённые занятия
   taughtGroups   Group[]             @relation("GroupTeacher")
   taughtSessions AttendanceSession[] @relation("SessionTeacher")
+
+  smsMessages   SmsLog[]       @relation("SmsMessages")
+  smsBroadcasts SmsBroadcast[] @relation("SmsBroadcasts")
 
   @@index([role])
   @@index([isActive])
@@ -369,6 +386,7 @@ model Group {
   enrollments        Enrollment[]
   attendanceSessions AttendanceSession[]
   payments           Payment[]
+  smsBroadcasts      SmsBroadcast[]
 
   @@unique([courseId, name])
   @@index([teacherId])
@@ -816,4 +834,92 @@ model MarketingPage {
   updatedAt    DateTime @updatedAt
 
   @@index([published])
+}
+
+
+// ─── СМС через eskiz.uz ───────────────────────────────────────────────────
+
+// Токен внешнего сервиса. В БД, а не в памяти процесса: контейнер
+// перезапускается на каждом деплое, и логин уходил бы заново.
+model IntegrationToken {
+  id        String   @id @default(cuid())
+  provider  String   @unique
+  token     String
+  expiresAt DateTime
+  updatedAt DateTime @updatedAt
+}
+
+// Зеркало шаблонов Eskiz. Отправка разрешена только со статусом APPROVED:
+// шлюз отобьёт несогласованный текст, а попытка уже стоит денег.
+model SmsTemplate {
+  id      String            @id @default(cuid())
+  eskizId Int?              @unique
+  title   String
+  textRu  String
+  textUz  String
+  status  SmsTemplateStatus @default(DRAFT)
+
+  syncedAt  DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  broadcasts SmsBroadcast[]
+
+  @@index([status])
+}
+
+// Одна рассылка — один dispatch_id у Eskiz. Нужна, чтобы видеть
+// «доставлено 28 из 30» и кому именно не дошло.
+model SmsBroadcast {
+  id         String @id @default(cuid())
+  dispatchId String @unique
+
+  templateId String?
+  template   SmsTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  groupId String?
+  group   Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
+  createdById String
+  createdBy   User   @relation("SmsBroadcasts", fields: [createdById], references: [id])
+
+  total     Int
+  createdAt DateTime @default(now())
+
+  messages SmsLog[]
+
+  @@index([groupId])
+  @@index([createdAt])
+}
+
+// Журнал обязателен: СМС стоят денег. price и parts храним потому, что
+// иначе не объяснить, почему длинное сообщение списало втрое больше.
+model SmsLog {
+  id     String    @id @default(cuid())
+  phone  String
+  text   String
+  status SmsStatus @default(QUEUED)
+
+  // id сообщения у Eskiz и наш собственный: второй возвращается в статусе
+  // пакета и связывает ответ шлюза с конкретной строкой журнала.
+  providerId String?
+  userSmsId  String? @unique
+
+  price Int?
+  parts Int?
+  error String?
+
+  userId String?
+  user   User?   @relation("SmsMessages", fields: [userId], references: [id], onDelete: SetNull)
+
+  broadcastId String?
+  broadcast   SmsBroadcast? @relation(fields: [broadcastId], references: [id], onDelete: SetNull)
+
+  createdAt   DateTime  @default(now())
+  deliveredAt DateTime?
+
+  @@index([phone])
+  @@index([status])
+  @@index([broadcastId])
+  @@index([createdAt])
 }

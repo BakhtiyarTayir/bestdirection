@@ -1047,7 +1047,11 @@
     "notAStudent": "Этот пользователь не ученик",
     "linkAlreadyExists": "Такая связь уже есть",
     "linkNotFound": "Связь не найдена",
-    "phoneRequired": "Укажите телефон"
+    "phoneRequired": "Укажите телефон",
+    "smsNotConfigured": "SMS-шлюз не настроен",
+    "templateNotFound": "Шаблон не найден",
+    "templateNotApproved": "Шаблон не согласован в Eskiz",
+    "noRecipients": "Нет получателей с корректным телефоном"
   },
   "success": {
     "saved": "Сохранено",
@@ -1574,6 +1578,67 @@
   },
   "navigation": {
     "myChildren": "Мои дети",
-    "teacherAttendance": "Посещаемость преподавателей"
+    "teacherAttendance": "Посещаемость преподавателей",
+    "sms": "СМС"
+  },
+  "sms": {
+    "title": "СМС",
+    "description": "Рассылки родителям через eskiz.uz",
+    "account": "Аккаунт",
+    "balance": "Баланс",
+    "balanceHint": "Хватит примерно на {count} частей сообщений",
+    "notConfigured": "Шлюз не настроен: не заданы ESKIZ_EMAIL и ESKIZ_PASSWORD",
+    "testMode": "Тестовый режим",
+    "testModeHint": "Аккаунт в режиме test — сообщения уйдут только на номера, привязанные в кабинете Eskiz. Для рассылки родителям нужен рабочий режим.",
+    "templates": "Шаблоны",
+    "templatesDescription": "Копии шаблонов из Eskiz. Отправлять можно только по согласованным.",
+    "syncTemplates": "Синхронизировать с Eskiz",
+    "synced": "Шаблоны обновлены: добавлено {created}, обновлено {updated}",
+    "noTemplates": "Шаблонов пока нет. Создайте первый или синхронизируйте с Eskiz.",
+    "newTemplate": "Новый шаблон",
+    "templateTitle": "Название",
+    "templateTextRu": "Текст (русский)",
+    "templateTextUz": "Текст (узбекский)",
+    "submitToEskiz": "Сразу подать на модерацию в Eskiz",
+    "templateCreated": "Шаблон создан",
+    "variablesHint": "Доступные переменные: {vars}. Незаполненные блокируют отправку.",
+    "status": {
+      "DRAFT": "Черновик",
+      "MODERATION": "На модерации",
+      "APPROVED": "Согласован",
+      "REJECTED": "Отклонён"
+    },
+    "broadcast": "Рассылка",
+    "broadcastToGroup": "Рассылка родителям группы",
+    "selectTemplate": "Выберите шаблон",
+    "recipients": "Получателей",
+    "willSend": "Будет отправлено",
+    "skipped": "Пропущено",
+    "withoutPhone": "Без телефона",
+    "parts": "Частей",
+    "estimatedCost": "Ориентировочно",
+    "sum": "сум",
+    "cyrillicWarning": "Кириллица: 70 символов на часть вместо 160 — сообщение дороже",
+    "preview": "Предпросмотр",
+    "send": "Отправить",
+    "confirmSend": "Отправить {count} сообщений на {cost} сум?",
+    "sent": "Отправлено сообщений: {count}",
+    "noRecipients": "Некому отправлять: ни у одного родителя нет корректного телефона",
+    "templateNotApproved": "Шаблон не согласован в Eskiz — отправка невозможна",
+    "log": "Журнал отправок",
+    "broadcasts": "Рассылки",
+    "phone": "Телефон",
+    "text": "Текст",
+    "sentAt": "Отправлено",
+    "price": "Цена",
+    "noLog": "Отправок пока не было",
+    "delivered": "Доставлено",
+    "total": "Всего",
+    "smsStatus": {
+      "QUEUED": "В очереди",
+      "SENT": "Отправлено",
+      "DELIVERED": "Доставлено",
+      "FAILED": "Ошибка"
+    }
   }
 }

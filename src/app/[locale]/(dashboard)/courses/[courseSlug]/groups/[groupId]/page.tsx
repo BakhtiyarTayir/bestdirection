@@ -3,6 +3,8 @@ import { getGroupDetails } from "@/actions/group-actions";
 import { notFound } from "next/navigation";
 import { GroupForm } from "@/components/groups/group-form";
 import { getTeacherOptions } from "@/actions/group-actions";
+import { getTemplates } from "@/actions/sms-actions";
+import { BroadcastPanel } from "@/components/sms/broadcast-panel";
 import { getTranslations } from "next-intl/server";
 import { resolveCourseSlug } from "@/lib/slug-resolvers";
 
@@ -26,10 +28,16 @@ export default async function GroupDetailPage({ params }: GroupDetailPageProps) 
   const teacherResult = await getTeacherOptions();
   const teachers = teacherResult.success ? teacherResult.data : [];
 
+  const templatesResult = await getTemplates();
+  const templates = templatesResult.success
+    ? templatesResult.data.map((tpl) => ({ id: tpl.id, title: tpl.title, status: tpl.status }))
+    : [];
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">{t("editGroup")}</h1>
       <GroupForm courseId={courseId} courseSlug={courseSlug} group={group} teachers={teachers} />
+      <BroadcastPanel groupId={groupId} templates={templates} />
     </div>
   );
 }

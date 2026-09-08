@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from "next-intl";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import {
+  MessageSquare,
   LayoutDashboard,
   BookOpen,
   Users,
@@ -81,6 +82,7 @@ const navItems: NavItem[] = [
   { href: "/payments/debtors", labelKey: "debtors", icon: TriangleAlert, roles: ["ADMIN"], badge: "debtors" },
   { href: "/admin/compare", labelKey: "compare", icon: GitCompare, roles: ["ADMIN"] },
   { href: "/admin/leads", labelKey: "leads", icon: Inbox, roles: ["ADMIN"] },
+  { href: "/admin/sms", labelKey: "sms", icon: MessageSquare, roles: ["ADMIN"] },
   {
     href: "/admin/landing",
     labelKey: "site",

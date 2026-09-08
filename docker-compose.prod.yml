@@ -66,6 +66,11 @@ services:
       NEXT_PUBLIC_TELEGRAM_BOT_USERNAME: ${NEXT_PUBLIC_TELEGRAM_BOT_USERNAME:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-}
+      # SMS-шлюз eskiz.uz. Пустые значения приложение переживает: модуль
+      # молча выключается, а не падает.
+      ESKIZ_EMAIL: ${ESKIZ_EMAIL:-}
+      ESKIZ_PASSWORD: ${ESKIZ_PASSWORD:-}
+      ESKIZ_FROM: ${ESKIZ_FROM:-4546}
     volumes:
       - uploads:/app/public/uploads
       - private_uploads:/app/uploads

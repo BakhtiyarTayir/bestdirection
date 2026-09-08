@@ -1047,7 +1047,11 @@
     "notAStudent": "Bu foydalanuvchi o‘quvchi emas",
     "linkAlreadyExists": "Bunday bog‘lanish allaqachon mavjud",
     "linkNotFound": "Bog‘lanish topilmadi",
-    "phoneRequired": "Telefonni kiriting"
+    "phoneRequired": "Telefonni kiriting",
+    "smsNotConfigured": "SMS shlyuz sozlanmagan",
+    "templateNotFound": "Shablon topilmadi",
+    "templateNotApproved": "Shablon Eskizda tasdiqlanmagan",
+    "noRecipients": "To‘g‘ri telefonli qabul qiluvchilar yo‘q"
   },
   "success": {
     "saved": "Saqlandi",
@@ -1574,6 +1578,67 @@
   },
   "navigation": {
     "myChildren": "Mening farzandlarim",
-    "teacherAttendance": "O‘qituvchilar davomati"
+    "teacherAttendance": "O‘qituvchilar davomati",
+    "sms": "SMS"
+  },
+  "sms": {
+    "title": "SMS",
+    "description": "eskiz.uz orqali ota-onalarga xabar yuborish",
+    "account": "Hisob",
+    "balance": "Balans",
+    "balanceHint": "Taxminan {count} qism xabarga yetadi",
+    "notConfigured": "Shlyuz sozlanmagan: ESKIZ_EMAIL va ESKIZ_PASSWORD kiritilmagan",
+    "testMode": "Sinov rejimi",
+    "testModeHint": "Hisob test rejimida — xabarlar faqat Eskiz kabinetiga biriktirilgan raqamlarga boradi. Ota-onalarga yuborish uchun ishchi rejim kerak.",
+    "templates": "Shablonlar",
+    "templatesDescription": "Eskiz shablonlarining nusxalari. Faqat tasdiqlanganlari bo‘yicha yuborish mumkin.",
+    "syncTemplates": "Eskiz bilan sinxronlash",
+    "synced": "Shablonlar yangilandi: qo‘shildi {created}, yangilandi {updated}",
+    "noTemplates": "Shablonlar hali yo‘q. Birinchisini yarating yoki Eskiz bilan sinxronlang.",
+    "newTemplate": "Yangi shablon",
+    "templateTitle": "Nomi",
+    "templateTextRu": "Matn (ruscha)",
+    "templateTextUz": "Matn (o‘zbekcha)",
+    "submitToEskiz": "Darhol Eskizga moderatsiyaga yuborish",
+    "templateCreated": "Shablon yaratildi",
+    "variablesHint": "Mavjud o‘zgaruvchilar: {vars}. To‘ldirilmaganlari yuborishni to‘xtatadi.",
+    "status": {
+      "DRAFT": "Qoralama",
+      "MODERATION": "Moderatsiyada",
+      "APPROVED": "Tasdiqlangan",
+      "REJECTED": "Rad etilgan"
+    },
+    "broadcast": "Yuborish",
+    "broadcastToGroup": "Guruh ota-onalariga xabar",
+    "selectTemplate": "Shablonni tanlang",
+    "recipients": "Qabul qiluvchilar",
+    "willSend": "Yuboriladi",
+    "skipped": "O‘tkazib yuborildi",
+    "withoutPhone": "Telefonsiz",
+    "parts": "Qismlar",
+    "estimatedCost": "Taxminan",
+    "sum": "so‘m",
+    "cyrillicWarning": "Kirill alifbosi: qismda 160 emas, 70 belgi — xabar qimmatroq",
+    "preview": "Ko‘rib chiqish",
+    "send": "Yuborish",
+    "confirmSend": "{count} ta xabar {cost} so‘mga yuborilsinmi?",
+    "sent": "Yuborilgan xabarlar: {count}",
+    "noRecipients": "Yuboradigan odam yo‘q: birorta ota-onada to‘g‘ri telefon yo‘q",
+    "templateNotApproved": "Shablon Eskizda tasdiqlanmagan — yuborib bo‘lmaydi",
+    "log": "Yuborishlar jurnali",
+    "broadcasts": "Xabarnomalar",
+    "phone": "Telefon",
+    "text": "Matn",
+    "sentAt": "Yuborilgan",
+    "price": "Narxi",
+    "noLog": "Hali yuborishlar bo‘lmagan",
+    "delivered": "Yetkazildi",
+    "total": "Jami",
+    "smsStatus": {
+      "QUEUED": "Navbatda",
+      "SENT": "Yuborilgan",
+      "DELIVERED": "Yetkazilgan",
+      "FAILED": "Xato"
+    }
   }
 }
