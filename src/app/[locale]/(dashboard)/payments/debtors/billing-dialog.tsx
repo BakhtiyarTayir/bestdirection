@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { intlLocale } from "@/i18n/config";
 import { format } from "date-fns";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -67,7 +68,7 @@ export function BillingDialog({
   const [priceOverride, setPriceOverride] = useState("");
   const [firstMonthCharge, setFirstMonthCharge] = useState("");
 
-  const money = new Intl.NumberFormat(locale === "uz" ? "uz-UZ" : "ru-RU");
+  const money = new Intl.NumberFormat(intlLocale(locale));
 
   useEffect(() => {
     let cancelled = false;

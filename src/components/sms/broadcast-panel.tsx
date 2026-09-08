@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { intlLocale } from "@/i18n/config";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,6 +55,7 @@ export function BroadcastPanel({
   templates: Template[];
 }) {
   const t = useTranslations("sms");
+  const numberLocale = intlLocale(useLocale());
   const tErrors = useTranslations("errors");
   const { toast } = useToast();
 
@@ -83,7 +85,7 @@ export function BroadcastPanel({
     const ok = window.confirm(
       t("confirmSend", {
         count: plan.sendableCount,
-        cost: plan.estimatedCost.toLocaleString("ru-RU"),
+        cost: plan.estimatedCost.toLocaleString(numberLocale),
       })
     );
     if (!ok) return;
@@ -146,7 +148,7 @@ export function BroadcastPanel({
               <Stat label={t("parts")} value={plan.totalParts} />
               <Stat
                 label={t("estimatedCost")}
-                value={`${plan.estimatedCost.toLocaleString("ru-RU")} ${t("sum")}`}
+                value={`${plan.estimatedCost.toLocaleString(numberLocale)} ${t("sum")}`}
                 emphasis
               />
             </div>

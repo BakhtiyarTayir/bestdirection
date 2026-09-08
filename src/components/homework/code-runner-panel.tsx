@@ -16,6 +16,7 @@ interface CodeRunnerPanelProps {
 
 export function CodeRunnerPanel({ submissionId, codeOverride }: CodeRunnerPanelProps) {
   const t = useTranslations("homeworkHub");
+  const tErrors = useTranslations("errors");
   const [stdin, setStdin] = useState("");
   const [output, setOutput] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -35,10 +36,13 @@ export function CodeRunnerPanel({ submissionId, codeOverride }: CodeRunnerPanelP
         setError(result.data.error || null);
         setExecTime(result.data.executionTime);
       } else {
-        setError(result.success ? "Unknown error" : result.error);
+        // Серверное действие возвращает либо ключ словаря errors, либо вывод
+        // самого рантайма — его переводить нечем и незачем.
+        const reason = result.success ? "unexpected" : result.error;
+        setError(tErrors.has(reason) ? tErrors(reason) : reason);
       }
     } catch {
-      setError("Failed to execute");
+      setError(tErrors("unexpected"));
     } finally {
       setRunning(false);
     }

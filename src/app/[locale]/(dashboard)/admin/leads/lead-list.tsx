@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { formatDateTime } from "@/lib/format-date";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -73,7 +74,7 @@ export function LeadList({ initialLeads }: LeadListProps) {
         {leads.map((lead) => (
           <TableRow key={lead.id}>
             <TableCell className="whitespace-nowrap">
-              {new Date(lead.createdAt).toLocaleString()}
+              {formatDateTime(lead.createdAt)}
             </TableCell>
             <TableCell>{lead.courseName}</TableCell>
             <TableCell>{lead.fullName}</TableCell>

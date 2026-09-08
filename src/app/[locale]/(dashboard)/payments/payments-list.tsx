@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { intlLocale } from "@/i18n/config";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -96,7 +97,7 @@ export function PaymentsList({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
-  const amountFormatter = new Intl.NumberFormat(locale === "uz" ? "uz-UZ" : "ru-RU");
+  const amountFormatter = new Intl.NumberFormat(intlLocale(locale));
 
   // Фильтры живут в URL: страница серверная, ссылка на отфильтрованный журнал шарится
   const setFilter = (key: string, value: string) => {

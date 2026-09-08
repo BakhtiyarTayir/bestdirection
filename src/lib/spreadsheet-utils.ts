@@ -333,8 +333,11 @@ export function validateSpreadsheetData(data: SpreadsheetData): string[] {
 
 // ---------- Helpers ----------
 
+// Импортируемые файлы админы готовят в Excel руками, поэтому «да» понимаем
+// на обоих языках интерфейса: ha / ha' / да.
+const TRUE_VALUES = new Set(["true", "1", "yes", "ha", "ha'", "да"]);
+
 function parseBool(value: unknown): boolean {
   if (typeof value === "boolean") return value;
-  const s = String(value ?? "").trim().toLowerCase();
-  return s === "true" || s === "1" || s === "yes" || s === "да";
+  return TRUE_VALUES.has(String(value ?? "").trim().toLowerCase());
 }

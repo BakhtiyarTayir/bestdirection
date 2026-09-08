@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar } from "lucide-react";
 import { DeleteSessionButton } from "./delete-session-button";
 import { formatFullDate } from "@/lib/format-date";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { resolveCourseSlug } from "@/lib/slug-resolvers";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +19,7 @@ interface SessionPageProps {
 
 export default async function SessionPage({ params }: SessionPageProps) {
   const t = await getTranslations("attendance");
+  const locale = await getLocale();
   const authSession = await auth();
   if (!authSession?.user) redirect("/login");
 
@@ -74,7 +75,7 @@ export default async function SessionPage({ params }: SessionPageProps) {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">
-              {formatFullDate(currentSession.date)}
+              {formatFullDate(currentSession.date, locale)}
             </CardTitle>
             {currentSession.note && (
               <Badge variant="secondary">{currentSession.note}</Badge>

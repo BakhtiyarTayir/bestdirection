@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Link } from "@/i18n/navigation";
-import { useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Code2, FileText, File, CheckCircle2, XCircle, RotateCcw } from "lucide-react";
+import { formatDate } from "@/lib/format-date";
 
 interface PendingSubmission {
   id: string;
@@ -131,6 +132,8 @@ export function TeacherReviewList({
 
 function PendingTable({ submissions }: { submissions: PendingSubmission[] }) {
   const t = useTranslations("homeworkHub");
+  const format = useFormatter();
+  const now = useNow();
 
   // Group by course
   const courseMap = new Map<string, { title: string; items: PendingSubmission[] }>();
@@ -164,7 +167,7 @@ function PendingTable({ submissions }: { submissions: PendingSubmission[] }) {
                   const TypeIcon = TYPE_ICONS[sub.homework.type] || Code2;
                   const passed = sub.testResults.filter((r) => r.passed).length;
                   const total = sub.homework._count.testCases;
-                  const timeAgo = getRelativeTime(sub.createdAt);
+                  const timeAgo = format.relativeTime(new Date(sub.createdAt), now);
 
                   return (
                     <TableRow key={sub.id}>
@@ -268,7 +271,7 @@ function HistoryTable({ submissions }: { submissions: HistorySubmission[] }) {
                     : "—"}
                   {sub.reviewedAt && (
                     <span className="block text-xs">
-                      {new Date(sub.reviewedAt).toLocaleDateString()}
+                      {formatDate(sub.reviewedAt)}
                     </span>
                   )}
                 </TableCell>
@@ -279,15 +282,4 @@ function HistoryTable({ submissions }: { submissions: HistorySubmission[] }) {
       </Table>
     </div>
   );
-}
-
-function getRelativeTime(dateStr: string | Date): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "только что";
-  if (mins < 60) return `${mins} мин назад`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} ч назад`;
-  const days = Math.floor(hours / 24);
-  return `${days} д назад`;
 }

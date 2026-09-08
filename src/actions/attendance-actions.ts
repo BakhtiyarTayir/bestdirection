@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
 import { revalidateLocalized } from "@/lib/revalidate";
 import { createAuditLog } from "@/lib/audit";
+import { nameCollator } from "@/lib/collator";
 import type { AttendanceStatus } from "@/validators/attendance";
 
 async function revalidateCourseAttendance(courseId: string) {
@@ -498,10 +499,11 @@ export async function getTeacherAttendanceReport(params?: {
         }
       }
 
+      const collator = await nameCollator();
       return {
         success: true as const,
         data: [...rows.values()].sort((a, b) =>
-          `${a.lastName}${a.firstName}`.localeCompare(`${b.lastName}${b.firstName}`, "ru")
+          collator.compare(`${a.lastName}${a.firstName}`, `${b.lastName}${b.firstName}`)
         ),
       };
     },

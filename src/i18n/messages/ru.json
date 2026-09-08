@@ -674,7 +674,7 @@
     "password": "Пароль",
     "passwordPlaceholder": "Минимум 6 символов",
     "phone": "Телефон",
-    "phonePlaceholder": "+7 (XXX) XXX-XX-XX",
+    "phonePlaceholder": "+998 (XX) XXX-XX-XX",
     "role": "Роль",
     "selectRole": "Выберите роль",
     "noUsersFound": "Пользователи не найдены",
@@ -804,7 +804,7 @@
     "email": "Email",
     "emailNote": "Email нельзя изменить.",
     "phone": "Телефон",
-    "phonePlaceholder": "+7 (XXX) XXX-XX-XX",
+    "phonePlaceholder": "+998 (XX) XXX-XX-XX",
     "saveChanges": "Сохранить изменения",
     "changePassword": "Изменение пароля",
     "changePasswordDescription": "Для изменения пароля введите текущий пароль и новый пароль.",
@@ -820,7 +820,16 @@
     "profileUpdateFailed": "Не удалось обновить профиль.",
     "passwordChanged": "Пароль изменен",
     "passwordChangedDescription": "Ваш пароль успешно обновлен.",
-    "passwordChangeFailed": "Не удалось изменить пароль."
+    "passwordChangeFailed": "Не удалось изменить пароль.",
+    "telegramTitle": "Telegram",
+    "telegramLinked": "Привязан",
+    "telegramUnlink": "Отвязать",
+    "telegramHint": "Привяжите Telegram, чтобы отправлять задания через бота",
+    "telegramLink": "Привязать",
+    "telegramOpenTitle": "Откройте Telegram",
+    "telegramOpenDescription": "Нажмите Start в боте, чтобы завершить привязку.",
+    "telegramLinkedToast": "Telegram привязан!",
+    "telegramUnlinkedToast": "Telegram отвязан"
   },
   "audit": {
     "title": "Журнал аудита",
@@ -1075,7 +1084,8 @@
     "smsNotConfigured": "SMS-шлюз не настроен",
     "templateNotFound": "Шаблон не найден",
     "templateNotApproved": "Шаблон не согласован в Eskiz",
-    "noRecipients": "Нет получателей с корректным телефоном"
+    "noRecipients": "Нет получателей с корректным телефоном",
+    "languageNotDetected": "Не удалось определить язык программирования"
   },
   "success": {
     "saved": "Сохранено",

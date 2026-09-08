@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { intlLocale } from "@/i18n/config";
 import { useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -46,7 +47,7 @@ export function RequestsList({ requests }: { requests: RequestRow[] }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
-  const priceFormatter = new Intl.NumberFormat(locale === "uz" ? "uz-UZ" : "ru-RU");
+  const priceFormatter = new Intl.NumberFormat(intlLocale(locale));
 
   const statusBadge = (status: RequestStatus) => {
     switch (status) {

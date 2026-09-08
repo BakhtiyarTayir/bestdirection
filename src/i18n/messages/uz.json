@@ -820,7 +820,16 @@
     "profileUpdateFailed": "Profilni yangilab bo'lmadi.",
     "passwordChanged": "Parol o'zgartirildi",
     "passwordChangedDescription": "Parolingiz muvaffaqiyatli yangilandi.",
-    "passwordChangeFailed": "Parolni o'zgartirib bo'lmadi."
+    "passwordChangeFailed": "Parolni o'zgartirib bo'lmadi.",
+    "telegramTitle": "Telegram",
+    "telegramLinked": "Bog'langan",
+    "telegramUnlink": "Uzish",
+    "telegramHint": "Vazifalarni bot orqali yuborish uchun Telegramni bog'lang",
+    "telegramLink": "Bog'lash",
+    "telegramOpenTitle": "Telegramni oching",
+    "telegramOpenDescription": "Bog'lashni yakunlash uchun botda Start tugmasini bosing.",
+    "telegramLinkedToast": "Telegram bog'landi!",
+    "telegramUnlinkedToast": "Telegram uzildi"
   },
   "audit": {
     "title": "Audit jurnali",
@@ -1075,7 +1084,8 @@
     "smsNotConfigured": "SMS shlyuz sozlanmagan",
     "templateNotFound": "Shablon topilmadi",
     "templateNotApproved": "Shablon Eskizda tasdiqlanmagan",
-    "noRecipients": "To‘g‘ri telefonli qabul qiluvchilar yo‘q"
+    "noRecipients": "To‘g‘ri telefonli qabul qiluvchilar yo‘q",
+    "languageNotDetected": "Dasturlash tilini aniqlab bo'lmadi"
   },
   "success": {
     "saved": "Saqlandi",

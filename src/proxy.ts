@@ -8,6 +8,11 @@ const intlMiddleware = createMiddleware({
   locales,
   defaultLocale,
   localePrefix,
+  // Узбекский — язык интерфейса по умолчанию, а не «предпочтительный язык
+  // браузера». У большинства учеников и родителей браузер русскоязычный, и
+  // с включённым определением next-intl уводил бы их на /ru вопреки дефолту.
+  // Русский остаётся доступен явным выбором в переключателе языка (/ru/...).
+  localeDetection: false,
 });
 
 export function proxy(request: NextRequest) {
@@ -31,7 +36,7 @@ export function proxy(request: NextRequest) {
 
   // Пути лендинга уже несут локаль сегментом (/marketing/<locale>/...), поэтому
   // intl-middleware им противопоказан: с localePrefix:'as-needed' он дописывает
-  // префикс локали и превращает /marketing/ru в /ru/marketing/ru, под который
+  // префикс локали и превращает /marketing/uz в /uz/marketing/uz, под который
   // роута нет. Важно в проде: Next прогоняет proxy повторно на внутреннем
   // rewrite, причём с подменённым Host (localhost вместо публичного домена),
   // так что проверка isMarketingHost на втором проходе уже не спасает и без
@@ -49,7 +54,7 @@ export function proxy(request: NextRequest) {
   }
 
   // Next 16 прогоняет proxy повторно на внутреннем rewrite. Для intl-middleware
-  // с localePrefix:'as-needed' это фатально: он переписывает /login в /ru/login,
+  // с localePrefix:'as-needed' это фатально: он переписывает /login в /uz/login,
   // на втором проходе видит префикс локали по умолчанию и редиректит обратно на
   // /login — получается бесконечный цикл (в dev его нет, повторного прогона там
   // не происходит). Путь, где локаль уже стоит первым сегментом, повторно

@@ -1,6 +1,8 @@
 import { requireRole } from "@/lib/auth-guard";
 import { getSmsAccount, getSmsLog, getTemplates } from "@/actions/sms-actions";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
+import { intlLocale } from "@/i18n/config";
+import { formatDate, formatShortDateTime } from "@/lib/format-date";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -30,6 +32,7 @@ export default async function SmsPage() {
   await requireRole(["ADMIN"]);
 
   const t = await getTranslations("sms");
+  const numberLocale = intlLocale(await getLocale());
   const [accountResult, templatesResult, logResult] = await Promise.all([
     getSmsAccount(),
     getTemplates(),
@@ -65,7 +68,7 @@ export default async function SmsPage() {
             <>
               <div className="flex flex-wrap items-baseline gap-3">
                 <span className="text-3xl font-bold tabular-nums">
-                  {account.balance.toLocaleString("ru-RU")}
+                  {account.balance.toLocaleString(numberLocale)}
                 </span>
                 <span className="text-muted-foreground">{t("sum")}</span>
                 <span className="text-sm text-muted-foreground">
@@ -115,7 +118,7 @@ export default async function SmsPage() {
                 {log.broadcasts.map((b) => (
                   <TableRow key={b.id}>
                     <TableCell className="whitespace-nowrap">
-                      {b.createdAt.toLocaleDateString("ru-RU")}
+                      {formatDate(b.createdAt)}
                     </TableCell>
                     <TableCell>
                       {b.template?.title ?? "—"}
@@ -156,12 +159,7 @@ export default async function SmsPage() {
                 {log.messages.map((m) => (
                   <TableRow key={m.id}>
                     <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
-                      {m.createdAt.toLocaleString("ru-RU", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatShortDateTime(m.createdAt)}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">{formatPhone(m.phone)}</TableCell>
                     <TableCell className="max-w-[380px]">
@@ -177,7 +175,7 @@ export default async function SmsPage() {
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{m.parts ?? "—"}</TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {m.price ? m.price.toLocaleString("ru-RU") : "—"}
+                      {m.price ? m.price.toLocaleString(numberLocale) : "—"}
                     </TableCell>
                   </TableRow>
                 ))}

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { isFileSubmissionPlaceholder } from "@/lib/homework-file-placeholder";
+import { formatDate } from "@/lib/format-date";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -93,7 +95,7 @@ export function SubmissionReviewPage({ submission }: { submission: SubmissionDat
   );
 
   // If code is a file placeholder, fetch actual file content
-  const isFilePlaceholder = submission.code?.startsWith("[Файл:");
+  const isFilePlaceholder = isFileSubmissionPlaceholder(submission.code);
   const [codeContent, setCodeContent] = useState(isFilePlaceholder ? "" : submission.code);
 
   useEffect(() => {
@@ -253,7 +255,7 @@ export function SubmissionReviewPage({ submission }: { submission: SubmissionDat
             <p className="text-muted-foreground">{submission.student.email}</p>
             <div className="flex gap-2">
               <Badge variant="outline">{t("card.attempt")} #{submission.attemptNumber}</Badge>
-              <Badge variant="outline">{new Date(submission.createdAt).toLocaleDateString()}</Badge>
+              <Badge variant="outline">{formatDate(submission.createdAt)}</Badge>
             </div>
             {hw.language && (
               <Badge variant="secondary">{LANGUAGE_LABELS[hw.language] || hw.language}</Badge>

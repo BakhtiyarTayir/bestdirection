@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,7 @@ import { MessageCircle, Link2, Unlink, Loader2 } from "lucide-react";
 import { getTelegramBotUsername } from "@/actions/telegram-auth-actions";
 
 export function TelegramLink() {
+  const t = useTranslations("profile");
   const { toast } = useToast();
   const [botUsername, setBotUsername] = useState<string | null>(null);
   const [isLinked, setIsLinked] = useState(false);
@@ -53,8 +55,8 @@ export function TelegramLink() {
       const botUrl = `https://t.me/${botUsername}?start=${result.data.code}`;
       window.open(botUrl, "_blank");
       toast({
-        title: "Откройте Telegram",
-        description: "Нажмите Start в боте для завершения привязки.",
+        title: t("telegramOpenTitle"),
+        description: t("telegramOpenDescription"),
       });
       // Poll for status change
       const interval = setInterval(async () => {
@@ -64,7 +66,7 @@ export function TelegramLink() {
           setUsername(status.data.username);
           clearInterval(interval);
           setIsLinking(false);
-          toast({ title: "Telegram привязан!" });
+          toast({ title: t("telegramLinkedToast") });
         }
       }, 3000);
       // Stop polling after 2 minutes
@@ -82,7 +84,7 @@ export function TelegramLink() {
     if (result.success) {
       setIsLinked(false);
       setUsername(null);
-      toast({ title: "Telegram отвязан" });
+      toast({ title: t("telegramUnlinkedToast") });
     }
   };
 
@@ -101,7 +103,7 @@ export function TelegramLink() {
       <CardHeader>
         <div className="flex items-center gap-2">
           <MessageCircle className="h-5 w-5" />
-          <CardTitle className="text-base">Telegram</CardTitle>
+          <CardTitle className="text-base">{t("telegramTitle")}</CardTitle>
         </div>
       </CardHeader>
       <CardContent>
@@ -109,7 +111,7 @@ export function TelegramLink() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="text-green-700 border-green-300">
-                Привязан
+                {t("telegramLinked")}
               </Badge>
               {username && (
                 <span className="text-sm text-muted-foreground">@{username}</span>
@@ -117,13 +119,13 @@ export function TelegramLink() {
             </div>
             <Button variant="ghost" size="sm" onClick={handleUnlink}>
               <Unlink className="h-4 w-4 mr-1" />
-              Отвязать
+              {t("telegramUnlink")}
             </Button>
           </div>
         ) : (
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Привяжите Telegram для отправки заданий через бота
+              {t("telegramHint")}
             </p>
             <Button
               variant="outline"
@@ -136,7 +138,7 @@ export function TelegramLink() {
               ) : (
                 <Link2 className="h-4 w-4 mr-1" />
               )}
-              Привязать
+              {t("telegramLink")}
             </Button>
           </div>
         )}

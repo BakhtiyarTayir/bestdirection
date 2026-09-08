@@ -13,5 +13,9 @@ export default getRequestConfig(async ({ requestLocale }) => {
     locale,
     messages: (await import(`./messages/${locale}.json`)).default,
     timeZone: 'Asia/Tashkent',
+    // Единая точка отсчёта для относительного времени («5 daqiqa oldin»).
+    // Без неё сервер и клиент считают «сейчас» каждый по-своему и React
+    // ругается на расхождение при гидратации.
+    now: new Date(),
   };
 });

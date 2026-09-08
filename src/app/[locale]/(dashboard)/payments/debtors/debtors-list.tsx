@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState, useTransition } from "react";
+import { intlLocale } from "@/i18n/config";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -84,7 +85,7 @@ export function DebtorsList({
   const [editing, setEditing] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
-  const money = new Intl.NumberFormat(locale === "uz" ? "uz-UZ" : "ru-RU");
+  const money = new Intl.NumberFormat(intlLocale(locale));
 
   const setFilter = (key: string, value: string) => {
     const next = { month, courseId, [key]: value === ALL ? "" : value };

@@ -2,7 +2,8 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { intlLocale } from "@/i18n/config";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -394,6 +395,7 @@ function ImageField({ value, onChange }: { value: string; onChange: (v: string) 
 // ─── Курсы ───────────────────────────────────────────────────────────────
 
 function CoursesTab({ rows, notify }: { rows: CourseRow[]; notify: Notify }) {
+  const numberLocale = intlLocale(useLocale());
   const t = useTranslations("landingAdmin");
   const [editing, setEditing] = useState<CourseRow | null>(null);
   const [open, setOpen] = useState(false);
@@ -436,7 +438,7 @@ function CoursesTab({ rows, notify }: { rows: CourseRow[]; notify: Notify }) {
               <TableRow key={row.id}>
                 <TableCell className="font-medium">{row.title}</TableCell>
                 <TableCell className="text-muted-foreground">{row.slug}</TableCell>
-                <TableCell>{row.price ? row.price.toLocaleString("ru-RU") : "—"}</TableCell>
+                <TableCell>{row.price ? row.price.toLocaleString(numberLocale) : "—"}</TableCell>
                 <TableCell>{row.sortOrder}</TableCell>
                 <TableCell>
                   <PublishedBadge published={row.published} />

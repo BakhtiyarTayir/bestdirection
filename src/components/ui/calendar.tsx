@@ -1,16 +1,18 @@
 "use client";
 
 import { DayPicker } from "react-day-picker";
-import { ru } from "date-fns/locale";
+import { useLocale } from "next-intl";
+import { dateFnsLocale } from "@/lib/date-fns-locale";
 import { cn } from "@/lib/utils";
 
 function Calendar({
   className,
   ...props
 }: React.ComponentProps<typeof DayPicker>) {
+  const locale = useLocale();
   return (
     <DayPicker
-      locale={ru}
+      locale={dateFnsLocale(locale)}
       className={cn("p-3", className)}
       classNames={{
         months: "flex flex-col sm:flex-row gap-2",

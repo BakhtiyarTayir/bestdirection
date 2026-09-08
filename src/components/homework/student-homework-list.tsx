@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatDate } from "@/lib/format-date";
 import { Link } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -193,7 +194,7 @@ function HomeworkCard({ hw, tab }: { hw: HomeworkItem; tab: Tab }) {
             <span className={`flex items-center gap-1 ${urgency === "urgent" ? "text-destructive font-medium" : urgency === "soon" ? "text-yellow-600 font-medium" : ""}`}>
               <Clock className="h-3 w-3" />
               {urgency === "urgent" && <AlertCircle className="h-3 w-3" />}
-              {new Date(hw.dueDate).toLocaleDateString()}
+              {formatDate(hw.dueDate)}
             </span>
           )}
           {sub && (

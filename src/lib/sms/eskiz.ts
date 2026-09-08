@@ -37,7 +37,7 @@ export function isEskizConfigured(): boolean {
 async function login(): Promise<string> {
   const email = process.env.ESKIZ_EMAIL;
   const password = process.env.ESKIZ_PASSWORD;
-  if (!email || !password) throw new EskizError("ESKIZ_EMAIL или ESKIZ_PASSWORD не заданы");
+  if (!email || !password) throw new EskizError("ESKIZ_EMAIL yoki ESKIZ_PASSWORD ko'rsatilmagan");
 
   const body = new FormData();
   body.append("email", email);
@@ -45,12 +45,12 @@ async function login(): Promise<string> {
 
   const res = await fetch(`${BASE}/auth/login`, { method: "POST", body });
   if (!res.ok) {
-    throw new EskizError(`Не удалось войти в Eskiz: HTTP ${res.status}`, res.status);
+    throw new EskizError(`Eskizga kirib bo'lmadi: HTTP ${res.status}`, res.status);
   }
 
   const json = (await res.json()) as { data?: { token?: string } };
   const token = json.data?.token;
-  if (!token) throw new EskizError("Eskiz не вернул токен");
+  if (!token) throw new EskizError("Eskiz token qaytarmadi");
 
   const expiresAt = new Date(Date.now() + TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000);
   await prisma.integrationToken.upsert({
@@ -94,7 +94,7 @@ async function authed(
 /** Остаток на счёте в сумах. */
 export async function getBalance(): Promise<number> {
   const res = await authed("/user/get-limit");
-  if (!res.ok) throw new EskizError(`Не удалось получить баланс: HTTP ${res.status}`, res.status);
+  if (!res.ok) throw new EskizError(`Balansni olib bo'lmadi: HTTP ${res.status}`, res.status);
   const json = (await res.json()) as { data?: { balance?: number } };
   return json.data?.balance ?? 0;
 }
@@ -107,7 +107,7 @@ export async function getAccount(): Promise<{
   balance: number;
 }> {
   const res = await authed("/auth/user");
-  if (!res.ok) throw new EskizError(`Не удалось получить аккаунт: HTTP ${res.status}`, res.status);
+  if (!res.ok) throw new EskizError(`Hisob ma'lumotlarini olib bo'lmadi: HTTP ${res.status}`, res.status);
   const json = (await res.json()) as {
     data?: { name?: string; role?: string; status?: string; balance?: number };
   };
@@ -141,7 +141,7 @@ export async function sendOne(params: {
   };
 
   if (!res.ok || !json.id) {
-    throw new EskizError(json.message || `Отправка отклонена: HTTP ${res.status}`, res.status);
+    throw new EskizError(json.message || `Yuborish rad etildi: HTTP ${res.status}`, res.status);
   }
   return { id: json.id, status: json.status ?? "waiting" };
 }
@@ -173,7 +173,7 @@ export async function sendBatch(params: {
 
   const json = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
   if (!res.ok) {
-    throw new EskizError(json.message || `Рассылка отклонена: HTTP ${res.status}`, res.status);
+    throw new EskizError(json.message || `Ommaviy yuborish rad etildi: HTTP ${res.status}`, res.status);
   }
   return { id: json.id ?? params.dispatchId };
 }
@@ -198,7 +198,7 @@ export async function listTemplates(): Promise<
   { id: number; template: string; original_text: string; status: string }[]
 > {
   const res = await authed("/user/templates");
-  if (!res.ok) throw new EskizError(`Не удалось получить шаблоны: HTTP ${res.status}`, res.status);
+  if (!res.ok) throw new EskizError(`Shablonlarni olib bo'lmadi: HTTP ${res.status}`, res.status);
   const json = (await res.json().catch(() => ({}))) as {
     result?: { id: number; template: string; original_text: string; status: string }[];
   };
@@ -211,6 +211,6 @@ export async function submitTemplate(text: string): Promise<void> {
   body.append("template", text);
   const res = await authed("/user/template", { method: "POST", body });
   if (!res.ok) {
-    throw new EskizError(`Не удалось подать шаблон: HTTP ${res.status}`, res.status);
+    throw new EskizError(`Shablonni yuborib bo'lmadi: HTTP ${res.status}`, res.status);
   }
 }

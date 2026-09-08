@@ -1,4 +1,7 @@
 import { Bot, InlineKeyboard, type Context } from "grammy";
+import { botMessages, SUBMIT_ERROR_MESSAGES } from "./messages";
+import { fileSubmissionPlaceholder } from "@/lib/homework-file-placeholder";
+import { formatDate } from "@/lib/format-date";
 import { prisma } from "@/lib/prisma";
 import { submitSolutionInternal } from "@/lib/homework-submission";
 import type { ProgrammingLanguage } from "@/generated/prisma";
@@ -118,18 +121,9 @@ function createBot(token: string): Bot {
     } else {
       const user = await findUserByChatId(String(ctx.chat.id));
       if (user) {
-        await ctx.reply(
-          `Вы привязаны как ${user.firstName} ${user.lastName}.\n\n` +
-          "Команды:\n" +
-          "/homework — активные задания\n" +
-          "/unlink — отвязать аккаунт\n\n" +
-          "Отправьте файл с кодом (.py, .js и т.д.) для проверки."
-        );
+        await ctx.reply(botMessages.linkedGreeting(user.firstName, user.lastName));
       } else {
-        await ctx.reply(
-          "Привет! Привяжите аккаунт через личный кабинет на сайте.\n" +
-          "Перейдите в Профиль → Привязать Telegram."
-        );
+        await ctx.reply(botMessages.notLinkedGreeting);
       }
     }
   });
@@ -138,7 +132,7 @@ function createBot(token: string): Bot {
   bot.command("homework", async (ctx) => {
     const user = await findUserByChatId(String(ctx.chat.id));
     if (!user) {
-      await ctx.reply("Сначала привяжите аккаунт через сайт.");
+      await ctx.reply(botMessages.linkAccountFirst);
       return;
     }
 
@@ -177,9 +171,7 @@ function createBot(token: string): Bot {
       for (const lesson of enrollment.course.lessons) {
         for (const hw of lesson.homeworks) {
           const used = hw._count.submissions;
-          const due = hw.dueDate
-            ? new Date(hw.dueDate).toLocaleDateString("ru-RU")
-            : "—";
+          const due = hw.dueDate ? formatDate(hw.dueDate) : "—";
           homeworks.push({
             id: hw.id,
             title: hw.title,
@@ -192,17 +184,17 @@ function createBot(token: string): Bot {
     }
 
     if (homeworks.length === 0) {
-      await ctx.reply("У вас нет активных заданий.");
+      await ctx.reply(botMessages.noActiveHomework);
       return;
     }
 
-    let message = "Активные задания:\n\n";
+    let message = botMessages.activeHomeworkHeader;
     for (const hw of homeworks) {
       message += `${hw.title}\n`;
-      message += `  Курс: ${hw.courseName}\n`;
-      message += `  Попытки: ${hw.attempts} | Дедлайн: ${hw.due}\n\n`;
+      message += `${botMessages.homeworkCourse(hw.courseName)}\n`;
+      message += `${botMessages.homeworkAttempts(hw.attempts, hw.due)}\n\n`;
     }
-    message += "Отправьте файл с кодом для проверки.";
+    message += botMessages.sendCodeFile;
 
     await ctx.reply(message);
   });
@@ -211,27 +203,27 @@ function createBot(token: string): Bot {
   bot.command("unlink", async (ctx) => {
     const user = await findUserByChatId(String(ctx.chat.id));
     if (!user) {
-      await ctx.reply("Аккаунт не привязан.");
+      await ctx.reply(botMessages.accountNotLinked);
       return;
     }
     await prisma.user.update({
       where: { id: user.id },
       data: { telegramChatId: null, telegramUsername: null },
     });
-    await ctx.reply("Аккаунт отвязан. Привяжите заново через сайт.");
+    await ctx.reply(botMessages.accountUnlinked);
   });
 
   // Handle file submissions
   bot.on("message:document", async (ctx) => {
     const user = await findUserByChatId(String(ctx.chat.id));
     if (!user) {
-      await ctx.reply("Сначала привяжите аккаунт через сайт.");
+      await ctx.reply(botMessages.linkAccountFirst);
       return;
     }
 
       const doc = getDocumentMetaFromContext(ctx);
       if (!doc) {
-        await ctx.reply("Не удалось получить файл.");
+        await ctx.reply(botMessages.fileFetchFailed);
         return;
       }
       const fileName = doc.fileName;
@@ -243,7 +235,7 @@ function createBot(token: string): Bot {
     if (isCodeFile) {
       // CODE homework flow
       if (doc.fileSize && doc.fileSize > 100 * 1024) {
-        await ctx.reply("Файл слишком большой (макс. 100 КБ).");
+        await ctx.reply(botMessages.fileTooLargeCode);
         return;
       }
 
@@ -290,7 +282,7 @@ function createBot(token: string): Bot {
       }
 
       if (matchingHomeworks.length === 0) {
-        await ctx.reply("Нет активных заданий для этого языка.");
+        await ctx.reply(botMessages.noHomeworkForLanguage);
         return;
       }
 
@@ -311,12 +303,12 @@ function createBot(token: string): Bot {
         keyboard.text(`${hw.title} (${hw.courseName})`, `submit:${hw.id}:${token}`).row();
       }
 
-      await ctx.reply("Выберите задание для проверки:", { reply_markup: keyboard });
+      await ctx.reply(botMessages.chooseHomeworkToCheck, { reply_markup: keyboard });
     } else {
       // FILE homework flow — any non-code file
       const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
       if (doc.fileSize && doc.fileSize > MAX_FILE_SIZE) {
-        await ctx.reply("Файл слишком большой (макс. 5 МБ).");
+        await ctx.reply(botMessages.fileTooLargeUpload);
         return;
       }
 
@@ -353,7 +345,7 @@ function createBot(token: string): Bot {
       }
 
       if (fileHomeworks.length === 0) {
-        await ctx.reply("Нет заданий для загрузки файлов.");
+        await ctx.reply(botMessages.noFileHomework);
         return;
       }
 
@@ -374,7 +366,7 @@ function createBot(token: string): Bot {
         keyboard.text(`${hw.title} (${hw.courseName})`, `fileupload:${hw.id}:${token}`).row();
       }
 
-      await ctx.reply("Выберите задание для загрузки файла:", { reply_markup: keyboard });
+      await ctx.reply(botMessages.chooseHomeworkToUpload, { reply_markup: keyboard });
     }
   });
 
@@ -394,12 +386,12 @@ function createBot(token: string): Bot {
 
     const [, homeworkId, token] = data.split(":");
     if (!homeworkId || !token) {
-      await ctx.answerCallbackQuery({ text: "Отправьте файл заново." });
+      await ctx.answerCallbackQuery({ text: botMessages.resendFile });
       return;
     }
     const user = await findUserByChatId(String(ctx.chat.id));
     if (!user) {
-      await ctx.answerCallbackQuery({ text: "Аккаунт не привязан." });
+      await ctx.answerCallbackQuery({ text: botMessages.accountNotLinked });
       return;
     }
 
@@ -407,7 +399,7 @@ function createBot(token: string): Bot {
 
     const pendingFile = takePendingTelegramFile(token, String(ctx.chat.id));
     if (!pendingFile) {
-      await ctx.reply("Сессия выбора файла истекла. Отправьте файл заново.");
+      await ctx.reply(botMessages.selectionExpired);
       return;
     }
 
@@ -437,20 +429,15 @@ async function handleLoginRequest(ctx: Context, code: string) {
 
   const request = await findValidLoginRequest(code);
   if (!request) {
-    await ctx.reply("Код входа не найден или истёк. Вернитесь на сайт и попробуйте снова.");
+    await ctx.reply(botMessages.loginCodeNotFound);
     return;
   }
 
   const keyboard = new InlineKeyboard().text(
-    "✅ Подтвердить вход",
+    botMessages.confirmLoginButton,
     `tglogin:${code}`
   );
-  await ctx.reply(
-    "Вход на сайт учебного центра.\n\n" +
-      "Если это вы нажали «Войти через Telegram» на сайте — подтвердите вход. " +
-      "Если нет — просто проигнорируйте это сообщение.",
-    { reply_markup: keyboard }
-  );
+  await ctx.reply(botMessages.loginPrompt, { reply_markup: keyboard });
 }
 
 async function handleLoginConfirm(ctx: Context, code: string) {
@@ -458,7 +445,7 @@ async function handleLoginConfirm(ctx: Context, code: string) {
 
   const request = await findValidLoginRequest(code);
   if (!request || request.status !== "PENDING") {
-    await ctx.answerCallbackQuery({ text: "Код входа не найден или истёк." });
+    await ctx.answerCallbackQuery({ text: botMessages.loginCodeExpired });
     return;
   }
 
@@ -473,8 +460,8 @@ async function handleLoginConfirm(ctx: Context, code: string) {
     },
   });
 
-  await ctx.answerCallbackQuery({ text: "Вход подтверждён" });
-  await ctx.reply("Вход подтверждён ✅ Вернитесь на сайт — вы будете авторизованы автоматически.");
+  await ctx.answerCallbackQuery({ text: botMessages.loginConfirmedShort });
+  await ctx.reply(botMessages.loginConfirmed);
 }
 
 async function handleLinkAccount(ctx: Context, linkCode: string) {
@@ -486,7 +473,7 @@ async function handleLinkAccount(ctx: Context, linkCode: string) {
   });
 
   if (!pendingUser) {
-    await ctx.reply("Код привязки не найден или истёк. Попробуйте заново через сайт.");
+    await ctx.reply(botMessages.linkCodeNotFound);
     return;
   }
 
@@ -500,10 +487,7 @@ async function handleLinkAccount(ctx: Context, linkCode: string) {
       where: { id: pendingUser.id },
       data: { telegramChatId: null },
     });
-    await ctx.reply(
-      `Этот Telegram уже привязан к аккаунту ${holder.firstName} ${holder.lastName}.\n` +
-      "Сначала отвяжите его в профиле того аккаунта (или попросите администратора), затем повторите привязку."
-    );
+    await ctx.reply(botMessages.telegramAlreadyTaken(holder.firstName, holder.lastName));
     return;
   }
 
@@ -515,11 +499,7 @@ async function handleLinkAccount(ctx: Context, linkCode: string) {
     },
   });
 
-  await ctx.reply(
-    `Аккаунт привязан! ${pendingUser.firstName} ${pendingUser.lastName}\n\n` +
-    "Теперь вы можете отправлять файлы с кодом для автоматической проверки.\n" +
-    "/homework — просмотр заданий"
-  );
+  await ctx.reply(botMessages.accountLinked(pendingUser.firstName, pendingUser.lastName));
 }
 
 async function processFileSubmission(
@@ -538,11 +518,11 @@ async function processFileSubmission(
       reason: "document_not_found",
       fileName,
     });
-    await ctx.reply("Не удалось получить файл.");
+    await ctx.reply(botMessages.fileFetchFailed);
     return;
   }
 
-  await ctx.reply(`Проверяю ${fileName}...`);
+  await ctx.reply(botMessages.checkingFile(fileName));
 
   try {
     const file = await getBot().api.getFile(doc.fileId);
@@ -558,7 +538,7 @@ async function processFileSubmission(
         reason: "empty_file",
         fileName,
       });
-      await ctx.reply("Файл пустой.");
+      await ctx.reply(botMessages.emptyFile);
       return;
     }
 
@@ -572,15 +552,9 @@ async function processFileSubmission(
         reason: result.error,
         fileName,
       });
-      const errorMessages: Record<string, string> = {
-        homeworkNotFound: "Задание не найдено.",
-        homeworkNotPublished: "Задание не опубликовано.",
-        languageNotSpecified: "Язык не указан.",
-        notEnrolled: "Вы не записаны на курс.",
-        deadlineExpired: "Дедлайн истёк.",
-        maxAttemptsReached: "Попытки закончились.",
-      };
-      await ctx.reply(errorMessages[result.error] || `Ошибка: ${result.error}`);
+      await ctx.reply(
+        SUBMIT_ERROR_MESSAGES[result.error] || botMessages.submitError(result.error)
+      );
       return;
     }
 
@@ -593,7 +567,7 @@ async function processFileSubmission(
         type: "CODE",
       },
     });
-    await ctx.reply("Ваша работа принята системой проверки.");
+    await ctx.reply(botMessages.submissionAccepted);
 
     const d = result.data;
     const statusEmoji: Record<string, string> = {
@@ -603,9 +577,9 @@ async function processFileSubmission(
       ERROR: "\u274c",
     };
 
-    let message = `${statusEmoji[d.status] || ""} Результат: ${d.passed}/${d.total} тестов (${d.percentage}%)`;
+    let message = `${statusEmoji[d.status] || ""} ${botMessages.testResult(d.passed, d.total, d.percentage)}`;
     if (d.finalScore !== d.percentage) {
-      message += `\nИтого со штрафом: ${d.finalScore}%`;
+      message += `\n${botMessages.finalScoreWithPenalty(d.finalScore)}`;
     }
 
     const errors = d.testResults
@@ -614,7 +588,7 @@ async function processFileSubmission(
       .filter((e, i, arr) => arr.indexOf(e) === i);
 
     if (errors.length > 0) {
-      message += "\n\nОшибки:\n" + errors.join("\n");
+      message += `\n\n${botMessages.errorsHeader}\n` + errors.join("\n");
     }
 
     // Trim long messages
@@ -632,7 +606,7 @@ async function processFileSubmission(
       reason: error instanceof Error ? error.message : "unknown_error",
       fileName,
     });
-    await ctx.reply("Ошибка при проверке. Попробуйте позже.");
+    await ctx.reply(botMessages.checkFailed);
   }
 }
 
@@ -654,7 +628,7 @@ async function processFileUploadSubmission(
       reason: "document_not_found",
       fileName,
     });
-    await ctx.reply("Не удалось получить файл.");
+    await ctx.reply(botMessages.fileFetchFailed);
     return;
   }
 
@@ -686,7 +660,7 @@ async function processFileUploadSubmission(
         reason: "homework_not_found_or_unpublished",
         fileName,
       });
-      await ctx.reply("Задание не найдено или не опубликовано.");
+      await ctx.reply(botMessages.homeworkNotFoundOrUnpublished);
       return;
     }
 
@@ -698,7 +672,7 @@ async function processFileUploadSubmission(
         reason: "not_enrolled",
         fileName,
       });
-      await ctx.reply("Вы не записаны на курс.");
+      await ctx.reply(botMessages.notEnrolled);
       return;
     }
 
@@ -713,7 +687,7 @@ async function processFileUploadSubmission(
         reason: "deadline_expired",
         fileName,
       });
-      await ctx.reply("Дедлайн истёк.");
+      await ctx.reply(botMessages.deadlineExpired);
       return;
     }
     const penalty = isLate ? homework.latePenalty : 0;
@@ -731,11 +705,11 @@ async function processFileUploadSubmission(
         reason: "max_attempts_reached",
         fileName,
       });
-      await ctx.reply("Попытки закончились.");
+      await ctx.reply(botMessages.attemptsExhausted);
       return;
     }
 
-    await ctx.reply(`Загружаю ${fileName}...`);
+    await ctx.reply(botMessages.uploadingFile(fileName));
 
     // Download file from Telegram
     const file = await getBot().api.getFile(doc.fileId);
@@ -751,7 +725,7 @@ async function processFileUploadSubmission(
         reason: "empty_file",
         fileName,
       });
-      await ctx.reply("Файл пустой.");
+      await ctx.reply(botMessages.emptyFile);
       return;
     }
 
@@ -763,7 +737,7 @@ async function processFileUploadSubmission(
         reason: "file_too_large",
         fileName,
       });
-      await ctx.reply("Файл слишком большой (макс. 5 МБ).");
+      await ctx.reply(botMessages.fileTooLargeUpload);
       return;
     }
 
@@ -789,7 +763,7 @@ async function processFileUploadSubmission(
         data: {
           homeworkId,
           studentId,
-          code: `[Файл: ${fileName}]`,
+          code: fileSubmissionPlaceholder(fileName),
           status: "PENDING",
           attemptNumber: count + 1,
           isLate,
@@ -817,14 +791,15 @@ async function processFileUploadSubmission(
         submissionId: submission.id,
       },
     });
-    await ctx.reply("Ваша работа принята системой проверки.");
+    await ctx.reply(botMessages.submissionAccepted);
 
-    let message = `Файл отправлен на проверку!\n\n`;
-    message += `Задание: ${homework.title}\n`;
-    message += `Попытка: ${submission.attemptNumber}/${homework.maxAttempts}\n`;
-    message += `Статус: На проверке`;
+    let message = botMessages.fileSubmitted(
+      homework.title,
+      submission.attemptNumber,
+      homework.maxAttempts
+    );
     if (isLate) {
-      message += `\n⚠️ Отправлено после дедлайна (штраф ${penalty}%)`;
+      message += botMessages.latePenaltyNote(penalty);
     }
 
     await ctx.reply(message);
@@ -837,7 +812,7 @@ async function processFileUploadSubmission(
         reason: "max_attempts_reached",
         fileName,
       });
-      await ctx.reply("Попытки закончились.");
+      await ctx.reply(botMessages.attemptsExhausted);
       return;
     }
     console.error("Telegram file upload error:", error);
@@ -848,7 +823,7 @@ async function processFileUploadSubmission(
       reason: error instanceof Error ? error.message : "unknown_error",
       fileName,
     });
-    await ctx.reply("Ошибка при загрузке файла. Попробуйте позже.");
+    await ctx.reply(botMessages.uploadFailed);
   }
 }
 

@@ -1,37 +1,40 @@
+import { intlLocale } from "@/i18n/config";
+
 /**
- * Formats date as DD.MM.YYYY
+ * Числовая дата DD.MM.YYYY. Формат намеренно не зависит от локали: он одинаков
+ * в русском и узбекском интерфейсе, а у ICU для uz-UZ короткая дата идёт через
+ * слэши (14/03/2026) — в таблицах кабинета это выглядело бы чужеродно.
  */
 export function formatDate(date: Date | string): string {
   const d = new Date(date);
-  return d.toLocaleDateString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
 }
 
-/**
- * Formats date and time as DD.MM.YYYY, HH:MM
- */
+/** Дата и время DD.MM.YYYY, HH:MM — так же вне локали, см. formatDate. */
 export function formatDateTime(date: Date | string): string {
   const d = new Date(date);
-  return d.toLocaleDateString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return `${formatDate(d)}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 /**
- * Formats date with full month name: 14 March 2026
+ * Дата с названием месяца: «14 mart 2026» / «14 марта 2026». Здесь локаль важна,
+ * поэтому вызывающий передаёт текущую — без неё берётся язык по умолчанию.
  */
-export function formatFullDate(date: Date | string): string {
+export function formatFullDate(date: Date | string, locale?: string): string {
   const d = new Date(date);
-  return d.toLocaleDateString("ru-RU", {
+  return d.toLocaleDateString(intlLocale(locale ?? ""), {
     day: "numeric",
     month: "long",
     year: "numeric",
   });
+}
+
+/** Компактные дата и время без года: DD.MM, HH:MM. Вне локали, см. formatDate. */
+export function formatShortDateTime(date: Date | string): string {
+  const d = new Date(date);
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function pad(value: number): string {
+  return String(value).padStart(2, "0");
 }

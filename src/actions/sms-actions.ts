@@ -77,7 +77,7 @@ export async function syncTemplates() {
                 eskizId: tpl.id,
                 // Заголовок — первые слова текста: у Eskiz своего имени нет,
                 // администратор потом переименует по-человечески.
-                title: text.slice(0, 60) || `Шаблон ${tpl.id}`,
+                title: text.slice(0, 60) || `Shablon ${tpl.id}`,
                 textRu: text,
                 textUz: text,
                 status,

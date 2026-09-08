@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Best Direction",
-  description: "Best Direction — центр изучения английского языка",
+  description: "Best Direction — ingliz tili o'quv markazi",
 };
 
 export default function RootLayout({
@@ -29,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="uz">
       <body className={`${manrope.variable} ${spaceGrotesk.variable} ${geistMono.variable} antialiased`}>
         {children}
       </body>

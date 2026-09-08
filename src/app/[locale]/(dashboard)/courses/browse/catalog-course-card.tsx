@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { intlLocale } from "@/i18n/config";
 import { useRouter, Link } from "@/i18n/navigation";
 import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
@@ -42,7 +43,7 @@ export function CatalogCourseCard({ course }: { course: CatalogCourse }) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  const priceFormatter = new Intl.NumberFormat(locale === "uz" ? "uz-UZ" : "ru-RU");
+  const priceFormatter = new Intl.NumberFormat(intlLocale(locale));
   const isFree = course.accessType === "FREE";
   const noSeats = course.seatsLeft !== null && course.seatsLeft <= 0;
 

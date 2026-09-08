@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { botMessages } from "@/lib/telegram/messages";
 import { withAuth } from "@/lib/action-utils";
 import { createAuditLog } from "@/lib/audit";
 import { revalidateLocalized } from "@/lib/revalidate";
@@ -190,10 +191,11 @@ export async function requestEnrollment(courseId: string) {
       });
       await sendTelegramMessage(
         course.teacher.telegramChatId,
-        `📝 Новая заявка на курс «${course.title}»\n` +
-          `Студент: ${student?.firstName ?? ""} ${student?.lastName ?? ""}` +
-          (student?.phone ? `\nТелефон: ${student.phone}` : "") +
-          "\n\nПодтвердите или отклоните заявку в кабинете: Заявки на курсы."
+        botMessages.newEnrollmentRequest(
+          course.title,
+          `${student?.firstName ?? ""} ${student?.lastName ?? ""}`.trim(),
+          student?.phone
+        )
       );
 
       revalidateLocalized("/courses/browse");
@@ -343,8 +345,7 @@ export async function approveEnrollmentRequest(requestId: string) {
 
       await sendTelegramMessage(
         request.student.telegramChatId,
-        `✅ Ваша заявка на курс «${request.course.title}» одобрена!\n` +
-          "Курс уже доступен в вашем кабинете в разделе «Курсы»."
+        botMessages.enrollmentApproved(request.course.title)
       );
 
       revalidateLocalized("/courses/requests");
@@ -383,8 +384,7 @@ export async function rejectEnrollmentRequest(requestId: string) {
 
       await sendTelegramMessage(
         request.student.telegramChatId,
-        `❌ Ваша заявка на курс «${request.course.title}» отклонена.\n` +
-          "Если это ошибка — свяжитесь с учебным центром и подайте заявку повторно."
+        botMessages.enrollmentRejected(request.course.title)
       );
 
       revalidateLocalized("/courses/requests");

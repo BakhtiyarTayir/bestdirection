@@ -11,8 +11,9 @@ export const MARKETING_DOMAIN = process.env.MARKETING_DOMAIN || "best-direction.
 // домен CRM конкретного сервера.
 export const LMS_URL = process.env.NEXTAUTH_URL || "https://crm.best-direction.uz";
 
-// Independent from the CRM's own defaultLocale ('ru') — the landing defaults to Uzbek
-// when no /ru or /uz prefix is present in the URL.
+// Локаль лендинга, когда в URL нет префикса /uz или /ru. Совпадает с
+// defaultLocale CRM ('uz'), но задана отдельно намеренно: лендинг и кабинет
+// могут разойтись по языку по умолчанию, не ломая друг друга.
 export const MARKETING_DEFAULT_LOCALE = "uz";
 
 /**

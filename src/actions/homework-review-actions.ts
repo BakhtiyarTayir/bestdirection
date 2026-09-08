@@ -130,7 +130,9 @@ export async function runStudentCode(
         (submission.files[0] ? detectLanguageFromExtension(submission.files[0].filename) : null);
 
       if (!language) {
-        return { success: false as const, error: "Не удалось определить язык" };
+        // Ключ словаря errors: клиент переводит его сам, как и остальные
+        // ошибки серверных действий.
+        return { success: false as const, error: "languageNotDetected" };
       }
 
       let code: string;

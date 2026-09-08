@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fileSubmissionPlaceholder } from "@/lib/homework-file-placeholder";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { writeFile, mkdir, unlink } from "fs/promises";
@@ -111,7 +112,7 @@ export async function POST(
         data: {
           homeworkId,
           studentId: session.user.id,
-          code: `[Файл: ${file.name}]`,
+          code: fileSubmissionPlaceholder(file.name),
           status: "PENDING",
           attemptNumber: count + 1,
           isLate,

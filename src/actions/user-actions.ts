@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma, prismaUnscoped } from "@/lib/prisma";
+import { nameCollator } from "@/lib/collator";
 import { Prisma } from "@/generated/prisma";
 import { withAuth } from "@/lib/action-utils";
 import { revalidateLocalized } from "@/lib/revalidate";
@@ -308,11 +309,12 @@ export async function getUsersHomeworkStatistics(filters: {
           ? baseRows
           : baseRows.filter((r) => r.submissionState === selectedSubmissionState);
 
+      const collator = await nameCollator();
       filteredRows.sort((a, b) => {
         if (a.submissionState === "NOT_SUBMITTED" && b.submissionState !== "NOT_SUBMITTED") return 1;
         if (a.submissionState !== "NOT_SUBMITTED" && b.submissionState === "NOT_SUBMITTED") return -1;
         if (b.bestPercent !== a.bestPercent) return b.bestPercent - a.bestPercent;
-        return a.fullName.localeCompare(b.fullName);
+        return collator.compare(a.fullName, b.fullName);
       });
 
       return {
