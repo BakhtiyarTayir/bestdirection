@@ -7,6 +7,9 @@ import { withAuth } from "@/lib/action-utils";
 // Get deleted records
 // ============================================================
 
+// Пользователей в корзине нет: их не удаляют мягко, а деактивируют
+// (deactivateUser снимает isActive и не ставит deletedAt). Восстановление и
+// полное удаление — на вкладке «Деактивированные», см. user-actions.ts.
 export async function getDeletedCourses() {
   return withAuth(
     async () => {
@@ -21,19 +24,6 @@ export async function getDeletedCourses() {
         orderBy: { deletedAt: "desc" },
       });
       return { success: true as const, data: courses };
-    },
-    { roles: ["ADMIN"] }
-  );
-}
-
-export async function getDeletedUsers() {
-  return withAuth(
-    async () => {
-      const users = await prisma.user.findMany({
-        where: { deletedAt: { not: null } },
-        orderBy: { deletedAt: "desc" },
-      });
-      return { success: true as const, data: users };
     },
     { roles: ["ADMIN"] }
   );
@@ -72,19 +62,6 @@ export async function restoreCourse(courseId: string) {
   );
 }
 
-export async function restoreUser(userId: string) {
-  return withAuth(
-    async () => {
-      const user = await prisma.user.update({
-        where: { id: userId },
-        data: { deletedAt: null, isActive: true },
-      });
-      return { success: true as const, data: user };
-    },
-    { roles: ["ADMIN"] }
-  );
-}
-
 export async function restoreLesson(lessonId: string) {
   return withAuth(
     async () => {
@@ -106,16 +83,6 @@ export async function hardDeleteCourse(courseId: string) {
   return withAuth(
     async () => {
       await prisma.$executeRaw`DELETE FROM "Course" WHERE id = ${courseId}`;
-      return { success: true as const, data: null };
-    },
-    { roles: ["ADMIN"] }
-  );
-}
-
-export async function hardDeleteUser(userId: string) {
-  return withAuth(
-    async () => {
-      await prisma.$executeRaw`DELETE FROM "User" WHERE id = ${userId}`;
       return { success: true as const, data: null };
     },
     { roles: ["ADMIN"] }

@@ -29,26 +29,20 @@ import { useTranslations } from "next-intl";
 interface TrashItem {
   id: string;
   title?: string;
-  email?: string | null;
-  firstName?: string;
-  lastName?: string;
   deletedAt: Date | null;
   [key: string]: unknown;
 }
 
 interface TrashTableProps {
   items: TrashItem[];
-  type: "course" | "user" | "lesson";
+  type: "course" | "lesson";
   onRestore: (id: string) => Promise<{ success: boolean; error?: string }>;
   onHardDelete: (id: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 // typeLabels moved to component body using translations
 
-function getItemName(item: TrashItem, type: string, noTitle: string): string {
-  if (type === "user") {
-    return `${item.firstName ?? ""} ${item.lastName ?? ""} (${item.email ?? ""})`.trim();
-  }
+function getItemName(item: TrashItem, noTitle: string): string {
   return (item.title as string) ?? noTitle;
 }
 
@@ -66,7 +60,6 @@ export function TrashTable({ items, type, onRestore, onHardDelete }: TrashTableP
 
   const typeLabels: Record<string, string> = {
     course: t("courseType"),
-    user: t("userType"),
     lesson: t("lessonType"),
   };
 
@@ -115,7 +108,7 @@ export function TrashTable({ items, type, onRestore, onHardDelete }: TrashTableP
         {localItems.map((item) => (
           <TableRow key={item.id}>
             <TableCell className="font-medium">
-              {getItemName(item, type, tCommon("noTitle"))}
+              {getItemName(item, tCommon("noTitle"))}
             </TableCell>
             <TableCell className="text-muted-foreground">
               {formatDeletedAt(item.deletedAt)}
@@ -147,7 +140,7 @@ export function TrashTable({ items, type, onRestore, onHardDelete }: TrashTableP
                     <AlertDialogHeader>
                       <AlertDialogTitle>{t("deletePermanentlyConfirm")}</AlertDialogTitle>
                       <AlertDialogDescription>
-                        {t("deletePermanentlyDescription", { type: typeLabels[type], name: getItemName(item, type, tCommon("noTitle")) })}
+                        {t("deletePermanentlyDescription", { type: typeLabels[type], name: getItemName(item, tCommon("noTitle")) })}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

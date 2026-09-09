@@ -2,13 +2,10 @@ import { requireRole } from "@/lib/auth-guard";
 import { getTranslations } from "next-intl/server";
 import {
   getDeletedCourses,
-  getDeletedUsers,
   getDeletedLessons,
   restoreCourse,
-  restoreUser,
   restoreLesson,
   hardDeleteCourse,
-  hardDeleteUser,
   hardDeleteLesson,
 } from "@/actions/admin-actions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,17 +17,17 @@ export default async function TrashPage() {
   const t = await getTranslations("trash");
   await requireRole(["ADMIN"]);
 
-  const [coursesResult, usersResult, lessonsResult] = await Promise.all([
+  // Пользователей здесь нет намеренно: их не удаляют мягко, а деактивируют,
+  // и живут они на вкладке «Деактивированные» в разделе пользователей.
+  const [coursesResult, lessonsResult] = await Promise.all([
     getDeletedCourses(),
-    getDeletedUsers(),
     getDeletedLessons(),
   ]);
 
   const courses = coursesResult.success ? coursesResult.data : [];
-  const users = usersResult.success ? usersResult.data : [];
   const lessons = lessonsResult.success ? lessonsResult.data : [];
 
-  const totalCount = courses.length + users.length + lessons.length;
+  const totalCount = courses.length + lessons.length;
 
   return (
     <div>
@@ -48,9 +45,6 @@ export default async function TrashPage() {
           <TabsTrigger value="courses">
             {t("courses")} {courses.length > 0 && `(${courses.length})`}
           </TabsTrigger>
-          <TabsTrigger value="users">
-            {t("users")} {users.length > 0 && `(${users.length})`}
-          </TabsTrigger>
           <TabsTrigger value="lessons">
             {t("lessons")} {lessons.length > 0 && `(${lessons.length})`}
           </TabsTrigger>
@@ -62,15 +56,6 @@ export default async function TrashPage() {
             type="course"
             onRestore={restoreCourse}
             onHardDelete={hardDeleteCourse}
-          />
-        </TabsContent>
-
-        <TabsContent value="users" className="mt-4">
-          <TrashTable
-            items={users}
-            type="user"
-            onRestore={restoreUser}
-            onHardDelete={hardDeleteUser}
           />
         </TabsContent>
 
