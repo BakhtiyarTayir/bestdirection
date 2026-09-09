@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { enrollStudent, unenrollStudent } from "@/actions/course-actions";
+import { refreshBadges } from "@/lib/badge-refresh";
 import { Loader2, Search } from "lucide-react";
 import { formatDate } from "@/lib/format-date";
 
@@ -89,6 +90,9 @@ export function StudentEnrollment({
     const result = await enrollStudent(courseId, student.id);
     setBusyIds((prev) => prev.filter((id) => id !== student.id));
 
+    // Запись на платный курс сразу добавляет должника — обновим счётчик
+    if (result.success) refreshBadges();
+
     if (!result.success) {
       setEnrolled((prev) => prev.filter((s) => s.id !== student.id));
       setAvailable((prev) => [...prev, student].sort(byName));
@@ -114,6 +118,7 @@ export function StudentEnrollment({
     setBusyIds((prev) => prev.filter((id) => id !== student.id));
 
     if (result.success) {
+      refreshBadges();
       toast({ title: t("studentRemoved") });
     } else {
       setAvailable((prev) => prev.filter((s) => s.id !== student.id));

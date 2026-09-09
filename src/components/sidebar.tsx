@@ -42,6 +42,7 @@ import {
 } from "./ui/tooltip";
 import { LanguageSwitcher } from "./language-switcher";
 import { LessonSidebarNav } from "./lesson-sidebar-nav";
+import { BADGE_REFRESH_EVENT } from "@/lib/badge-refresh";
 
 /** На странице урока сайдбар показывает уроки курса вместо общего меню. */
 function matchLessonRoute(pathname: string): { courseSlug: string; lessonSlug: string } | null {
@@ -119,7 +120,13 @@ function useBadgeCount(endpoint: string, enabled: boolean) {
     }
     load();
     const interval = setInterval(load, 60000);
-    return () => { cancelled = true; clearInterval(interval); };
+    // Мутации дёргают событие, чтобы не ждать следующего опроса
+    window.addEventListener(BADGE_REFRESH_EVENT, load);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      window.removeEventListener(BADGE_REFRESH_EVENT, load);
+    };
   }, [endpoint, enabled]);
   return count;
 }

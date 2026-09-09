@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { createPayment } from "@/actions/payment-actions";
+import { refreshBadges } from "@/lib/badge-refresh";
 import { paymentMethods, type PaymentMethodValue } from "@/validators/payment";
 import { Plus, Search } from "lucide-react";
 import type { PaymentStudentOption } from "./payments-list";
@@ -183,6 +184,7 @@ export function CreatePaymentDialog({
         reset();
         setOpen(false);
         onCreated?.();
+        refreshBadges();
         router.refresh();
       } else {
         toast({

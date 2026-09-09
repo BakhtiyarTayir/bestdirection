@@ -21,6 +21,7 @@ import {
   getEnrollmentBilling,
   updateEnrollmentBilling,
 } from "@/actions/billing-actions";
+import { refreshBadges } from "@/lib/badge-refresh";
 
 interface BillingDialogProps {
   enrollmentId: string;
@@ -141,6 +142,7 @@ export function BillingDialog({
 
       if (result.success) {
         toast({ title: t("billingSaved") });
+        refreshBadges();
         onSaved();
       } else {
         toast({

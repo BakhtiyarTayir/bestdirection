@@ -38,6 +38,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { formatDate } from "@/lib/format-date";
 import { Trash2, Loader2 } from "lucide-react";
 import { deletePayment } from "@/actions/payment-actions";
+import { refreshBadges } from "@/lib/badge-refresh";
 import { paymentMethods, type PaymentMethodValue } from "@/validators/payment";
 import { CreatePaymentDialog } from "./create-payment-dialog";
 
@@ -118,6 +119,7 @@ export function PaymentsList({
       const result = await deletePayment(id);
       if (result.success) {
         toast({ title: t("deletedToast") });
+        refreshBadges();
         router.refresh();
       } else {
         toast({
