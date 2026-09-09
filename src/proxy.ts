@@ -57,10 +57,16 @@ export function proxy(request: NextRequest) {
   // с localePrefix:'as-needed' это фатально: он переписывает /login в /uz/login,
   // на втором проходе видит префикс локали по умолчанию и редиректит обратно на
   // /login — получается бесконечный цикл (в dev его нет, повторного прогона там
-  // не происходит). Путь, где локаль уже стоит первым сегментом, повторно
-  // обрабатывать не нужно — локаль берётся из параметра маршрута.
+  // не происходит).
+  //
+  // Обход сужен до префикса локали по умолчанию: цикл возможен только с ним,
+  // потому что только для него 'as-needed' требует убрать префикс. Остальные
+  // локали middleware должен видеть — иначе он не выставит локаль запроса, и
+  // getRequestConfig получит requestLocale=undefined, свалившись на
+  // defaultLocale. Так /ru/... отдавался узбекским. Для самой дефолтной локали
+  // тот же fallback как раз даёт верный ответ, так что обход ей не вредит.
   const localeSegment = request.nextUrl.pathname.split("/")[1];
-  if (locales.includes(localeSegment as (typeof locales)[number])) {
+  if (localeSegment === defaultLocale) {
     const passthrough = NextResponse.next();
     addSecurityHeaders(passthrough);
     return passthrough;
