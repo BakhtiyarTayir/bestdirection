@@ -28,6 +28,10 @@ export default async function DebtorsPage({
   const data = debtorsResult.success && debtorsResult.data ? debtorsResult.data : null;
   const courses =
     optionsResult.success && optionsResult.data ? optionsResult.data.courses : [];
+  // Студенты с их записями нужны диалогу оплаты: он открывается прямо из строки
+  // должника с подставленными студентом, курсом и суммой долга.
+  const students =
+    optionsResult.success && optionsResult.data ? optionsResult.data.students : [];
 
   return (
     <div>
@@ -38,6 +42,7 @@ export default async function DebtorsPage({
       <DebtorsList
         month={data?.month ?? ""}
         debtors={data?.debtors ?? []}
+        students={students}
         totalDebt={data?.totalDebt ?? 0}
         prepaidCount={data?.prepaidCount ?? 0}
         prepaidTotal={data?.prepaidTotal ?? 0}

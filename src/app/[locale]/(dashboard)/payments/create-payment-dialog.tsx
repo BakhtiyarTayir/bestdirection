@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
@@ -36,18 +36,47 @@ function currentMonth() {
   return format(new Date(), "yyyy-MM");
 }
 
+/** Студент, курс и сумма, подставляемые при открытии извне. */
+export interface PaymentPrefill {
+  studentId: string;
+  courseId: string;
+  amount: number;
+  forMonth?: string;
+}
+
+interface CreatePaymentDialogProps {
+  students: PaymentStudentOption[];
+  /**
+   * Управление извне: диалог перестаёт рисовать свою кнопку и открывается
+   * родителем — так строка должника вносит оплату уже с заполненными полями.
+   */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  prefill?: PaymentPrefill | null;
+  onCreated?: () => void;
+}
+
 export function CreatePaymentDialog({
   students,
-}: {
-  students: PaymentStudentOption[];
-}) {
+  open: controlledOpen,
+  onOpenChange,
+  prefill,
+  onCreated,
+}: CreatePaymentDialogProps) {
   const t = useTranslations("payments");
   const tCommon = useTranslations("common");
   const tErrors = useTranslations("errors");
   const router = useRouter();
   const { toast } = useToast();
 
-  const [open, setOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = isControlled ? controlledOpen : uncontrolledOpen;
+  const setOpen = (next: boolean) => {
+    if (isControlled) onOpenChange?.(next);
+    else setUncontrolledOpen(next);
+  };
+
   const [search, setSearch] = useState("");
   const [studentId, setStudentId] = useState("");
   const [courseId, setCourseId] = useState("");
@@ -71,6 +100,26 @@ export function CreatePaymentDialog({
       )
       .slice(0, 50);
   }, [students, search]);
+
+  // Подставляем один раз на открытие: иначе повторные рендеры родителя
+  // затирали бы то, что админ успел поправить руками.
+  const prefillKey = prefill
+    ? `${prefill.studentId}:${prefill.courseId}:${prefill.amount}:${prefill.forMonth ?? ""}`
+    : null;
+  const appliedPrefill = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      appliedPrefill.current = null;
+      return;
+    }
+    if (!prefill || !prefillKey || appliedPrefill.current === prefillKey) return;
+    appliedPrefill.current = prefillKey;
+    setStudentId(prefill.studentId);
+    setCourseId(prefill.courseId);
+    setAmount(String(prefill.amount));
+    setForMonth(prefill.forMonth ?? currentMonth());
+  }, [open, prefill, prefillKey]);
 
   const reset = () => {
     setSearch("");
@@ -133,6 +182,7 @@ export function CreatePaymentDialog({
         toast({ title: t("createdToast") });
         reset();
         setOpen(false);
+        onCreated?.();
         router.refresh();
       } else {
         toast({
@@ -161,12 +211,14 @@ export function CreatePaymentDialog({
         if (!next) reset();
       }}
     >
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          {t("addPayment")}
-        </Button>
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            {t("addPayment")}
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t("newPayment")}</DialogTitle>

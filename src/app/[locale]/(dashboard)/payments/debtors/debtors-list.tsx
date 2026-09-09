@@ -23,8 +23,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronDown, ChevronRight, SlidersHorizontal, TriangleAlert } from "lucide-react";
+import { ChevronDown, ChevronRight, SlidersHorizontal, TriangleAlert, Wallet } from "lucide-react";
 import { BillingDialog } from "./billing-dialog";
+import { CreatePaymentDialog } from "../create-payment-dialog";
+import type { PaymentStudentOption } from "../payments-list";
 
 export interface DebtorBreakdown {
   month: string;
@@ -57,6 +59,7 @@ export interface DebtorRow {
 interface DebtorsListProps {
   month: string;
   debtors: DebtorRow[];
+  students: PaymentStudentOption[];
   totalDebt: number;
   prepaidCount: number;
   prepaidTotal: number;
@@ -70,6 +73,7 @@ const ALL = "all";
 export function DebtorsList({
   month,
   debtors,
+  students,
   totalDebt,
   prepaidCount,
   prepaidTotal,
@@ -78,11 +82,13 @@ export function DebtorsList({
   courses,
 }: DebtorsListProps) {
   const t = useTranslations("debtors");
+  const tPayments = useTranslations("payments");
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
   const [expanded, setExpanded] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
+  const [paying, setPaying] = useState<DebtorRow | null>(null);
   const [, startTransition] = useTransition();
 
   const money = new Intl.NumberFormat(intlLocale(locale));
@@ -244,14 +250,26 @@ export function DebtorsList({
                         <Badge variant="destructive">{money.format(row.debt)}</Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label={t("billingSettings")}
-                          onClick={() => setEditing(row.enrollmentId)}
-                        >
-                          <SlidersHorizontal className="h-4 w-4" />
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={tPayments("addPayment")}
+                            title={tPayments("addPayment")}
+                            onClick={() => setPaying(row)}
+                          >
+                            <Wallet className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={t("billingSettings")}
+                            title={t("billingSettings")}
+                            onClick={() => setEditing(row.enrollmentId)}
+                          >
+                            <SlidersHorizontal className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                     {isOpen && (
@@ -294,6 +312,25 @@ export function DebtorsList({
           }}
         />
       )}
+
+      {/* Тот же диалог, что на странице оплат, но открытый из строки: студент,
+          курс и сумма долга уже подставлены, месяц — тот, что выбран в фильтре. */}
+      <CreatePaymentDialog
+        students={students}
+        open={paying !== null}
+        onOpenChange={(next) => !next && setPaying(null)}
+        prefill={
+          paying
+            ? {
+                studentId: paying.student.id,
+                courseId: paying.course.id,
+                amount: paying.debt,
+                forMonth: month,
+              }
+            : null
+        }
+        onCreated={() => setPaying(null)}
+      />
     </div>
   );
 }
