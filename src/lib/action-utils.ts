@@ -16,11 +16,11 @@ export async function withAuth<T extends { success: true; [key: string]: any }>(
   try {
     const session = await auth();
     if (!session?.user) {
-      return { success: false, error: "Unauthorized" };
+      return { success: false, error: "unauthorized" };
     }
 
     if (options?.roles && !options.roles.includes(session.user.role)) {
-      return { success: false, error: "Forbidden" };
+      return { success: false, error: "forbidden" };
     }
 
     return await callback(session as AuthSession);

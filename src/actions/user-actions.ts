@@ -383,7 +383,7 @@ export async function createUser(data: {
         : null;
 
       if (emailTaken) {
-        return { success: false, error: "User with this email already exists" };
+        return { success: false, error: "emailExists" };
       }
 
       const passwordHash = await bcrypt.hash(data.password, 10);
@@ -417,7 +417,7 @@ export async function createUser(data: {
           error instanceof Prisma.PrismaClientKnownRequestError &&
           error.code === "P2002"
         ) {
-          return { success: false, error: "User with this email already exists" };
+          return { success: false, error: "emailExists" };
         }
         throw error;
       }
@@ -470,7 +470,7 @@ export async function updateUser(
         });
 
         if (emailTaken && emailTaken.id !== id) {
-          return { success: false, error: "Email is already in use" };
+          return { success: false, error: "emailExists" };
         }
       }
 

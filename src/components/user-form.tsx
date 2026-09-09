@@ -51,8 +51,20 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
   const tRoles = useTranslations("roles");
   const tCommon = useTranslations("common");
   const tErrors = useTranslations("errors");
+  const tValidation = useTranslations("validation");
   const [isLoading, setIsLoading] = useState(false);
   const isEditing = !!user;
+
+  // Схема валидации общая с серверными действиями, поэтому в сообщениях лежат
+  // ключи, а не текст. Незнакомое сообщение (например, собственное от Zod)
+  // отдаём как есть.
+  const fieldError = (message?: string) =>
+    message && tValidation.has(message) ? tValidation(message) : message;
+
+  // Действия возвращают коды ошибок; те, что есть в namespace errors,
+  // переводим, остальные показываем без перевода, чтобы не терять смысл.
+  const actionError = (code?: string) =>
+    code && tErrors.has(code) ? tErrors(code) : code || t("saveFailed");
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const schema = (isEditing ? updateUserSchema : createUserSchema) as any;
@@ -98,7 +110,7 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
       } else {
         toast({
           title: tErrors("error"),
-          description: result.error ?? t("saveFailed"),
+          description: actionError(result.error),
           variant: "destructive",
         });
       }
@@ -121,7 +133,13 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+        {/* autoComplete="off": иначе Chrome принимает пару email+пароль за
+            форму входа и подставляет сюда сохранённые данные администратора */}
+        <form
+          onSubmit={form.handleSubmit(handleSubmit)}
+          className="space-y-4"
+          autoComplete="off"
+        >
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="firstName">{t("firstName")}</Label>
@@ -132,7 +150,7 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
               />
               {form.formState.errors.firstName && (
                 <p className="text-sm text-destructive">
-                  {form.formState.errors.firstName.message}
+                  {fieldError(form.formState.errors.firstName.message)}
                 </p>
               )}
             </div>
@@ -146,7 +164,7 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
               />
               {form.formState.errors.lastName && (
                 <p className="text-sm text-destructive">
-                  {form.formState.errors.lastName.message}
+                  {fieldError(form.formState.errors.lastName.message)}
                 </p>
               )}
             </div>
@@ -158,11 +176,12 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
               id="email"
               type="email"
               placeholder="user@example.com"
+              autoComplete="off"
               {...form.register("email")}
             />
             {form.formState.errors.email && (
               <p className="text-sm text-destructive">
-                {form.formState.errors.email.message}
+                {fieldError(form.formState.errors.email.message)}
               </p>
             )}
           </div>
@@ -170,15 +189,18 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
           {!isEditing && (
             <div className="space-y-2">
               <Label htmlFor="password">{t("password")}</Label>
+              {/* new-password — единственное значение, которое Chrome
+                  действительно уважает: сохранённый пароль он не подставит */}
               <Input
                 id="password"
                 type="password"
+                autoComplete="new-password"
                 placeholder={t("passwordPlaceholder")}
                 {...form.register("password")}
               />
               {form.formState.errors.password && (
                 <p className="text-sm text-destructive">
-                  {form.formState.errors.password.message}
+                  {fieldError(form.formState.errors.password.message)}
                 </p>
               )}
             </div>
@@ -193,7 +215,7 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
             />
             {form.formState.errors.phone && (
               <p className="text-sm text-destructive">
-                {form.formState.errors.phone.message}
+                {fieldError(form.formState.errors.phone.message)}
               </p>
             )}
           </div>
@@ -217,7 +239,7 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
             </Select>
             {form.formState.errors.role && (
               <p className="text-sm text-destructive">
-                {form.formState.errors.role.message}
+                {fieldError(form.formState.errors.role.message)}
               </p>
             )}
           </div>

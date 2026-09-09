@@ -35,7 +35,7 @@ export default async function UsersPage() {
   const canManageUsers = session.user.role === "ADMIN";
 
   // Вкладка деактивированных — только для администратора, поэтому и запрос
-  // делаем только ему: преподавателю действие всё равно ответит "Forbidden".
+  // делаем только ему: преподавателю действие всё равно ответит "forbidden".
   const [usersResult, deactivatedResult] = await Promise.all([
     getUsers(),
     canManageUsers ? getDeactivatedUsers() : null,

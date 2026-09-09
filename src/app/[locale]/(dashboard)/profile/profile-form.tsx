@@ -213,6 +213,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
               <Input
                 id="currentPassword"
                 type="password"
+                autoComplete="current-password"
                 placeholder={t("currentPasswordPlaceholder")}
                 {...passwordForm.register("currentPassword")}
               />
@@ -228,6 +229,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
               <Input
                 id="newPassword"
                 type="password"
+                autoComplete="new-password"
                 placeholder={t("newPasswordPlaceholder")}
                 {...passwordForm.register("newPassword")}
               />
@@ -243,6 +245,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
               <Input
                 id="confirmPassword"
                 type="password"
+                autoComplete="new-password"
                 placeholder={t("confirmPasswordPlaceholder")}
                 {...passwordForm.register("confirmPassword")}
               />

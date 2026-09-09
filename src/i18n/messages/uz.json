@@ -1039,6 +1039,8 @@
     "homeworkNotFound": "Vazifa topilmadi",
     "questionNotFound": "Savol topilmadi",
     "noAccess": "Ruxsat yo'q",
+    "unauthorized": "Sessiya tugadi. Qaytadan kiring",
+    "forbidden": "Bu amal uchun huquq yetarli emas",
     "canManageOwnOnly": "Siz faqat o'z kurslaringizni boshqarishingiz mumkin",
     "canEditOwnOnly": "Siz faqat o'z tadbirlaringizni tahrirlashingiz mumkin",
     "canDeleteOwnOnly": "Siz faqat o'z tadbirlaringizni o'chirishingiz mumkin",

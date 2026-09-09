@@ -43,7 +43,7 @@ export async function reviewSubmission(
         session.user.role !== "ADMIN" &&
         submission.homework.lesson.course.teacherId !== session.user.id
       ) {
-        return { success: false as const, error: "Forbidden" };
+        return { success: false as const, error: "forbidden" };
       }
 
       const updated = await prisma.submission.update({
@@ -122,7 +122,7 @@ export async function runStudentCode(
         session.user.role !== "ADMIN" &&
         submission.homework.lesson.course.teacherId !== session.user.id
       ) {
-        return { success: false as const, error: "Forbidden" };
+        return { success: false as const, error: "forbidden" };
       }
 
       const language =
@@ -379,7 +379,7 @@ export async function getSubmissionForReview(submissionId: string) {
         session.user.role !== "ADMIN" &&
         submission.homework.lesson.course.teacherId !== session.user.id
       ) {
-        return { success: false as const, error: "Forbidden" };
+        return { success: false as const, error: "forbidden" };
       }
 
       return { success: true as const, data: submission };

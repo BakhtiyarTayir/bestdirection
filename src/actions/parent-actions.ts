@@ -71,7 +71,7 @@ export async function getParentChildren(parentId?: string) {
     const targetId = parentId ?? session.user.id;
 
     if (targetId !== session.user.id && !["ADMIN", "TEACHER"].includes(session.user.role)) {
-      return { success: false as const, error: "Forbidden" };
+      return { success: false as const, error: "forbidden" };
     }
 
     const links = await prisma.parentStudent.findMany({
