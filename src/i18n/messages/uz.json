@@ -144,7 +144,8 @@
     "debtors": "Qarzdorlar",
     "myChildren": "Farzandlarim",
     "teacherAttendance": "O‘qituvchilar",
-    "sms": "SMS"
+    "sms": "SMS",
+    "teachers": "O'qituvchilar"
   },
   "weekdays": {
     "mon": "Du",
@@ -185,7 +186,8 @@
     "attempts": "Urinishlar",
     "student": "Mening vazifalarim",
     "review": "Tekshirish",
-    "statistics": "Statistika"
+    "statistics": "Statistika",
+    "teachers": "O'qituvchilar"
   },
   "dashboard": {
     "adminTitle": "Administrator paneli",
@@ -1440,7 +1442,13 @@
     "tabFooter": "Futer",
     "sectionTextsHeading": "Bo‘lim matnlari",
     "pagesTitle": "Sahifalar",
-    "pagesSubtitle": "Saytning alohida sahifalari (masalan, «Biz haqimizda» yoki kursning batafsil sahifasi). Saqlangach darhol e’lon qilinadi."
+    "pagesSubtitle": "Saytning alohida sahifalari (masalan, «Biz haqimizda» yoki kursning batafsil sahifasi). Saqlangach darhol e’lon qilinadi.",
+    "tabLogo": "Logotip",
+    "logoTitle": "Sayt logotipi",
+    "logoHint": "Bitta logotip hamma joyda: lendingning shapkasi va podvali, shuningdek CRM sidebari. PNG, JPG yoki WebP, 5 MB gacha — shaffof fon bilan yaxshiroq. Bo'sh maydon standart logotipni qaytaradi.",
+    "logoSave": "Logotipni saqlash",
+    "logoReset": "Standartga qaytarish",
+    "logoInvalidPath": "Faqat shu shakl orqali yuklangan fayllar ruxsat etiladi"
   },
   "catalogStudent": {
     "title": "Kurslar katalogi",
@@ -1676,5 +1684,18 @@
       "DELIVERED": "Yetkazilgan",
       "FAILED": "Xato"
     }
+  },
+  "teachers": {
+    "title": "O'qituvchilar",
+    "subtitle": "Markaz o'qituvchilari, ularning guruhlari va kurslari",
+    "attendanceReport": "O'qituvchilar davomati",
+    "noTeachers": "Hozircha o'qituvchi yo'q. «O'qituvchi» rolida foydalanuvchi qo'shing.",
+    "contacts": "Kontaktlar",
+    "groups": "Guruhlar",
+    "courses": "Kurslar",
+    "students": "Talabalar",
+    "noPhone": "Telefon ko'rsatilmagan",
+    "noGroups": "Guruh yo'q",
+    "noCourses": "Kurs yo'q"
   }
 }

@@ -807,6 +807,14 @@ model MarketingTestimonial {
 
 // Тексты лендинга: ключ = путь в messages (например "hero.title").
 // Отсутствующий ключ → фолбэк на src/i18n/messages/{ru,uz}.json.
+// Настройки, общие для CRM и лендинга. Key-value, а не колонки: значений
+// единицы, и каждое новое не должно стоить миграции.
+model SiteSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
 model MarketingText {
   key       String   @id
   ru        String

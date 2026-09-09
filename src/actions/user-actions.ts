@@ -744,3 +744,71 @@ export async function changePassword(data: {
     return { success: true };
   });
 }
+
+// ---------- getTeachers (ADMIN) ----------
+/**
+ * Список преподавателей для отдельного раздела: в «Пользователях» все роли
+ * вперемешку, а администратору нужно видеть педагогов вместе с их нагрузкой —
+ * какие группы ведут и какие курсы за ними закреплены.
+ */
+export async function getTeachers() {
+  return withAuth(
+    async () => {
+      const teachers = await prisma.user.findMany({
+        where: { role: "TEACHER", deletedAt: null },
+        orderBy: [{ isActive: "desc" }, { lastName: "asc" }, { firstName: "asc" }],
+        select: {
+          id: true,
+          number: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+          isActive: true,
+          telegramUsername: true,
+          taughtGroups: {
+            where: { course: { deletedAt: null } },
+            select: {
+              id: true,
+              name: true,
+              course: { select: { title: true } },
+              _count: { select: { enrollments: true } },
+            },
+            orderBy: { name: "asc" },
+          },
+          courses: {
+            where: { deletedAt: null },
+            select: { id: true, title: true, slug: true },
+            orderBy: { title: "asc" },
+          },
+        },
+      });
+
+      return {
+        success: true as const,
+        data: teachers.map((teacher) => ({
+          id: teacher.id,
+          number: teacher.number,
+          firstName: teacher.firstName,
+          lastName: teacher.lastName,
+          email: teacher.email,
+          phone: teacher.phone,
+          isActive: teacher.isActive,
+          telegramUsername: teacher.telegramUsername,
+          groups: teacher.taughtGroups.map((group) => ({
+            id: group.id,
+            name: group.name,
+            courseTitle: group.course.title,
+            studentCount: group._count.enrollments,
+          })),
+          courses: teacher.courses,
+          studentCount: teacher.taughtGroups.reduce(
+            (sum, group) => sum + group._count.enrollments,
+            0
+          ),
+        })),
+      };
+    },
+    { roles: ["ADMIN"] }
+  );
+}

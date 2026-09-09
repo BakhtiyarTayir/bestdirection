@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +41,7 @@ import {
   saveMarketingTexts,
   seedMarketingContent,
 } from "@/actions/marketing-content-actions";
+import { saveSiteLogo } from "@/actions/site-settings-actions";
 import { Loader2, Pencil, Plus, Trash2, Upload, DownloadCloud } from "lucide-react";
 
 // Типы = сериализованные строки Prisma-таблиц
@@ -100,6 +102,8 @@ interface LandingAdminProps {
   gallery: GalleryRow[];
   testimonials: TestimonialRow[];
   texts: TextRow[];
+  /** Загруженный логотип или null — тогда показывается файл из public */
+  logoUrl: string | null;
   initialTab?: string;
 }
 
@@ -118,6 +122,7 @@ const TAB_TEXT_PREFIXES: Record<string, string[]> = {
 };
 
 const TAB_ORDER = [
+  "logo",
   "menu",
   "hero",
   "how",
@@ -131,7 +136,15 @@ const TAB_ORDER = [
 
 type ActionResult = { success: true } | { success: false; error: string };
 
-export function LandingAdmin({ courses, reels, gallery, testimonials, texts, initialTab }: LandingAdminProps) {
+export function LandingAdmin({
+  courses,
+  reels,
+  gallery,
+  testimonials,
+  texts,
+  logoUrl,
+  initialTab,
+}: LandingAdminProps) {
   const t = useTranslations("landingAdmin");
   const { toast } = useToast();
   const router = useRouter();
@@ -200,6 +213,7 @@ export function LandingAdmin({ courses, reels, gallery, testimonials, texts, ini
         defaultValue={TAB_ORDER.includes(initialTab as (typeof TAB_ORDER)[number]) ? initialTab : "menu"}
       >
         <TabsList className="h-auto flex-wrap">
+          <TabsTrigger value="logo">{t("tabLogo")}</TabsTrigger>
           <TabsTrigger value="menu">{t("tabMenu")}</TabsTrigger>
           <TabsTrigger value="hero">{t("tabHero")}</TabsTrigger>
           <TabsTrigger value="how">{t("tabHow")}</TabsTrigger>
@@ -211,6 +225,9 @@ export function LandingAdmin({ courses, reels, gallery, testimonials, texts, ini
           <TabsTrigger value="footer">{t("tabFooter")}</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="logo">
+          <LogoSection initialUrl={logoUrl} />
+        </TabsContent>
         <TabsContent value="menu">
           <SectionTexts rows={texts} notify={notify} prefixes={TAB_TEXT_PREFIXES.menu} />
         </TabsContent>
@@ -323,6 +340,79 @@ function CommonFooterFields({
         {t("publishedField")}
       </label>
     </div>
+  );
+}
+
+/**
+ * Логотип, общий для CRM и лендинга: шапка, подвал и сайдбар берут его из
+ * настроек. Пустое поле возвращает файлы из public.
+ */
+function LogoSection({ initialUrl }: { initialUrl: string | null }) {
+  const t = useTranslations("landingAdmin");
+  const { toast } = useToast();
+  const router = useRouter();
+  const [url, setUrl] = useState(initialUrl ?? "");
+  const [saving, setSaving] = useState(false);
+
+  const save = async (next: string) => {
+    setSaving(true);
+    try {
+      const result = await saveSiteLogo(next);
+      if (result.success) {
+        setUrl(next);
+        toast({ description: t("saved") });
+        router.refresh();
+      } else {
+        toast({
+          variant: "destructive",
+          description:
+            result.error === "invalidLogoPath" ? t("logoInvalidPath") : t("error"),
+        });
+      }
+    } catch {
+      toast({ variant: "destructive", description: t("error") });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">{t("logoTitle")}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground">{t("logoHint")}</p>
+
+        {/* object-contain, а не cover: логотип нельзя обрезать. Клетчатого фона
+            нет, поэтому светлый фон подложки — как в шапке лендинга. */}
+        <div className="flex h-24 w-56 items-center justify-center rounded-md border bg-white p-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={url || "/logo.png"}
+            alt=""
+            className="max-h-full max-w-full object-contain"
+          />
+        </div>
+
+        <ImageField value={url} onChange={setUrl} />
+
+        <div className="flex gap-2">
+          <Button type="button" disabled={saving} onClick={() => save(url)}>
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {t("logoSave")}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={saving || !url}
+            onClick={() => save("")}
+          >
+            {t("logoReset")}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

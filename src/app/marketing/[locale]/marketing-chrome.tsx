@@ -13,9 +13,11 @@ interface ChromeProps {
   mt: TextFn;
   /** "" на главной (чистые #якоря), "/" или "/ru" на подстраницах */
   anchorBase?: string;
+  /** Логотип из настроек сайта; null — файл из public */
+  logoUrl?: string | null;
 }
 
-export function MarketingHeader({ mt, anchorBase = "" }: ChromeProps) {
+export function MarketingHeader({ mt, anchorBase = "", logoUrl }: ChromeProps) {
   const link =
     "rounded-sm text-sm font-semibold text-[#1F3260] hover:text-[#0F7CAF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0F7CAF]";
   return (
@@ -24,7 +26,7 @@ export function MarketingHeader({ mt, anchorBase = "" }: ChromeProps) {
         <a href={anchorBase || "/"} className="flex items-center">
           {/* Логотип уже содержит надпись «Best Direction» — дублировать её текстом не нужно */}
           <Image
-            src="/marketing/logo.png"
+            src={logoUrl || "/marketing/logo.png"}
             alt={mt("header.brand")}
             width={877}
             height={490}
@@ -63,7 +65,7 @@ interface FooterProps extends ChromeProps {
   isUz: boolean;
 }
 
-export function MarketingFooter({ mt, courses, pages, isUz, anchorBase = "" }: FooterProps) {
+export function MarketingFooter({ mt, courses, pages, isUz, anchorBase = "", logoUrl }: FooterProps) {
   const pageBase = isUz ? "/" : "/ru/";
   return (
     <footer id="contacts" className="scroll-mt-24 bg-[#152344] px-6 py-16 text-white/70">
@@ -71,7 +73,16 @@ export function MarketingFooter({ mt, courses, pages, isUz, anchorBase = "" }: F
         <div className="grid gap-10 border-b border-white/10 pb-10 md:grid-cols-4">
           <div>
             <div className="mb-4 flex items-center">
-              <Image src="/marketing/logo-white.png" alt={mt("header.brand")} width={877} height={490} className="h-12 w-auto" />
+              {/* Загруженный логотип один на весь сайт, поэтому в подвале он
+                  же. Белая версия из public остаётся дефолтом: на тёмном фоне
+                  она читается лучше, пока свой логотип не загрузили. */}
+              <Image
+                src={logoUrl || "/marketing/logo-white.png"}
+                alt={mt("header.brand")}
+                width={877}
+                height={490}
+                className="h-12 w-auto"
+              />
             </div>
             <p className="text-sm">{mt("footer.about")}</p>
           </div>

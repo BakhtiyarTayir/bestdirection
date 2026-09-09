@@ -2,6 +2,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import Image from "next/image";
 import { LeadForm } from "./lead-form";
 import { InstagramReels } from "./instagram-reels";
+import { getSiteLogoUrl } from "@/lib/site-settings";
 import { MarketingHeader, MarketingFooter } from "./marketing-chrome";
 import { Button } from "@/components/ui/button";
 import { instagramProfileUrl } from "@/lib/marketing-reels";
@@ -28,14 +29,16 @@ export default async function MarketingPage({ params }: MarketingPageProps) {
 
   // Контент лендинга из БД (редактируется в /admin/landing); пустые таблицы
   // отдают статичные значения по умолчанию
-  const [courses, galleryRows, reelUrls, dbTestimonials, textRows, pages] = await Promise.all([
-    getLandingCourses(),
-    getLandingGallery(),
-    getLandingReels(),
-    getLandingTestimonials(),
-    getLandingTexts(),
-    getLandingPages(),
-  ]);
+  const [courses, galleryRows, reelUrls, dbTestimonials, textRows, pages, logoUrl] =
+    await Promise.all([
+      getLandingCourses(),
+      getLandingGallery(),
+      getLandingReels(),
+      getLandingTestimonials(),
+      getLandingTexts(),
+      getLandingPages(),
+      getSiteLogoUrl(),
+    ]);
   const mt = makeLandingText(textRows, locale, t);
 
   const messageTestimonials = t.raw("testimonials.items") as Array<{
@@ -69,7 +72,7 @@ export default async function MarketingPage({ params }: MarketingPageProps) {
 
   return (
     <div className="min-h-screen bg-white text-[#1F3260]">
-      <MarketingHeader mt={mt} />
+      <MarketingHeader mt={mt} logoUrl={logoUrl} />
 
       <main>
         {/* Hero */}
@@ -269,7 +272,7 @@ export default async function MarketingPage({ params }: MarketingPageProps) {
         </section>
       </main>
 
-      <MarketingFooter mt={mt} courses={courses} pages={pages} isUz={isUz} />
+      <MarketingFooter mt={mt} courses={courses} pages={pages} isUz={isUz} logoUrl={logoUrl} />
     </div>
   );
 }

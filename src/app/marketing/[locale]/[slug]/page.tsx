@@ -8,6 +8,7 @@ import {
   getLandingTexts,
   makeLandingText,
 } from "@/lib/marketing-content";
+import { getSiteLogoUrl } from "@/lib/site-settings";
 import { MarketingHeader, MarketingFooter } from "../marketing-chrome";
 import { EditorContentView } from "../editor-content";
 
@@ -35,10 +36,11 @@ export default async function MarketingContentPage({ params }: LandingPageProps)
 
   const isUz = locale === "uz";
   const t = await getTranslations("marketing");
-  const [textRows, courses, pages] = await Promise.all([
+  const [textRows, courses, pages, logoUrl] = await Promise.all([
     getLandingTexts(),
     getLandingCourses(),
     getLandingPages(),
+    getSiteLogoUrl(),
   ]);
   const mt = makeLandingText(textRows, locale, t);
 
@@ -49,14 +51,14 @@ export default async function MarketingContentPage({ params }: LandingPageProps)
 
   return (
     <div className="min-h-screen bg-white text-[#1F3260]">
-      <MarketingHeader mt={mt} anchorBase={anchorBase} />
+      <MarketingHeader mt={mt} anchorBase={anchorBase} logoUrl={logoUrl} />
       <main>
         <article className="mx-auto max-w-3xl px-6 py-16">
           <h1 className="mb-8 text-balance text-3xl font-bold leading-tight md:text-4xl">{title}</h1>
           <EditorContentView content={content} />
         </article>
       </main>
-      <MarketingFooter mt={mt} courses={courses} pages={pages} isUz={isUz} anchorBase={anchorBase} />
+      <MarketingFooter mt={mt} courses={courses} pages={pages} isUz={isUz} anchorBase={anchorBase} logoUrl={logoUrl} />
     </div>
   );
 }

@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   BookOpen,
   Users,
+  GraduationCap,
   FileText,
   User,
   LogOut,
@@ -56,6 +57,8 @@ function matchLessonRoute(pathname: string): { courseSlug: string; lessonSlug: s
 interface SidebarProps {
   role: string;
   userName: string;
+  /** Логотип из настроек сайта; null — берём файл из public */
+  logoUrl?: string | null;
 }
 
 interface NavItem {
@@ -74,6 +77,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard, roles: ["ADMIN", "TEACHER", "STUDENT"] },
   { href: "/courses", labelKey: "courses", icon: BookOpen, roles: ["ADMIN", "TEACHER", "STUDENT"] },
   { href: "/users", labelKey: "users", icon: Users, roles: ["ADMIN", "TEACHER"] },
+  { href: "/teachers", labelKey: "teachers", icon: GraduationCap, roles: ["ADMIN"] },
   { href: "/statistics", labelKey: "homeworkStats", icon: BarChart3, roles: ["ADMIN", "TEACHER"] },
   { href: "/groups", labelKey: "groups", icon: UsersRound, roles: ["ADMIN", "TEACHER"] },
   { href: "/courses/catalog", labelKey: "catalog", icon: Copy, roles: ["ADMIN", "TEACHER"] },
@@ -131,7 +135,7 @@ function useBadgeCount(endpoint: string, enabled: boolean) {
   return count;
 }
 
-export function Sidebar({ role, userName }: SidebarProps) {
+export function Sidebar({ role, userName, logoUrl }: SidebarProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -159,7 +163,15 @@ export function Sidebar({ role, userName }: SidebarProps) {
   const sidebarContent = (
     <div className="flex h-full flex-col">
       <div className={cn("flex items-center gap-2 border-b py-5", collapsed ? "justify-center px-2" : "px-6")}>
-        <Image src="/logo.png" alt="" width={490} height={492} className="h-7 w-auto shrink-0" />
+        {/* Логотип из настроек сайта; пока не загружен — файл из public.
+            next/image с внешним ремоут-паттерном не нужен: путь всегда локальный. */}
+        <Image
+          src={logoUrl || "/logo.png"}
+          alt=""
+          width={490}
+          height={492}
+          className="h-7 w-auto shrink-0"
+        />
         {!collapsed && <span className="text-lg font-semibold">Best Direction</span>}
       </div>
 
