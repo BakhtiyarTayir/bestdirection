@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import { prisma, prismaUnscoped } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
 import { createAuditLog } from "@/lib/audit";
 import { revalidateLocalized } from "@/lib/revalidate";
@@ -64,7 +64,12 @@ export async function copyCourse(
       const courseTitle = options?.newTitle ?? `${source.title} (copy)`;
       const courseSlug = await generateUniqueSlug(
         slugify(courseTitle),
-        async (s) => !!(await prisma.course.findUnique({ where: { slug: s }, select: { id: true } }))
+        // Без soft-delete-фильтра: slug держит и удалённый курс (см. createCourse).
+        async (s) =>
+          !!(await prismaUnscoped.course.findUnique({
+            where: { slug: s },
+            select: { id: true },
+          }))
       );
 
       const newCourse = await prisma.$transaction(async (tx) => {

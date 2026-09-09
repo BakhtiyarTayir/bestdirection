@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import { prisma, prismaUnscoped } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
 import { revalidateLocalized } from "@/lib/revalidate";
 import { createAuditLog, computeChanges } from "@/lib/audit";
@@ -108,9 +108,16 @@ export async function createCourse(data: {
         return { success: false, error: "Teachers can only create courses for themselves" };
       }
 
+      // Занятость slug проверяем без soft-delete-фильтра: уникальный индекс в
+      // БД про deletedAt не знает, поэтому slug держит и удалённый курс.
+      // Обычный prisma.course его не видит — и create падал с P2002.
       const slug = await generateUniqueSlug(
         slugify(data.title),
-        async (s) => !!(await prisma.course.findUnique({ where: { slug: s }, select: { id: true } }))
+        async (s) =>
+          !!(await prismaUnscoped.course.findUnique({
+            where: { slug: s },
+            select: { id: true },
+          }))
       );
 
       const course = await prisma.course.create({
@@ -185,10 +192,14 @@ export async function updateCourse(
 
       let slugUpdate: { slug: string } | Record<string, never> = {};
       if (data.title !== undefined && data.title !== existing.title) {
+        // Без soft-delete-фильтра — по той же причине, что и в createCourse.
         const newSlug = await generateUniqueSlug(
           slugify(data.title),
           async (s) => {
-            const found = await prisma.course.findUnique({ where: { slug: s }, select: { id: true } });
+            const found = await prismaUnscoped.course.findUnique({
+              where: { slug: s },
+              select: { id: true },
+            });
             return !!found && found.id !== id;
           }
         );

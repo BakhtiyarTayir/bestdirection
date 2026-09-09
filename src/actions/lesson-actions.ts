@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import { prisma, prismaUnscoped } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
 import { revalidateLocalized } from "@/lib/revalidate";
 import { createAuditLog, computeChanges } from "@/lib/audit";
@@ -140,7 +140,13 @@ export async function createLesson(data: {
 
       const slug = await generateUniqueSlug(
         slugify(data.title),
-        async (s) => !!(await prisma.lesson.findFirst({ where: { courseId: data.courseId, slug: s }, select: { id: true } }))
+        // Без soft-delete-фильтра: пару (courseId, slug) держит занятой и
+        // удалённый урок — уникальный индекс про deletedAt не знает.
+        async (s) =>
+          !!(await prismaUnscoped.lesson.findFirst({
+            where: { courseId: data.courseId, slug: s },
+            select: { id: true },
+          }))
       );
 
       const lesson = await prisma.lesson.create({
@@ -205,7 +211,11 @@ export async function updateLesson(
         const newSlug = await generateUniqueSlug(
           slugify(data.title),
           async (s) => {
-            const found = await prisma.lesson.findFirst({ where: { courseId: existing.courseId, slug: s }, select: { id: true } });
+            // Без soft-delete-фильтра — по той же причине, что и в createLesson.
+            const found = await prismaUnscoped.lesson.findFirst({
+              where: { courseId: existing.courseId, slug: s },
+              select: { id: true },
+            });
             return !!found && found.id !== id;
           }
         );

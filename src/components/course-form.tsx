@@ -71,9 +71,23 @@ export function CourseForm({
   const t = useTranslations("courses");
   const tCommon = useTranslations("common");
   const tErrors = useTranslations("errors");
+  const tValidation = useTranslations("validation");
   const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
+
+  // Схема валидации общая с серверными действиями, поэтому в сообщениях лежат
+  // ключи, а не текст: переводим их здесь. Zod может подставить и собственное
+  // сообщение (например, для нечислового значения) — такое отдаём как есть.
+  const fieldError = (message?: string) =>
+    message && tValidation.has(message) ? tValidation(message) : message;
+
+  // Серверные действия возвращают коды ошибок. Часть из них есть в namespace
+  // errors, остальные — англоязычные строки из старых действий, их показываем
+  // без перевода, чтобы не терять смысл.
+  const actionError = (code?: string) =>
+    code && tErrors.has(code) ? tErrors(code) : code || tErrors("somethingWentWrong");
+
   const isEditing = !!course;
   const isAdmin = currentUserRole === "ADMIN";
 
@@ -176,7 +190,7 @@ export function CourseForm({
           } else {
             toast({
               title: tErrors("error"),
-              description: result.error,
+              description: actionError(result.error),
               variant: "destructive",
             });
           }
@@ -196,7 +210,7 @@ export function CourseForm({
           } else {
             toast({
               title: tErrors("error"),
-              description: result.error,
+              description: actionError(result.error),
               variant: "destructive",
             });
           }
@@ -228,7 +242,9 @@ export function CourseForm({
               {...register("title")}
             />
             {errors.title && (
-              <p className="text-sm text-destructive">{errors.title.message}</p>
+              <p className="text-sm text-destructive">
+                {fieldError(errors.title.message)}
+              </p>
             )}
           </div>
 
@@ -242,7 +258,7 @@ export function CourseForm({
             />
             {errors.description && (
               <p className="text-sm text-destructive">
-                {errors.description.message}
+                {fieldError(errors.description.message)}
               </p>
             )}
           </div>
@@ -335,7 +351,7 @@ export function CourseForm({
               </Select>
               {errors.teacherId && (
                 <p className="text-sm text-destructive">
-                  {errors.teacherId.message}
+                  {fieldError(errors.teacherId.message)}
                 </p>
               )}
             </div>

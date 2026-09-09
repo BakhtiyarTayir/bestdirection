@@ -1121,6 +1121,7 @@
     "groupNameRequired": "Guruh nomi majburiy",
     "maxChars100": "Maksimum 100 belgi",
     "maxChars200": "Maksimum 200 belgi",
+    "maxChars300": "Maksimum 300 belgi",
     "maxChars500": "Maksimum 500 belgi",
     "invalidDate": "To'g'ri sanani kiriting",
     "sessionIdRequired": "Sessiya ID majburiy",
