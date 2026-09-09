@@ -879,17 +879,19 @@
   },
   "enrollment": {
     "title": "Студенты курса ({count})",
-    "addStudent": "Добавить студента",
-    "addStudentTitle": "Добавить студента в курс",
-    "addStudentDescription": "Выберите студента из списка для записи на курс.",
     "noAvailableStudents": "Нет доступных студентов для записи.",
-    "selectStudent": "Выберите студента",
-    "enroll": "Записать",
-    "studentAdded": "Студент добавлен в курс",
     "studentRemoved": "Студент удален из курса",
     "removeFromCourse": "Удалить из курса",
     "noStudentsEnrolled": "В этот курс пока не записан ни один студент.",
-    "enrollmentDate": "Дата записи"
+    "enrollmentDate": "Дата записи",
+    "availableTitle": "Все студенты ({count})",
+    "transferHint": "Отметьте студента слева — он сразу записывается на курс и появляется справа. Снимите отметку справа, чтобы отписать.",
+    "searchPlaceholder": "Имя, почта или телефон",
+    "nothingFound": "Ничего не найдено",
+    "removeConfirmTitle": "Отписать от курса?",
+    "removeConfirmDescription": "{name} будет отписан от курса. Сданные работы и прогресс сохранятся, а дата записи и группа — нет.",
+    "enrollFailed": "Не удалось записать студента",
+    "removeFailed": "Не удалось отписать студента"
   },
   "copyCourse": {
     "title": "Копировать курс",
@@ -1087,7 +1089,9 @@
     "templateNotFound": "Шаблон не найден",
     "templateNotApproved": "Шаблон не согласован в Eskiz",
     "noRecipients": "Нет получателей с корректным телефоном",
-    "languageNotDetected": "Не удалось определить язык программирования"
+    "languageNotDetected": "Не удалось определить язык программирования",
+    "studentNotFound": "Студент не найден",
+    "alreadyEnrolled": "Студент уже записан на этот курс"
   },
   "success": {
     "saved": "Сохранено",

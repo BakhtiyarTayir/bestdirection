@@ -78,7 +78,7 @@ export async function getCourseById(id: string) {
       },
     });
 
-    if (!course) return { success: false, error: "Course not found" };
+    if (!course) return { success: false, error: "courseNotFound" };
 
     return { success: true, data: course };
   });
@@ -303,14 +303,14 @@ export async function enrollStudent(courseId: string, studentId: string) {
 
       const student = await prisma.user.findUnique({ where: { id: studentId } });
       if (!student || student.role !== "STUDENT") {
-        return { success: false, error: "Student not found" };
+        return { success: false, error: "studentNotFound" };
       }
 
       if (role === "TEACHER") {
         const course = await prisma.course.findUnique({ where: { id: courseId } });
-        if (!course) return { success: false, error: "Course not found" };
+        if (!course) return { success: false, error: "courseNotFound" };
         if (course.teacherId !== session.user.id) {
-          return { success: false, error: "You can only enroll students in your own courses" };
+          return { success: false, error: "onlyOwnCourses" };
         }
       }
 
@@ -319,7 +319,7 @@ export async function enrollStudent(courseId: string, studentId: string) {
       });
 
       if (existing) {
-        return { success: false, error: "Student is already enrolled in this course" };
+        return { success: false, error: "alreadyEnrolled" };
       }
 
       const enrollment = await prisma.enrollment.create({
@@ -354,9 +354,9 @@ export async function unenrollStudent(courseId: string, studentId: string) {
 
       if (role === "TEACHER") {
         const course = await prisma.course.findUnique({ where: { id: courseId } });
-        if (!course) return { success: false, error: "Course not found" };
+        if (!course) return { success: false, error: "courseNotFound" };
         if (course.teacherId !== session.user.id) {
-          return { success: false, error: "You can only unenroll students from your own courses" };
+          return { success: false, error: "onlyOwnCourses" };
         }
       }
 

@@ -879,17 +879,19 @@
   },
   "enrollment": {
     "title": "Kurs talabalari ({count})",
-    "addStudent": "Talaba qo'shish",
-    "addStudentTitle": "Kursga talaba qo'shish",
-    "addStudentDescription": "Kursga yozish uchun ro'yxatdan talabani tanlang.",
     "noAvailableStudents": "Yozish uchun mavjud talabalar yo'q.",
-    "selectStudent": "Talabani tanlang",
-    "enroll": "Yozish",
-    "studentAdded": "Talaba kursga qo'shildi",
     "studentRemoved": "Talaba kursdan o'chirildi",
     "removeFromCourse": "Kursdan o'chirish",
     "noStudentsEnrolled": "Bu kursga hali birorta talaba yozilmagan.",
-    "enrollmentDate": "Yozilgan sana"
+    "enrollmentDate": "Yozilgan sana",
+    "availableTitle": "Barcha talabalar ({count})",
+    "transferHint": "Chapdan talabani belgilang — u darhol kursga yoziladi va o'ngda paydo bo'ladi. Yozuvni bekor qilish uchun o'ngdagi belgini olib tashlang.",
+    "searchPlaceholder": "Ism, email yoki telefon",
+    "nothingFound": "Hech narsa topilmadi",
+    "removeConfirmTitle": "Kursdan chiqarilsinmi?",
+    "removeConfirmDescription": "{name} kursdan chiqariladi. Topshirilgan ishlar va progress saqlanadi, yozilgan sana va guruh esa yo'q.",
+    "enrollFailed": "Talabani yozib bo'lmadi",
+    "removeFailed": "Talabani chiqarib bo'lmadi"
   },
   "copyCourse": {
     "title": "Kursni nusxalash",
@@ -1087,7 +1089,9 @@
     "templateNotFound": "Shablon topilmadi",
     "templateNotApproved": "Shablon Eskizda tasdiqlanmagan",
     "noRecipients": "To‘g‘ri telefonli qabul qiluvchilar yo‘q",
-    "languageNotDetected": "Dasturlash tilini aniqlab bo'lmadi"
+    "languageNotDetected": "Dasturlash tilini aniqlab bo'lmadi",
+    "studentNotFound": "Talaba topilmadi",
+    "alreadyEnrolled": "Talaba bu kursga allaqachon yozilgan"
   },
   "success": {
     "saved": "Saqlandi",

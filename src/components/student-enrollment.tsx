@@ -1,38 +1,26 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "@/i18n/navigation";
+import { useState } from "react";
+import { useTranslations } from "next-intl";
 
-import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { enrollStudent, unenrollStudent } from "@/actions/course-actions";
-import { UserPlus, UserMinus, Loader2 } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import { formatDate } from "@/lib/format-date";
-import { useTranslations } from "next-intl";
 
 interface Student {
   id: string;
@@ -40,11 +28,11 @@ interface Student {
   lastName: string;
   email: string | null;
   phone?: string | null;
+  isActive?: boolean;
 }
 
 interface EnrolledStudent extends Student {
   enrolledAt: Date;
-  isActive?: boolean;
 }
 
 interface StudentEnrollmentProps {
@@ -52,6 +40,12 @@ interface StudentEnrollmentProps {
   enrolledStudents: EnrolledStudent[];
   availableStudents: Student[];
 }
+
+const fullName = (student: Student) =>
+  `${student.firstName} ${student.lastName}`.trim();
+
+const byName = (a: Student, b: Student) =>
+  fullName(a).localeCompare(fullName(b));
 
 export function StudentEnrollment({
   courseId,
@@ -61,160 +55,223 @@ export function StudentEnrollment({
   const t = useTranslations("enrollment");
   const tCommon = useTranslations("common");
   const tErrors = useTranslations("errors");
-  const router = useRouter();
   const { toast } = useToast();
-  const [isPending, startTransition] = useTransition();
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedStudentId, setSelectedStudentId] = useState<string>("");
 
-  const handleEnroll = () => {
-    if (!selectedStudentId) return;
+  // Списки держим локально и переносим строки сразу, не дожидаясь сервера:
+  // отметить десяток студентов подряд должно быть быстро. При отказе строка
+  // возвращается на место, поэтому расхождения с базой не остаётся.
+  const [available, setAvailable] = useState<Student[]>(availableStudents);
+  const [enrolled, setEnrolled] = useState<EnrolledStudent[]>(enrolledStudents);
+  const [availableQuery, setAvailableQuery] = useState("");
+  const [enrolledQuery, setEnrolledQuery] = useState("");
+  const [busyIds, setBusyIds] = useState<string[]>([]);
+  const [removeTarget, setRemoveTarget] = useState<EnrolledStudent | null>(null);
 
-    startTransition(async () => {
-      const result = await enrollStudent(courseId, selectedStudentId);
-      if (result.success) {
-        toast({ title: t("studentAdded") });
-        setDialogOpen(false);
-        setSelectedStudentId("");
-        router.refresh();
-      } else {
-        toast({
-          title: tErrors("error"),
-          description: result.error,
-          variant: "destructive",
-        });
-      }
-    });
+  const actionError = (code?: string, fallback?: string) =>
+    code && tErrors.has(code) ? tErrors(code) : code || fallback;
+
+  const matches = (student: Student, query: string) => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return true;
+    return [fullName(student), student.email ?? "", student.phone ?? ""].some(
+      (field) => field.toLowerCase().includes(needle)
+    );
   };
 
-  const handleUnenroll = (studentId: string) => {
-    if (!confirm(t("removeFromCourse"))) return;
+  const visibleAvailable = available.filter((s) => matches(s, availableQuery));
+  const visibleEnrolled = enrolled.filter((s) => matches(s, enrolledQuery));
 
-    startTransition(async () => {
-      const result = await unenrollStudent(courseId, studentId);
-      if (result.success) {
-        toast({ title: t("studentRemoved") });
-        router.refresh();
-      } else {
-        toast({
-          title: tErrors("error"),
-          description: result.error,
-          variant: "destructive",
-        });
-      }
-    });
+  const handleEnroll = async (student: Student) => {
+    setBusyIds((prev) => [...prev, student.id]);
+    setAvailable((prev) => prev.filter((s) => s.id !== student.id));
+    setEnrolled((prev) => [...prev, { ...student, enrolledAt: new Date() }]);
+
+    const result = await enrollStudent(courseId, student.id);
+    setBusyIds((prev) => prev.filter((id) => id !== student.id));
+
+    if (!result.success) {
+      setEnrolled((prev) => prev.filter((s) => s.id !== student.id));
+      setAvailable((prev) => [...prev, student].sort(byName));
+      toast({
+        title: tErrors("error"),
+        description: actionError(result.error, t("enrollFailed")),
+        variant: "destructive",
+      });
+    }
   };
+
+  const handleRemove = async (student: EnrolledStudent) => {
+    setRemoveTarget(null);
+    setBusyIds((prev) => [...prev, student.id]);
+    setEnrolled((prev) => prev.filter((s) => s.id !== student.id));
+    // Отключённых студентов getAvailableStudents не отдаёт, поэтому и слева
+    // их не показываем — иначе список врал бы до перезагрузки страницы.
+    if (student.isActive !== false) {
+      setAvailable((prev) => [...prev, student].sort(byName));
+    }
+
+    const result = await unenrollStudent(courseId, student.id);
+    setBusyIds((prev) => prev.filter((id) => id !== student.id));
+
+    if (result.success) {
+      toast({ title: t("studentRemoved") });
+    } else {
+      setAvailable((prev) => prev.filter((s) => s.id !== student.id));
+      setEnrolled((prev) => [...prev, student].sort(byName));
+      toast({
+        title: tErrors("error"),
+        description: actionError(result.error, t("removeFailed")),
+        variant: "destructive",
+      });
+    }
+  };
+
+  const searchBox = (value: string, onChange: (v: string) => void) => (
+    <div className="relative">
+      <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={t("searchPlaceholder")}
+        className="pl-8"
+      />
+    </div>
+  );
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">
-          {t("title", { count: enrolledStudents.length })}
-        </h2>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <UserPlus className="mr-2 h-4 w-4" />
-              {t("addStudent")}
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t("addStudentTitle")}</DialogTitle>
-              <DialogDescription>
-                {t("addStudentDescription")}
-              </DialogDescription>
-            </DialogHeader>
-            {availableStudents.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4">
-                {t("noAvailableStudents")}
-              </p>
-            ) : (
-              <div className="space-y-4">
-                <Select
-                  value={selectedStudentId}
-                  onValueChange={setSelectedStudentId}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t("selectStudent")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableStudents.map((student) => (
-                      <SelectItem key={student.id} value={student.id}>
-                        {student.firstName} {student.lastName} ({student.email})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setDialogOpen(false)}
-              >
-                {tCommon("cancel")}
-              </Button>
-              <Button
-                onClick={handleEnroll}
-                disabled={!selectedStudentId || isPending}
-              >
-                {isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                {t("enroll")}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+      <p className="text-sm text-muted-foreground">{t("transferHint")}</p>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">
+              {t("availableTitle", { count: available.length })}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {searchBox(availableQuery, setAvailableQuery)}
+            <ScrollArea className="h-[420px] rounded-md border">
+              {available.length === 0 ? (
+                <p className="p-4 text-sm text-muted-foreground">
+                  {t("noAvailableStudents")}
+                </p>
+              ) : visibleAvailable.length === 0 ? (
+                <p className="p-4 text-sm text-muted-foreground">
+                  {t("nothingFound")}
+                </p>
+              ) : (
+                visibleAvailable.map((student) => {
+                  const busy = busyIds.includes(student.id);
+                  return (
+                    <label
+                      key={student.id}
+                      className="flex cursor-pointer items-center gap-3 border-b p-3 last:border-b-0 hover:bg-muted/50"
+                    >
+                      <Checkbox
+                        checked={false}
+                        disabled={busy}
+                        onCheckedChange={() => handleEnroll(student)}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">
+                          {fullName(student)}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {student.email || student.phone || "—"}
+                        </p>
+                      </div>
+                      {busy && (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      )}
+                    </label>
+                  );
+                })
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">
+              {t("title", { count: enrolled.length })}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {searchBox(enrolledQuery, setEnrolledQuery)}
+            <ScrollArea className="h-[420px] rounded-md border">
+              {enrolled.length === 0 ? (
+                <p className="p-4 text-sm text-muted-foreground">
+                  {t("noStudentsEnrolled")}
+                </p>
+              ) : visibleEnrolled.length === 0 ? (
+                <p className="p-4 text-sm text-muted-foreground">
+                  {t("nothingFound")}
+                </p>
+              ) : (
+                visibleEnrolled.map((student) => {
+                  const busy = busyIds.includes(student.id);
+                  return (
+                    <label
+                      key={student.id}
+                      className="flex cursor-pointer items-center gap-3 border-b p-3 last:border-b-0 hover:bg-muted/50"
+                    >
+                      <Checkbox
+                        checked
+                        disabled={busy}
+                        onCheckedChange={() => setRemoveTarget(student)}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">
+                          {fullName(student)}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {student.email || student.phone || "—"}
+                        </p>
+                      </div>
+                      <span
+                        className="shrink-0 text-xs text-muted-foreground"
+                        title={t("enrollmentDate")}
+                      >
+                        {formatDate(student.enrolledAt)}
+                      </span>
+                      {busy && (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      )}
+                    </label>
+                  );
+                })
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
       </div>
 
-      {enrolledStudents.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-8 text-center">
-          <p className="text-muted-foreground">
-            {t("noStudentsEnrolled")}
-          </p>
-        </div>
-      ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{tCommon("firstName")}</TableHead>
-                <TableHead>{tCommon("lastName")}</TableHead>
-                <TableHead>{tCommon("email")}</TableHead>
-                <TableHead>{tCommon("phone")}</TableHead>
-                <TableHead>{t("enrollmentDate")}</TableHead>
-                <TableHead className="w-[100px]">{tCommon("actions")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {enrolledStudents.map((student) => (
-                <TableRow key={student.id}>
-                  <TableCell>{student.firstName}</TableCell>
-                  <TableCell>{student.lastName}</TableCell>
-                  <TableCell>{student.email}</TableCell>
-                  <TableCell>{student.phone || "---"}</TableCell>
-                  <TableCell>
-                    {formatDate(student.enrolledAt)}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleUnenroll(student.id)}
-                      disabled={isPending}
-                      title={t("removeFromCourse")}
-                    >
-                      <UserMinus className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+      <AlertDialog
+        open={removeTarget !== null}
+        onOpenChange={(open) => !open && setRemoveTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("removeConfirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("removeConfirmDescription", {
+                name: removeTarget ? fullName(removeTarget) : "",
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => removeTarget && handleRemove(removeTarget)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t("removeFromCourse")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
