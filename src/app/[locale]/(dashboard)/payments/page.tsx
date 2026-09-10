@@ -56,6 +56,7 @@ export default async function PaymentsPage({
           forMonth: payment.forMonth,
           comment: payment.comment,
           student: {
+            id: payment.student.id,
             firstName: payment.student.firstName,
             lastName: payment.student.lastName,
             phone: payment.student.phone,

@@ -318,3 +318,142 @@ export async function updateEnrollmentBilling(
     { roles: ["ADMIN"] }
   );
 }
+
+// ---------- getStudentBilling (ADMIN) ----------
+/**
+ * Карточка студента: по каждому курсу — помесячная история начислений и
+ * оплат с балансом на конец месяца. Список должников показывает только тех,
+ * у кого долг положительный, поэтому переплата там видна лишь общей суммой,
+ * без имён. Здесь видно, откуда взялась каждая цифра.
+ */
+export async function getStudentBilling(studentId: string) {
+  return withAuth(
+    async () => {
+      const student = await prisma.user.findUnique({
+        where: { id: studentId },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          email: true,
+          telegramUsername: true,
+        },
+      });
+      if (!student) return { success: false as const, error: "userNotFound" };
+
+      const [enrollments, payments] = await Promise.all([
+        loadBillableEnrollments({ studentId }),
+        prisma.payment.findMany({
+          where: { studentId, deletedAt: null },
+          orderBy: { paidAt: "desc" },
+          select: {
+            id: true,
+            amount: true,
+            method: true,
+            paidAt: true,
+            forMonth: true,
+            comment: true,
+            courseId: true,
+            course: { select: { title: true } },
+            group: { select: { name: true } },
+            createdBy: { select: { firstName: true, lastName: true } },
+          },
+        }),
+      ]);
+
+      // История доводится до текущего месяца или до месяца последней оплаты —
+      // иначе аванс за будущий месяц не попал бы в таблицу вовсе.
+      const currentMonth = monthKey(new Date());
+      const lastPaymentMonth = payments.reduce(
+        (latest, payment) => {
+          const month = paymentMonth(payment);
+          return month > latest ? month : latest;
+        },
+        currentMonth
+      );
+
+      const courses = enrollments.map((enrollment) => {
+        const schedule = chargeSchedule(
+          toBillingEnrollment(enrollment),
+          lastPaymentMonth
+        );
+
+        const paidByMonth = new Map<string, number>();
+        for (const payment of payments) {
+          if (payment.courseId !== enrollment.courseId) continue;
+          const month = paymentMonth(payment);
+          paidByMonth.set(month, (paidByMonth.get(month) ?? 0) + payment.amount);
+        }
+
+        // Месяцы обеих сторон: начисления могут кончиться раньше оплат
+        const months = Array.from(
+          new Set([...schedule.map((item) => item.month), ...paidByMonth.keys()])
+        ).sort();
+
+        let running = 0;
+        const rows = months.map((month) => {
+          const charge = schedule.find((item) => item.month === month)?.charge;
+          const charged = charge?.amount ?? 0;
+          const paid = paidByMonth.get(month) ?? 0;
+          running += paid - charged;
+          return {
+            month,
+            charged,
+            paid,
+            basis: charge?.basis ?? "none",
+            unitsTotal: charge?.unitsTotal ?? 0,
+            unitsBilled: charge?.unitsBilled ?? 0,
+            // Плюс — аванс, минус — долг на конец этого месяца
+            balance: running,
+          };
+        });
+
+        const totalCharged = rows.reduce((sum, row) => sum + row.charged, 0);
+        const totalPaid = rows.reduce((sum, row) => sum + row.paid, 0);
+
+        return {
+          enrollmentId: enrollment.id,
+          course: { id: enrollment.course.id, title: enrollment.course.title },
+          group: enrollment.group
+            ? { id: enrollment.group.id, name: enrollment.group.name }
+            : null,
+          monthlyPrice: enrollment.priceOverride ?? enrollment.course.price ?? 0,
+          hasSchedule: (enrollment.group?.scheduleDays.length ?? 0) > 0,
+          startsAt: (enrollment.startsAt ?? enrollment.createdAt).toISOString(),
+          billingEndsAt: enrollment.billingEndsAt?.toISOString() ?? null,
+          totalCharged,
+          totalPaid,
+          balance: totalPaid - totalCharged,
+          months: rows,
+        };
+      });
+
+      return {
+        success: true as const,
+        data: {
+          student,
+          upToMonth: lastPaymentMonth,
+          courses,
+          payments: payments.map((payment) => ({
+            id: payment.id,
+            amount: payment.amount,
+            method: payment.method,
+            paidAt: payment.paidAt.toISOString(),
+            forMonth: payment.forMonth,
+            comment: payment.comment,
+            courseTitle: payment.course.title,
+            groupName: payment.group?.name ?? null,
+            createdBy: `${payment.createdBy.lastName} ${payment.createdBy.firstName}`,
+          })),
+          totals: {
+            charged: courses.reduce((sum, c) => sum + c.totalCharged, 0),
+            paid: courses.reduce((sum, c) => sum + c.totalPaid, 0),
+            balance: courses.reduce((sum, c) => sum + c.balance, 0),
+          },
+        },
+      };
+    },
+    { roles: ["ADMIN"] }
+  );
+}

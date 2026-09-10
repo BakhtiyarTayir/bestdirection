@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ChevronDown, ChevronRight, SlidersHorizontal, TriangleAlert, Wallet } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 import { BillingDialog } from "./billing-dialog";
 import { CreatePaymentDialog } from "../create-payment-dialog";
 import type { PaymentStudentOption } from "../payments-list";
@@ -234,9 +235,14 @@ export function DebtorsList({
                         </Button>
                       </TableCell>
                       <TableCell>
-                        <div className="font-medium">
+                        {/* Имя ведёт в карточку: там видна помесячная история
+                            и, в отличие от этого списка, переплата */}
+                        <Link
+                          href={`/payments/students/${row.student.id}`}
+                          className="font-medium hover:underline"
+                        >
                           {row.student.lastName} {row.student.firstName}
-                        </div>
+                        </Link>
                         <div className="text-sm text-muted-foreground">
                           {row.student.phone ?? t("noPhone")}
                           {row.student.telegramUsername && ` · @${row.student.telegramUsername}`}

@@ -188,7 +188,9 @@
     "student": "Mening vazifalarim",
     "review": "Tekshirish",
     "statistics": "Statistika",
-    "teachers": "O'qituvchilar"
+    "teachers": "O'qituvchilar",
+    "payments": "To'lovlar",
+    "debtors": "Qarzdorlar"
   },
   "dashboard": {
     "adminTitle": "Administrator paneli",
@@ -1711,5 +1713,20 @@
     "noPhone": "Telefon ko'rsatilmagan",
     "noGroups": "Guruh yo'q",
     "noCourses": "Kurs yo'q"
+  },
+  "studentBilling": {
+    "balance": "Balans",
+    "balanceAtEnd": "Oy oxiriga balans",
+    "month": "Oy",
+    "basis": "Asos",
+    "advance": "avans {amount}",
+    "debt": "qarz {amount}",
+    "settled": "nol",
+    "since": "{date} dan",
+    "until": "{date} gacha",
+    "noScheduleBadge": "Dars kunlari yo'q — kunlar bo'yicha hisoblanadi",
+    "noPaidCourses": "Talabada pullik kurslarga yozuv yo'q.",
+    "paymentsTitle": "To'lovlar tarixi",
+    "noPayments": "Hozircha to'lovlar bo'lmagan"
   }
 }

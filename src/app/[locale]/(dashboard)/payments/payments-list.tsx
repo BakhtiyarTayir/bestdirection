@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { intlLocale } from "@/i18n/config";
-import { useRouter, usePathname } from "@/i18n/navigation";
+import { Link, useRouter, usePathname } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Table,
@@ -63,7 +63,7 @@ interface PaymentRow {
   paidAt: string;
   forMonth: string | null;
   comment: string | null;
-  student: { firstName: string; lastName: string; phone: string | null };
+  student: { id: string; firstName: string; lastName: string; phone: string | null };
   course: { title: string };
   group: { name: string } | null;
   createdBy: { firstName: string; lastName: string };
@@ -227,9 +227,13 @@ export function PaymentsList({
                     {formatDate(payment.paidAt)}
                   </TableCell>
                   <TableCell>
-                    <div className="font-medium">
+                    {/* Ссылка в карточку студента: история начислений и баланс */}
+                    <Link
+                      href={`/payments/students/${payment.student.id}`}
+                      className="font-medium hover:underline"
+                    >
                       {payment.student.lastName} {payment.student.firstName}
-                    </div>
+                    </Link>
                     {payment.student.phone && (
                       <div className="text-sm text-muted-foreground">
                         {payment.student.phone}

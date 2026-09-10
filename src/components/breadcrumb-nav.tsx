@@ -27,6 +27,8 @@ const SEGMENT_KEYS: Record<string, string> = {
   students: "students",
   users: "users",
   teachers: "teachers",
+  payments: "payments",
+  debtors: "debtors",
   new: "new",
   profile: "profile",
   "my-results": "myResults",
