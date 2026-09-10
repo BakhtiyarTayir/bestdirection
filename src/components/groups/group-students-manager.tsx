@@ -74,6 +74,7 @@ export function GroupStudentsManager({
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [moveStudentId, setMoveStudentId] = useState<string | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<Student | null>(null);
   const [targetGroupId, setTargetGroupId] = useState<string>("");
 
   const handleAddStudents = () => {
@@ -92,15 +93,21 @@ export function GroupStudentsManager({
     });
   };
 
-  const handleRemoveStudent = (studentId: string, name: string) => {
-    if (!confirm(t("removeFromGroup", { name }))) return;
+  // Два исхода вместо одного: снять группу или отчислить с курса. Разница
+  // существенная — в первом случае начисления продолжаются, но уже по дням.
+  const handleRemoveStudent = (alsoUnenroll: boolean) => {
+    const student = removeTarget;
+    if (!student) return;
+    setRemoveTarget(null);
 
     startTransition(async () => {
-      const result = await removeStudentFromGroup(groupId, studentId);
+      const result = await removeStudentFromGroup(groupId, student.id, alsoUnenroll);
       if (!result.success) {
         toast({ title: tErrors("error"), description: result.error, variant: "destructive" });
       } else {
-        toast({ title: t("studentRemovedFromGroup") });
+        toast({
+          title: alsoUnenroll ? t("studentUnenrolled") : t("studentRemovedFromGroup"),
+        });
         router.refresh();
       }
     });
@@ -231,10 +238,7 @@ export function GroupStudentsManager({
                     className="h-8 w-8 text-destructive"
                     disabled={isPending}
                     onClick={() =>
-                      handleRemoveStudent(
-                        student.id,
-                        `${student.firstName} ${student.lastName}`
-                      )
+                      setRemoveTarget(student)
                     }
                   >
                     <UserMinus className="h-4 w-4" />
@@ -278,6 +282,51 @@ export function GroupStudentsManager({
               disabled={!targetGroupId || isPending}
             >
               {isPending ? tCommon("moving") : t("move")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Убрать из группы или отчислить — исходы разные, поэтому две кнопки,
+          а не подтверждение одного действия. */}
+      <Dialog
+        open={removeTarget !== null}
+        onOpenChange={(open) => !open && setRemoveTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("removeTitle")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p className="font-medium">
+              {removeTarget
+                ? `${removeTarget.firstName} ${removeTarget.lastName}`
+                : ""}
+            </p>
+            <p className="text-muted-foreground">{t("removeOnlyGroupHint")}</p>
+            <p className="text-muted-foreground">{t("removeUnenrollHint")}</p>
+          </div>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button
+              variant="outline"
+              onClick={() => setRemoveTarget(null)}
+              disabled={isPending}
+            >
+              {tCommon("cancel")}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => handleRemoveStudent(false)}
+              disabled={isPending}
+            >
+              {t("removeOnlyGroup")}
+            </Button>
+            <Button
+              onClick={() => handleRemoveStudent(true)}
+              disabled={isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t("removeUnenroll")}
             </Button>
           </DialogFooter>
         </DialogContent>

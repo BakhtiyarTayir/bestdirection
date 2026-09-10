@@ -290,7 +290,16 @@ export async function addStudentsToGroup(groupId: string, studentIds: string[]) 
 }
 
 // ---------- removeStudentFromGroup ----------
-export async function removeStudentFromGroup(groupId: string, studentId: string) {
+/**
+ * Убрать из группы. По умолчанию студент остаётся на курсе — но уже без
+ * расписания, и неполный месяц ему считается по календарным дням. Поэтому
+ * администратор выбирает: снять только группу или отчислить совсем.
+ */
+export async function removeStudentFromGroup(
+  groupId: string,
+  studentId: string,
+  alsoUnenroll = false
+) {
   return withAuth(
     async (session) => {
       const group = await prisma.group.findUnique({
@@ -306,13 +315,30 @@ export async function removeStudentFromGroup(groupId: string, studentId: string)
         return { success: false as const, error: "noAccess" };
       }
 
-      await prisma.enrollment.update({
-        where: { studentId_courseId: { studentId, courseId: group.courseId } },
-        data: { groupId: null },
+      if (alsoUnenroll) {
+        // Запись удаляется целиком: начисления прекращаются. Принятые оплаты
+        // остаются — они привязаны к паре студент+курс, а не к записи.
+        await prisma.enrollment.delete({
+          where: { studentId_courseId: { studentId, courseId: group.courseId } },
+        });
+      } else {
+        await prisma.enrollment.update({
+          where: { studentId_courseId: { studentId, courseId: group.courseId } },
+          data: { groupId: null },
+        });
+      }
+
+      await createAuditLog({
+        userId: session.user.id,
+        entityType: "Enrollment",
+        entityId: `${studentId}:${group.courseId}`,
+        action: alsoUnenroll ? "DELETE" : "UPDATE",
+        metadata: { groupId, alsoUnenroll },
       });
 
       revalidateLocalized(`/courses/${group.courseId}/groups`);
-      return { success: true as const, data: { studentId } };
+      revalidateLocalized("/payments/debtors");
+      return { success: true as const, data: { studentId, alsoUnenroll } };
     },
     { roles: ["ADMIN", "TEACHER"] }
   );

@@ -5,6 +5,7 @@ import {
   getEnrolledStudents,
   getAvailableStudents,
 } from "@/actions/course-actions";
+import { getCourseGroups } from "@/actions/group-actions";
 import { StudentEnrollment } from "@/components/student-enrollment";
 import { notFound } from "next/navigation";
 import { resolveCourseSlug } from "@/lib/slug-resolvers";
@@ -35,13 +36,19 @@ export default async function StudentsPage({ params }: StudentsPageProps) {
     notFound();
   }
 
-  const [enrolledResult, availableResult] = await Promise.all([
+  const [enrolledResult, availableResult, groupsResult] = await Promise.all([
     getEnrolledStudents(courseId),
     getAvailableStudents(courseId),
+    getCourseGroups(courseId),
   ]);
 
   const enrolledStudents = enrolledResult.success && enrolledResult.data ? enrolledResult.data : [];
   const availableStudents = availableResult.success && availableResult.data ? availableResult.data : [];
+  // Подсказку про расчёт по дням показываем только когда группы есть —
+  // иначе совет «добавьте через группу» некуда применить.
+  const hasGroups = Boolean(
+    groupsResult.success && groupsResult.data && groupsResult.data.length > 0
+  );
 
   return (
     <div>
@@ -52,6 +59,8 @@ export default async function StudentsPage({ params }: StudentsPageProps) {
 
       <StudentEnrollment
         courseId={courseId}
+        courseSlug={courseSlug}
+        hasGroups={hasGroups}
         enrolledStudents={enrolledStudents}
         availableStudents={availableStudents}
       />

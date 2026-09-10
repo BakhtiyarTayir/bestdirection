@@ -20,7 +20,8 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { enrollStudent, unenrollStudent } from "@/actions/course-actions";
 import { refreshBadges } from "@/lib/badge-refresh";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Search, TriangleAlert } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 import { formatDate } from "@/lib/format-date";
 
 interface Student {
@@ -38,6 +39,9 @@ interface EnrolledStudent extends Student {
 
 interface StudentEnrollmentProps {
   courseId: string;
+  courseSlug: string;
+  /** У курса есть группы — значит совет «добавляйте через группу» применим */
+  hasGroups: boolean;
   enrolledStudents: EnrolledStudent[];
   availableStudents: Student[];
 }
@@ -50,6 +54,8 @@ const byName = (a: Student, b: Student) =>
 
 export function StudentEnrollment({
   courseId,
+  courseSlug,
+  hasGroups,
   enrolledStudents,
   availableStudents,
 }: StudentEnrollmentProps) {
@@ -146,6 +152,27 @@ export function StudentEnrollment({
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">{t("transferHint")}</p>
+
+      {/* Запись отсюда не привязывает к группе, а без расписания неполный
+          месяц начисляется по календарным дням. Предупреждаем заранее —
+          иначе это всплывает только в списке должников. */}
+      {hasGroups && (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
+          <div className="flex items-center gap-2 font-medium">
+            <TriangleAlert className="h-4 w-4 text-amber-600" />
+            {t("noGroupWarningTitle")}
+          </div>
+          <p className="mt-1 text-muted-foreground">
+            {t("noGroupWarningHint")}{" "}
+            <Link
+              href={`/courses/${courseSlug}/groups`}
+              className="font-medium underline underline-offset-2"
+            >
+              {t("goToGroups")}
+            </Link>
+          </p>
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

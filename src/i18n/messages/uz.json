@@ -771,7 +771,6 @@
     "allStudentsInGroup": "Barcha yozilgan talabalar allaqachon bu guruhda",
     "addCount": "Qo'shish ({count})",
     "noStudentsInGroup": "Bu guruhda hozircha talabalar yo'q",
-    "removeFromGroup": "\"{name}\"ni guruhdan chiqarasizmi? Talaba kursga yozilgan holda qoladi.",
     "studentRemovedFromGroup": "Talaba guruhdan chiqarildi",
     "moveStudent": "Talabani ko'chirish",
     "selectGroup": "Guruhni tanlang:",
@@ -799,7 +798,13 @@
     "addStudentsHint": "Talabalarni belgilang. Kursda bo'lmaganlar avtomatik yoziladi, boshqa guruhdagilar ko'chiriladi.",
     "willEnroll": "kursga yoziladi",
     "onCourseNoGroup": "kursda, guruhsiz",
-    "willMoveFrom": "«{group}» dan ko'chiriladi"
+    "willMoveFrom": "«{group}» dan ko'chiriladi",
+    "removeTitle": "Guruhdan chiqarilsinmi?",
+    "removeOnlyGroupHint": "«Guruhdan chiqarish» — talaba kursda qoladi, lekin jadvalsiz: to'liqsiz oy unga kunlar bo'yicha hisoblanadi.",
+    "removeUnenrollHint": "«Kursdan chiqarish» — yozuv o'chiriladi, hisoblash to'xtaydi. Qabul qilingan to'lovlar jurnalda qoladi.",
+    "removeOnlyGroup": "Guruhdan chiqarish",
+    "removeUnenroll": "Kursdan chiqarish",
+    "studentUnenrolled": "Talaba kursdan chiqarildi"
   },
   "profile": {
     "title": "Mening profilim",
@@ -898,7 +903,10 @@
     "removeConfirmTitle": "Kursdan chiqarilsinmi?",
     "removeConfirmDescription": "{name} kursdan chiqariladi. Topshirilgan ishlar va progress saqlanadi, yozilgan sana va guruh esa yo'q.",
     "enrollFailed": "Talabani yozib bo'lmadi",
-    "removeFailed": "Talabani chiqarib bo'lmadi"
+    "removeFailed": "Talabani chiqarib bo'lmadi",
+    "noGroupWarningTitle": "Bu yerdagi yozuv guruhga biriktirmaydi",
+    "noGroupWarningHint": "Guruhsiz jadval yo'q, va to'liqsiz oy darslar emas, kunlar bo'yicha hisoblanadi. Darslar bo'yicha hisoblanishi uchun talabalarni guruh orqali qo'shing.",
+    "goToGroups": "Guruhlarga o'tish"
   },
   "copyCourse": {
     "title": "Kursni nusxalash",
