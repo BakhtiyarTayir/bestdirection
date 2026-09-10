@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { defaultLocale } from "@/i18n/config";
 import { Sidebar } from "@/components/sidebar";
 import { BreadcrumbNav } from "@/components/breadcrumb-nav";
 import { PresenceHeartbeat } from "@/components/presence-heartbeat";
@@ -17,7 +18,11 @@ export default async function DashboardLayout({
   setRequestLocale(locale);
 
   const session = await auth();
-  if (!session?.user) redirect(`/${locale}/login`);
+  // Префикс только для неосновной локали — как localePrefix: 'as-needed'.
+  // С безусловным `/${locale}` адрес выходил неканоническим: /uz/login.
+  if (!session?.user) {
+    redirect(locale === defaultLocale ? "/login" : `/${locale}/login`);
+  }
 
   const logoUrl = await getSiteLogoUrl();
 
