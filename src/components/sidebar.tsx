@@ -70,7 +70,10 @@ interface NavItem {
   /** Подсвечивать только на самом href: иначе родитель горит на вложенном пути */
   exact?: boolean;
   /** Подпункты: родитель становится раскрывающимся разделом */
-  children?: { href: string; labelKey: string }[];
+  // Роли у подпункта необязательны: без них он наследует доступ родителя.
+  // Нужны там, где родитель шире ребёнка — например, журнал посещаемости
+  // видят все, а отчёт по преподавателям только администратор и педагог.
+  children?: { href: string; labelKey: string; roles?: string[] }[];
 }
 
 const navItems: NavItem[] = [
@@ -101,8 +104,16 @@ const navItems: NavItem[] = [
   { href: "/trash", labelKey: "trash", icon: Trash2, roles: ["ADMIN"] },
   { href: "/audit", labelKey: "audit", icon: ScrollText, roles: ["ADMIN"] },
   { href: "/homework", labelKey: "homework", icon: ClipboardList, roles: ["ADMIN", "TEACHER", "STUDENT"], badge: "homework" },
-  { href: "/attendance", labelKey: "attendance", icon: CalendarCheck, roles: ["ADMIN", "TEACHER", "STUDENT"], exact: true },
-  { href: "/attendance/teachers", labelKey: "teacherAttendance", icon: CalendarCheck, roles: ["ADMIN", "TEACHER"] },
+  {
+    href: "/attendance",
+    labelKey: "attendance",
+    icon: CalendarCheck,
+    roles: ["ADMIN", "TEACHER", "STUDENT"],
+    children: [
+      { href: "/attendance", labelKey: "attendanceByCourse" },
+      { href: "/attendance/teachers", labelKey: "teacherAttendance", roles: ["ADMIN", "TEACHER"] },
+    ],
+  },
   { href: "/my-results", labelKey: "myResults", icon: FileText, roles: ["STUDENT"] },
   { href: "/my-children", labelKey: "myChildren", icon: UsersRound, roles: ["PARENT"] },
   { href: "/profile", labelKey: "profile", icon: User, roles: ["ADMIN", "TEACHER", "STUDENT", "PARENT"] },
@@ -191,7 +202,11 @@ export function Sidebar({ role, userName, logoUrl }: SidebarProps) {
               : pathname === item.href || pathname.startsWith(item.href + "/");
             const badgeCount = item.badge ? badgeCounts[item.badge] : 0;
 
-            if (item.children && !collapsed) {
+            const visibleChildren = item.children?.filter(
+              (child) => !child.roles || child.roles.includes(role)
+            );
+
+            if (visibleChildren && visibleChildren.length > 1 && !collapsed) {
               const isOpen = openGroups[item.href] ?? isActive;
               return (
                 <div key={item.href}>
@@ -213,7 +228,7 @@ export function Sidebar({ role, userName, logoUrl }: SidebarProps) {
                   </button>
                   {isOpen && (
                     <div className="ml-4 mt-1 space-y-1 border-l pl-3">
-                      {item.children.map((child) => {
+                      {visibleChildren.map((child) => {
                         // Точное совпадение, чтобы /admin/landing не подсвечивался на /admin/landing/pages
                         const childActive =
                           pathname === child.href ||
