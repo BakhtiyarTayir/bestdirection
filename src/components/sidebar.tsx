@@ -81,6 +81,16 @@ const navItems: NavItem[] = [
   { href: "/courses", labelKey: "courses", icon: BookOpen, roles: ["ADMIN", "TEACHER", "STUDENT"] },
   { href: "/users", labelKey: "users", icon: Users, roles: ["ADMIN", "TEACHER"] },
   { href: "/teachers", labelKey: "teachers", icon: GraduationCap, roles: ["ADMIN"] },
+  {
+    href: "/attendance",
+    labelKey: "attendance",
+    icon: CalendarCheck,
+    roles: ["ADMIN", "TEACHER", "STUDENT"],
+    children: [
+      { href: "/attendance", labelKey: "attendanceByCourse" },
+      { href: "/attendance/teachers", labelKey: "teacherAttendance", roles: ["ADMIN", "TEACHER"] },
+    ],
+  },
   { href: "/statistics", labelKey: "homeworkStats", icon: BarChart3, roles: ["ADMIN", "TEACHER"] },
   { href: "/groups", labelKey: "groups", icon: UsersRound, roles: ["ADMIN", "TEACHER"] },
   { href: "/courses/catalog", labelKey: "catalog", icon: Copy, roles: ["ADMIN", "TEACHER"] },
@@ -104,16 +114,6 @@ const navItems: NavItem[] = [
   { href: "/trash", labelKey: "trash", icon: Trash2, roles: ["ADMIN"] },
   { href: "/audit", labelKey: "audit", icon: ScrollText, roles: ["ADMIN"] },
   { href: "/homework", labelKey: "homework", icon: ClipboardList, roles: ["ADMIN", "TEACHER", "STUDENT"], badge: "homework" },
-  {
-    href: "/attendance",
-    labelKey: "attendance",
-    icon: CalendarCheck,
-    roles: ["ADMIN", "TEACHER", "STUDENT"],
-    children: [
-      { href: "/attendance", labelKey: "attendanceByCourse" },
-      { href: "/attendance/teachers", labelKey: "teacherAttendance", roles: ["ADMIN", "TEACHER"] },
-    ],
-  },
   { href: "/my-results", labelKey: "myResults", icon: FileText, roles: ["STUDENT"] },
   { href: "/my-children", labelKey: "myChildren", icon: UsersRound, roles: ["PARENT"] },
   { href: "/profile", labelKey: "profile", icon: User, roles: ["ADMIN", "TEACHER", "STUDENT", "PARENT"] },
