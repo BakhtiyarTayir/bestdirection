@@ -795,7 +795,11 @@
     "scheduleDaysHint": "To'lovda to'liqsiz oyni hisoblash uchun kerak: kunlar emas, darslar sanaladi. Bo'sh qoldirsa ham bo'ladi.",
     "teacher": "O‘qituvchi",
     "teacherFromCourse": "Kurs o‘qituvchisi",
-    "teacherHint": "Guruhni kurs o‘qituvchisi olib borsa, bo‘sh qoldiring"
+    "teacherHint": "Guruhni kurs o‘qituvchisi olib borsa, bo‘sh qoldiring",
+    "addStudentsHint": "Talabalarni belgilang. Kursda bo'lmaganlar avtomatik yoziladi, boshqa guruhdagilar ko'chiriladi.",
+    "willEnroll": "kursga yoziladi",
+    "onCourseNoGroup": "kursda, guruhsiz",
+    "willMoveFrom": "«{group}» dan ko'chiriladi"
   },
   "profile": {
     "title": "Mening profilim",
@@ -1552,8 +1556,7 @@
     "debtorsCount": "{count, plural, other {# qarzdor}}",
     "prepaid": "Ortiqcha to'lov",
     "prepaidCount": "{count, plural, other {# talaba}} avans bilan",
-    "noScheduleTitle": "Hamma guruhlarda dars kunlari belgilanmagan",
-    "noScheduleHint": "{count, plural, other {# yozuv}} uchun to'liqsiz oy darslar emas, kunlar bo'yicha hisoblanadi. Guruh sozlamalarida hafta kunlarini belgilang.",
+    "noScheduleHint": "{count, plural, other {# yozuv}} uchun guruh bor, lekin unda dars kunlari belgilanmagan. Guruh sozlamalarida hafta kunlarini ko'rsating.",
     "empty": "Qarzdorlar yo'q",
     "colStudent": "Talaba",
     "colCourse": "Kurs",
@@ -1587,7 +1590,9 @@
     "useSuggestion": "Qo'yish",
     "suggestionLessons": "Jadval bo'yicha: {total} darsdan {billed} tasi → {amount} UZS",
     "suggestionDays": "Guruhda dars kunlari yo'q, kunlar bo'yicha: {total} dan {billed} → {amount} UZS",
-    "suggestionFull": "Talaba oyning birinchi kunidan boshlagan — oy to'liq"
+    "suggestionFull": "Talaba oyning birinchi kunidan boshlagan — oy to'liq",
+    "byDaysTitle": "To'liqsiz oy kunlar bo'yicha hisoblandi",
+    "withoutGroupHint": "{count, plural, other {# yozuv}} guruhga biriktirilmagan. Darslar guruh jadvalidan olinadi — talabani guruhga qo'shing, va hisob darslar bo'yicha ketadi."
   },
   "parents": {
     "title": "Ota-onalar",

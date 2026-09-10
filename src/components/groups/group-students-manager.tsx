@@ -33,13 +33,15 @@ interface Student {
   id: string;
   firstName: string;
   lastName: string;
-  email: string;
+  email: string | null;
   phone?: string | null;
   isActive?: boolean;
 }
 
 interface AvailableStudent extends Student {
   currentGroup: string | null;
+  /** Уже записан на курс этой группы */
+  enrolled: boolean;
 }
 
 interface GroupInfo {
@@ -144,6 +146,7 @@ export function GroupStudentsManager({
             <DialogHeader>
               <DialogTitle>{t("addStudentsTitle")}</DialogTitle>
             </DialogHeader>
+            <p className="text-sm text-muted-foreground">{t("addStudentsHint")}</p>
             {availableStudents.length === 0 ? (
               <p className="text-muted-foreground py-4">
                 {t("allStudentsInGroup")}
@@ -163,13 +166,19 @@ export function GroupStudentsManager({
                       <p className="text-sm font-medium">
                         {student.firstName} {student.lastName}
                       </p>
-                      <p className="text-xs text-muted-foreground">{student.email}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {student.email || student.phone || "—"}
+                      </p>
                     </div>
-                    {student.currentGroup && (
-                      <span className="text-xs text-muted-foreground">
-                        {student.currentGroup}
-                      </span>
-                    )}
+                    {/* Что произойдёт при добавлении: перевод из другой группы,
+                        привязка уже записанного или запись на курс с нуля */}
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {student.currentGroup
+                        ? t("willMoveFrom", { group: student.currentGroup })
+                        : student.enrolled
+                          ? t("onCourseNoGroup")
+                          : t("willEnroll")}
+                    </span>
                   </label>
                 ))}
               </div>

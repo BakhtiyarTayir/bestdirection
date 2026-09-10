@@ -46,7 +46,8 @@ export default async function DebtorsPage({
         totalDebt={data?.totalDebt ?? 0}
         prepaidCount={data?.prepaidCount ?? 0}
         prepaidTotal={data?.prepaidTotal ?? 0}
-        withoutSchedule={data?.withoutSchedule ?? 0}
+        withoutGroup={data?.withoutGroup ?? 0}
+        groupWithoutSchedule={data?.groupWithoutSchedule ?? 0}
         courseId={single("courseId")}
         courses={courses}
       />

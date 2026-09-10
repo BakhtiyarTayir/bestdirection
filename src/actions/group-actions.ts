@@ -251,8 +251,21 @@ export async function addStudentsToGroup(groupId: string, studentIds: string[]) 
         return { success: false as const, error: "noAccess" };
       }
 
-      // For each student: upsert enrollment with groupId
-      for (const studentId of studentIds) {
+      // Выбор больше не ограничен записанными на курс, поэтому роль и
+      // активность проверяем здесь: иначе в группу можно было бы затащить
+      // преподавателя или отключённого пользователя.
+      const eligible = await prisma.user.findMany({
+        where: {
+          id: { in: studentIds },
+          role: "STUDENT",
+          deletedAt: null,
+          isActive: true,
+        },
+        select: { id: true },
+      });
+      const eligibleIds = eligible.map((student) => student.id);
+
+      for (const studentId of eligibleIds) {
         const existing = await prisma.enrollment.findUnique({
           where: { studentId_courseId: { studentId, courseId: group.courseId } },
         });
@@ -270,7 +283,7 @@ export async function addStudentsToGroup(groupId: string, studentIds: string[]) 
       }
 
       revalidateLocalized(`/courses/${group.courseId}/groups`);
-      return { success: true as const, data: { added: studentIds.length } };
+      return { success: true as const, data: { added: eligibleIds.length } };
     },
     { roles: ["ADMIN", "TEACHER"] }
   );
@@ -540,31 +553,48 @@ export async function getAvailableStudentsForGroup(groupId: string) {
       return { success: false as const, error: "groupNotFound" };
     }
 
-    // Get enrolled students NOT in this group
-    const enrollments = await prisma.enrollment.findMany({
+    // Все активные студенты, кроме уже состоящих в этой группе. Раньше выбор
+    // ограничивался записанными на курс, и группу нельзя было наполнить, не
+    // записав людей отдельным шагом. Запись создаёт addStudentsToGroup — она
+    // это умеет с самого начала.
+    const students = await prisma.user.findMany({
       where: {
-        courseId: group.courseId,
-        OR: [{ groupId: null }, { groupId: { not: groupId } }],
+        role: "STUDENT",
+        deletedAt: null,
+        isActive: true,
+        NOT: { enrollments: { some: { groupId } } },
       },
-      include: {
-        student: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        enrollments: {
+          where: { courseId: group.courseId },
+          select: { group: { select: { name: true } } },
         },
-        group: { select: { name: true } },
       },
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
     });
 
-    const students = enrollments.map((e) => ({
-      ...e.student,
-      currentGroup: e.group?.name || null,
-    }));
-
-    return { success: true as const, data: students };
+    return {
+      success: true as const,
+      data: students.map((student) => {
+        const enrollment = student.enrollments[0];
+        return {
+          id: student.id,
+          firstName: student.firstName,
+          lastName: student.lastName,
+          email: student.email,
+          phone: student.phone,
+          // Уже на курсе? В какой группе? Это меняет смысл добавления:
+          // запись, перевод из другой группы или просто привязка к группе.
+          enrolled: Boolean(enrollment),
+          currentGroup: enrollment?.group?.name ?? null,
+        };
+      }),
+    };
   });
 }
 

@@ -117,6 +117,9 @@ async function computeBillingRows(
       group: enrollment.group ? { id: enrollment.group.id, name: enrollment.group.name } : null,
       monthlyPrice: enrollment.priceOverride ?? enrollment.course.price ?? 0,
       hasSchedule: (enrollment.group?.scheduleDays.length ?? 0) > 0,
+      // Две разные причины расчёта по дням: студента нет в группе или у
+      // группы не заданы дни занятий. Совет админу в каждом случае свой.
+      hasGroup: enrollment.group !== null,
       charged,
       paid,
       debt: charged - paid,
@@ -157,8 +160,11 @@ export async function getDebtors(params: { month?: string; courseId?: string; gr
           totalDebt: debtors.reduce((sum, row) => sum + row.debt, 0),
           prepaidCount: prepaid.length,
           prepaidTotal: prepaid.reduce((sum, row) => sum - row.debt, 0),
-          // Группы без расписания считаются по дням — повод завести дни недели
-          withoutSchedule: rows.filter((row) => !row.hasSchedule).length,
+          // Неполный месяц у них считается по дням, а не по занятиям
+          withoutGroup: rows.filter((row) => !row.hasGroup).length,
+          groupWithoutSchedule: rows.filter(
+            (row) => row.hasGroup && !row.hasSchedule
+          ).length,
         },
       };
     },

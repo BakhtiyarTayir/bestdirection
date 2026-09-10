@@ -63,7 +63,8 @@ interface DebtorsListProps {
   totalDebt: number;
   prepaidCount: number;
   prepaidTotal: number;
-  withoutSchedule: number;
+  withoutGroup: number;
+  groupWithoutSchedule: number;
   courseId?: string;
   courses: { id: string; title: string }[];
 }
@@ -77,7 +78,8 @@ export function DebtorsList({
   totalDebt,
   prepaidCount,
   prepaidTotal,
-  withoutSchedule,
+  withoutGroup,
+  groupWithoutSchedule,
   courseId,
   courses,
 }: DebtorsListProps) {
@@ -168,15 +170,25 @@ export function DebtorsList({
             {t("prepaidCount", { count: prepaidCount })}
           </div>
         </div>
-        {withoutSchedule > 0 && (
+        {/* Две причины расчёта по дням разведены: совет в каждом случае свой,
+            а общий текст «задайте дни недели» сбивал с толку там, где дни у
+            группы заданы, но студент в неё не добавлен. */}
+        {(withoutGroup > 0 || groupWithoutSchedule > 0) && (
           <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3">
             <div className="flex items-center gap-2 text-sm font-medium">
               <TriangleAlert className="h-4 w-4 text-amber-600" />
-              {t("noScheduleTitle")}
+              {t("byDaysTitle")}
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {t("noScheduleHint", { count: withoutSchedule })}
-            </p>
+            {withoutGroup > 0 && (
+              <p className="mt-1 text-sm text-muted-foreground">
+                {t("withoutGroupHint", { count: withoutGroup })}
+              </p>
+            )}
+            {groupWithoutSchedule > 0 && (
+              <p className="mt-1 text-sm text-muted-foreground">
+                {t("noScheduleHint", { count: groupWithoutSchedule })}
+              </p>
+            )}
           </div>
         )}
       </div>
