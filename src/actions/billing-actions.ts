@@ -5,6 +5,7 @@ import { withAuth } from "@/lib/action-utils";
 import { createAuditLog } from "@/lib/audit";
 import { revalidateLocalized } from "@/lib/revalidate";
 import {
+  billingStart,
   chargeForMonth,
   chargeSchedule,
   isValidMonth,
@@ -58,7 +59,15 @@ async function loadBillableEnrollments(filters: {
         },
       },
       course: { select: { id: true, title: true, price: true } },
-      group: { select: { id: true, name: true, scheduleDays: true, endDate: true } },
+      group: {
+        select: {
+          id: true,
+          name: true,
+          scheduleDays: true,
+          startDate: true,
+          endDate: true,
+        },
+      },
     },
   });
 }
@@ -75,6 +84,7 @@ function toBillingEnrollment(enrollment: LoadedEnrollment): BillingEnrollment {
     coursePrice: enrollment.course.price,
     scheduleDays: enrollment.group?.scheduleDays ?? [],
     groupEndDate: enrollment.group?.endDate ?? null,
+    groupStartDate: enrollment.group?.startDate ?? null,
   };
 }
 
@@ -202,7 +212,14 @@ export async function getEnrollmentBilling(enrollmentId: string) {
           firstMonthCharge: true,
           student: { select: { firstName: true, lastName: true } },
           course: { select: { title: true, price: true } },
-          group: { select: { name: true, scheduleDays: true, endDate: true } },
+          group: {
+            select: {
+              name: true,
+              scheduleDays: true,
+              startDate: true,
+              endDate: true,
+            },
+          },
         },
       });
 
@@ -210,22 +227,23 @@ export async function getEnrollmentBilling(enrollmentId: string) {
         return { success: true as const, data: null };
       }
 
-      const start = enrollment.startsAt ?? enrollment.createdAt;
+      const billing = {
+        startsAt: enrollment.startsAt,
+        createdAt: enrollment.createdAt,
+        billingEndsAt: enrollment.billingEndsAt,
+        priceOverride: enrollment.priceOverride,
+        firstMonthCharge: null,
+        coursePrice: enrollment.course.price,
+        scheduleDays: enrollment.group?.scheduleDays ?? [],
+        groupEndDate: enrollment.group?.endDate ?? null,
+        groupStartDate: enrollment.group?.startDate ?? null,
+      };
+      // Первый месяц — от фактического начала: оно может быть отложено датой
+      // старта группы, и тогда подсказка должна считать именно тот месяц.
+      const start = billingStart(billing);
       const firstMonth = monthKey(start);
       // Считаем без ручной правки — чтобы показать, что предлагает формула
-      const suggested = chargeForMonth(
-        {
-          startsAt: enrollment.startsAt,
-          createdAt: enrollment.createdAt,
-          billingEndsAt: enrollment.billingEndsAt,
-          priceOverride: enrollment.priceOverride,
-          firstMonthCharge: null,
-          coursePrice: enrollment.course.price,
-          scheduleDays: enrollment.group?.scheduleDays ?? [],
-          groupEndDate: enrollment.group?.endDate ?? null,
-        },
-        firstMonth
-      );
+      const suggested = chargeForMonth(billing, firstMonth);
 
       return {
         success: true as const,
@@ -235,7 +253,9 @@ export async function getEnrollmentBilling(enrollmentId: string) {
           courseTitle: enrollment.course.title,
           groupName: enrollment.group?.name ?? null,
           coursePrice: enrollment.course.price,
-          startsAt: (enrollment.startsAt ?? enrollment.createdAt).toISOString(),
+          // Показываем ту дату, с которой реально считают: она может быть
+          // отложена стартом группы.
+          startsAt: start.toISOString(),
           startsAtExplicit: enrollment.startsAt !== null,
           billingEndsAt: enrollment.billingEndsAt?.toISOString() ?? null,
           priceOverride: enrollment.priceOverride,
@@ -420,7 +440,7 @@ export async function getStudentBilling(studentId: string) {
             : null,
           monthlyPrice: enrollment.priceOverride ?? enrollment.course.price ?? 0,
           hasSchedule: (enrollment.group?.scheduleDays.length ?? 0) > 0,
-          startsAt: (enrollment.startsAt ?? enrollment.createdAt).toISOString(),
+          startsAt: billingStart(toBillingEnrollment(enrollment)).toISOString(),
           billingEndsAt: enrollment.billingEndsAt?.toISOString() ?? null,
           totalCharged,
           totalPaid,

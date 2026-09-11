@@ -44,6 +44,12 @@ export interface BillingEnrollment {
   scheduleDays: number[];
   /** Дата окончания группы — тоже прекращает начисления */
   groupEndDate: Date | null;
+  /**
+   * Дата начала группы — симметрично endDate откладывает начисления.
+   * Студента могли завести в систему заранее, до старта группы; платить он
+   * должен с того дня, когда группа начала заниматься.
+   */
+  groupStartDate: Date | null;
 }
 
 const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -122,6 +128,19 @@ export function countLessons(scheduleDays: number[], from: Date, to: Date): numb
 const laterOf = (a: Date, b: Date) => (a.getTime() >= b.getTime() ? a : b);
 const earlierOf = (a: Date, b: Date) => (a.getTime() <= b.getTime() ? a : b);
 
+/**
+ * Начало начислений: более поздняя из даты записи и даты старта группы.
+ * Позже группы — значит студент пришёл не с первого дня и платит со своего
+ * дня. Раньше группы — платить не с чего, занятий ещё не было.
+ */
+export function billingStart(enrollment: BillingEnrollment): Date {
+  const own = enrollment.startsAt ?? enrollment.createdAt;
+  if (!enrollment.groupStartDate) return own;
+  return own.getTime() >= enrollment.groupStartDate.getTime()
+    ? own
+    : enrollment.groupStartDate;
+}
+
 const NOTHING: ChargeResult = {
   amount: 0,
   basis: "none",
@@ -139,7 +158,7 @@ export function chargeForMonth(
   const price = enrollment.priceOverride ?? enrollment.coursePrice;
   if (price === null || price <= 0) return NOTHING;
 
-  const start = enrollment.startsAt ?? enrollment.createdAt;
+  const start = billingStart(enrollment);
   // Из двух возможных дат окончания берём более раннюю: и уход студента,
   // и конец группы одинаково прекращают начисления
   const ends = [enrollment.billingEndsAt, enrollment.groupEndDate].filter(
@@ -210,8 +229,7 @@ export function chargeSchedule(
   upToMonth: string
 ): MonthCharge[] {
   if (!isValidMonth(upToMonth)) return [];
-  const start = enrollment.startsAt ?? enrollment.createdAt;
-  const firstMonth = monthKey(start);
+  const firstMonth = monthKey(billingStart(enrollment));
   if (firstMonth > upToMonth) return [];
 
   return monthRange(firstMonth, upToMonth).map((month) => ({

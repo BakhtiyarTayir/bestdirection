@@ -1590,7 +1590,7 @@
     "endBeforeStart": "Tugash sanasi boshlanish sanasidan oldin",
     "invalidAmounts": "Summalar butun son bo'lishi kerak",
     "startsAt": "Birinchi o'quv kuni",
-    "startsAtHint": "Shu sanadan hisob boshlanadi. Bo'sh bo'lsa — kursga yozilgan sana olinadi.",
+    "startsAtHint": "Shu sanadan hisob boshlanadi. Bo'sh bo'lsa — guruh boshlanish sanasi, u ham bo'lmasa — kursga yozilgan sana olinadi.",
     "billingEndsAt": "Oxirgi to'lanadigan kun",
     "billingEndsAtHint": "Talaba ketdi yoki pauzada. Bo'sh bo'lsa — hisob davom etadi.",
     "priceOverride": "Individual oylik narx",

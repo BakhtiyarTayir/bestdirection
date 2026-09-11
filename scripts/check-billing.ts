@@ -37,6 +37,7 @@ const base: BillingEnrollment = {
   coursePrice: 650000,
   scheduleDays: [1, 3, 5], // пн/ср/пт
   groupEndDate: null,
+  groupStartDate: null,
 };
 
 const MWF = [1, 3, 5];
@@ -74,6 +75,45 @@ check(
   "месяц до прихода не начисляется",
   chargeForMonth({ ...base, startsAt: utc("2026-07-25") }, "2026-06"),
   { amount: 0, basis: "none", unitsTotal: 0, unitsBilled: 0 }
+);
+
+console.log("\n── дата начала группы ──");
+check(
+  "запись заведена раньше старта группы → считаем с группы",
+  chargeForMonth(
+    { ...base, createdAt: utc("2026-07-01"), groupStartDate: utc("2026-07-25") },
+    "2026-07"
+  ),
+  { amount: 139286, basis: "lessons", unitsTotal: 14, unitsBilled: 3 }
+);
+check(
+  "месяц до старта группы не начисляется",
+  chargeForMonth(
+    { ...base, createdAt: utc("2026-06-01"), groupStartDate: utc("2026-07-25") },
+    "2026-06"
+  ),
+  { amount: 0, basis: "none", unitsTotal: 0, unitsBilled: 0 }
+);
+check(
+  "пришёл позже старта группы → считаем с его дня",
+  chargeForMonth(
+    { ...base, startsAt: utc("2026-07-25"), groupStartDate: utc("2026-07-01") },
+    "2026-07"
+  ),
+  { amount: 139286, basis: "lessons", unitsTotal: 14, unitsBilled: 3 }
+);
+check(
+  "оба с первого числа → полный месяц",
+  chargeForMonth(
+    { ...base, createdAt: utc("2026-07-01"), groupStartDate: utc("2026-07-01") },
+    "2026-07"
+  ),
+  { amount: 650000, basis: "full", unitsTotal: 1, unitsBilled: 1 }
+);
+check(
+  "без даты у группы поведение прежнее",
+  chargeForMonth({ ...base, startsAt: utc("2026-07-25") }, "2026-07").amount,
+  139286
 );
 
 console.log("\n── ручная правка суммы админом ──");
