@@ -10,6 +10,7 @@ import {
   BookOpen,
   Users,
   GraduationCap,
+  UserRound,
   FileText,
   User,
   LogOut,
@@ -81,6 +82,7 @@ const navItems: NavItem[] = [
   { href: "/courses", labelKey: "courses", icon: BookOpen, roles: ["ADMIN", "TEACHER", "STUDENT"] },
   { href: "/users", labelKey: "users", icon: Users, roles: ["ADMIN", "TEACHER"] },
   { href: "/teachers", labelKey: "teachers", icon: GraduationCap, roles: ["ADMIN"] },
+  { href: "/students", labelKey: "students", icon: UserRound, roles: ["ADMIN"] },
   {
     href: "/attendance",
     labelKey: "attendance",

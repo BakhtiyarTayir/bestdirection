@@ -146,7 +146,8 @@
     "myChildren": "Farzandlarim",
     "teacherAttendance": "O‘qituvchilar",
     "sms": "SMS",
-    "teachers": "O'qituvchilar"
+    "teachers": "O'qituvchilar",
+    "students": "Talabalar"
   },
   "weekdays": {
     "mon": "Du",
@@ -1602,7 +1603,8 @@
     "suggestionDays": "Guruhda dars kunlari yo'q, kunlar bo'yicha: {total} dan {billed} → {amount} UZS",
     "suggestionFull": "Talaba oyning birinchi kunidan boshlagan — oy to'liq",
     "byDaysTitle": "To'liqsiz oy kunlar bo'yicha hisoblandi",
-    "withoutGroupHint": "{count, plural, other {# yozuv}} guruhga biriktirilmagan. Darslar guruh jadvalidan olinadi — talabani guruhga qo'shing, va hisob darslar bo'yicha ketadi."
+    "withoutGroupHint": "{count, plural, other {# yozuv}} guruhga biriktirilmagan. Darslar guruh jadvalidan olinadi — talabani guruhga qo'shing, va hisob darslar bo'yicha ketadi.",
+    "effectiveStartsAt": "Aslida {date} dan hisoblanadi — guruh keyinroq boshlanadi"
   },
   "parents": {
     "title": "Ota-onalar",
@@ -1727,6 +1729,16 @@
     "noScheduleBadge": "Dars kunlari yo'q — kunlar bo'yicha hisoblanadi",
     "noPaidCourses": "Talabada pullik kurslarga yozuv yo'q.",
     "paymentsTitle": "To'lovlar tarixi",
-    "noPayments": "Hozircha to'lovlar bo'lmagan"
+    "noPayments": "Hozircha to'lovlar bo'lmagan",
+    "notStartedYet": "Hozircha hisob yo'q — o'qish hali boshlanmagan"
+  },
+  "students": {
+    "title": "Talabalar",
+    "subtitle": "Har birining balansi: joriy oyga avans yoki qarz",
+    "noStudents": "Hozircha talabalar yo'q.",
+    "contacts": "Kontaktlar",
+    "courses": "Kurslar",
+    "noCourses": "Pullik kurslar yo'q",
+    "openCard": "Karta"
   }
 }

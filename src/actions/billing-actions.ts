@@ -253,10 +253,13 @@ export async function getEnrollmentBilling(enrollmentId: string) {
           courseTitle: enrollment.course.title,
           groupName: enrollment.group?.name ?? null,
           coursePrice: enrollment.course.price,
-          // Показываем ту дату, с которой реально считают: она может быть
-          // отложена стартом группы.
-          startsAt: start.toISOString(),
+          // Форму заполняет ИМЕННО сохранённое значение: подставить сюда
+          // фактическое начало (отложенное стартом группы) нельзя — админ,
+          // зашедший поменять цену, молча переписал бы дату начала.
+          startsAt: (enrollment.startsAt ?? enrollment.createdAt).toISOString(),
           startsAtExplicit: enrollment.startsAt !== null,
+          // Фактическое начало — только для подсказки, в форму не идёт
+          effectiveStartsAt: start.toISOString(),
           billingEndsAt: enrollment.billingEndsAt?.toISOString() ?? null,
           priceOverride: enrollment.priceOverride,
           firstMonthCharge: enrollment.firstMonthCharge,
@@ -472,6 +475,60 @@ export async function getStudentBilling(studentId: string) {
             balance: courses.reduce((sum, c) => sum + c.balance, 0),
           },
         },
+      };
+    },
+    { roles: ["ADMIN"] }
+  );
+}
+
+// ---------- getStudentsOverview (ADMIN) ----------
+/**
+ * Список всех студентов с балансом на текущий месяц. Нужен как вход в
+ * карточку: список должников показывает только должников, и, поправив
+ * студенту дату начала, вернуться к его настройкам было уже неоткуда.
+ */
+export async function getStudentsOverview() {
+  return withAuth(
+    async () => {
+      const [students, rows] = await Promise.all([
+        prisma.user.findMany({
+          where: { role: "STUDENT", deletedAt: null },
+          orderBy: [{ isActive: "desc" }, { lastName: "asc" }, { firstName: "asc" }],
+          select: {
+            id: true,
+            number: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            email: true,
+            isActive: true,
+          },
+        }),
+        computeBillingRows(monthKey(new Date())),
+      ]);
+
+      const byStudent = new Map<string, typeof rows>();
+      for (const row of rows) {
+        const list = byStudent.get(row.student.id) ?? [];
+        list.push(row);
+        byStudent.set(row.student.id, list);
+      }
+
+      return {
+        success: true as const,
+        data: students.map((student) => {
+          const own = byStudent.get(student.id) ?? [];
+          return {
+            ...student,
+            courses: own.map((row) => ({
+              enrollmentId: row.enrollmentId,
+              title: row.course.title,
+              groupName: row.group?.name ?? null,
+            })),
+            // Плюс — аванс, минус — долг, как в карточке студента
+            balance: own.reduce((sum, row) => sum - row.debt, 0),
+          };
+        }),
       };
     },
     { roles: ["ADMIN"] }

@@ -37,6 +37,8 @@ interface BillingData {
   coursePrice: number | null;
   startsAt: string;
   startsAtExplicit: boolean;
+  /** Дата, с которой реально идут начисления: может быть отложена группой */
+  effectiveStartsAt: string;
   billingEndsAt: string | null;
   priceOverride: number | null;
   firstMonthCharge: number | null;
@@ -184,6 +186,15 @@ export function BillingDialog({
                 <Label>{t("startsAt")}</Label>
                 <DatePicker value={startsAt} onChange={setStartsAt} />
                 <p className="text-xs text-muted-foreground">{t("startsAtHint")}</p>
+                {/* Группа может начаться позже, чем заведена запись — тогда
+                    считают с даты группы, и это стоит показать явно */}
+                {data.effectiveStartsAt !== data.startsAt && (
+                  <p className="text-xs font-medium text-amber-600">
+                    {t("effectiveStartsAt", {
+                      date: format(new Date(data.effectiveStartsAt), "dd.MM.yyyy"),
+                    })}
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>{t("billingEndsAt")}</Label>

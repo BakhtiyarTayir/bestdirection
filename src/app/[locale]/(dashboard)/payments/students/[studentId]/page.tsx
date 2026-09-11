@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { BillingSettingsButton } from "./billing-settings-button";
 
 export const dynamic = "force-dynamic";
 
@@ -189,8 +190,12 @@ export default async function StudentBillingPage({ params }: StudentBillingPageP
                     </Badge>
                   )}
                 </div>
-                <div className={`text-right font-semibold ${balanceClass(course.balance)}`}>
-                  {balanceText(course.balance)}
+                <div className="flex flex-col items-end gap-2">
+                  <div className={`font-semibold ${balanceClass(course.balance)}`}>
+                    {balanceText(course.balance)}
+                  </div>
+                  {/* Правка начислений доступна независимо от того, есть ли долг */}
+                  <BillingSettingsButton enrollmentId={course.enrollmentId} />
                 </div>
               </div>
             </CardHeader>
@@ -211,6 +216,16 @@ export default async function StudentBillingPage({ params }: StudentBillingPageP
                     </TableRow>
                   </TableHeader>
                   <TableBody>
+                    {course.months.length === 0 && (
+                      <TableRow>
+                        <TableCell
+                          colSpan={5}
+                          className="text-center text-muted-foreground"
+                        >
+                          {t("notStartedYet")}
+                        </TableCell>
+                      </TableRow>
+                    )}
                     {course.months.map((row) => (
                       <TableRow key={row.month}>
                         <TableCell className="font-medium tabular-nums">
