@@ -17,11 +17,7 @@ import {
   updateEnrollmentBillingSchema,
   type UpdateEnrollmentBillingInput,
 } from "@/validators/billing";
-
-/** Календарная дата "YYYY-MM-DD" → полдень UTC (см. payment-actions) */
-function toNoonUtc(date: string) {
-  return new Date(`${date}T12:00:00.000Z`);
-}
+import { toNoonUtc } from "@/lib/date-only";
 
 /**
  * Записи на платные курсы вместе со всем, что нужно для начисления.

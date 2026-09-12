@@ -10,15 +10,7 @@ import {
   type CreatePaymentInput,
   type PaymentFilters,
 } from "@/validators/payment";
-
-/**
- * Календарную дату "YYYY-MM-DD" храним как полдень UTC: в любой таймзоне
- * от UTC-11 до UTC+11 это остаётся тем же днём, поэтому дата приёма денег
- * не съезжает на сутки ни при записи, ни при выводе.
- */
-function toNoonUtc(date: string) {
-  return new Date(`${date}T12:00:00.000Z`);
-}
+import { toNoonUtc } from "@/lib/date-only";
 
 /** Границы календарного месяца "YYYY-MM" в UTC: [начало, начало следующего) */
 function monthRange(month: string) {

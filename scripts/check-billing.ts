@@ -115,6 +115,38 @@ check(
   chargeForMonth({ ...base, startsAt: utc("2026-07-25") }, "2026-07").amount,
   139286
 );
+// Регрессия: дата группы приходила из формы полночью по локали (UTC+5) и
+// сохранялась как 19:00 предыдущих суток. Старт 01.10 превращался в 30.09 —
+// среду, учебный день, — и за сентябрь набегало 650000 × 1/13 = 50000
+// у студента, который не был ни на одном занятии.
+check(
+  "старт группы 01.10: сентябрь не начисляется",
+  chargeForMonth(
+    { ...base, createdAt: utc("2026-09-12"), groupStartDate: utc("2026-10-01") },
+    "2026-09"
+  ),
+  { amount: 0, basis: "none", unitsTotal: 0, unitsBilled: 0 }
+);
+check(
+  "старт группы 01.10: октябрь идёт полным месяцем",
+  chargeForMonth(
+    { ...base, createdAt: utc("2026-09-12"), groupStartDate: utc("2026-10-01") },
+    "2026-10"
+  ),
+  { amount: 650000, basis: "full", unitsTotal: 1, unitsBilled: 1 }
+);
+check(
+  "а сдвинутая на сутки дата дала бы те самые 50000",
+  chargeForMonth(
+    {
+      ...base,
+      createdAt: utc("2026-09-12"),
+      groupStartDate: new Date("2026-09-30T19:00:00.000Z"),
+    },
+    "2026-09"
+  ).amount,
+  50000
+);
 
 console.log("\n── ручная правка суммы админом ──");
 check(

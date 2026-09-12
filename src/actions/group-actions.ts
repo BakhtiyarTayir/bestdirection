@@ -5,6 +5,7 @@ import { withAuth } from "@/lib/action-utils";
 import { revalidateLocalized } from "@/lib/revalidate";
 import { createAuditLog, computeChanges } from "@/lib/audit";
 import type { CreateGroupInput, UpdateGroupInput } from "@/validators/group";
+import { dateInputToDb } from "@/lib/date-only";
 
 // ---------- getCourseGroups ----------
 export async function getCourseGroups(courseId: string) {
@@ -85,9 +86,15 @@ export async function createGroup(courseId: string, data: CreateGroupInput) {
         _max: { sortOrder: true },
       });
 
+      const { startDate, endDate, ...rest } = data;
+
       const group = await prisma.group.create({
         data: {
-          ...data,
+          ...rest,
+          // Даты группы двигают начисления (см. src/lib/billing.ts), поэтому
+          // нормализуем их к полудню UTC — как startsAt у записи и paidAt у оплаты
+          startDate: dateInputToDb(startDate) ?? null,
+          endDate: dateInputToDb(endDate) ?? null,
           courseId,
           // Не указан явно — ведёт преподаватель курса. Отчёт по занятиям
           // опирается на это поле, и пустое значение выкинуло бы группу из него.
@@ -137,10 +144,15 @@ export async function updateGroup(groupId: string, data: UpdateGroupInput) {
         }
       }
 
+      const { startDate, endDate, ...rest } = data;
+
       const updated = await prisma.group.update({
         where: { id: groupId },
         data: {
-          ...data,
+          ...rest,
+          // undefined — поле не трогаем, "" — очищаем, дата — полдень UTC
+          startDate: dateInputToDb(startDate),
+          endDate: dateInputToDb(endDate),
           // Пустая строка из формы = «убрать преподавателя», undefined = «не менять»
           teacherId:
             data.teacherId === undefined

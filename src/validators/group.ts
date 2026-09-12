@@ -1,5 +1,17 @@
 import { z } from "zod";
 
+/**
+ * Календарная дата строкой "YYYY-MM-DD", а не Date: Date по дороге на сервер
+ * сериализуется в момент времени, и выбранная полночь по локали админа (UTC+5)
+ * пришла бы как 19:00 предыдущих суток — дата уехала бы на день назад.
+ * К полудню UTC её приводит dateInputToDb (src/lib/date-only.ts).
+ * Пустая строка означает «очистить поле».
+ */
+const dateOnly = z.union([
+  z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "invalidDate"),
+  z.literal(""),
+]);
+
 export const createGroupSchema = z.object({
   name: z
     .string()
@@ -23,14 +35,8 @@ export const createGroupSchema = z.object({
   // преподавателя курса»; в null её превращает серверное действие —
   // transform здесь ломает типы react-hook-form, разводя вход и выход схемы.
   teacherId: z.string().optional(),
-  startDate: z
-    .coerce
-    .date()
-    .optional(),
-  endDate: z
-    .coerce
-    .date()
-    .optional(),
+  startDate: dateOnly.optional(),
+  endDate: dateOnly.optional(),
 });
 
 export type CreateGroupInput = z.infer<typeof createGroupSchema>;

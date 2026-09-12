@@ -2,7 +2,9 @@
 
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { format } from "date-fns";
 import { createGroupSchema, type CreateGroupInput } from "@/validators/group";
+import { fromDateInput, toDateInput } from "@/lib/date-only";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,8 +68,8 @@ export function GroupForm({ courseId, courseSlug, group, teachers = [] }: GroupF
       schedule: group?.schedule || "",
       teacherId: group?.teacherId || "",
       scheduleDays: group?.scheduleDays ?? [],
-      startDate: group?.startDate || undefined,
-      endDate: group?.endDate || undefined,
+      startDate: toDateInput(group?.startDate),
+      endDate: toDateInput(group?.endDate),
     },
   });
 
@@ -187,8 +189,11 @@ export function GroupForm({ courseId, courseSlug, group, teachers = [] }: GroupF
             control={control}
             render={({ field }) => (
               <DatePicker
-                value={field.value ? new Date(field.value) : undefined}
-                onChange={(date) => field.onChange(date)}
+                value={fromDateInput(field.value)}
+                // Строкой, а не Date: см. комментарий в src/validators/group.ts
+                onChange={(date) =>
+                  field.onChange(date ? format(date, "yyyy-MM-dd") : "")
+                }
                 placeholder={tDatePicker("selectDate")}
               />
             )}
@@ -201,8 +206,10 @@ export function GroupForm({ courseId, courseSlug, group, teachers = [] }: GroupF
             control={control}
             render={({ field }) => (
               <DatePicker
-                value={field.value ? new Date(field.value) : undefined}
-                onChange={(date) => field.onChange(date)}
+                value={fromDateInput(field.value)}
+                onChange={(date) =>
+                  field.onChange(date ? format(date, "yyyy-MM-dd") : "")
+                }
                 placeholder={tDatePicker("selectDate")}
               />
             )}
