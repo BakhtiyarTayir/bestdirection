@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
+import { createAuditLog } from "@/lib/audit";
 import { updateTag } from "next/cache";
 import {
   MARKETING_TAG,
@@ -66,8 +67,18 @@ export async function saveMarketingCourse(input: MarketingCourseInput) {
 }
 
 export async function deleteMarketingCourse(id: string) {
-  return withAuth(async () => {
+  return withAuth(async (session) => {
+    // Снимок строки уходит в metadata: удаление здесь окончательное, и без
+    // копии в журнале восстановить контент будет неоткуда
+    const existing = await prisma.marketingCourse.findUnique({ where: { id } });
     await prisma.marketingCourse.delete({ where: { id } });
+    await createAuditLog({
+      userId: session.user.id,
+      entityType: "MarketingCourse",
+      entityId: id,
+      action: "DELETE",
+      metadata: existing ? { deleted: existing } : undefined,
+    });
     published();
     return { success: true as const };
   }, ADMIN);
@@ -88,8 +99,16 @@ export async function saveMarketingReel(input: MarketingReelInput) {
 }
 
 export async function deleteMarketingReel(id: string) {
-  return withAuth(async () => {
+  return withAuth(async (session) => {
+    const existing = await prisma.marketingReel.findUnique({ where: { id } });
     await prisma.marketingReel.delete({ where: { id } });
+    await createAuditLog({
+      userId: session.user.id,
+      entityType: "MarketingReel",
+      entityId: id,
+      action: "DELETE",
+      metadata: existing ? { deleted: existing } : undefined,
+    });
     published();
     return { success: true as const };
   }, ADMIN);
@@ -110,8 +129,16 @@ export async function saveMarketingGalleryItem(input: MarketingGalleryItemInput)
 }
 
 export async function deleteMarketingGalleryItem(id: string) {
-  return withAuth(async () => {
+  return withAuth(async (session) => {
+    const existing = await prisma.marketingGalleryItem.findUnique({ where: { id } });
     await prisma.marketingGalleryItem.delete({ where: { id } });
+    await createAuditLog({
+      userId: session.user.id,
+      entityType: "MarketingGalleryItem",
+      entityId: id,
+      action: "DELETE",
+      metadata: existing ? { deleted: existing } : undefined,
+    });
     published();
     return { success: true as const };
   }, ADMIN);
@@ -132,8 +159,16 @@ export async function saveMarketingTestimonial(input: MarketingTestimonialInput)
 }
 
 export async function deleteMarketingTestimonial(id: string) {
-  return withAuth(async () => {
+  return withAuth(async (session) => {
+    const existing = await prisma.marketingTestimonial.findUnique({ where: { id } });
     await prisma.marketingTestimonial.delete({ where: { id } });
+    await createAuditLog({
+      userId: session.user.id,
+      entityType: "MarketingTestimonial",
+      entityId: id,
+      action: "DELETE",
+      metadata: existing ? { deleted: existing } : undefined,
+    });
     published();
     return { success: true as const };
   }, ADMIN);
@@ -168,8 +203,16 @@ export async function saveMarketingPage(input: MarketingPageInput) {
 }
 
 export async function deleteMarketingPage(id: string) {
-  return withAuth(async () => {
+  return withAuth(async (session) => {
+    const existing = await prisma.marketingPage.findUnique({ where: { id } });
     await prisma.marketingPage.delete({ where: { id } });
+    await createAuditLog({
+      userId: session.user.id,
+      entityType: "MarketingPage",
+      entityId: id,
+      action: "DELETE",
+      metadata: existing ? { deleted: existing } : undefined,
+    });
     published();
     return { success: true as const };
   }, ADMIN);
