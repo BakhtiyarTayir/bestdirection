@@ -408,6 +408,10 @@ model Group {
   scheduleDays Int[]
   startDate   DateTime?
   endDate     DateTime?
+  // Цена группы за месяц. Пусто — берётся цена курса. Индивидуальная цена
+  // студента (Enrollment.priceOverride) важнее цены группы. Меняется только
+  // вперёд: закрытые месяцы уже лежат в MonthlyCharge со своей priceUsed.
+  price       Int?
   settings    Json?
   isActive    Boolean   @default(true)
   sortOrder   Int       @default(0)
