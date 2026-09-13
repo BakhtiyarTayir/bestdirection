@@ -31,6 +31,7 @@ import { toNoonUtc } from "@/lib/date-only";
  * Курсы без цены и удалённые отсеиваются на уровне запроса.
  */
 async function loadBillableEnrollments(filters: {
+  enrollmentId?: string;
   courseId?: string;
   groupId?: string;
   studentId?: string;
@@ -39,6 +40,7 @@ async function loadBillableEnrollments(filters: {
     where: {
       course: { deletedAt: null, price: { not: null } },
       student: { deletedAt: null },
+      ...(filters.enrollmentId ? { id: filters.enrollmentId } : {}),
       ...(filters.courseId ? { courseId: filters.courseId } : {}),
       ...(filters.groupId ? { groupId: filters.groupId } : {}),
       ...(filters.studentId ? { studentId: filters.studentId } : {}),
@@ -512,6 +514,9 @@ export async function getStudentBilling(studentId: string) {
             unitsBilled: charge?.unitsBilled ?? 0,
             // Плюс — аванс, минус — долг на конец этого месяца
             balance: running,
+            // Закрытый месяц с начислением лежит в реестре: resolveSchedules
+            // выше заморозил его, если строки ещё не было
+            locked: charge !== undefined && isClosedMonth(month),
           };
         });
 
@@ -613,6 +618,145 @@ export async function getStudentsOverview() {
           };
         }),
       };
+    },
+    { roles: ["ADMIN"] }
+  );
+}
+
+// ---------- пересчёт закрытого месяца (ADMIN) ----------
+
+/**
+ * Закрытый месяц окончателен: правки в диалоге начислений его не трогают.
+ * Исправить его можно только явно — этой парой действий.
+ *
+ * Цена берётся ЗАФИКСИРОВАННАЯ (priceUsed), а не текущая. Пересчёт исправляет
+ * даты и число занятий, но цену месяца задним числом не меняет — иначе кнопка
+ * стала бы обходом той самой фиксации: поправили в сентябре дату начала, а
+ * сентябрь заодно подтянул октябрьскую цену.
+ */
+async function computeRecalc(enrollmentId: string, month: string) {
+  if (!isValidMonth(month) || !isClosedMonth(month)) {
+    return { ok: false as const, error: "monthNotClosed" };
+  }
+
+  const [enrollment] = await loadBillableEnrollments({ enrollmentId });
+  if (!enrollment) {
+    return { ok: false as const, error: "enrollmentNotFound" };
+  }
+
+  const stored = await prisma.monthlyCharge.findUnique({
+    where: { enrollmentId_month: { enrollmentId, month } },
+  });
+  if (!stored) {
+    return { ok: false as const, error: "chargeNotFound" };
+  }
+
+  const next = chargeForMonth(
+    { ...toBillingEnrollment(enrollment), priceOverride: stored.priceUsed },
+    month
+  );
+  const changed =
+    stored.amount !== next.amount ||
+    stored.basis !== next.basis ||
+    stored.unitsTotal !== next.unitsTotal ||
+    stored.unitsBilled !== next.unitsBilled;
+
+  return { ok: true as const, stored, next, changed };
+}
+
+/** Предпросмотр: что сейчас зафиксировано и что даст пересчёт */
+export async function previewMonthRecalc(enrollmentId: string, month: string) {
+  return withAuth(
+    async () => {
+      const result = await computeRecalc(enrollmentId, month);
+      if (!result.ok) {
+        return { success: false as const, error: result.error };
+      }
+      const { stored, next, changed } = result;
+
+      return {
+        success: true as const,
+        data: {
+          month,
+          priceUsed: stored.priceUsed,
+          current: {
+            amount: stored.amount,
+            basis: stored.basis,
+            unitsTotal: stored.unitsTotal,
+            unitsBilled: stored.unitsBilled,
+          },
+          next: {
+            amount: next.amount,
+            basis: next.basis,
+            unitsTotal: next.unitsTotal,
+            unitsBilled: next.unitsBilled,
+          },
+          changed,
+        },
+      };
+    },
+    { roles: ["ADMIN"] }
+  );
+}
+
+/**
+ * Перезаписывает закрытый месяц по актуальным данным записи.
+ *
+ * Журнал и изменение суммы идут одной транзакцией: это правка денег задним
+ * числом, и она не должна пройти без следа. createAuditLog здесь не годится —
+ * он глотает ошибку, и сумма поменялась бы при незаписанном журнале.
+ */
+export async function recalculateMonth(enrollmentId: string, month: string) {
+  return withAuth(
+    async (session) => {
+      const result = await computeRecalc(enrollmentId, month);
+      if (!result.ok) {
+        return { success: false as const, error: result.error };
+      }
+      const { stored, next, changed } = result;
+
+      // Нечего менять — не пишем в журнал пустую правку
+      if (!changed) {
+        return { success: true as const, data: { amount: stored.amount, changed: false } };
+      }
+
+      await prisma.$transaction(async (tx) => {
+        await tx.auditLog.create({
+          data: {
+            userId: session.user.id,
+            entityType: "MonthlyCharge",
+            entityId: stored.id,
+            action: "UPDATE",
+            changes: {
+              amount: { old: stored.amount, new: next.amount },
+              basis: { old: stored.basis, new: next.basis },
+              unitsTotal: { old: stored.unitsTotal, new: next.unitsTotal },
+              unitsBilled: { old: stored.unitsBilled, new: next.unitsBilled },
+            },
+            metadata: {
+              recalculated: true,
+              enrollmentId,
+              month,
+              priceUsed: stored.priceUsed,
+            },
+          },
+        });
+
+        await tx.monthlyCharge.update({
+          where: { id: stored.id },
+          data: {
+            amount: next.amount,
+            basis: next.basis,
+            unitsTotal: next.unitsTotal,
+            unitsBilled: next.unitsBilled,
+            lockedAt: new Date(),
+          },
+        });
+      });
+
+      revalidateLocalized("/payments/debtors");
+      revalidateLocalized("/payments");
+      return { success: true as const, data: { amount: next.amount, changed: true } };
     },
     { roles: ["ADMIN"] }
   );
