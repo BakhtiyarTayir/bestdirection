@@ -8,11 +8,18 @@ import {
   billingStart,
   chargeForMonth,
   chargeSchedule,
+  isClosedMonth,
   isValidMonth,
+  mergeSchedule,
   monthKey,
   paymentMonth,
+  priceFor,
   type BillingEnrollment,
+  type ChargeBasis,
+  type MonthCharge,
+  type StoredCharge,
 } from "@/lib/billing";
+import type { Prisma } from "@/generated/prisma";
 import {
   updateEnrollmentBillingSchema,
   type UpdateEnrollmentBillingInput,
@@ -85,6 +92,85 @@ function toBillingEnrollment(enrollment: LoadedEnrollment): BillingEnrollment {
 }
 
 /**
+ * Расписание начислений по записям с учётом реестра MonthlyCharge.
+ *
+ * Закрытые месяцы берутся из реестра, открытые считаются формулой. Закрытый
+ * месяц, у которого строки ещё нет, фиксируется тут же — поэтому крон не нужен:
+ * месяц замораживается при первом обращении после того, как закончился.
+ * Повторные и параллельные вызовы безопасны: уникальный индекс
+ * (enrollmentId, month) плюс skipDuplicates.
+ */
+async function resolveSchedules(
+  enrollments: LoadedEnrollment[],
+  upToMonth: string
+): Promise<Map<string, MonthCharge[]>> {
+  const ids = enrollments.map((enrollment) => enrollment.id);
+  const storedRows =
+    ids.length > 0
+      ? await prisma.monthlyCharge.findMany({
+          where: { enrollmentId: { in: ids }, lockedAt: { not: null } },
+          select: {
+            enrollmentId: true,
+            month: true,
+            amount: true,
+            basis: true,
+            unitsTotal: true,
+            unitsBilled: true,
+          },
+        })
+      : [];
+
+  const storedByEnrollment = new Map<string, StoredCharge[]>();
+  for (const row of storedRows) {
+    // Месяцы позже отчётного не участвуют: иначе замороженный август
+    // попал бы в отчёт «на конец июля»
+    if (row.month > upToMonth) continue;
+    const list = storedByEnrollment.get(row.enrollmentId) ?? [];
+    list.push({
+      month: row.month,
+      amount: row.amount,
+      basis: row.basis as ChargeBasis,
+      unitsTotal: row.unitsTotal,
+      unitsBilled: row.unitsBilled,
+    });
+    storedByEnrollment.set(row.enrollmentId, list);
+  }
+
+  const now = new Date();
+  const toFreeze: Prisma.MonthlyChargeCreateManyInput[] = [];
+  const schedules = new Map<string, MonthCharge[]>();
+
+  for (const enrollment of enrollments) {
+    const billing = toBillingEnrollment(enrollment);
+    const stored = storedByEnrollment.get(enrollment.id) ?? [];
+    const storedMonths = new Set(stored.map((item) => item.month));
+    const computed = chargeSchedule(billing, upToMonth);
+
+    for (const item of computed) {
+      if (!isClosedMonth(item.month, now) || storedMonths.has(item.month)) continue;
+      toFreeze.push({
+        enrollmentId: enrollment.id,
+        month: item.month,
+        amount: item.charge.amount,
+        basis: item.charge.basis,
+        unitsTotal: item.charge.unitsTotal,
+        unitsBilled: item.charge.unitsBilled,
+        priceUsed: priceFor(billing) ?? 0,
+        lockedAt: now,
+      });
+    }
+
+    schedules.set(enrollment.id, mergeSchedule(computed, stored, now));
+  }
+
+  if (toFreeze.length > 0) {
+    await prisma.monthlyCharge.createMany({ data: toFreeze, skipDuplicates: true });
+  }
+
+  return schedules;
+}
+
+/**
  * Начислено/оплачено по каждой записи на конец указанного месяца.
  * Долг накопительный: всё начисленное с начала обучения минус всё оплаченное
  * за те же месяцы. Именно накопительный, а не помесячный — студент,
@@ -111,8 +197,10 @@ async function computeBillingRows(
     paidByEnrollment.set(key, (paidByEnrollment.get(key) ?? 0) + payment.amount);
   }
 
+  const schedules = await resolveSchedules(enrollments, month);
+
   return enrollments.map((enrollment) => {
-    const schedule = chargeSchedule(toBillingEnrollment(enrollment), month);
+    const schedule = schedules.get(enrollment.id) ?? [];
     const charged = schedule.reduce((sum, item) => sum + item.charge.amount, 0);
     const paid = paidByEnrollment.get(`${enrollment.studentId}:${enrollment.courseId}`) ?? 0;
 
@@ -392,11 +480,10 @@ export async function getStudentBilling(studentId: string) {
         currentMonth
       );
 
+      const schedules = await resolveSchedules(enrollments, lastPaymentMonth);
+
       const courses = enrollments.map((enrollment) => {
-        const schedule = chargeSchedule(
-          toBillingEnrollment(enrollment),
-          lastPaymentMonth
-        );
+        const schedule = schedules.get(enrollment.id) ?? [];
 
         const paidByMonth = new Map<string, number>();
         for (const payment of payments) {
