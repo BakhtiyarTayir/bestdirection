@@ -1604,7 +1604,8 @@
     "suggestionFull": "Talaba oyning birinchi kunidan boshlagan — oy to'liq",
     "byDaysTitle": "To'liqsiz oy kunlar bo'yicha hisoblandi",
     "withoutGroupHint": "{count, plural, other {# yozuv}} guruhga biriktirilmagan. Darslar guruh jadvalidan olinadi — talabani guruhga qo'shing, va hisob darslar bo'yicha ketadi.",
-    "effectiveStartsAt": "Aslida {date} dan hisoblanadi — guruh keyinroq boshlanadi"
+    "effectiveStartsAt": "Aslida {date} dan hisoblanadi — guruh keyinroq boshlanadi",
+    "closedMonthsNote": "O'tgan oylar yopilgan va qayta hisoblanmaydi: bu o'zgarishlar joriy oydan boshlab amal qiladi. Yopilgan oyni talaba kartochkasida qayta hisoblash mumkin."
   },
   "parents": {
     "title": "Ota-onalar",
@@ -1730,7 +1731,18 @@
     "noPaidCourses": "Talabada pullik kurslarga yozuv yo'q.",
     "paymentsTitle": "To'lovlar tarixi",
     "noPayments": "Hozircha to'lovlar bo'lmagan",
-    "notStartedYet": "Hozircha hisob yo'q — o'qish hali boshlanmagan"
+    "notStartedYet": "Hozircha hisob yo'q — o'qish hali boshlanmagan",
+    "recalc": "Oyni qayta hisoblash",
+    "recalcTitle": "{month} ni qayta hisoblash",
+    "recalcDescription": "Oy yopilgan va uning hisobi qayd etilgan. Qayta hisoblash yozuvning joriy sanalari va darslarini oladi, lekin oy narxini o'zgartirmaydi.",
+    "recalcCurrent": "Hozir qayd etilgan",
+    "recalcNext": "Qayta hisoblashdan keyin",
+    "recalcPriceKept": "Oy narxi {price} bo'lib qoladi — qayta hisoblash narxni orqaga surmaydi.",
+    "recalcNoChange": "Joriy ma'lumotlar xuddi shu summani beradi — qayta hisoblash shart emas.",
+    "recalcConfirm": "Qayta hisoblash",
+    "recalcCancel": "Bekor qilish",
+    "recalcDone": "{month} qayta hisoblandi",
+    "recalcFailed": "Oyni qayta hisoblab bo'lmadi"
   },
   "students": {
     "title": "Talabalar",

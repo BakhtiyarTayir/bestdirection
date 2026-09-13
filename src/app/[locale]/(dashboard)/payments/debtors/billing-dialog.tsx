@@ -181,6 +181,11 @@ export function BillingDialog({
           <p className="py-6 text-sm text-muted-foreground">{tCommon("loading")}</p>
         ) : (
           <div className="space-y-4">
+            {/* Закрытые месяцы заморожены: правки здесь действуют только на
+                открытые, иначе админ ждал бы пересчёта, которого не будет */}
+            <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+              {t("closedMonthsNote")}
+            </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>{t("startsAt")}</Label>

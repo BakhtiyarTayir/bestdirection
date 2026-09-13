@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { BillingSettingsButton } from "./billing-settings-button";
+import { RecalcMonthButton } from "./recalc-month-button";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,8 @@ interface MonthRow {
   unitsTotal: number;
   unitsBilled: number;
   balance: number;
+  /** Месяц закрыт и заморожен — исправляется только явным пересчётом */
+  locked: boolean;
 }
 
 interface CourseBilling {
@@ -213,13 +216,16 @@ export default async function StudentBillingPage({ params }: StudentBillingPageP
                         {tDebtors("colPaid")}
                       </TableHead>
                       <TableHead className="text-right">{t("balanceAtEnd")}</TableHead>
+                      <TableHead className="w-12">
+                        <span className="sr-only">{t("recalc")}</span>
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {course.months.length === 0 && (
                       <TableRow>
                         <TableCell
-                          colSpan={5}
+                          colSpan={6}
                           className="text-center text-muted-foreground"
                         >
                           {t("notStartedYet")}
@@ -244,6 +250,14 @@ export default async function StudentBillingPage({ params }: StudentBillingPageP
                           className={`text-right tabular-nums ${balanceClass(row.balance)}`}
                         >
                           {balanceText(row.balance)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {row.locked && (
+                            <RecalcMonthButton
+                              enrollmentId={course.enrollmentId}
+                              month={row.month}
+                            />
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
