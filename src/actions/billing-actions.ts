@@ -7,170 +7,24 @@ import { revalidateLocalized } from "@/lib/revalidate";
 import {
   billingStart,
   chargeForMonth,
-  chargeSchedule,
   isClosedMonth,
   isValidMonth,
-  mergeSchedule,
   monthKey,
   paymentMonth,
   priceFor,
   type BillingEnrollment,
-  type ChargeBasis,
-  type MonthCharge,
-  type StoredCharge,
 } from "@/lib/billing";
-import type { Prisma } from "@/generated/prisma";
+import {
+  freezeClosedMonths,
+  loadBillableEnrollments,
+  resolveSchedules,
+  toBillingEnrollment,
+} from "@/lib/billing-ledger";
 import {
   updateEnrollmentBillingSchema,
   type UpdateEnrollmentBillingInput,
 } from "@/validators/billing";
 import { toNoonUtc } from "@/lib/date-only";
-
-/**
- * Записи на платные курсы вместе со всем, что нужно для начисления.
- * Курсы без цены и удалённые отсеиваются на уровне запроса.
- */
-async function loadBillableEnrollments(filters: {
-  enrollmentId?: string;
-  courseId?: string;
-  groupId?: string;
-  studentId?: string;
-}) {
-  return prisma.enrollment.findMany({
-    where: {
-      course: { deletedAt: null, price: { not: null } },
-      student: { deletedAt: null },
-      ...(filters.enrollmentId ? { id: filters.enrollmentId } : {}),
-      ...(filters.courseId ? { courseId: filters.courseId } : {}),
-      ...(filters.groupId ? { groupId: filters.groupId } : {}),
-      ...(filters.studentId ? { studentId: filters.studentId } : {}),
-    },
-    select: {
-      id: true,
-      createdAt: true,
-      startsAt: true,
-      billingEndsAt: true,
-      priceOverride: true,
-      firstMonthCharge: true,
-      studentId: true,
-      courseId: true,
-      student: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          phone: true,
-          telegramUsername: true,
-        },
-      },
-      course: { select: { id: true, title: true, price: true } },
-      group: {
-        select: {
-          id: true,
-          name: true,
-          scheduleDays: true,
-          startDate: true,
-          endDate: true,
-        },
-      },
-    },
-  });
-}
-
-type LoadedEnrollment = Awaited<ReturnType<typeof loadBillableEnrollments>>[number];
-
-function toBillingEnrollment(enrollment: LoadedEnrollment): BillingEnrollment {
-  return {
-    startsAt: enrollment.startsAt,
-    createdAt: enrollment.createdAt,
-    billingEndsAt: enrollment.billingEndsAt,
-    priceOverride: enrollment.priceOverride,
-    firstMonthCharge: enrollment.firstMonthCharge,
-    coursePrice: enrollment.course.price,
-    scheduleDays: enrollment.group?.scheduleDays ?? [],
-    groupEndDate: enrollment.group?.endDate ?? null,
-    groupStartDate: enrollment.group?.startDate ?? null,
-  };
-}
-
-/**
- * Расписание начислений по записям с учётом реестра MonthlyCharge.
- *
- * Закрытые месяцы берутся из реестра, открытые считаются формулой. Закрытый
- * месяц, у которого строки ещё нет, фиксируется тут же — поэтому крон не нужен:
- * месяц замораживается при первом обращении после того, как закончился.
- * Повторные и параллельные вызовы безопасны: уникальный индекс
- * (enrollmentId, month) плюс skipDuplicates.
- */
-async function resolveSchedules(
-  enrollments: LoadedEnrollment[],
-  upToMonth: string
-): Promise<Map<string, MonthCharge[]>> {
-  const ids = enrollments.map((enrollment) => enrollment.id);
-  const storedRows =
-    ids.length > 0
-      ? await prisma.monthlyCharge.findMany({
-          where: { enrollmentId: { in: ids }, lockedAt: { not: null } },
-          select: {
-            enrollmentId: true,
-            month: true,
-            amount: true,
-            basis: true,
-            unitsTotal: true,
-            unitsBilled: true,
-          },
-        })
-      : [];
-
-  const storedByEnrollment = new Map<string, StoredCharge[]>();
-  for (const row of storedRows) {
-    // Месяцы позже отчётного не участвуют: иначе замороженный август
-    // попал бы в отчёт «на конец июля»
-    if (row.month > upToMonth) continue;
-    const list = storedByEnrollment.get(row.enrollmentId) ?? [];
-    list.push({
-      month: row.month,
-      amount: row.amount,
-      basis: row.basis as ChargeBasis,
-      unitsTotal: row.unitsTotal,
-      unitsBilled: row.unitsBilled,
-    });
-    storedByEnrollment.set(row.enrollmentId, list);
-  }
-
-  const now = new Date();
-  const toFreeze: Prisma.MonthlyChargeCreateManyInput[] = [];
-  const schedules = new Map<string, MonthCharge[]>();
-
-  for (const enrollment of enrollments) {
-    const billing = toBillingEnrollment(enrollment);
-    const stored = storedByEnrollment.get(enrollment.id) ?? [];
-    const storedMonths = new Set(stored.map((item) => item.month));
-    const computed = chargeSchedule(billing, upToMonth);
-
-    for (const item of computed) {
-      if (!isClosedMonth(item.month, now) || storedMonths.has(item.month)) continue;
-      toFreeze.push({
-        enrollmentId: enrollment.id,
-        month: item.month,
-        amount: item.charge.amount,
-        basis: item.charge.basis,
-        unitsTotal: item.charge.unitsTotal,
-        unitsBilled: item.charge.unitsBilled,
-        priceUsed: priceFor(billing) ?? 0,
-        lockedAt: now,
-      });
-    }
-
-    schedules.set(enrollment.id, mergeSchedule(computed, stored, now));
-  }
-
-  if (toFreeze.length > 0) {
-    await prisma.monthlyCharge.createMany({ data: toFreeze, skipDuplicates: true });
-  }
-
-  return schedules;
-}
 
 /**
  * Начислено/оплачено по каждой записи на конец указанного месяца.
@@ -211,7 +65,7 @@ async function computeBillingRows(
       student: enrollment.student,
       course: { id: enrollment.course.id, title: enrollment.course.title },
       group: enrollment.group ? { id: enrollment.group.id, name: enrollment.group.name } : null,
-      monthlyPrice: enrollment.priceOverride ?? enrollment.course.price ?? 0,
+      monthlyPrice: priceFor(toBillingEnrollment(enrollment)) ?? 0,
       hasSchedule: (enrollment.group?.scheduleDays.length ?? 0) > 0,
       // Две разные причины расчёта по дням: студента нет в группе или у
       // группы не заданы дни занятий. Совет админу в каждом случае свой.
@@ -301,6 +155,7 @@ export async function getEnrollmentBilling(enrollmentId: string) {
           group: {
             select: {
               name: true,
+              price: true,
               scheduleDays: true,
               startDate: true,
               endDate: true,
@@ -313,13 +168,14 @@ export async function getEnrollmentBilling(enrollmentId: string) {
         return { success: true as const, data: null };
       }
 
-      const billing = {
+      const billing: BillingEnrollment = {
         startsAt: enrollment.startsAt,
         createdAt: enrollment.createdAt,
         billingEndsAt: enrollment.billingEndsAt,
         priceOverride: enrollment.priceOverride,
         firstMonthCharge: null,
         coursePrice: enrollment.course.price,
+        groupPrice: enrollment.group?.price ?? null,
         scheduleDays: enrollment.group?.scheduleDays ?? [],
         groupEndDate: enrollment.group?.endDate ?? null,
         groupStartDate: enrollment.group?.startDate ?? null,
@@ -339,6 +195,7 @@ export async function getEnrollmentBilling(enrollmentId: string) {
           courseTitle: enrollment.course.title,
           groupName: enrollment.group?.name ?? null,
           coursePrice: enrollment.course.price,
+          groupPrice: enrollment.group?.price ?? null,
           // Форму заполняет ИМЕННО сохранённое значение: подставить сюда
           // фактическое начало (отложенное стартом группы) нельзя — админ,
           // зашедший поменять цену, молча переписал бы дату начала.
@@ -392,6 +249,10 @@ export async function updateEnrollmentBilling(
       if (startsAt && billingEndsAt && billingEndsAt < startsAt) {
         return { success: false as const, error: "endBeforeStart" };
       }
+
+      // Закрытые месяцы окончательны, а заморозка ленивая: фиксируем их ДО
+      // записи, иначе ещё не открытый месяц посчитался бы по новым настройкам
+      await freezeClosedMonths({ enrollmentId });
 
       const updated = await prisma.enrollment.update({
         where: { id: enrollmentId },
@@ -529,7 +390,7 @@ export async function getStudentBilling(studentId: string) {
           group: enrollment.group
             ? { id: enrollment.group.id, name: enrollment.group.name }
             : null,
-          monthlyPrice: enrollment.priceOverride ?? enrollment.course.price ?? 0,
+          monthlyPrice: priceFor(toBillingEnrollment(enrollment)) ?? 0,
           hasSchedule: (enrollment.group?.scheduleDays.length ?? 0) > 0,
           startsAt: billingStart(toBillingEnrollment(enrollment)).toISOString(),
           billingEndsAt: enrollment.billingEndsAt?.toISOString() ?? null,

@@ -35,6 +35,7 @@ interface BillingData {
   courseTitle: string;
   groupName: string | null;
   coursePrice: number | null;
+  groupPrice: number | null;
   startsAt: string;
   startsAtExplicit: boolean;
   /** Дата, с которой реально идут начисления: может быть отложена группой */
@@ -217,7 +218,11 @@ export function BillingDialog({
                 step={1}
                 inputMode="numeric"
                 placeholder={
-                  data.coursePrice !== null ? money.format(data.coursePrice) : ""
+                  // Подсказка — цена, которая действует без индивидуальной:
+                  // цена группы, а если у группы её нет — цена курса
+                  data.groupPrice !== null || data.coursePrice !== null
+                    ? money.format(data.groupPrice ?? data.coursePrice ?? 0)
+                    : ""
                 }
                 value={priceOverride}
                 onChange={(e) => setPriceOverride(e.target.value)}

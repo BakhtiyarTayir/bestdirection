@@ -40,6 +40,8 @@ export interface BillingEnrollment {
   firstMonthCharge: number | null;
   /** Цена курса за месяц обучения */
   coursePrice: number | null;
+  /** Цена группы за месяц: важнее цены курса, но уступает цене студента */
+  groupPrice: number | null;
   /** Дни занятий по ISO (1 = пн … 7 = вс); пустой массив — расписания нет */
   scheduleDays: number[];
   /** Дата окончания группы — тоже прекращает начисления */
@@ -149,13 +151,16 @@ const NOTHING: ChargeResult = {
 };
 
 /**
- * Цена за месяц по этой записи: индивидуальная цена студента важнее цены курса.
+ * Цена за месяц по этой записи. Приоритет: цена студента → цена группы → цена
+ * курса. Группа в середине, потому что это «цена потока» (начальная дешевле,
+ * продвинутая дороже), а скидка конкретному студенту должна её перебивать.
+ *
  * Отдельной функцией, потому что её спрашивает не только расчёт: реестр
  * начислений сохраняет цену, по которой посчитал, и брать её надо отсюда же,
  * иначе правило раздвоится.
  */
 export function priceFor(enrollment: BillingEnrollment): number | null {
-  return enrollment.priceOverride ?? enrollment.coursePrice;
+  return enrollment.priceOverride ?? enrollment.groupPrice ?? enrollment.coursePrice;
 }
 
 /** Начисление за календарный месяц по одной записи на курс */

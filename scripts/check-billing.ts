@@ -16,6 +16,7 @@ import {
   paymentMonth,
   isClosedMonth,
   mergeSchedule,
+  priceFor,
   type BillingEnrollment,
   type MonthCharge,
   type StoredCharge,
@@ -39,6 +40,7 @@ const base: BillingEnrollment = {
   priceOverride: null,
   firstMonthCharge: null,
   coursePrice: 650000,
+  groupPrice: null,
   scheduleDays: [1, 3, 5], // пн/ср/пт
   groupEndDate: null,
   groupStartDate: null,
@@ -191,6 +193,45 @@ check(
   "курс без цены не биллится",
   chargeForMonth({ ...base, startsAt: utc("2026-07-01"), coursePrice: null }, "2026-08").basis,
   "none"
+);
+
+console.log("\n── цена группы ──");
+check("без цены группы — цена курса", priceFor(base), 650000);
+check("цена группы важнее цены курса", priceFor({ ...base, groupPrice: 500000 }), 500000);
+check(
+  "цена студента важнее цены группы",
+  priceFor({ ...base, groupPrice: 500000, priceOverride: 450000 }),
+  450000
+);
+check(
+  "полный месяц идёт по цене группы",
+  chargeForMonth({ ...base, startsAt: utc("2026-07-01"), groupPrice: 500000 }, "2026-08"),
+  { amount: 500000, basis: "full", unitsTotal: 1, unitsBilled: 1 }
+);
+check(
+  "неполный месяц — пропорция от цены группы: 520000 × 3/13",
+  chargeForMonth(
+    { ...base, scheduleDays: TTS, startsAt: utc("2026-07-25"), groupPrice: 520000 },
+    "2026-07"
+  ),
+  { amount: 120000, basis: "lessons", unitsTotal: 13, unitsBilled: 3 }
+);
+check(
+  "цена группы на курсе без цены — начисляется",
+  chargeForMonth(
+    { ...base, startsAt: utc("2026-07-01"), coursePrice: null, groupPrice: 500000 },
+    "2026-08"
+  ).amount,
+  500000
+);
+check(
+  "новая цена группы не переписывает закрытый месяц",
+  mergeSchedule(
+    chargeSchedule({ ...base, startsAt: utc("2026-09-01"), groupPrice: 800000 }, "2026-10"),
+    [{ month: "2026-09", amount: 650000, basis: "full", unitsTotal: 1, unitsBilled: 1 }],
+    utc("2026-10-15")
+  ).map((m) => [m.month, m.charge.amount]),
+  [["2026-09", 650000], ["2026-10", 800000]]
 );
 
 console.log("\n── группа без расписания ──");
