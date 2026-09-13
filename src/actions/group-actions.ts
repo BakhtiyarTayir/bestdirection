@@ -6,6 +6,7 @@ import { revalidateLocalized } from "@/lib/revalidate";
 import { createAuditLog, computeChanges } from "@/lib/audit";
 import type { CreateGroupInput, UpdateGroupInput } from "@/validators/group";
 import { dateInputToDb } from "@/lib/date-only";
+import { freezeClosedMonths } from "@/lib/billing-ledger";
 
 // ---------- getCourseGroups ----------
 export async function getCourseGroups(courseId: string) {
@@ -86,11 +87,13 @@ export async function createGroup(courseId: string, data: CreateGroupInput) {
         _max: { sortOrder: true },
       });
 
-      const { startDate, endDate, ...rest } = data;
+      const { startDate, endDate, price, ...rest } = data;
 
       const group = await prisma.group.create({
         data: {
           ...rest,
+          // Пустая строка из формы — цены у группы нет, берётся цена курса
+          price: price === "" || price === undefined ? null : price,
           // Даты группы двигают начисления (см. src/lib/billing.ts), поэтому
           // нормализуем их к полудню UTC — как startsAt у записи и paidAt у оплаты
           startDate: dateInputToDb(startDate) ?? null,
@@ -144,12 +147,19 @@ export async function updateGroup(groupId: string, data: UpdateGroupInput) {
         }
       }
 
-      const { startDate, endDate, ...rest } = data;
+      const { startDate, endDate, price, ...rest } = data;
+
+      // Цена, даты и расписание группы — входы начисления. Закрытые месяцы
+      // окончательны, но заморозка ленивая: фиксируем их ДО записи, иначе
+      // месяц, который ещё никто не открывал, заморозился бы по новым данным
+      await freezeClosedMonths({ groupId });
 
       const updated = await prisma.group.update({
         where: { id: groupId },
         data: {
           ...rest,
+          // undefined — не трогаем, "" — убираем цену группы
+          price: price === undefined ? undefined : price === "" ? null : price,
           // undefined — поле не трогаем, "" — очищаем, дата — полдень UTC
           startDate: dateInputToDb(startDate),
           endDate: dateInputToDb(endDate),
@@ -193,6 +203,10 @@ export async function deleteGroup(groupId: string) {
       if (session.user.role === "TEACHER" && group.course.teacherId !== session.user.id) {
         return { success: false as const, error: "noAccess" };
       }
+
+      // Студенты теряют цену и расписание группы — сначала фиксируем их
+      // закрытые месяцы по нынешним данным
+      await freezeClosedMonths({ groupId });
 
       // Remove group from enrollments (keep enrollments)
       await prisma.enrollment.updateMany({
@@ -283,6 +297,9 @@ export async function addStudentsToGroup(groupId: string, studentIds: string[]) 
         });
 
         if (existing) {
+          // Перевод из другой группы меняет цену и расписание — закрытые
+          // месяцы фиксируем по прежней группе
+          await freezeClosedMonths({ studentId, courseId: group.courseId });
           await prisma.enrollment.update({
             where: { studentId_courseId: { studentId, courseId: group.courseId } },
             data: { groupId },
@@ -334,6 +351,9 @@ export async function removeStudentFromGroup(
           where: { studentId_courseId: { studentId, courseId: group.courseId } },
         });
       } else {
+        // Запись остаётся без группы — теряет её цену и расписание, поэтому
+        // закрытые месяцы фиксируем по нынешней группе
+        await freezeClosedMonths({ studentId, courseId: group.courseId });
         await prisma.enrollment.update({
           where: { studentId_courseId: { studentId, courseId: group.courseId } },
           data: { groupId: null },
@@ -376,6 +396,10 @@ export async function moveStudentToGroup(
       if (session.user.role === "TEACHER" && course.teacherId !== session.user.id) {
         return { success: false as const, error: "noAccess" };
       }
+
+      // Новая группа — новая цена и расписание: сначала фиксируем закрытые
+      // месяцы по старой, иначе перевод в октябре переписал бы сентябрь
+      await freezeClosedMonths({ studentId, courseId });
 
       await prisma.enrollment.update({
         where: { studentId_courseId: { studentId, courseId } },

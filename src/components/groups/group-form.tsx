@@ -28,6 +28,7 @@ interface GroupFormProps {
     teacherId: string | null;
     startDate: Date | null;
     endDate: Date | null;
+    price: number | null;
   };
   /** Кандидаты в преподаватели группы; пустой список прячет поле */
   teachers?: { id: string; firstName: string; lastName: string }[];
@@ -70,6 +71,7 @@ export function GroupForm({ courseId, courseSlug, group, teachers = [] }: GroupF
       scheduleDays: group?.scheduleDays ?? [],
       startDate: toDateInput(group?.startDate),
       endDate: toDateInput(group?.endDate),
+      price: group?.price ?? "",
     },
   });
 
@@ -179,6 +181,23 @@ export function GroupForm({ courseId, courseSlug, group, teachers = [] }: GroupF
           }}
         />
         <p className="text-sm text-muted-foreground">{t("scheduleDaysHint")}</p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="price">{t("price")}</Label>
+        <Input
+          id="price"
+          type="number"
+          min={1}
+          step={1}
+          inputMode="numeric"
+          {...register("price")}
+          placeholder={t("pricePlaceholder")}
+        />
+        {errors.price && (
+          <p className="text-sm text-destructive">{t("pricePositive")}</p>
+        )}
+        <p className="text-sm text-muted-foreground">{t("priceHint")}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

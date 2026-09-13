@@ -37,6 +37,12 @@ export const createGroupSchema = z.object({
   teacherId: z.string().optional(),
   startDate: dateOnly.optional(),
   endDate: dateOnly.optional(),
+  // Цена группы за месяц. Пустая строка — цены у группы нет, берётся цена курса.
+  // Ноль не допускаем: иначе пустое поле, приведённое к числу, тихо сделало бы
+  // месяц бесплатным.
+  price: z
+    .union([z.coerce.number().int().positive("pricePositive"), z.literal("")])
+    .optional(),
 });
 
 export type CreateGroupInput = z.infer<typeof createGroupSchema>;

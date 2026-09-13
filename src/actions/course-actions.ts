@@ -1,5 +1,6 @@
 "use server";
 
+import { freezeClosedMonths } from "@/lib/billing-ledger";
 import { prisma, prismaUnscoped } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
 import { revalidateLocalized } from "@/lib/revalidate";
@@ -204,6 +205,13 @@ export async function updateCourse(
           }
         );
         slugUpdate = { slug: newSlug };
+      }
+
+      // Цена курса меняется только вперёд. Заморозка ленивая, поэтому сначала
+      // фиксируем закрытые месяцы по старой цене — иначе месяц, который никто
+      // ещё не открывал после его конца, заморозился бы уже по новой
+      if (data.price !== undefined && data.price !== existing.price) {
+        await freezeClosedMonths({ courseId: id });
       }
 
       const course = await prisma.course.update({
