@@ -14,7 +14,11 @@ import {
   addMonths,
   monthKey,
   paymentMonth,
+  isClosedMonth,
+  mergeSchedule,
   type BillingEnrollment,
+  type MonthCharge,
+  type StoredCharge,
 } from "../src/lib/billing";
 
 let failed = 0;
@@ -204,6 +208,51 @@ check(
   [["2026-07", 150000], ["2026-08", 650000], ["2026-09", 650000]]
 );
 check("начислено всего к сентябрю", totalCharged(student, "2026-09"), 1450000);
+
+console.log("\n── фиксация закрытых месяцев ──");
+// «Сейчас» задаём явно, иначе проверки поедут при смене календарного месяца
+const NOW = utc("2026-10-15");
+check("прошедший месяц закрыт", isClosedMonth("2026-09", NOW), true);
+check("текущий месяц открыт", isClosedMonth("2026-10", NOW), false);
+check("будущий месяц открыт", isClosedMonth("2026-11", NOW), false);
+
+const computed: MonthCharge[] = [
+  { month: "2026-09", charge: { amount: 650000, basis: "full", unitsTotal: 1, unitsBilled: 1 } },
+  { month: "2026-10", charge: { amount: 650000, basis: "full", unitsTotal: 1, unitsBilled: 1 } },
+];
+const frozen: StoredCharge[] = [
+  { month: "2026-09", amount: 500000, basis: "full", unitsTotal: 1, unitsBilled: 1 },
+  { month: "2026-10", amount: 500000, basis: "full", unitsTotal: 1, unitsBilled: 1 },
+];
+
+check(
+  "закрытый месяц берётся из реестра, открытый пересчитывается",
+  mergeSchedule(computed, frozen, NOW).map((m) => [m.month, m.charge.amount]),
+  [["2026-09", 500000], ["2026-10", 650000]]
+);
+check(
+  "без реестра всё считается формулой",
+  mergeSchedule(computed, [], NOW).map((m) => [m.month, m.charge.amount]),
+  [["2026-09", 650000], ["2026-10", 650000]]
+);
+check(
+  "зафиксированный месяц не теряется, даже если выпал из расчёта",
+  mergeSchedule(
+    [{ month: "2026-10", charge: { amount: 650000, basis: "full", unitsTotal: 1, unitsBilled: 1 } }],
+    [{ month: "2026-08", amount: 300000, basis: "lessons", unitsTotal: 13, unitsBilled: 6 }],
+    NOW
+  ).map((m) => [m.month, m.charge.amount]),
+  [["2026-08", 300000], ["2026-10", 650000]]
+);
+check(
+  "цена, изменённая в октябре, не переписывает закрытый сентябрь",
+  mergeSchedule(
+    chargeSchedule({ ...base, startsAt: utc("2026-09-01"), priceOverride: 900000 }, "2026-10"),
+    [{ month: "2026-09", amount: 650000, basis: "full", unitsTotal: 1, unitsBilled: 1 }],
+    NOW
+  ).map((m) => [m.month, m.charge.amount]),
+  [["2026-09", 650000], ["2026-10", 900000]]
+);
 
 console.log("\n── работа с месяцами ──");
 check("переход через год", addMonths("2026-12", 1), "2027-01");

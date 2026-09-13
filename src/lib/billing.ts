@@ -148,6 +148,16 @@ const NOTHING: ChargeResult = {
   unitsBilled: 0,
 };
 
+/**
+ * Цена за месяц по этой записи: индивидуальная цена студента важнее цены курса.
+ * Отдельной функцией, потому что её спрашивает не только расчёт: реестр
+ * начислений сохраняет цену, по которой посчитал, и брать её надо отсюда же,
+ * иначе правило раздвоится.
+ */
+export function priceFor(enrollment: BillingEnrollment): number | null {
+  return enrollment.priceOverride ?? enrollment.coursePrice;
+}
+
 /** Начисление за календарный месяц по одной записи на курс */
 export function chargeForMonth(
   enrollment: BillingEnrollment,
@@ -155,7 +165,7 @@ export function chargeForMonth(
 ): ChargeResult {
   if (!isValidMonth(month)) return NOTHING;
 
-  const price = enrollment.priceOverride ?? enrollment.coursePrice;
+  const price = priceFor(enrollment);
   if (price === null || price <= 0) return NOTHING;
 
   const start = billingStart(enrollment);
@@ -236,6 +246,67 @@ export function chargeSchedule(
     month,
     charge: chargeForMonth(enrollment, month),
   }));
+}
+
+/** Уже зафиксированное начисление за месяц (строка MonthlyCharge) */
+export interface StoredCharge {
+  month: string;
+  amount: number;
+  basis: ChargeBasis;
+  unitsTotal: number;
+  unitsBilled: number;
+}
+
+/**
+ * Месяц закрыт, если он уже прошёл. Текущий и будущие закрывать нельзя:
+ * в них начисление ещё может измениться законно — студент уйдёт в паузу,
+ * админ поправит дату начала.
+ */
+export function isClosedMonth(month: string, now: Date = new Date()): boolean {
+  return month < monthKey(now);
+}
+
+/**
+ * Накладывает зафиксированные начисления на вычисленные.
+ *
+ * Закрытый месяц, у которого есть сохранённая строка, берётся из неё и
+ * пересчёту не подлежит — именно это защищает оплаченный сентябрь от того,
+ * чтобы его переписала цена, изменённая в октябре. Открытый месяц всегда
+ * считается формулой, даже если строка почему-то есть.
+ *
+ * Зафиксированные месяцы, которых больше нет в расчёте, возвращаются тоже:
+ * если админ сдвинул дату начала вперёд, деньги за уже закрытый месяц никуда
+ * не делись, и молча забыть про них нельзя.
+ */
+export function mergeSchedule(
+  computed: MonthCharge[],
+  stored: StoredCharge[],
+  now: Date = new Date()
+): MonthCharge[] {
+  const toMonthCharge = (s: StoredCharge): MonthCharge => ({
+    month: s.month,
+    charge: {
+      amount: s.amount,
+      basis: s.basis,
+      unitsTotal: s.unitsTotal,
+      unitsBilled: s.unitsBilled,
+    },
+  });
+
+  const byMonth = new Map(stored.map((s) => [s.month, s]));
+  const result = computed.map((item) => {
+    const frozen = byMonth.get(item.month);
+    return frozen && isClosedMonth(item.month, now) ? toMonthCharge(frozen) : item;
+  });
+
+  const computedMonths = new Set(computed.map((item) => item.month));
+  for (const s of stored) {
+    if (!computedMonths.has(s.month) && isClosedMonth(s.month, now)) {
+      result.push(toMonthCharge(s));
+    }
+  }
+
+  return result.sort((a, b) => (a.month < b.month ? -1 : a.month > b.month ? 1 : 0));
 }
 
 /** Сумма начислений с начала обучения по указанный месяц включительно */
