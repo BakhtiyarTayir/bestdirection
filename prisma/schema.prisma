@@ -351,9 +351,49 @@ model Enrollment {
   groupId String?
   group   Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
 
+  monthlyCharges MonthlyCharge[]
+
   @@unique([studentId, courseId])
   @@index([courseId])
   @@index([groupId])
+}
+
+// Зафиксированное начисление за календарный месяц.
+//
+// До этой таблицы долг существовал только как результат пересчёта на лету:
+// chargeSchedule заново считал всю историю от ТЕКУЩИХ цен при каждом открытии
+// страницы. Любая правка цены переписывала прошлое — студент, закрывший
+// сентябрь, задним числом становился должником. Теперь закрытый месяц
+// читается отсюда, а открытый (текущий и будущие) по-прежнему считается
+// формулой: пока месяц идёт, начисление ещё может измениться законно.
+model MonthlyCharge {
+  id String @id @default(cuid())
+
+  enrollmentId String
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  // Календарный месяц "YYYY-MM" строкой, как Payment.forMonth: Date-поля
+  // срезаются на день назад в таймзонах впереди UTC.
+  month String
+
+  amount      Int
+  basis       String // full | lessons | days | manual | none
+  unitsTotal  Int
+  unitsBilled Int
+
+  // Цена, по которой посчитали. Без неё через год не объяснить, почему
+  // за сентябрь вышло одно число, а за октябрь другое.
+  priceUsed Int
+
+  // Проставлен — месяц закрыт и пересчёту не подлежит
+  lockedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([enrollmentId, month])
+  @@index([month])
+  @@index([lockedAt])
 }
 
 model Group {
