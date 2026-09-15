@@ -24,21 +24,43 @@ import type { Prisma } from "@/generated/prisma";
  */
 
 /**
- * Записи на платные курсы вместе со всем, что нужно для начисления.
- * Платная — если цена есть у курса или у группы: группа может задать цену и
- * курсу, у которого своей нет. Удалённые курсы и студенты отсеиваются.
+ * Записи вместе со всем, что нужно для начисления. Удалённые курсы и студенты
+ * отсеиваются.
+ *
+ * По умолчанию — только платные: цена есть у курса, у группы или у самого
+ * студента, либо у записи уже зафиксирован ненулевой долг. Последнее условие
+ * держит в расчёте запись, которая перестала быть платной (цену группы убрали,
+ * группу удалили): иначе её замороженный долг лежал бы в базе, но пропал бы из
+ * должников, карточки студента и пересчёта. Именно ненулевой — заморозка
+ * фиксирует нулями и бесплатные записи, и они не должны лезть в расчёты.
+ *
+ * includeFree нужен заморозке перед записью: бесплатную запись надо
+ * зафиксировать нулями ДО того, как она станет платной, — иначе все её
+ * прошлые месяцы замёрзли бы уже по новой цене.
  */
-export async function loadBillableEnrollments(filters: {
-  enrollmentId?: string;
-  courseId?: string;
-  groupId?: string;
-  studentId?: string;
-}) {
+export async function loadBillableEnrollments(
+  filters: {
+    enrollmentId?: string;
+    courseId?: string;
+    groupId?: string;
+    studentId?: string;
+  },
+  options: { includeFree?: boolean } = {}
+) {
   return prisma.enrollment.findMany({
     where: {
       course: { deletedAt: null },
       student: { deletedAt: null },
-      OR: [{ course: { price: { not: null } } }, { group: { price: { not: null } } }],
+      ...(options.includeFree
+        ? {}
+        : {
+            OR: [
+              { course: { price: { not: null } } },
+              { group: { price: { not: null } } },
+              { priceOverride: { not: null } },
+              { monthlyCharges: { some: { amount: { gt: 0 } } } },
+            ],
+          }),
       ...(filters.enrollmentId ? { id: filters.enrollmentId } : {}),
       ...(filters.courseId ? { courseId: filters.courseId } : {}),
       ...(filters.groupId ? { groupId: filters.groupId } : {}),
@@ -181,6 +203,9 @@ export async function resolveSchedules(
  * Без этого вызова сентябрь, который никто ещё не открывал, заморозился бы
  * уже по новой цене — ровно то, от чего защищает реестр. Идемпотентно:
  * уже замороженные месяцы не трогаются.
+ *
+ * Бесплатные записи тоже: их закрытые месяцы фиксируются нулями, иначе запись,
+ * ставшая платной, получила бы долг за всё прошлое по новой цене.
  */
 export async function freezeClosedMonths(filters: {
   enrollmentId?: string;
@@ -188,7 +213,7 @@ export async function freezeClosedMonths(filters: {
   groupId?: string;
   studentId?: string;
 }) {
-  const enrollments = await loadBillableEnrollments(filters);
+  const enrollments = await loadBillableEnrollments(filters, { includeFree: true });
   if (enrollments.length === 0) return;
 
   // Последний закрытый месяц — предыдущий: текущий ещё открыт
