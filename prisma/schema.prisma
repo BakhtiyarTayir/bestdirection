@@ -516,6 +516,10 @@ model AttendanceSession {
 
   records AttendanceRecord[]
 
+  // Для занятий БЕЗ группы это правило не работает: в Postgres NULL не равен
+  // NULL, и дубликаты проходили. Их закрывает частичный уникальный индекс
+  // (courseId, date) WHERE "groupId" IS NULL — Prisma такие описывать не умеет,
+  // он создан миграцией 20260916090000_attendance_no_group_unique.
   @@unique([courseId, date, groupId])
   @@index([courseId])
   @@index([groupId])
