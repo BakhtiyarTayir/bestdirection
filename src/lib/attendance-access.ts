@@ -21,6 +21,15 @@ interface SessionAccess {
   group: { teacherId: string | null } | null;
 }
 
+/**
+ * За кем числится занятие: записанный ведущий, иначе педагог группы, иначе
+ * педагог курса. У занятий, заведённых до появления отметки, ведущий пуст —
+ * без этого запаса они выпали бы из отчёта вовсе.
+ */
+export function responsibleTeacherId(session: SessionAccess): string | null {
+  return session.teacherId ?? session.group?.teacherId ?? session.course.teacherId ?? null;
+}
+
 /** Ведущий занятия, педагог его группы или педагог курса */
 export function canManageSession(actor: AttendanceActor, session: SessionAccess): boolean {
   if (actor.role === "ADMIN") return true;

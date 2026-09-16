@@ -1,5 +1,8 @@
 import { requireRole } from "@/lib/auth-guard";
-import { getTeacherAttendanceReport } from "@/actions/attendance-actions";
+import {
+  getTeacherAttendanceReport,
+  getTeacherSessions,
+} from "@/actions/attendance-actions";
 import { getTranslations } from "next-intl/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -12,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { PeriodFilter } from "./period-filter";
+import { TeacherSessions, type TeacherSessionRow } from "./teacher-sessions";
 
 export const dynamic = "force-dynamic";
 
@@ -39,8 +43,14 @@ export default async function TeacherAttendancePage({
 
   const t = await getTranslations("attendance");
   const { from, to } = await searchParams;
-  const result = await getTeacherAttendanceReport({ from, to });
+  const [result, sessionsResult] = await Promise.all([
+    getTeacherAttendanceReport({ from, to }),
+    getTeacherSessions({ from, to }),
+  ]);
   const rows: TeacherRow[] = result.success ? (result.data as TeacherRow[]) : [];
+  const sessions: TeacherSessionRow[] = sessionsResult.success
+    ? (sessionsResult.data as TeacherSessionRow[])
+    : [];
 
   return (
     <div className="space-y-6">
@@ -101,6 +111,16 @@ export default async function TeacherAttendancePage({
               </Table>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">{t("sessionsTitle")}</CardTitle>
+          <CardDescription>{t("sessionsDescription")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TeacherSessions rows={sessions} />
         </CardContent>
       </Card>
     </div>

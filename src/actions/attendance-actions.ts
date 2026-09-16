@@ -6,7 +6,11 @@ import { revalidateLocalized } from "@/lib/revalidate";
 import { createAuditLog } from "@/lib/audit";
 import { nameCollator } from "@/lib/collator";
 import { Prisma } from "@/generated/prisma";
-import { canManageCourseAttendance, canManageSession } from "@/lib/attendance-access";
+import {
+  canManageCourseAttendance,
+  canManageSession,
+  responsibleTeacherId,
+} from "@/lib/attendance-access";
 import type { AttendanceStatus } from "@/validators/attendance";
 
 async function revalidateCourseAttendance(courseId: string) {
@@ -497,8 +501,7 @@ export async function getTeacherAttendanceReport(params?: {
       const rows = new Map<string, Row>();
 
       for (const s of sessions) {
-        const responsibleId =
-          s.teacherId ?? s.group?.teacherId ?? s.course.teacherId ?? null;
+        const responsibleId = responsibleTeacherId(s);
         if (!responsibleId) continue;
         if (teacherFilter && responsibleId !== teacherFilter) continue;
 
@@ -561,6 +564,146 @@ export async function getTeacherAttendanceReport(params?: {
           collator.compare(`${a.lastName}${a.firstName}`, `${b.lastName}${b.firstName}`)
         ),
       };
+    },
+    { roles: ["ADMIN", "TEACHER"] }
+  );
+}
+
+// ---------- getTeacherSessions (ADMIN, TEACHER) ----------
+/**
+ * Занятия периода с отметкой преподавателя — список под сводкой отчёта.
+ * Сводка отвечает «сколько», этот список — «какие именно», и в нём же
+ * администратор проставляет отметки.
+ */
+export async function getTeacherSessions(params?: {
+  from?: string;
+  to?: string;
+  teacherId?: string;
+}) {
+  return withAuth(
+    async (session) => {
+      const role = session.user.role;
+      const teacherFilter = role === "TEACHER" ? session.user.id : params?.teacherId;
+
+      const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+      const bound = (value?: string) =>
+        value && DATE_ONLY.test(value) ? new Date(`${value}T00:00:00.000Z`) : undefined;
+      const from = bound(params?.from);
+      const to = bound(params?.to);
+
+      const sessions = await prisma.attendanceSession.findMany({
+        where: {
+          course: { deletedAt: null },
+          ...(from || to
+            ? { date: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } }
+            : {}),
+        },
+        select: {
+          id: true,
+          date: true,
+          teacherId: true,
+          teacherStatus: true,
+          teacherNote: true,
+          group: { select: { name: true, teacherId: true } },
+          course: { select: { title: true, slug: true, teacherId: true } },
+        },
+        orderBy: { date: "desc" },
+        take: 200,
+      });
+
+      const rows = sessions
+        .map((item) => ({ item, responsible: responsibleTeacherId(item) }))
+        .filter(({ responsible }) => responsible !== null)
+        .filter(({ responsible }) => !teacherFilter || responsible === teacherFilter);
+
+      // prismaUnscoped: удалённый преподаватель иначе остался бы без имени
+      const teachers = await prismaUnscoped.user.findMany({
+        where: { id: { in: [...new Set(rows.map((r) => r.responsible as string))] } },
+        select: { id: true, firstName: true, lastName: true },
+      });
+      const nameById = new Map(teachers.map((t) => [t.id, `${t.lastName} ${t.firstName}`]));
+
+      return {
+        success: true as const,
+        data: rows.map(({ item, responsible }) => ({
+          id: item.id,
+          date: item.date.toISOString(),
+          courseTitle: item.course.title,
+          courseSlug: item.course.slug,
+          groupName: item.group?.name ?? null,
+          teacherId: responsible as string,
+          teacherName: nameById.get(responsible as string) ?? "",
+          status: item.teacherStatus,
+          note: item.teacherNote,
+          // Ведущий ещё не записан: отметка проставит его явно
+          teacherImplicit: item.teacherId === null,
+        })),
+      };
+    },
+    { roles: ["ADMIN", "TEACHER"] }
+  );
+}
+
+// ---------- setTeacherAttendance (ADMIN, TEACHER) ----------
+/**
+ * Отметка преподавателя из отчёта. Отдельно от updateAttendanceRecords: там
+ * отмечают учеников конкретного занятия, здесь — преподавателей списком, и
+ * тащить ради этого пустой массив учеников значило бы путать два действия.
+ */
+export async function setTeacherAttendance(
+  sessionId: string,
+  data: { status?: AttendanceStatus | null; note?: string | null }
+) {
+  return withAuth(
+    async (session) => {
+      const role = session.user.role;
+
+      const existing = await prisma.attendanceSession.findUnique({
+        where: { id: sessionId },
+        include: {
+          course: { select: { id: true, teacherId: true } },
+          group: { select: { teacherId: true } },
+        },
+      });
+
+      if (!existing) {
+        return { success: false as const, error: "sessionNotFound" };
+      }
+      if (!canManageSession({ id: session.user.id, role }, existing)) {
+        return { success: false as const, error: "noAccess" };
+      }
+
+      // У занятий, заведённых до появления отметки, ведущий пуст, и они
+      // числятся за педагогом группы или курса. Отметка должна кому-то
+      // принадлежать, поэтому при первой же записи ведущий фиксируется.
+      const responsible = responsibleTeacherId(existing);
+
+      await prisma.attendanceSession.update({
+        where: { id: sessionId },
+        data: {
+          ...(data.status !== undefined ? { teacherStatus: data.status } : {}),
+          ...(data.note !== undefined ? { teacherNote: data.note } : {}),
+          ...(existing.teacherId === null && responsible
+            ? { teacherId: responsible }
+            : {}),
+        },
+      });
+
+      await createAuditLog({
+        userId: session.user.id,
+        entityType: "AttendanceSession",
+        entityId: sessionId,
+        action: "UPDATE",
+        metadata: {
+          teacherAttendance: true,
+          teacherId: responsible,
+          status: data.status ?? null,
+        },
+      });
+
+      revalidateLocalized("/attendance/teachers");
+      await revalidateCourseAttendance(existing.course.id);
+      return { success: true as const };
     },
     { roles: ["ADMIN", "TEACHER"] }
   );

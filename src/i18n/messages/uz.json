@@ -670,7 +670,10 @@
     "teacherSelect": "Darsni kim o'tkazgan",
     "onlyAdminCanChangeTeacher": "Dars o'qituvchisini faqat administrator o'zgartira oladi.",
     "teacherNotFound": "Tanlangan o'qituvchi topilmadi yoki o'chirilgan.",
-    "periodReset": "Davrni tozalash"
+    "periodReset": "Davrni tozalash",
+    "sessionsTitle": "Davr darslari",
+    "sessionsDescription": "O'qituvchining darsi qanday o'tganini belgilang: holat darhol saqlanadi, izoh — maydondan chiqqanda",
+    "teacherByGroup": "guruh bo'yicha"
   },
   "users": {
     "title": "Foydalanuvchilar",
@@ -1047,8 +1050,7 @@
   "datePicker": {
     "selectDate": "Sanani tanlang"
   },
-  "errors": {
-    "generic": "Xatolik yuz berdi",
+  "errors": {    "generic": "Xatolik yuz berdi",
     "unexpected": "Kutilmagan xatolik yuz berdi.",
     "somethingWentWrong": "Nimadir noto'g'ri ketdi",
     "unexpectedError": "Kutilmagan xatolik yuz berdi. Sahifani yangilashga urinib ko'ring.",
