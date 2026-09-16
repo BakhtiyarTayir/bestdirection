@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { PeriodFilter } from "./period-filter";
 
 export const dynamic = "force-dynamic";
 
@@ -26,12 +27,19 @@ interface TeacherRow {
   unmarked: number;
 }
 
-export default async function TeacherAttendancePage() {
+interface TeacherAttendancePageProps {
+  searchParams: Promise<{ from?: string; to?: string }>;
+}
+
+export default async function TeacherAttendancePage({
+  searchParams,
+}: TeacherAttendancePageProps) {
   // Преподаватель тоже допущен: действие само сузит выборку до его занятий
   await requireRole(["ADMIN", "TEACHER"]);
 
   const t = await getTranslations("attendance");
-  const result = await getTeacherAttendanceReport();
+  const { from, to } = await searchParams;
+  const result = await getTeacherAttendanceReport({ from, to });
   const rows: TeacherRow[] = result.success ? (result.data as TeacherRow[]) : [];
 
   return (
@@ -40,6 +48,8 @@ export default async function TeacherAttendancePage() {
         <h1 className="text-3xl font-bold">{t("teacherReport")}</h1>
         <p className="mt-1 text-muted-foreground">{t("teacherReportDescription")}</p>
       </div>
+
+      <PeriodFilter from={from} to={to} />
 
       <Card>
         <CardHeader>

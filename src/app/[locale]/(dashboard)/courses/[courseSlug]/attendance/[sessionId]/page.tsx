@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getEnrolledStudents, getCourseById } from "@/actions/course-actions";
 import { getAttendanceSessions } from "@/actions/attendance-actions";
+import { getTeacherOptions } from "@/actions/group-actions";
 import { AttendanceMarking } from "@/components/attendance-marking";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,9 +32,8 @@ export default async function SessionPage({ params }: SessionPageProps) {
     redirect("/dashboard");
   }
 
-  const [courseResult, studentsResult, sessionsResult] = await Promise.all([
+  const [courseResult, sessionsResult] = await Promise.all([
     getCourseById(courseId),
-    getEnrolledStudents(courseId),
     getAttendanceSessions(courseId),
   ]);
 
@@ -42,7 +42,6 @@ export default async function SessionPage({ params }: SessionPageProps) {
   }
 
   const course = courseResult.data;
-  const students = studentsResult.success ? studentsResult.data ?? [] : [];
   const allSessions = sessionsResult.success ? sessionsResult.data ?? [] : [];
 
   const currentSession = allSessions.find(
@@ -52,6 +51,21 @@ export default async function SessionPage({ params }: SessionPageProps) {
   if (!currentSession) {
     redirect(`/courses/${courseSlug}/attendance`);
   }
+
+  // Ученики только той группы, на которую заведено занятие: список грузится
+  // после того, как занятие найдено. Иначе преподаватель отмечает чужих детей —
+  // в форме у всех по умолчанию «присутствует», и одно сохранение проставляет
+  // присутствие ученикам других групп курса.
+  const studentsResult = await getEnrolledStudents(
+    courseId,
+    currentSession.groupId ?? undefined
+  );
+  const students = studentsResult.success ? studentsResult.data ?? [] : [];
+
+  // Ведущего занятия меняет только администратор — например, при замене
+  const canChangeTeacher = role === "ADMIN";
+  const teachersResult = canChangeTeacher ? await getTeacherOptions() : null;
+  const teacherOptions = teachersResult?.success ? teachersResult.data : [];
 
   const existingRecords = currentSession.records ?? [];
 
@@ -77,9 +91,15 @@ export default async function SessionPage({ params }: SessionPageProps) {
             <CardTitle className="text-lg">
               {formatFullDate(currentSession.date, locale)}
             </CardTitle>
-            {currentSession.note && (
-              <Badge variant="secondary">{currentSession.note}</Badge>
-            )}
+            <div className="flex items-center gap-2">
+              {/* Чьё это занятие: по этой же группе сужен список учеников */}
+              <Badge variant="outline">
+                {currentSession.group?.name ?? t("allGroups")}
+              </Badge>
+              {currentSession.note && (
+                <Badge variant="secondary">{currentSession.note}</Badge>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -90,6 +110,8 @@ export default async function SessionPage({ params }: SessionPageProps) {
             teacher={currentSession.teacher}
             teacherStatus={currentSession.teacherStatus}
             teacherNote={currentSession.teacherNote}
+            canChangeTeacher={canChangeTeacher}
+            teacherOptions={teacherOptions}
           />
         </CardContent>
       </Card>

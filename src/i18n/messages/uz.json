@@ -666,7 +666,11 @@
     "totalSessions": "Jami darslar",
     "noTeacherData": "Statistika hisoblash uchun darslar hali yo‘q",
     "periodFrom": "Dan",
-    "periodTo": "Gacha"
+    "periodTo": "Gacha",
+    "teacherSelect": "Darsni kim o'tkazgan",
+    "onlyAdminCanChangeTeacher": "Dars o'qituvchisini faqat administrator o'zgartira oladi.",
+    "teacherNotFound": "Tanlangan o'qituvchi topilmadi yoki o'chirilgan.",
+    "periodReset": "Davrni tozalash"
   },
   "users": {
     "title": "Foydalanuvchilar",

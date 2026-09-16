@@ -388,10 +388,15 @@ export async function unenrollStudent(courseId: string, studentId: string) {
 }
 
 // ---------- getEnrolledStudents ----------
-export async function getEnrolledStudents(courseId: string) {
+/**
+ * Записанные на курс. groupId сужает список до учеников одной группы: занятие
+ * посещаемости заводится на группу, и отмечать в нём учеников других групп
+ * нельзя — в форме у всех по умолчанию «присутствует».
+ */
+export async function getEnrolledStudents(courseId: string, groupId?: string) {
   return withAuth(async () => {
     const enrollments = await prisma.enrollment.findMany({
-      where: { courseId },
+      where: { courseId, ...(groupId ? { groupId } : {}) },
       include: {
         student: {
           select: {

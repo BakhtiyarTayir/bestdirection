@@ -1,10 +1,12 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import { prisma, prismaUnscoped } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
 import { revalidateLocalized } from "@/lib/revalidate";
 import { createAuditLog } from "@/lib/audit";
 import { nameCollator } from "@/lib/collator";
+import { Prisma } from "@/generated/prisma";
+import { canManageCourseAttendance, canManageSession } from "@/lib/attendance-access";
 import type { AttendanceStatus } from "@/validators/attendance";
 
 async function revalidateCourseAttendance(courseId: string) {
@@ -48,6 +50,8 @@ export async function getAttendanceSessions(courseId: string) {
       include: {
         _count: { select: { records: true } },
         teacher: { select: { id: true, firstName: true, lastName: true } },
+        // Группа занятия нужна странице отметки: по ней сужается список учеников
+        group: { select: { id: true, name: true } },
         records: {
           include: {
             student: {
@@ -74,14 +78,15 @@ export async function createAttendanceSession(data: {
     async (session) => {
       const role = session.user.role;
 
-      if (role === "TEACHER") {
-        const course = await prisma.course.findUnique({
-          where: { id: data.courseId },
-        });
-        if (!course) return { success: false, error: "Course not found" };
-        if (course.teacherId !== session.user.id) {
-          return { success: false, error: "You can only create sessions for your own courses" };
-        }
+      const course = await prisma.course.findUnique({
+        where: { id: data.courseId },
+        select: { id: true, teacherId: true, groups: { select: { id: true, teacherId: true } } },
+      });
+      if (!course) return { success: false, error: "Course not found" };
+
+      // Не только педагог курса: занятие группы вправе завести и её педагог
+      if (!canManageCourseAttendance({ id: session.user.id, role }, course, data.groupId || null)) {
+        return { success: false, error: "You can only create sessions for your own courses" };
       }
 
       const dateValue = new Date(data.date);
@@ -115,9 +120,13 @@ export async function createAttendanceSession(data: {
         await revalidateCourseAttendance(data.courseId);
         return { success: true, data: attendanceSession };
       } catch (error) {
+        // P2002 — и обычная уникальность (курс, дата, группа), и частичный
+        // индекс для занятий без группы (миграция
+        // 20260916090000_attendance_no_group_unique). Сверяем код ошибки, а не
+        // текст: он не зависит ни от версии Prisma, ни от языка.
         if (
-          error instanceof Error &&
-          error.message.includes("Unique constraint")
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2002"
         ) {
           return { success: false, error: "An attendance session already exists for this date" };
         }
@@ -151,6 +160,7 @@ export async function updateAttendanceRecords(data: {
         where: { id: data.sessionId },
         include: {
           course: { select: { id: true, teacherId: true } },
+          group: { select: { teacherId: true } },
         },
       });
 
@@ -158,22 +168,55 @@ export async function updateAttendanceRecords(data: {
         return { success: false, error: "Attendance session not found" };
       }
 
-      if (role === "TEACHER" && attendanceSession.course.teacherId !== session.user.id) {
+      if (!canManageSession({ id: session.user.id, role }, attendanceSession)) {
         return { success: false, error: "You can only update attendance for your own courses" };
       }
 
+      // Отличаем «не менять» от «очистить»: отсутствие поля оставляет значение,
+      // а null его стирает. Раньше всё шло через `?? undefined`, и стереть
+      // заметку было невозможно — она молча возвращалась после обновления.
+      const teacherData: Prisma.AttendanceSessionUpdateInput = {};
+      if (data.teacher) {
+        if (data.teacher.status !== undefined) teacherData.teacherStatus = data.teacher.status;
+        if (data.teacher.note !== undefined) teacherData.teacherNote = data.teacher.note;
+        if (data.teacher.startedAt !== undefined) {
+          teacherData.startedAt = data.teacher.startedAt ? new Date(data.teacher.startedAt) : null;
+        }
+        if (data.teacher.endedAt !== undefined) {
+          teacherData.endedAt = data.teacher.endedAt ? new Date(data.teacher.endedAt) : null;
+        }
+
+        // Ведущего занятия меняет только администратор: иначе преподаватель
+        // прямым вызовом перевесил бы свой пропуск на коллегу.
+        if (data.teacher.teacherId !== undefined) {
+          if (role !== "ADMIN") {
+            return { success: false, error: "onlyAdminCanChangeTeacher" };
+          }
+          if (data.teacher.teacherId === null) {
+            teacherData.teacher = { disconnect: true };
+          } else {
+            const candidate = await prisma.user.findFirst({
+              where: {
+                id: data.teacher.teacherId,
+                role: { in: ["TEACHER", "ADMIN"] },
+                isActive: true,
+              },
+              select: { id: true },
+            });
+            if (!candidate) {
+              return { success: false, error: "teacherNotFound" };
+            }
+            teacherData.teacher = { connect: { id: candidate.id } };
+          }
+        }
+      }
+
       await prisma.$transaction([
-        ...(data.teacher
+        ...(Object.keys(teacherData).length > 0
           ? [
               prisma.attendanceSession.update({
                 where: { id: data.sessionId },
-                data: {
-                  teacherId: data.teacher.teacherId ?? undefined,
-                  teacherStatus: data.teacher.status ?? undefined,
-                  teacherNote: data.teacher.note ?? undefined,
-                  startedAt: data.teacher.startedAt ? new Date(data.teacher.startedAt) : undefined,
-                  endedAt: data.teacher.endedAt ? new Date(data.teacher.endedAt) : undefined,
-                },
+                data: teacherData,
               }),
             ]
           : []),
@@ -356,12 +399,13 @@ export async function deleteAttendanceSession(id: string) {
         where: { id },
         include: {
           course: { select: { id: true, teacherId: true } },
+          group: { select: { teacherId: true } },
         },
       });
 
       if (!existing) return { success: false, error: "Attendance session not found" };
 
-      if (role === "TEACHER" && existing.course.teacherId !== session.user.id) {
+      if (!canManageSession({ id: session.user.id, role }, existing)) {
         return { success: false, error: "You can only delete sessions for your own courses" };
       }
 
@@ -406,18 +450,26 @@ export async function getTeacherAttendanceReport(params?: {
       const teacherFilter =
         role === "TEACHER" ? session.user.id : params?.teacherId;
 
+      // Границы периода приходят из строки запроса, поэтому мусор отсекаем:
+      // new Date("чушь") дал бы Invalid Date и запрос упал бы целиком
+      const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+      const parseBound = (value?: Date | string) => {
+        if (!value) return undefined;
+        if (value instanceof Date) return value;
+        return DATE_ONLY.test(value) ? new Date(`${value}T00:00:00.000Z`) : undefined;
+      };
+      const from = parseBound(params?.from);
+      const to = parseBound(params?.to);
+
       const dateWhere =
-        params?.from || params?.to
-          ? {
-              date: {
-                ...(params.from ? { gte: new Date(params.from) } : {}),
-                ...(params.to ? { lte: new Date(params.to) } : {}),
-              },
-            }
+        from || to
+          ? { date: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } }
           : {};
 
       const sessions = await prisma.attendanceSession.findMany({
-        where: dateWhere,
+        // Курсы из Корзины не считаются: их занятия больше не ведутся, а
+        // статистика преподавателя продолжала бы их учитывать
+        where: { ...dateWhere, course: { deletedAt: null } },
         select: {
           id: true,
           date: true,
@@ -487,7 +539,10 @@ export async function getTeacherAttendanceReport(params?: {
 
       if (rows.size === 0) return { success: true as const, data: [] };
 
-      const teachers = await prisma.user.findMany({
+      // prismaUnscoped намеренно: обычный клиент прячет удалённых пользователей
+      // (см. src/lib/prisma.ts), и строка удалённого преподавателя осталась бы
+      // в отчёте с цифрами, но без имени
+      const teachers = await prismaUnscoped.user.findMany({
         where: { id: { in: [...rows.keys()] } },
         select: { id: true, firstName: true, lastName: true },
       });

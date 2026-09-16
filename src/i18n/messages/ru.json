@@ -666,7 +666,11 @@
     "totalSessions": "Всего занятий",
     "noTeacherData": "Пока нет занятий, по которым можно посчитать статистику",
     "periodFrom": "С",
-    "periodTo": "По"
+    "periodTo": "По",
+    "teacherSelect": "Кто вёл занятие",
+    "onlyAdminCanChangeTeacher": "Менять ведущего занятия может только администратор.",
+    "teacherNotFound": "Выбранный преподаватель не найден или отключён.",
+    "periodReset": "Сбросить период"
   },
   "users": {
     "title": "Пользователи",

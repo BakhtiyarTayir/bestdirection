@@ -48,6 +48,9 @@ interface AttendanceMarkingProps {
   teacher?: { id: string; firstName: string; lastName: string } | null;
   teacherStatus?: AttendanceStatus | null;
   teacherNote?: string | null;
+  /** Менять ведущего занятия вправе только администратор */
+  canChangeTeacher?: boolean;
+  teacherOptions?: { id: string; firstName: string; lastName: string }[];
 }
 
 interface StudentRecord {
@@ -63,6 +66,8 @@ export function AttendanceMarking({
   teacher,
   teacherStatus,
   teacherNote,
+  canChangeTeacher = false,
+  teacherOptions = [],
 }: AttendanceMarkingProps) {
   const t = useTranslations("attendance");
   const tCommon = useTranslations("common");
@@ -85,6 +90,7 @@ export function AttendanceMarking({
     (teacherStatus ?? "PRESENT") as AttendanceStatus
   );
   const [tNote, setTNote] = useState(teacherNote ?? "");
+  const [tId, setTId] = useState(teacher?.id ?? "");
 
   // Build initial records from existing data or defaults
   const existingMap = new Map(
@@ -102,6 +108,34 @@ export function AttendanceMarking({
 
   const [records, setRecords] = useState<StudentRecord[]>(initialRecords);
   const savedRecordsRef = useRef<StudentRecord[]>(initialRecords);
+  const savedTeacherRef = useRef({
+    id: teacher?.id ?? "",
+    status: (teacherStatus ?? "PRESENT") as AttendanceStatus,
+    note: teacherNote ?? "",
+  });
+
+  /**
+   * Значок «сохранено» считает и учеников, и строку преподавателя. Раньше он
+   * смотрел только на учеников и затирал «несохранено», выставленное правкой
+   * преподавателя: изменение статуса педагога можно было потерять, уйдя со
+   * страницы с зелёным значком.
+   */
+  const syncSaveStatus = (
+    nextRecords: StudentRecord[],
+    nextTeacher: { id: string; status: AttendanceStatus; note: string }
+  ) => {
+    const changed =
+      JSON.stringify(nextRecords) !== JSON.stringify(savedRecordsRef.current) ||
+      JSON.stringify(nextTeacher) !== JSON.stringify(savedTeacherRef.current);
+    setSaveStatus(changed ? "unsaved" : "saved");
+  };
+
+  const teacherState = (patch?: Partial<{ id: string; status: AttendanceStatus; note: string }>) => ({
+    id: tId,
+    status: tStatus,
+    note: tNote,
+    ...patch,
+  });
 
   const updateRecord = (
     studentId: string,
@@ -112,11 +146,17 @@ export function AttendanceMarking({
       const next = prev.map((r) =>
         r.studentId === studentId ? { ...r, [field]: value } : r
       );
-      // Check if changed from saved version
-      const hasChanges = JSON.stringify(next) !== JSON.stringify(savedRecordsRef.current);
-      setSaveStatus(hasChanges ? "unsaved" : "saved");
+      syncSaveStatus(next, teacherState());
       return next;
     });
+  };
+
+  // Сервер отвечает кодом, а не текстом: коды, которые пользователь может
+  // увидеть, переводим, остальное показываем как есть
+  const errorText = (code?: string) => {
+    if (code === "onlyAdminCanChangeTeacher") return t("onlyAdminCanChangeTeacher");
+    if (code === "teacherNotFound") return t("teacherNotFound");
+    return code ?? t("saveFailed");
   };
 
   const handleSave = async () => {
@@ -131,11 +171,23 @@ export function AttendanceMarking({
         })),
         // Преподавателя отмечаем только когда он известен: иначе запись
         // повисла бы без адресата и отчёт посчитал бы её пропуском.
-        teacher: teacher ? { status: tStatus, note: tNote.trim() || null } : undefined,
+        teacher:
+          teacher || (canChangeTeacher && tId)
+            ? {
+                status: tStatus,
+                // null стирает заметку; undefined оставил бы прежнюю
+                note: tNote.trim() || null,
+                // Ведущего отправляем, только если его вправе менять
+                ...(canChangeTeacher && tId !== (teacher?.id ?? "")
+                  ? { teacherId: tId || null }
+                  : {}),
+              }
+            : undefined,
       });
 
       if (result.success) {
         savedRecordsRef.current = records;
+        savedTeacherRef.current = teacherState();
         setSaveStatus("saved");
         toast({
           title: t("saved"),
@@ -145,7 +197,7 @@ export function AttendanceMarking({
       } else {
         toast({
           title: tErrors("error"),
-          description: result.error ?? t("saveFailed"),
+          description: errorText(result.error),
           variant: "destructive",
         });
       }
@@ -163,8 +215,7 @@ export function AttendanceMarking({
   const setAllStatus = (status: AttendanceStatus) => {
     setRecords((prev) => {
       const next = prev.map((r) => ({ ...r, status }));
-      const hasChanges = JSON.stringify(next) !== JSON.stringify(savedRecordsRef.current);
-      setSaveStatus(hasChanges ? "unsaved" : "saved");
+      syncSaveStatus(next, teacherState());
       return next;
     });
   };
@@ -199,17 +250,38 @@ export function AttendanceMarking({
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
           <div className="min-w-[180px] flex-1">
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {t("teacherRow")}
+              {canChangeTeacher && teacherOptions.length > 0 ? t("teacherSelect") : t("teacherRow")}
             </div>
-            <div className="font-medium">
-              {teacher.lastName} {teacher.firstName}
-            </div>
+            {canChangeTeacher && teacherOptions.length > 0 ? (
+              <Select
+                value={tId}
+                onValueChange={(v) => {
+                  setTId(v);
+                  syncSaveStatus(records, teacherState({ id: v }));
+                }}
+              >
+                <SelectTrigger className="mt-1 w-full">
+                  <SelectValue placeholder={t("teacherRow")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {teacherOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.lastName} {option.firstName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="font-medium">
+                {teacher.lastName} {teacher.firstName}
+              </div>
+            )}
           </div>
           <Select
             value={tStatus}
             onValueChange={(v) => {
               setTStatus(v as AttendanceStatus);
-              setSaveStatus("unsaved");
+              syncSaveStatus(records, teacherState({ status: v as AttendanceStatus }));
             }}
           >
             <SelectTrigger className="w-[170px]">
@@ -227,7 +299,7 @@ export function AttendanceMarking({
             value={tNote}
             onChange={(e) => {
               setTNote(e.target.value);
-              setSaveStatus("unsaved");
+              syncSaveStatus(records, teacherState({ note: e.target.value }));
             }}
             placeholder={t("teacherNotePlaceholder")}
             className="w-[220px]"
