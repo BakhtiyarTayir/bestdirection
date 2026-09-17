@@ -146,7 +146,7 @@ best-direction/
 │   │   │   ├── notifications/  sms + telegram
 │   │   │   ├── marketing/
 │   │   │   └── billing/        billing + payments
-│   │   └── generated/prisma/   ← клиент Prisma для api
+│   ├── generated/prisma/       ← клиент Prisma для api (вне src: tsc не копирует его JS в dist)
 │   ├── test/
 │   ├── Dockerfile
 │   └── package.json
@@ -163,7 +163,7 @@ generator client {
 
 generator apiClient {
   provider = "prisma-client-js"
-  output   = "../api/src/generated/prisma"
+  output   = "../api/generated/prisma"
 }
 ```
 
@@ -196,7 +196,7 @@ async function readSession(req: Request) {
 }
 ```
 
-**Главное отличие от текущего кода:** guard **не доверяет роли из токена**. По `payload.id` он загружает пользователя из БД (кэш в Redis на 30 секунд) и проверяет `isActive` и `deletedAt`. Роль берётся из БД. Так деактивация и смена роли действуют в пределах 30 секунд — находка 2.1 закрыта для всего, что уже переехало в `api`.
+**Главное отличие от текущего кода:** guard **не доверяет роли из токена**. По `payload.id` он загружает пользователя из БД (кэш в памяти процесса на 30 секунд: Redis не поднимаем) и проверяет `isActive` и `deletedAt`. Роль берётся из БД. Так деактивация и смена роли действуют в пределах 30 секунд — находка 2.1 закрыта для всего, что уже переехало в `api`.
 
 Проверить на старте реализации: точные имена куки и соль на проде (`AUTH_URL` на HTTPS → префикс `__Secure-`), совместимость версии `@auth/core` в `api` с версией в `web`.
 
@@ -205,15 +205,16 @@ async function readSession(req: Request) {
 ```ts
 // api/src/app.module.ts
 providers: [
-  { provide: APP_GUARD, useClass: OriginGuard },    // CSRF, см. 4.4
-  { provide: APP_GUARD, useClass: SessionGuard },   // пропускает только @Public()
-  { provide: APP_GUARD, useClass: PoliciesGuard },  // нет @CheckPolicies() и нет @Public() → 403
+  { provide: APP_GUARD, useClass: ApiThrottlerGuard }, // частота запросов, см. 4.7
+  { provide: APP_GUARD, useClass: OriginGuard },       // CSRF, см. 4.4
+  { provide: APP_GUARD, useClass: SessionGuard },      // пропускает только @Public()
+  { provide: APP_GUARD, useClass: PoliciesGuard },     // нет правила доступа → 403
 ]
 ```
 
-**Правило:** у каждого обработчика контроллера есть `@CheckPolicies(...)` или `@Public()`. Отсутствие метаданных = отказ. Забытая проверка превращается из дыры в 403 при первом ручном прогоне.
+**Правило:** у каждого обработчика контроллера есть `@CheckPolicies(...)`, `@Authenticated()` или `@Public()`. `@Authenticated()` — любой вошедший, без прав на объект: для действий человека только с собой (`GET /me`), объявляется так же явно. Отсутствие метаданных = отказ. Забытая проверка превращается из дыры в 403 при первом ручном прогоне.
 
-**Тест метаданных** (обязательный, падает сборка): через `DiscoveryService` и `Reflector` обойти все контроллеры и все обработчики; каждый должен иметь метаданные `@CheckPolicies` или `@Public`. Это аналог «сделать `roles` обязательным параметром».
+**Тест метаданных** (обязательный, падает сборка): через `DiscoveryService` и `Reflector` обойти все контроллеры и все обработчики; каждый должен иметь `@CheckPolicies`, `@Authenticated` или `@Public` (`api/test/access-metadata.e2e-spec.ts`). Это аналог «сделать `roles` обязательным параметром».
 
 ### 4.3. Политики: CASL + `@casl/prisma`
 
@@ -285,6 +286,8 @@ Server Actions в Next.js сами сверяют `Origin` с хостом. **П
 - `Origin` нет — допустимо только при заголовке `X-Internal-Token`, равном секрету из env (серверные вызовы из `web`), иначе 403.
 
 Дополнительно: кука остаётся `SameSite=Lax` (дефолт Auth.js). CORS не нужен и не включается: `web` и `api` на одном домене.
+
+**Вебхуки (этап 6).** Telegram и Eskiz шлют POST без `Origin` и без внутреннего токена — `OriginGuard` их отклонит. При переносе завести явный декоратор пропуска проверки `Origin` только для маршрутов, которые сами проверяют свой секрет.
 
 ### 4.5. Валидация
 
@@ -392,15 +395,29 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
 - `api/` на NestJS, `setGlobalPrefix("api/v2")`, порт 4000.
 - Второй генератор Prisma (раздел 3).
 - `SessionGuard` с мостом к Auth.js (4.1), `PoliciesGuard` + CASL (4.2–4.3), `OriginGuard` (4.4), `ZodValidationPipe` (4.5), фильтр ошибок (4.6), `AuditService` (4.9).
-- Тест метаданных (4.2) и инфраструктура e2e-тестов (раздел 7).
+- Тест метаданных (4.2) и инфраструктура e2e-тестов (раздел 7, Vitest + Testcontainers).
 - `GET /api/v2/health`.
 - `GET /api/v2/me` — доказательство, что мост к сессии работает на настоящей куке.
 - Для локальной разработки rewrite `/api/v2/*` → `http://localhost:4000` в `next.config.ts` (Caddy локально нет). Починить локальную БД: порт 5433 в `docker-compose.yml` занят другим проектом.
 - Сервис `api` в `docker-compose.prod.yml` (без Redis и Piston), маршрут в `Caddyfile` (раздел 8), CI (раздел 8).
-- Существующие `scripts/check-*.ts` на этом этапе только запускаются в CI как есть. В Jest они переносятся вместе со своим кодом: посещаемость — на этапе 3c, биллинг — на этапе 8.
+- Существующие `scripts/check-*.ts` на этом этапе только запускаются в CI как есть. В тесты `api` они переносятся вместе со своим кодом: посещаемость — на этапе 3c, биллинг — на этапе 8.
 - Ни одного перенесённого модуля — только проверка, что `api` поднимается в проде рядом с `web` и читает сессию.
 
 **Готово, когда** в проде `GET /api/v2/me` под настоящей кукой отдаёт пользователя, а деактивированный пользователь получает 401 в пределах 30 секунд; замерено реальное потребление памяти `api`.
+
+**Статус 2026-09-17:** сделано в ветке `stage-1-api-skeleton`, в прод не выкатывалось. Проверено локально: 40 тестов `api`; `/me` с настоящей кукой после входа в `web` — и из `dist`, и из Docker-образа с лимитом 200 МБ. Образ `api` ~570 МБ, в работе ~45 МБ памяти (из `nest start` без NODE_ENV=production — ~115 МБ).
+
+Отступления от текста выше, принятые при реализации:
+- **NestJS 11, а не 12.** 12 вышла 2026-08-27, а `nestjs-zod` и `@nestjs/swagger` пока поддерживают только 10–11. Перейти, когда подтянутся.
+- **Vitest вместо Jest** — см. раздел 7.
+- **`@Authenticated()`** — третий вид правила доступа, см. 4.2.
+- **Клиент Prisma — в `api/generated/prisma`, а не в `api/src/generated`**: `tsc` не копирует JS сгенерированного клиента в `dist`, а путь `../../../generated` одинаково верен из `src/` и из `dist/`.
+- **`multer` поднят до 2.4.0 через `overrides`**: в 2.2.0 из `@nestjs/platform-express@11` — DoS (исправлено только в Nest 12).
+- **Клиент `api` для `web` (`src/lib/api-client.ts`) и OpenAPI — на этапе 2**, вместе с первым модулем: на этапе 1 им нечего вызывать.
+- **CI:** задача `test` перед сборкой (tsc и eslint для обоих приложений, `scripts/check-*`, тесты `api`), два образа, после деплоя — `caddy reload` (Caddyfile примонтирован файлом, `up` его не перечитывает) и проверка `/api/v2/health` через Caddy с сервера. `INTERNAL_TOKEN` деплой создаёт в `.env` сервера сам, один раз.
+- **Образ `api` тяжелее, чем мог бы**: `prisma` и `typescript` — необязательные peer у `@prisma/client`, npm ставит их в прод-зависимости (~170 МБ). Отрезать средствами npm чисто не вышло; вернуться, если место на диске сервера станет проблемой.
+- **HSTS без `includeSubDomains`**: осторожнее, и у `crm.best-direction.uz` поддоменов нет.
+- Попутно: ошибка `react-hooks/rules-of-hooks` в `src/components/markdown-renderer.tsx` (аудит 4.5) — иначе `eslint` в CI красный; запасной пароль БД убран из `docker-compose.prod.yml` (аудит 2.13).
 
 ### Этап 10 — перенос в lms
 
@@ -452,7 +469,7 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
 - [ ] Все перечисленные в таблице actions удалены из `src/actions/`, `web` их не импортирует.
 - [ ] Все перечисленные API-роуты удалены из `src/app/api/`.
 - [ ] Страницы и библиотеки этапа из таблицы «ходят в Prisma напрямую» больше не импортируют `@/lib/prisma`.
-- [ ] Тест метаданных зелёный: у каждого обработчика есть `@CheckPolicies` или `@Public`.
+- [ ] Тест метаданных зелёный: у каждого обработчика есть `@CheckPolicies`, `@Authenticated` или `@Public`.
 - [ ] e2e-тест матрицы ролей модуля зелёный (раздел 7).
 - [ ] e2e-тест «чужой id → 404» зелёный.
 - [ ] Указанные находки аудита закрыты; в `AUDIT-2026-09-17.md` (копия в best-direction) у них проставлена отметка «закрыто на этапе N».
@@ -462,9 +479,11 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
 
 ## 7. Тесты
 
-**Инструменты:** Jest (стандарт NestJS), Supertest, Testcontainers с `postgres:16-alpine`. Миграции накатываются на контейнер перед прогоном.
+**Инструменты:** Vitest (с SWC ради метаданных декораторов), Supertest, Testcontainers с `postgres:16-alpine`. Миграции накатываются на контейнер перед прогоном (`api/test/global-setup.ts`).
 
-**Существующие проверки переносятся первыми.** `scripts/check-billing.ts`, `scripts/check-billing-db.ts`, `scripts/check-attendance-db.ts` превращаются в тесты Jest. Они уже работают против одноразовой БД — формат совместим.
+Не Jest, хотя он стандарт NestJS: `@auth/core` распространяется только как ESM, и Jest без пересборки чужих пакетов его не загружает. У NestJS есть официальный рецепт под Vitest.
+
+**Существующие проверки переносятся первыми.** `scripts/check-billing.ts`, `scripts/check-billing-db.ts`, `scripts/check-attendance-db.ts` превращаются в тесты `api`. Они уже работают против одноразовой БД — формат совместим.
 
 **Обязательные тесты для каждого модуля:**
 
@@ -514,7 +533,7 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
 		reverse_proxy app:3000
 	}
 
-	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	header Strict-Transport-Security "max-age=31536000"
 }
 ```
 
