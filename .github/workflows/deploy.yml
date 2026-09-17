@@ -1,8 +1,10 @@
 name: Deploy to Production
 
-# Образ собирается здесь, а не на сервере: next build берёт до 2 ГБ, а на VPS
-# 1 CPU и 956 МБ — сборка там падала бы по памяти. На сервер приезжает готовый
-# образ, ему нужна память только на запуск.
+# Образы собираются здесь, а не на сервере: next build берёт до 2 ГБ, а на VPS
+# 1 CPU и 956 МБ — сборка там падала бы по памяти. На сервер приезжают готовые
+# образы, им нужна память только на запуск.
+#
+# Порядок: test → build → deploy. Красные проверки — деплоя нет.
 
 on:
   push:
@@ -20,39 +22,123 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      # Одноразовая база для scripts/check-*-db.ts: они создают данные и не
+      # убирают их, поэтому только localhost
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: bd
+          POSTGRES_PASSWORD: bd
+          POSTGRES_DB: bd
+        ports:
+          - 5439:5432
+        options: >-
+          --health-cmd "pg_isready -U bd"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://bd:bd@localhost:5439/bd
+    steps:
+      - uses: actions/checkout@v7
+
+      # Node на раннере старше, чем нужно vitest и api (>= 22.12)
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            api/package-lock.json
+
+      - name: web — зависимости и клиент Prisma
+        run: |
+          npm ci
+          npx prisma generate --generator client
+
+      - name: web — типы и линтер
+        run: |
+          npx tsc --noEmit
+          npx eslint
+
+      - name: web — проверки биллинга, посещаемости и баллов
+        run: |
+          DATABASE_URL="$TEST_DATABASE_URL" npx prisma migrate deploy
+          npm run check:billing
+          npm run check:assessment-scoring
+          BILLING_DB_TEST_URL="$TEST_DATABASE_URL" npm run check:billing-db
+          ATTENDANCE_DB_TEST_URL="$TEST_DATABASE_URL" npm run check:attendance-db
+
+      - name: api — зависимости и клиент Prisma
+        working-directory: api
+        run: |
+          npm ci
+          npm run prisma:generate
+
+      - name: api — типы, линтер, тесты
+        # Тесты поднимают свою Postgres через Testcontainers (Docker на раннере есть)
+        working-directory: api
+        run: |
+          npm run typecheck
+          npm run lint
+          npm test
+
   build:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     outputs:
       image: ${{ steps.meta.outputs.image }}
+      api-image: ${{ steps.meta.outputs.api-image }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - name: Привести имя образа к нижнему регистру
+      - name: Привести имена образов к нижнему регистру
         id: meta
-        run: echo "image=${REGISTRY}/${IMAGE_NAME,,}" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "image=${REGISTRY}/${IMAGE_NAME,,}" >> "$GITHUB_OUTPUT"
+          echo "api-image=${REGISTRY}/${IMAGE_NAME,,}-api" >> "$GITHUB_OUTPUT"
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       - name: Логин в ghcr
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Сборка и публикация
-        uses: docker/build-push-action@v6
+      - name: Сборка и публикация web
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
           tags: |
             ${{ steps.meta.outputs.image }}:latest
             ${{ steps.meta.outputs.image }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+
+      - name: Сборка и публикация api
+        uses: docker/build-push-action@v7
+        with:
+          # Контекст — корень: схема Prisma общая. Что в него попадает —
+          # api/Dockerfile.dockerignore
+          context: .
+          file: api/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.api-image }}:latest
+            ${{ steps.meta.outputs.api-image }}:${{ github.sha }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
 
   deploy:
     needs: build
@@ -65,7 +151,7 @@ jobs:
           chmod 600 ~/.ssh/id_deploy
           ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Обновить конфигурацию на сервере
         # .env на сервере не трогаем — там секреты, сгенерированные на месте
@@ -78,9 +164,9 @@ jobs:
             scripts/backup/bestdirection-backup.service scripts/backup/bestdirection-backup.timer \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/bestdirection/"
 
-      - name: Забрать образ и перезапустить
+      - name: Забрать образы и перезапустить
         # GITHUB_TOKEN живёт только на время задания — его хватает, чтобы
-        # сервер стянул образ прямо сейчас, и хранить пароль на сервере не надо.
+        # сервер стянул образы прямо сейчас, и хранить пароль на сервере не надо.
         run: |
           ssh -i ~/.ssh/id_deploy "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" bash -s <<REMOTE
             set -euo pipefail
@@ -91,6 +177,12 @@ jobs:
             # Тег коммита, а не latest: docker compose иначе может оставить
             # закэшированный образ и молча выкатить старую версию.
             sed -i "s|^APP_IMAGE=.*|APP_IMAGE=${{ needs.build.outputs.image }}:${{ github.sha }}|" .env
+            grep -q '^API_IMAGE=' .env || echo 'API_IMAGE=' >> .env
+            sed -i "s|^API_IMAGE=.*|API_IMAGE=${{ needs.build.outputs.api-image }}:${{ github.sha }}|" .env
+
+            # Секрет серверных вызовов app → api. Создаётся на сервере один раз
+            # и дальше не меняется; в репозитории и в GitHub его нет.
+            grep -q '^INTERNAL_TOKEN=' .env || echo "INTERNAL_TOKEN=\$(openssl rand -hex 32)" >> .env
 
             # Ночной бэкап базы — таймер systemd: cron на сервере не установлен
             chmod 755 backup-db.sh
@@ -107,6 +199,11 @@ jobs:
             fi
 
             docker compose up -d --remove-orphans
+
+            # Caddyfile примонтирован файлом: up не перезапускает caddy, если
+            # поменялось только содержимое, — перечитываем конфигурацию явно.
+            docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+
             docker logout ghcr.io
 
             # Место на диске 20 ГБ — старые образы копятся быстро
@@ -125,3 +222,20 @@ jobs:
           done
           echo "сайт не ответил 200 за 200 секунд" >&2
           exit 1
+
+      - name: Проверка, что api поднялся
+        # С сервера и через Caddy: /api/v2/* маршрутизируется только на домене
+        # CRM, а какой домен в SITE_DOMAIN — лендинг или CRM — здесь не важно.
+        run: |
+          ssh -i ~/.ssh/id_deploy "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" bash -s <<'REMOTE'
+            set -uo pipefail
+            domain=$(grep '^APP_DOMAIN=' /opt/bestdirection/.env | cut -d= -f2-)
+            url="https://${domain}/api/v2/health"
+            for i in $(seq 1 24); do
+              if curl -fsS -m 10 "$url" | grep -q '"ok"'; then echo "api отвечает: $url"; exit 0; fi
+              echo "попытка $i"
+              sleep 5
+            done
+            echo "api не ответил за 120 секунд: $url" >&2
+            exit 1
+          REMOTE
