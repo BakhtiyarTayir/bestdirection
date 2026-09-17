@@ -12,7 +12,8 @@ COPY . .
 
 # Raise V8 heap limit so the build survives on low-RAM hosts (swap-backed).
 ENV NODE_OPTIONS=--max-old-space-size=2048
-RUN npx prisma generate
+# Только клиент web: у api свой генератор и свой образ
+RUN npx prisma generate --generator client
 RUN npm run build
 
 # Stage 3: Production

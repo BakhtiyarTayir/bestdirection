@@ -3,6 +3,14 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
+// Клиент для api/ (NestJS) на время переноса — см. MIGRATION-NESTJS.md, раздел 3.
+// Схема одна на оба приложения, миграциями до этапа 9 владеет web.
+// Генерируется из api: npm run prisma:generate.
+generator apiClient {
+  provider = "prisma-client-js"
+  output   = "../api/generated/prisma"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")

@@ -97,3 +97,9 @@ IT School - Brend Kit/
 /*.zip
 /design/
 /favicon*.png
+
+# api (NestJS)
+/api/node_modules
+/api/dist
+/api/generated
+/api/coverage

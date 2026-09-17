@@ -12,3 +12,5 @@ node_modules
 *.csv
 *.log
 .github
+# api/ собирается своим образом (api/Dockerfile)
+api
