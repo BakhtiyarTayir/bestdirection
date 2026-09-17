@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
+import { scoreAssessment } from "@/lib/assessment-scoring";
 import { revalidateLocalized } from "@/lib/revalidate";
 import { createAuditLog, computeChanges } from "@/lib/audit";
 import type { QuestionType, AssessmentType } from "@/validators/assessment";
@@ -519,54 +520,8 @@ export async function submitAssessmentAttempt(data: {
       return { success: false, error: "notEnrolled" };
     }
 
-    // Score the attempt
-    let totalScore = 0;
-    let maxScore = 0;
-
-    const answersWithScoring = data.answers.map((answer) => {
-      const question = assessment.questions.find((q) => q.id === answer.questionId);
-      if (!question) {
-        return {
-          questionId: answer.questionId,
-          selectedOptionIds: answer.selectedOptionIds,
-          isCorrect: false,
-          pointsEarned: 0,
-        };
-      }
-
-      maxScore += question.points;
-
-      const correctOptionIds = question.options
-        .filter((o) => o.isCorrect)
-        .map((o) => o.id)
-        .sort();
-
-      const selectedSorted = [...answer.selectedOptionIds].sort();
-
-      const isCorrect =
-        correctOptionIds.length === selectedSorted.length &&
-        correctOptionIds.every((id, index) => id === selectedSorted[index]);
-
-      const pointsEarned = isCorrect ? question.points : 0;
-      totalScore += pointsEarned;
-
-      return {
-        questionId: answer.questionId,
-        selectedOptionIds: answer.selectedOptionIds,
-        isCorrect,
-        pointsEarned,
-      };
-    });
-
-    // Account for unanswered questions
-    const answeredQuestionIds = new Set(data.answers.map((a) => a.questionId));
-    for (const question of assessment.questions) {
-      if (!answeredQuestionIds.has(question.id)) {
-        maxScore += question.points;
-      }
-    }
-
-    const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+    const { answers: answersWithScoring, score: totalScore, maxScore, percentage } =
+      scoreAssessment(assessment.questions, data.answers);
     const isPassed = percentage >= assessment.passingScore;
 
     // Race condition protection: check attempt count inside transaction
