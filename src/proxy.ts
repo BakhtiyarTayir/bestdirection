@@ -112,6 +112,14 @@ function getPublicHomeworkRewrite(request: NextRequest): NextResponse | null {
   const locale = hasLocalePrefix ? firstSegment! : defaultLocale;
   const pathSegments = hasLocalePrefix ? segments.slice(1) : segments;
 
+  // Этот rewrite идёт мимо intl-middleware, а next-intl узнаёт локаль страницы
+  // из заголовка X-NEXT-INTL-LOCALE, который ставит именно middleware. Без него
+  // локаль падала на узбекскую, и гость на /ru/courses/.../lessons/... получал
+  // страницу и ссылку на вход по-узбекски. Ставим заголовок так же, как это
+  // делает сам middleware.
+  const headers = new Headers(request.headers);
+  headers.set("X-NEXT-INTL-LOCALE", locale);
+
   if (
     pathSegments.length === 6 &&
     pathSegments[0] === "courses" &&
@@ -125,7 +133,7 @@ function getPublicHomeworkRewrite(request: NextRequest): NextResponse | null {
 
     const rewriteUrl = request.nextUrl.clone();
     rewriteUrl.pathname = `${localePathPrefix}/homework/open/${courseSlug}/${lessonSlug}/${homeworkSlug}`;
-    return NextResponse.rewrite(rewriteUrl);
+    return NextResponse.rewrite(rewriteUrl, { request: { headers } });
   }
 
   if (
@@ -139,7 +147,7 @@ function getPublicHomeworkRewrite(request: NextRequest): NextResponse | null {
 
     const rewriteUrl = request.nextUrl.clone();
     rewriteUrl.pathname = `${localePathPrefix}/lessons/open/${courseSlug}/${lessonSlug}`;
-    return NextResponse.rewrite(rewriteUrl);
+    return NextResponse.rewrite(rewriteUrl, { request: { headers } });
   }
 
   return null;
