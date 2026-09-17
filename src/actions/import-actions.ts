@@ -6,6 +6,7 @@ import { revalidateLocalized } from "@/lib/revalidate";
 import { bufferToData, jsonToData, validateSpreadsheetData } from "@/lib/spreadsheet-utils";
 import { generateUniqueSlug, slugify } from "@/lib/slugify";
 import type { QuestionType } from "@/validators/assessment";
+import { CODE_HOMEWORK_ENABLED } from "@/lib/code-runner/config";
 
 // ---------- importTestFromFile ----------
 export async function importTestFromFile(formData: FormData) {
@@ -226,7 +227,10 @@ function clamp(value: number, min: number, max: number) {
 }
 
 function normalizeImportedHomework(raw: ImportedHomework): ImportedHomework {
-  const type = HOMEWORK_TYPES.has(raw.type || "") ? raw.type : "CODE";
+  const requestedType = HOMEWORK_TYPES.has(raw.type || "") ? raw.type : "CODE";
+  // Пока автопроверка выключена, CODE-задание импортируется как FILE: условие
+  // сохраняется, решение преподаватель проверяет вручную.
+  const type = requestedType === "CODE" && !CODE_HOMEWORK_ENABLED ? "FILE" : requestedType;
   const language =
     raw.language && PROGRAMMING_LANGUAGES.has(raw.language)
       ? raw.language

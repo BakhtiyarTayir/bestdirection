@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { withAuth } from "@/lib/action-utils";
 import { submitSolutionInternal } from "@/lib/homework-submission";
+import { CODE_HOMEWORK_ENABLED } from "@/lib/code-runner/config";
 import { revalidateLocalized } from "@/lib/revalidate";
 import { createAuditLog, computeChanges } from "@/lib/audit";
 import { slugify, generateUniqueSlug } from "@/lib/slugify";
@@ -77,19 +78,24 @@ export async function createHomework(
       const ownership = await validateLessonOwnership(lessonId, session.user.id, session.user.role);
       if (!ownership.success) return { success: false, error: ownership.error };
 
+      const type = data.type ?? "FILE";
+      if (type === "CODE" && !CODE_HOMEWORK_ENABLED) {
+        return { success: false, error: "codeHomeworkDisabled" };
+      }
+
       const slug = await generateUniqueSlug(
         slugify(data.title),
         async (s) => !!(await prisma.homework.findFirst({ where: { lessonId, slug: s }, select: { id: true } }))
       );
 
-      const isFile = data.type === "FILE";
+      const isFile = type === "FILE";
 
       const homework = await prisma.homework.create({
         data: {
           title: data.title,
           slug,
           description: data.description,
-          type: data.type ?? "CODE",
+          type,
           language: isFile ? null : (data.language ?? null),
           starterCode: isFile ? null : data.starterCode,
           solutionCode: isFile ? null : data.solutionCode,
@@ -165,6 +171,10 @@ export async function updateHomework(
       if (!ownership.success) return { success: false, error: ownership.error };
 
       const existing = ownership.homework;
+
+      if (data.type === "CODE" && existing.type !== "CODE" && !CODE_HOMEWORK_ENABLED) {
+        return { success: false, error: "codeHomeworkDisabled" };
+      }
 
       let slugUpdate: { slug: string } | Record<string, never> = {};
       if (data.title !== undefined && data.title !== existing.title) {

@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { createHomework, updateHomework } from "@/actions/homework-actions";
-import { LANGUAGE_LABELS } from "@/lib/code-runner/config";
+import { CODE_HOMEWORK_ENABLED, LANGUAGE_LABELS } from "@/lib/code-runner/config";
 import { Badge } from "@/components/ui/badge";
 import { MarkdownEditor } from "@/components/markdown-editor";
 import { Loader2, Save, Plus, Trash2, Eye, EyeOff } from "lucide-react";
@@ -72,7 +72,12 @@ export function HomeworkForm({ courseSlug, lessonSlug, lessonId, homework }: Hom
   const tErrors = useTranslations("errors");
   const tSuccess = useTranslations("success");
 
-  const [type, setType] = useState<"CODE" | "FILE">((homework?.type as "CODE" | "FILE") || "CODE");
+  const [type, setType] = useState<"CODE" | "FILE">(
+    (homework?.type as "CODE" | "FILE") || (CODE_HOMEWORK_ENABLED ? "CODE" : "FILE")
+  );
+  // Вариант CODE скрыт, пока выключена автопроверка; у уже созданного
+  // CODE-задания он остаётся, чтобы форма не меняла тип молча.
+  const canChooseCode = CODE_HOMEWORK_ENABLED || homework?.type === "CODE";
   const [title, setTitle] = useState(homework?.title || "");
   const [description, setDescription] = useState(homework?.description || "");
   const [language, setLanguage] = useState<string>(homework?.language || "PYTHON");
@@ -226,7 +231,7 @@ export function HomeworkForm({ courseSlug, lessonSlug, lessonId, homework }: Hom
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="CODE">{t("homeworkTypeCode")}</SelectItem>
+              {canChooseCode && <SelectItem value="CODE">{t("homeworkTypeCode")}</SelectItem>}
               <SelectItem value="FILE">{t("homeworkTypeFile")}</SelectItem>
             </SelectContent>
           </Select>
