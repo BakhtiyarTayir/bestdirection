@@ -1,0 +1,9 @@
+# Ночной бэкап базы. Ставится деплоем (.github/workflows/deploy.yml).
+[Unit]
+Description=Best Direction: бэкап базы
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/bestdirection/backup-db.sh nightly

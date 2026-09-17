@@ -1,0 +1,11 @@
+# Каждую ночь в 03:30 по времени сервера (Asia/Tashkent). Persistent: если
+# сервер был выключен в это время, бэкап снимется сразу после включения.
+[Unit]
+Description=Best Direction: ночной бэкап базы
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

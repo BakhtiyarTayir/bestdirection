@@ -74,6 +74,9 @@ jobs:
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/bestdirection/docker-compose.yml"
           scp -i ~/.ssh/id_deploy Caddyfile \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/bestdirection/Caddyfile"
+          scp -i ~/.ssh/id_deploy scripts/backup/backup-db.sh \
+            scripts/backup/bestdirection-backup.service scripts/backup/bestdirection-backup.timer \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/bestdirection/"
 
       - name: Забрать образ и перезапустить
         # GITHUB_TOKEN живёт только на время задания — его хватает, чтобы
@@ -89,7 +92,20 @@ jobs:
             # закэшированный образ и молча выкатить старую версию.
             sed -i "s|^APP_IMAGE=.*|APP_IMAGE=${{ needs.build.outputs.image }}:${{ github.sha }}|" .env
 
+            # Ночной бэкап базы — таймер systemd: cron на сервере не установлен
+            chmod 755 backup-db.sh
+            install -m 644 bestdirection-backup.service bestdirection-backup.timer /etc/systemd/system/
+            systemctl daemon-reload
+            systemctl enable --now bestdirection-backup.timer
+
             docker compose pull
+
+            # Бэкап до того, как новый контейнер накатит миграции. Не удался —
+            # деплой останавливается. На пустом сервере базы ещё нет.
+            if docker compose ps --status running --services | grep -qx db; then
+              ./backup-db.sh pre-deploy-${{ github.sha }}
+            fi
+
             docker compose up -d --remove-orphans
             docker logout ghcr.io
 
