@@ -2,8 +2,10 @@ services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
+    # 5436, а не 5433: 5433 на машине разработчика занят базой lms. Совпадает
+    # с DATABASE_URL в локальном .env.
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5436:5432"
     environment:
       POSTGRES_USER: bestdirection
       POSTGRES_PASSWORD: ${DB_PASSWORD:-bestdirectionpassword}

@@ -7,7 +7,7 @@
     "prisma:generate": "prisma generate --schema ../prisma/schema.prisma --generator apiClient",
     "build": "nest build",
     "start": "node dist/main.js",
-    "dev": "nest start --watch",
+    "dev": "nest start --watch --exec \"node --env-file-if-exists=.env\"",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
