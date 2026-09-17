@@ -6,7 +6,8 @@ services:
       - "127.0.0.1:5433:5432"
     environment:
       POSTGRES_USER: bestdirection
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-bestdirectionpassword}
+      # Без запасного значения: пароль обязан быть в .env (аудит 2.13)
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?нужен DB_PASSWORD}
       POSTGRES_DB: bestdirection
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -50,7 +51,7 @@ services:
     expose:
       - "3000"
     environment:
-      DATABASE_URL: postgresql://bestdirection:${DB_PASSWORD:-bestdirectionpassword}@db:5432/bestdirection?schema=public
+      DATABASE_URL: postgresql://bestdirection:${DB_PASSWORD:?нужен DB_PASSWORD}@db:5432/bestdirection?schema=public
       AUTH_SECRET: ${AUTH_SECRET:?нужен AUTH_SECRET}
       AUTH_URL: ${AUTH_URL:?нужен AUTH_URL}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-${AUTH_SECRET}}
@@ -78,6 +79,38 @@ services:
       db:
         condition: service_healthy
     mem_limit: 512m
+
+  api:
+    # Бэкенд на NestJS — перенос с Server Actions (MIGRATION-NESTJS.md). Образ
+    # собирается в CI из api/Dockerfile. Снаружи доступен только через Caddy:
+    # /api/v2/* на домене CRM.
+    image: ${API_IMAGE:?нужен API_IMAGE}
+    restart: unless-stopped
+    expose:
+      - "4000"
+    # Каждая переменная перечислена явно: Compose не пробрасывает .env в
+    # контейнер сам — так в проде когда-то потерялись Piston и Upstash.
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      DATABASE_URL: postgresql://bestdirection:${DB_PASSWORD:?нужен DB_PASSWORD}@db:5432/bestdirection?schema=public
+      # Тот же секрет, что у app: api читает сессионную куку web
+      AUTH_SECRET: ${AUTH_SECRET:?нужен AUTH_SECRET}
+      # Откуда разрешены изменяющие запросы (проверка Origin)
+      APP_URL: ${AUTH_URL:?нужен AUTH_URL}
+      # Секрет серверных вызовов app → api; деплой создаёт его в .env один раз
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:?нужен INTERNAL_TOKEN}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4000/api/v2/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    # Замер 2026-09-17: ~115 МБ. На сервере 956 МБ, увеличивать VPS не будем.
+    mem_limit: 200m
 
 volumes:
   pgdata:

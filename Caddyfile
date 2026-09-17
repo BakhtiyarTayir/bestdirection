@@ -22,5 +22,17 @@ www.{$MARKETING_DOMAIN} {
 # Личный кабинет / CRM
 {$APP_DOMAIN} {
 	encode zstd gzip
-	reverse_proxy app:3000
+
+	# Перенос на NestJS: /api/v2/* обслуживает api, всё остальное — app.
+	# Только на домене CRM: лендинг api не нужен.
+	handle /api/v2/* {
+		reverse_proxy api:4000
+	}
+
+	handle {
+		reverse_proxy app:3000
+	}
+
+	# Браузер ходит на CRM только по HTTPS (аудит 2.10)
+	header Strict-Transport-Security "max-age=31536000"
 }

@@ -1,0 +1,9 @@
+# Контекст образа api — корень репозитория, но нужны только api/ и prisma/
+*
+!api
+!prisma
+api/node_modules
+api/dist
+api/generated
+api/coverage
+api/*.tsbuildinfo
