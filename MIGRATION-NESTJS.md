@@ -56,7 +56,7 @@ Server Actions выглядят как вызов функции, поэтому
 | **VPS не увеличиваем** | Сейчас нет возможности. Замер прода 2026-09-17: `app` 189 МБ, `db` 36 МБ, `caddy` 33 МБ; свободно 594 МБ из 956, swap 2 ГБ. Цифра «2–4 ГБ» была нужна в основном под Piston | `api` получает лимит ~200 МБ. Раздел 8 «Память сервера» не действует |
 | **Piston не поднимаем, задания CODE отключены** | Не влезает в память. В проде на 2026-09-17 нет ни одного домашнего задания | В этапе 0 тип CODE убирается из формы и импорта. Очереди `code-run` нет. Этап 5 закрывает 7.1 отключением, а не деплоем Piston |
 | **Redis не поднимаем** | Экономия памяти; один инстанс `api` | Rate limiting — в памяти процесса. Очереди откладываются до этапа 6; кандидат — pg-boss поверх той же Postgres |
-| **Бэкапы БД хранятся на том же сервере** | БД 11 МБ, отдельного хранилища нет | `pg_dump` ночью по cron и перед каждым деплоем, ротация 14 дней. Защищает от неудачной миграции и ошибочного удаления, **не** от потери сервера |
+| **Бэкапы БД хранятся на том же сервере** | БД 11 МБ, отдельного хранилища нет | `pg_dump` ночью (таймер systemd, cron на сервере нет) и перед каждым деплоем, ротация 14 дней. Защищает от неудачной миграции и ошибочного удаления, **не** от потери сервера |
 | **Уроки и ДЗ платных курсов закрыты для гостей** (находка 2.9) | Решение владельца | Делается в этапе 0. Все курсы в проде сейчас PAID, поэтому публичные страницы уроков фактически закрываются целиком; гость отправляется на вход |
 | **Перенос `api/` в `~/Projects/lms` — в самом конце** | Сначала довести best-direction | Добавлен этап 10. До него lms не синхронизируется с изменениями переноса |
 
@@ -64,20 +64,22 @@ Server Actions выглядят как вызов функции, поэтому
 
 ## 1. Этап 0 — сделать в текущем коде ДО начала переноса
 
+**Статус 2026-09-17:** всё сделано в коде и проверено на собранном приложении с одноразовой базой; деплой в прод — по команде владельца. Коммиты `9cab156`…`4ba3a42`.
+
 Перенос займёт месяцы. Эти дыры нельзя оставлять открытыми на всё это время. Делаются прямо в Next.js-коде.
 
 **Безопасность (блок A аудита):**
-- [ ] 2.3 — добавить `{ roles: ["ADMIN", "TEACHER"] }` в `withAuth` у: `src/actions/group-actions.ts` `getAvailableStudentsForGroup`, `getUngroupedStudents`, `getGroupDetails`; `src/actions/course-actions.ts` `getEnrolledStudents`, `getCourseById`; `src/actions/attendance-actions.ts` `getAttendanceSessions`, `getAttendanceReport`; `src/actions/user-actions.ts` `getUserById`.
-- [ ] 2.5 — удалить `getAccessibleStudentIds` из `src/actions/parent-actions.ts`.
-- [ ] 2.2 — `src/app/api/homework/[homeworkId]/upload/route.ts`: убрать `.html` из разрешённых, MIME выводить из расширения, не из `file.type`. `src/app/api/files/[fileId]/route.ts`: для всего, кроме картинок, отдавать `application/octet-stream` + `Content-Disposition: attachment`. `src/app/uploads/[...path]/route.ts`: убрать `.svg`.
-- [ ] 2.6 — `npm audit fix` ради `@auth/core`, проверить вход.
-- [ ] 3.1 — дедупликация `answers` по `questionId` в `submitAssessmentAttempt`, `maxScore` считать только по `assessment.questions`.
-- [ ] 2.9 — публичные страницы уроков и ДЗ не показывают платные курсы, гость отправляется на вход.
+- [x] 2.3 — добавить `{ roles: ["ADMIN", "TEACHER"] }` в `withAuth` у: `src/actions/group-actions.ts` `getAvailableStudentsForGroup`, `getUngroupedStudents`, `getGroupDetails`; `src/actions/course-actions.ts` `getEnrolledStudents`, `getCourseById`; `src/actions/attendance-actions.ts` `getAttendanceSessions`, `getAttendanceReport`; `src/actions/user-actions.ts` `getUserById`.
+- [x] 2.5 — удалить `getAccessibleStudentIds` из `src/actions/parent-actions.ts`.
+- [x] 2.2 — `src/app/api/homework/[homeworkId]/upload/route.ts`: убрать `.html` из разрешённых, MIME выводить из расширения, не из `file.type`. `src/app/api/files/[fileId]/route.ts`: для всего, кроме картинок, отдавать `application/octet-stream` + `Content-Disposition: attachment`. `src/app/uploads/[...path]/route.ts`: убрать `.svg`.
+- [x] 2.6 — `npm audit fix` ради `@auth/core`, проверить вход.
+- [x] 3.1 — дедупликация `answers` по `questionId` в `submitAssessmentAttempt`, `maxScore` считать только по `assessment.questions`.
+- [x] 2.9 — публичные страницы уроков и ДЗ не показывают платные курсы, гость отправляется на вход.
 
 **Эксплуатация:**
-- [ ] 7.1 — Piston отключён: убрать тип CODE из формы ДЗ и импорта, по умолчанию FILE.
-- [ ] 1.5 — `concurrency` в `.github/workflows/deploy.yml`.
-- [ ] Бэкап БД на сервере: `pg_dump` ночью и перед каждым деплоем, ротация 14 дней. Сейчас бэкапов нет, а миграции накатываются на каждом старте.
+- [x] 7.1 — Piston отключён: убрать тип CODE из формы ДЗ и импорта, по умолчанию FILE.
+- [x] 1.5 — `concurrency` в `.github/workflows/deploy.yml`.
+- [x] Бэкап БД на сервере: `pg_dump` ночью и перед каждым деплоем, ротация 14 дней. Сейчас бэкапов нет, а миграции накатываются на каждом старте.
 
 ---
 
@@ -377,7 +379,7 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
 | 9 | вход и сессии | `auth-actions`, `email-verification-actions`, `telegram-auth-actions`; `src/lib/auth.ts` | `auth/[...nextauth]` | 2.1 целиком, 2.12 |
 | 10 | перенос в `~/Projects/lms` | — | — | — |
 
-Этап 3 разбит на три, потому что это самый крупный кусок интерфейса: его actions импортируются примерно в 44 местах. 2.2, 2.9, 3.1 и 7.1 (Piston) закрываются на этапе 0 и при переносе только сохраняются.
+Этап 3 разбит на три, потому что это самый крупный кусок интерфейса: его actions импортируются примерно в 44 местах. На этапе 3a закрыть и мелочь из этапа 0: название чужого курса видно в «хлебных крошках» кабинета даже на странице 404. 2.2, 2.9, 3.1 и 7.1 (Piston) закрываются на этапе 0 и при переносе только сохраняются.
 
 **Биллинг (этап 8) переносится не раньше, чем в проде проверена первая заморозка месяцев после 1 октября 2026.**
 
