@@ -1,11 +1,10 @@
 import { prisma } from "@/lib/prisma";
-import { Link } from "@/i18n/navigation";
+import { Link, redirect } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
 import { LANGUAGE_LABELS } from "@/lib/code-runner/config";
-import { getTranslations } from "next-intl/server";
-import { notFound } from "next/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { Code2, FileUp } from "lucide-react";
 
 interface PublicHomeworkPageProps {
@@ -17,7 +16,10 @@ export default async function PublicHomeworkPage({ params }: PublicHomeworkPageP
   const tAuth = await getTranslations("auth");
   const tAssessments = await getTranslations("assessments");
   const { courseSlug, lessonSlug, homeworkSlug } = await params;
+  const callbackPath = `/courses/${courseSlug}/lessons/${lessonSlug}/homework/${homeworkSlug}`;
 
+  // Как у публичного урока: гостю — только задания бесплатных курсов,
+  // остальное через вход.
   const homework = await prisma.homework.findFirst({
     where: {
       slug: homeworkSlug,
@@ -28,6 +30,7 @@ export default async function PublicHomeworkPage({ params }: PublicHomeworkPageP
         course: {
           slug: courseSlug,
           isPublished: true,
+          accessType: "FREE",
         },
       },
     },
@@ -52,9 +55,9 @@ export default async function PublicHomeworkPage({ params }: PublicHomeworkPageP
     },
   });
 
-  if (!homework) notFound();
-
-  const callbackPath = `/courses/${courseSlug}/lessons/${lessonSlug}/homework/${homeworkSlug}`;
+  if (!homework) {
+    return redirect({ href: { pathname: "/login", query: { callbackUrl: callbackPath } }, locale: await getLocale() });
+  }
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8 md:px-6 md:py-10">

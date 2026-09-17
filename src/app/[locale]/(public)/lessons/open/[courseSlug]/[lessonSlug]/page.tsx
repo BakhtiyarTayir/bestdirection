@@ -1,13 +1,12 @@
 import { prisma } from "@/lib/prisma";
-import { Link } from "@/i18n/navigation";
+import { Link, redirect } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LessonContent } from "@/components/lesson-content";
 import { LessonTOC } from "@/components/lesson-toc";
 import { LANGUAGE_LABELS } from "@/lib/code-runner/config";
-import { getTranslations } from "next-intl/server";
-import { notFound } from "next/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { Code2, FileText, Target, ArrowLeft, ArrowRight } from "lucide-react";
 import { hasToc } from "@/lib/toc";
 import { cn } from "@/lib/utils";
@@ -21,7 +20,11 @@ export default async function PublicLessonPage({ params }: PublicLessonPageProps
   const tHomework = await getTranslations("homework");
   const tAuth = await getTranslations("auth");
   const { courseSlug, lessonSlug } = await params;
+  const callbackPath = `/courses/${courseSlug}/lessons/${lessonSlug}`;
 
+  // Гостю открыты только уроки бесплатных курсов. Платный или закрытый курс,
+  // как и несуществующий урок, ведёт на вход: после входа кабинет сам решит,
+  // есть ли доступ. Раньше уроки платных курсов читались без регистрации.
   const lesson = await prisma.lesson.findFirst({
     where: {
       slug: lessonSlug,
@@ -29,6 +32,7 @@ export default async function PublicLessonPage({ params }: PublicLessonPageProps
       course: {
         slug: courseSlug,
         isPublished: true,
+        accessType: "FREE",
       },
     },
     select: {
@@ -52,7 +56,9 @@ export default async function PublicLessonPage({ params }: PublicLessonPageProps
     },
   });
 
-  if (!lesson) notFound();
+  if (!lesson) {
+    return redirect({ href: { pathname: "/login", query: { callbackUrl: callbackPath } }, locale: await getLocale() });
+  }
 
   const siblings = await prisma.lesson.findMany({
     where: { courseId: lesson.courseId, isPublished: true },
@@ -66,7 +72,6 @@ export default async function PublicLessonPage({ params }: PublicLessonPageProps
       ? siblings[currentIndex + 1]
       : null;
 
-  const callbackPath = `/courses/${courseSlug}/lessons/${lessonSlug}`;
   const showToc = !!lesson.content && hasToc(lesson.content, lesson.contentFormat);
 
   return (
