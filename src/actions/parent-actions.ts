@@ -25,19 +25,6 @@ const STUDENT_SELECT = {
   email: true,
 } as const;
 
-/**
- * Ученики, к которым у пользователя есть доступ как у родителя.
- * Возвращает пустой массив для всех остальных ролей — вызывающий код
- * может смело использовать его в `where: { id: { in: ... } }`.
- */
-export async function getAccessibleStudentIds(userId: string): Promise<string[]> {
-  const links = await prisma.parentStudent.findMany({
-    where: { parentId: userId },
-    select: { studentId: true },
-  });
-  return links.map((l) => l.studentId);
-}
-
 // ---------- getStudentParents ----------
 export async function getStudentParents(studentId: string) {
   return withAuth(

@@ -334,7 +334,13 @@ export async function getUsersHomeworkStatistics(filters: {
 
 // ---------- getUserById ----------
 export async function getUserById(id: string) {
-  return withAuth(async () => {
+  return withAuth(async (session) => {
+    // Свой профиль доступен каждому, чужой — только администратору. Раньше
+    // любой вошедший получал email, телефон и роль любого пользователя по id.
+    if (id !== session.user.id && session.user.role !== "ADMIN") {
+      return { success: false, error: "forbidden" };
+    }
+
     const user = await prisma.user.findUnique({
       where: { id },
       select: {

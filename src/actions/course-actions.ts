@@ -60,9 +60,18 @@ export async function getCourses() {
 
 // ---------- getCourseById ----------
 export async function getCourseById(id: string) {
-  return withAuth(async () => {
-    const course = await prisma.course.findUnique({
-      where: { id, deletedAt: null },
+  return withAuth(async (session) => {
+    const { id: userId, role } = session.user;
+    // Персонал видит любой курс: преподаватели подменяют друг друга. Остальным —
+    // только опубликованный курс, на который записан сам пользователь, как в
+    // getCourses. Раньше по id отдавался любой курс, включая черновики.
+    const isStaff = role === "ADMIN" || role === "TEACHER";
+    const course = await prisma.course.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+        ...(isStaff ? {} : { isPublished: true, enrollments: { some: { studentId: userId } } }),
+      },
       include: {
         teacher: {
           select: { id: true, firstName: true, lastName: true, email: true },
@@ -394,31 +403,34 @@ export async function unenrollStudent(courseId: string, studentId: string) {
  * нельзя — в форме у всех по умолчанию «присутствует».
  */
 export async function getEnrolledStudents(courseId: string, groupId?: string) {
-  return withAuth(async () => {
-    const enrollments = await prisma.enrollment.findMany({
-      where: { courseId, ...(groupId ? { groupId } : {}) },
-      include: {
-        student: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            phone: true,
-            isActive: true,
+  return withAuth(
+    async () => {
+      const enrollments = await prisma.enrollment.findMany({
+        where: { courseId, ...(groupId ? { groupId } : {}) },
+        include: {
+          student: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true,
+              isActive: true,
+            },
           },
         },
-      },
-      orderBy: { createdAt: "asc" },
-    });
+        orderBy: { createdAt: "asc" },
+      });
 
-    const students = enrollments.map((e) => ({
-      ...e.student,
-      enrolledAt: e.createdAt,
-    }));
+      const students = enrollments.map((e) => ({
+        ...e.student,
+        enrolledAt: e.createdAt,
+      }));
 
-    return { success: true, data: students };
-  });
+      return { success: true, data: students };
+    },
+    { roles: ["ADMIN", "TEACHER"] }
+  );
 }
 
 // ---------- getAvailableStudents ----------

@@ -48,7 +48,21 @@ async function resolveDefaultTeacherId(
 
 // ---------- getAttendanceSessions ----------
 export async function getAttendanceSessions(courseId: string) {
-  return withAuth(async () => {
+  return withAuth(async (session) => {
+    const { id: userId, role } = session.user;
+    const isStaff = role === "ADMIN" || role === "TEACHER";
+
+    // Ученик видит занятия только своего курса и только свои отметки. Раньше
+    // любой вошедший получал отметки всех учеников любого курса вместе с email.
+    if (!isStaff) {
+      if (role !== "STUDENT") return { success: false, error: "forbidden" };
+      const enrollment = await prisma.enrollment.findUnique({
+        where: { studentId_courseId: { studentId: userId, courseId } },
+        select: { id: true },
+      });
+      if (!enrollment) return { success: false, error: "forbidden" };
+    }
+
     const sessions = await prisma.attendanceSession.findMany({
       where: { courseId },
       include: {
@@ -57,6 +71,7 @@ export async function getAttendanceSessions(courseId: string) {
         // Группа занятия нужна странице отметки: по ней сужается список учеников
         group: { select: { id: true, name: true } },
         records: {
+          where: isStaff ? undefined : { studentId: userId },
           include: {
             student: {
               select: { id: true, firstName: true, lastName: true, email: true },
@@ -272,63 +287,66 @@ export async function updateAttendanceRecords(data: {
 
 // ---------- getAttendanceReport ----------
 export async function getAttendanceReport(courseId: string) {
-  return withAuth(async () => {
-    const sessions = await prisma.attendanceSession.findMany({
-      where: { courseId },
-      include: {
-        records: {
-          include: {
-            student: {
-              select: { id: true, firstName: true, lastName: true, email: true },
+  return withAuth(
+    async () => {
+      const sessions = await prisma.attendanceSession.findMany({
+        where: { courseId },
+        include: {
+          records: {
+            include: {
+              student: {
+                select: { id: true, firstName: true, lastName: true, email: true },
+              },
             },
           },
         },
-      },
-      orderBy: { date: "asc" },
-    });
+        orderBy: { date: "asc" },
+      });
 
-    const enrollments = await prisma.enrollment.findMany({
-      where: { courseId },
-      include: {
-        student: {
-          select: { id: true, firstName: true, lastName: true, email: true },
+      const enrollments = await prisma.enrollment.findMany({
+        where: { courseId },
+        include: {
+          student: {
+            select: { id: true, firstName: true, lastName: true, email: true },
+          },
         },
-      },
-      orderBy: { student: { firstName: "asc" } },
-    });
+        orderBy: { student: { firstName: "asc" } },
+      });
 
-    const students = enrollments.map((e) => e.student);
+      const students = enrollments.map((e) => e.student);
 
-    const matrix = students.map((student) => {
-      const attendance: Record<
-        string,
-        { status: AttendanceStatus; note?: string | null }
-      > = {};
+      const matrix = students.map((student) => {
+        const attendance: Record<
+          string,
+          { status: AttendanceStatus; note?: string | null }
+        > = {};
 
-      for (const sess of sessions) {
-        const record = sess.records.find((r) => r.studentId === student.id);
-        if (record) {
-          attendance[sess.id] = {
-            status: record.status,
-            note: record.note,
-          };
+        for (const sess of sessions) {
+          const record = sess.records.find((r) => r.studentId === student.id);
+          if (record) {
+            attendance[sess.id] = {
+              status: record.status,
+              note: record.note,
+            };
+          }
         }
-      }
 
-      return { student, attendance };
-    });
+        return { student, attendance };
+      });
 
-    const sessionsSummary = sessions.map((s) => ({
-      id: s.id,
-      date: s.date,
-      note: s.note,
-    }));
+      const sessionsSummary = sessions.map((s) => ({
+        id: s.id,
+        date: s.date,
+        note: s.note,
+      }));
 
-    return {
-      success: true,
-      data: { sessions: sessionsSummary, students: matrix },
-    };
-  });
+      return {
+        success: true,
+        data: { sessions: sessionsSummary, students: matrix },
+      };
+    },
+    { roles: ["ADMIN", "TEACHER"] }
+  );
 }
 
 // ---------- getStudentAttendance ----------
