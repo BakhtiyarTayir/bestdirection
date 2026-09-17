@@ -9,6 +9,12 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Два пуша подряд запускали два деплоя одновременно, и оба перезапускали
+# контейнер с миграциями. Теперь следующий ждёт, пока закончится текущий.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
