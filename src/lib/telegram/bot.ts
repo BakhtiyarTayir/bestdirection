@@ -4,6 +4,7 @@ import { fileSubmissionPlaceholder } from "@/lib/homework-file-placeholder";
 import { formatDate } from "@/lib/format-date";
 import { prisma } from "@/lib/prisma";
 import { submitSolutionInternal } from "@/lib/homework-submission";
+import { submissionMimeType } from "@/lib/submission-files";
 import type { ProgrammingLanguage } from "@/generated/prisma";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
@@ -773,7 +774,7 @@ async function processFileUploadSubmission(
             create: {
               filename: fileName,
               path: filePath,
-              mimeType: doc.mimeType || "application/octet-stream",
+              mimeType: submissionMimeType(fileName),
               size: buffer.length,
             },
           },

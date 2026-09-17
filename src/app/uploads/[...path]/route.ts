@@ -11,13 +11,14 @@ import path from "path";
 
 const UPLOADS_DIR = path.join(process.cwd(), "public", "uploads");
 
+// Без .svg: SVG исполняет скрипты на домене CRM. Загрузка картинок SVG и так
+// не принимает (api/v1/upload/image).
 const CONTENT_TYPES: Record<string, string> = {
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
   ".png": "image/png",
   ".webp": "image/webp",
   ".gif": "image/gif",
-  ".svg": "image/svg+xml",
   ".mp4": "video/mp4",
   ".webm": "video/webm",
   ".mov": "video/quicktime",

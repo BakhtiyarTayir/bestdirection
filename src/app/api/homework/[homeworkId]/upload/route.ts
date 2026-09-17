@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { fileSubmissionPlaceholder } from "@/lib/homework-file-placeholder";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { submissionMimeType } from "@/lib/submission-files";
 import { writeFile, mkdir, unlink } from "fs/promises";
 import path from "path";
 
@@ -10,9 +11,11 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 // авторизованного /api/files/[fileId]
 const UPLOAD_DIR = path.join(process.cwd(), "uploads/homework");
 
+// Без .html и .svg: браузер исполняет их скрипты. Выдача всё равно отдаёт
+// такие файлы вложением (src/lib/submission-files.ts), но принимать их незачем.
 const ALLOWED_EXTENSIONS = new Set([
   ".py", ".js", ".ts", ".jsx", ".tsx", ".php", ".java", ".cs", ".cpp", ".c",
-  ".h", ".html", ".css", ".sql", ".json", ".txt", ".md", ".ipynb",
+  ".h", ".css", ".sql", ".json", ".txt", ".md", ".ipynb",
   ".zip", ".rar", ".7z", ".pdf", ".doc", ".docx", ".xls", ".xlsx",
   ".png", ".jpg", ".jpeg", ".gif", ".webp",
 ]);
@@ -122,7 +125,7 @@ export async function POST(
             create: {
               filename: file.name,
               path: filePath,
-              mimeType: file.type || "application/octet-stream",
+              mimeType: submissionMimeType(file.name),
               size: file.size,
             },
           },

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { submissionFileHeaders } from "@/lib/submission-files";
 import { readFile } from "fs/promises";
 
 export async function GET(
@@ -49,11 +50,7 @@ export async function GET(
   try {
     const content = await readFile(file.path);
     return new NextResponse(content, {
-      headers: {
-        "Content-Type": "application/octet-stream",
-        "Content-Disposition": `attachment; filename="${file.filename}"`,
-        "Content-Length": file.size.toString(),
-      },
+      headers: submissionFileHeaders(file, { download: true }),
     });
   } catch {
     return NextResponse.json({ error: "File not accessible" }, { status: 500 });
