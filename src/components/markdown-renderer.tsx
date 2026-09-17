@@ -25,6 +25,44 @@ function getTextContent(children: ReactNode): string {
   return "";
 }
 
+// Отдельный компонент, а не стрелка в components: внутри нужен useContext, а
+// хук вне компонента нарушает правила хуков (react-hooks/rules-of-hooks).
+// react-markdown рендерит его как обычный компонент, поведение то же.
+function MarkdownCode({ children, className }: { children?: ReactNode; className?: string }) {
+  const isInsidePre = useContext(InsidePreContext);
+  const isHighlighted = className?.includes("language-");
+
+  // Тип 2: inline `code` внутри текста — без стилей блока
+  if (!isInsidePre) {
+    return (
+      <code className="px-1.5 py-0.5 rounded bg-muted text-sm">
+        {children}
+      </code>
+    );
+  }
+
+  // Тип 3: подсвеченный блок кода (```python и т.д.)
+  if (isHighlighted) {
+    return (
+      <code
+        className={cn(
+          className,
+          "block w-full p-4 bg-transparent text-zinc-50 text-sm leading-relaxed"
+        )}
+      >
+        {children}
+      </code>
+    );
+  }
+
+  // Тип 1: plain блок кода без языка (``` без указания языка)
+  return (
+    <code className="block w-full p-4 text-black bg-muted text-sm leading-relaxed">
+      {children}
+    </code>
+  );
+}
+
 export function MarkdownRenderer({ content, className }: MarkdownRendererProps) {
   return (
     <div className={cn("prose prose-base max-w-none dark:prose-invert", className)}>
@@ -45,40 +83,7 @@ export function MarkdownRenderer({ content, className }: MarkdownRendererProps) 
               </pre>
             </InsidePreContext.Provider>
           ),
-          code: ({ children, className }) => {
-            const isInsidePre = useContext(InsidePreContext);
-            const isHighlighted = className?.includes("language-");
-
-            // Тип 2: inline `code` внутри текста — без стилей блока
-            if (!isInsidePre) {
-              return (
-                <code className="px-1.5 py-0.5 rounded bg-muted text-sm">
-                  {children}
-                </code>
-              );
-            }
-
-            // Тип 3: подсвеченный блок кода (```python и т.д.)
-            if (isHighlighted) {
-              return (
-                <code
-                  className={cn(
-                    className,
-                    "block w-full p-4 bg-transparent text-zinc-50 text-sm leading-relaxed"
-                  )}
-                >
-                  {children}
-                </code>
-              );
-            }
-
-            // Тип 1: plain блок кода без языка (``` без указания языка)
-            return (
-              <code className="block w-full p-4 text-black bg-muted text-sm leading-relaxed">
-                {children}
-              </code>
-            );
-          },
+          code: MarkdownCode,
         }}
       >
         {content}
