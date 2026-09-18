@@ -1,7 +1,6 @@
 import { requireRole } from "@/lib/auth-guard";
 import { getTranslations } from "next-intl/server";
-import { getDebtors } from "@/actions/billing-actions";
-import { getPaymentFormOptions } from "@/actions/payment-actions";
+import { getDebtors, getPaymentFormOptions } from "@/lib/api/billing.server";
 import { DebtorsList } from "./debtors-list";
 
 export const dynamic = "force-dynamic";

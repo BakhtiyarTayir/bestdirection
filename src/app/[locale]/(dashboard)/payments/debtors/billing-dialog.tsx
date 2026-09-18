@@ -20,7 +20,7 @@ import { useToast } from "@/components/ui/use-toast";
 import {
   getEnrollmentBilling,
   updateEnrollmentBilling,
-} from "@/actions/billing-actions";
+} from "@/lib/api/billing";
 import { refreshBadges } from "@/lib/badge-refresh";
 
 interface BillingDialogProps {

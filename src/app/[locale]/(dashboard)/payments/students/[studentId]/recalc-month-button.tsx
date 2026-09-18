@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { previewMonthRecalc, recalculateMonth } from "@/actions/billing-actions";
+import { previewMonthRecalc, recalculateMonth } from "@/lib/api/billing";
 import { refreshBadges } from "@/lib/badge-refresh";
 
 interface ChargeView {

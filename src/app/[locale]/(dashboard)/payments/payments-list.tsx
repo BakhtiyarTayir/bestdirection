@@ -37,7 +37,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { formatDate } from "@/lib/format-date";
 import { Trash2, Loader2 } from "lucide-react";
-import { deletePayment } from "@/actions/payment-actions";
+import { deletePayment } from "@/lib/api/billing";
 import { refreshBadges } from "@/lib/badge-refresh";
 import { paymentMethods, type PaymentMethodValue } from "@/validators/payment";
 import { CreatePaymentDialog } from "./create-payment-dialog";

@@ -13,6 +13,15 @@ export interface AuditLogInput {
   metadata?: Record<string, unknown>;
 }
 
+/**
+ * Клиент внутри транзакции. Структурный тип, а не Prisma.TransactionClient:
+ * у расширенного клиента (мягкое удаление) свой несовместимый тип транзакции,
+ * а нужен здесь только auditLog.create.
+ */
+export interface AuditTransactionClient {
+  auditLog: { create(args: { data: Prisma.AuditLogUncheckedCreateInput }): Promise<unknown> };
+}
+
 /** Тот же контракт, что у src/lib/audit.ts в web. */
 @Injectable()
 export class AuditService {
@@ -26,7 +35,7 @@ export class AuditService {
    * пишутся денежные операции и окончательные удаления, чтобы изменение не
    * прошло без следа в журнале.
    */
-  async record(input: AuditLogInput, tx?: Prisma.TransactionClient): Promise<void> {
+  async record(input: AuditLogInput, tx?: AuditTransactionClient): Promise<void> {
     const data = {
       userId: input.userId,
       entityType: input.entityType,

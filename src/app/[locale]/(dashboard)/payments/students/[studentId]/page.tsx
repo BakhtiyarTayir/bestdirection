@@ -2,7 +2,7 @@ import { requireRole } from "@/lib/auth-guard";
 import { getTranslations, getLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { intlLocale } from "@/i18n/config";
-import { getStudentBilling } from "@/actions/billing-actions";
+import { getStudentBilling } from "@/lib/api/billing.server";
 import { formatDate } from "@/lib/format-date";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

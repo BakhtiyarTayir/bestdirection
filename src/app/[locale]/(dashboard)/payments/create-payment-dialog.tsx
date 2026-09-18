@@ -26,7 +26,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { createPayment } from "@/actions/payment-actions";
+import { createPayment } from "@/lib/api/billing";
 import { refreshBadges } from "@/lib/badge-refresh";
 import { paymentMethods, type PaymentMethodValue } from "@/validators/payment";
 import { Plus, Search } from "lucide-react";

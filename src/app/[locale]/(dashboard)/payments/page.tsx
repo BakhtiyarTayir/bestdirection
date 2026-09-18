@@ -1,6 +1,6 @@
 import { requireRole } from "@/lib/auth-guard";
 import { getTranslations } from "next-intl/server";
-import { getPayments, getPaymentFormOptions } from "@/actions/payment-actions";
+import { getPayments, getPaymentFormOptions } from "@/lib/api/billing.server";
 import { paymentFiltersSchema } from "@/validators/payment";
 import { PaymentsList } from "./payments-list";
 
@@ -52,7 +52,8 @@ export default async function PaymentsPage({
           id: payment.id,
           amount: payment.amount,
           method: payment.method,
-          paidAt: payment.paidAt.toISOString(),
+          // api отдаёт дату строкой ISO
+          paidAt: payment.paidAt,
           forMonth: payment.forMonth,
           comment: payment.comment,
           student: {

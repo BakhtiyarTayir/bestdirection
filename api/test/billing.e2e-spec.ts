@@ -1,0 +1,226 @@
+import request from "supertest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { addMonths, monthKey } from "../src/modules/billing/domain/billing";
+import { createTestApp, createUser, sessionCookie, TEST_APP_URL, testDb, type TestApp } from "./helpers";
+
+describe("модуль billing", () => {
+  let app: TestApp;
+  const cookies: Record<string, string> = {};
+  const ids: Record<string, string> = {};
+  const run = Date.now().toString(36);
+  const current = monthKey(new Date());
+  const prevMonth = addMonths(current, -1);
+
+  beforeAll(async () => {
+    app = await createTestApp();
+    for (const role of ["ADMIN", "TEACHER", "STUDENT", "PARENT"] as const) {
+      const user = await createUser({ role });
+      ids[role] = user.id;
+      cookies[role] = await sessionCookie(user, { roleInToken: role });
+    }
+
+    const course = await testDb().course.create({
+      data: { slug: `billing-${run}`, title: "Курс", teacherId: ids.TEACHER, price: 600000 },
+    });
+    ids.course = course.id;
+    const group = await testDb().group.create({
+      data: { name: `G-${run}`, courseId: course.id, scheduleDays: [1, 3, 5] },
+    });
+    ids.group = group.id;
+    const enrollment = await testDb().enrollment.create({
+      data: {
+        studentId: ids.STUDENT,
+        courseId: course.id,
+        groupId: group.id,
+        startsAt: new Date(`${addMonths(current, -3)}-01T12:00:00.000Z`),
+      },
+    });
+    ids.enrollment = enrollment.id;
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  const http = () => request(app.getHttpServer());
+  const get = (path: string, role?: string) => {
+    const req = http().get(`/api/v2${path}`);
+    return role ? req.set("Cookie", cookies[role]) : req;
+  };
+  const send = (method: "post" | "patch" | "delete", path: string, role: string, body?: object) =>
+    http()[method](`/api/v2${path}`).set("Cookie", cookies[role]).set("Origin", TEST_APP_URL).send(body);
+
+  describe("деньги доступны только администратору", () => {
+    const paths = [
+      "/billing/debtors",
+      "/billing/debtors/count",
+      "/billing/students",
+      "/billing/payments",
+      "/billing/payments/form-options",
+    ];
+
+    it.each(paths)("%s: администратор — 200", async (path) => {
+      expect((await get(path, "ADMIN")).status).toBe(200);
+    });
+
+    it.each(paths)("%s: преподаватель — 403", async (path) => {
+      expect((await get(path, "TEACHER")).status).toBe(403);
+    });
+
+    it.each(["STUDENT", "PARENT"])("%s не видит должников", async (role) => {
+      expect((await get("/billing/debtors", role)).status).toBe(403);
+    });
+
+    it("аноним — 401", async () => {
+      expect((await get("/billing/debtors")).status).toBe(401);
+    });
+
+    it("ученик не может завести оплату себе", async () => {
+      const res = await send("post", "/billing/payments", "STUDENT", {
+        studentId: ids.STUDENT,
+        courseId: ids.course,
+        amount: 100000,
+        method: "CASH",
+        paidAt: `${current}-05`,
+      });
+      expect(res.status).toBe(403);
+    });
+  });
+
+  describe("оплаты", () => {
+    it("оплата без записи на курс не принимается", async () => {
+      const other = await createUser({ role: "STUDENT" });
+      const res = await send("post", "/billing/payments", "ADMIN", {
+        studentId: other.id,
+        courseId: ids.course,
+        amount: 100000,
+        method: "CASH",
+        paidAt: `${current}-05`,
+      });
+      expect(res.status).toBe(404);
+      expect(res.body.message).toBe("notEnrolled");
+    });
+
+    it("сумма нулём или строкой не проходит", async () => {
+      for (const amount of [0, -5, "100000"]) {
+        const res = await send("post", "/billing/payments", "ADMIN", {
+          studentId: ids.STUDENT,
+          courseId: ids.course,
+          amount,
+          method: "CASH",
+          paidAt: `${current}-05`,
+        });
+        expect(res.status, `сумма ${amount}`).toBe(400);
+      }
+    });
+
+    it("оплата создаётся, попадает в журнал и гасит долг", async () => {
+      const before = await get("/billing/debtors", "ADMIN");
+      const debtBefore = before.body.debtors.find(
+        (row: { enrollmentId: string }) => row.enrollmentId === ids.enrollment
+      );
+      expect(debtBefore.debt).toBeGreaterThan(0);
+
+      const res = await send("post", "/billing/payments", "ADMIN", {
+        studentId: ids.STUDENT,
+        courseId: ids.course,
+        amount: debtBefore.debt,
+        method: "CASH",
+        paidAt: `${current}-05`,
+        forMonth: prevMonth,
+        comment: "полная оплата",
+      });
+      expect(res.status).toBe(201);
+      ids.payment = res.body.id;
+
+      const log = await testDb().auditLog.findFirst({
+        where: { entityType: "Payment", entityId: ids.payment, action: "CREATE" },
+      });
+      expect(log).not.toBeNull();
+
+      const after = await get("/billing/debtors", "ADMIN");
+      const stillDebtor = after.body.debtors.some(
+        (row: { enrollmentId: string }) => row.enrollmentId === ids.enrollment
+      );
+      expect(stillDebtor).toBe(false);
+    });
+
+    it("удаление оплаты мягкое: строка остаётся с deletedAt", async () => {
+      const res = await send("delete", `/billing/payments/${ids.payment}`, "ADMIN");
+      expect(res.status).toBe(200);
+      const row = await testDb().payment.findUnique({ where: { id: ids.payment } });
+      expect(row?.deletedAt).toBeInstanceOf(Date);
+      expect((await send("delete", `/billing/payments/${ids.payment}`, "ADMIN")).body.message).toBe(
+        "paymentNotFound"
+      );
+    });
+  });
+
+  describe("карточка записи и пересчёт", () => {
+    it("карточка показывает подсказку по первому месяцу", async () => {
+      const res = await get(`/billing/enrollments/${ids.enrollment}`, "ADMIN");
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ courseTitle: "Курс", hasSchedule: true });
+      expect(res.body.suggestedFirstMonthCharge).toBeGreaterThan(0);
+    });
+
+    it("правка настроек замораживает закрытые месяцы до записи (аудит: прошлое не переписывается)", async () => {
+      const res = await send("patch", `/billing/enrollments/${ids.enrollment}`, "ADMIN", {
+        startsAt: `${addMonths(current, -3)}-01`,
+        priceOverride: 900000,
+      });
+      expect(res.status).toBe(200);
+
+      const frozen = await testDb().monthlyCharge.findMany({
+        where: { enrollmentId: ids.enrollment },
+        orderBy: { month: "asc" },
+      });
+      // Все закрытые месяцы зафиксированы по старой цене курса
+      expect(frozen.length).toBeGreaterThan(0);
+      expect(frozen.every((row) => row.priceUsed === 600000)).toBe(true);
+    });
+
+    it("текущий месяц пересчитать нельзя — он ещё не закрыт", async () => {
+      const res = await send("post", `/billing/enrollments/${ids.enrollment}/recalc?month=${current}`, "ADMIN");
+      expect(res.status).toBe(400);
+      expect(res.body.message).toBe("monthNotClosed");
+    });
+
+    it("пересчёт закрытого месяца идёт по зафиксированной цене и пишет в журнал", async () => {
+      const preview = await get(
+        `/billing/enrollments/${ids.enrollment}/recalc?month=${prevMonth}`,
+        "ADMIN"
+      );
+      expect(preview.status).toBe(200);
+      expect(preview.body.priceUsed).toBe(600000);
+
+      const res = await send(
+        "post",
+        `/billing/enrollments/${ids.enrollment}/recalc?month=${prevMonth}`,
+        "ADMIN"
+      );
+      expect(res.status).toBe(201);
+
+      const row = await testDb().monthlyCharge.findFirst({
+        where: { enrollmentId: ids.enrollment, month: prevMonth },
+      });
+      // Цена месяца осталась прежней, несмотря на priceOverride 900000
+      expect(row?.priceUsed).toBe(600000);
+      expect(row?.amount).toBe(600000);
+    });
+  });
+
+  describe("карточка студента", () => {
+    it("показывает помесячную историю и баланс", async () => {
+      const res = await get(`/billing/students/${ids.STUDENT}`, "ADMIN");
+      expect(res.status).toBe(200);
+      expect(res.body.student.id).toBe(ids.STUDENT);
+      expect(res.body.courses[0].months.length).toBeGreaterThan(0);
+      expect(res.body.totals).toHaveProperty("balance");
+    });
+
+    it("несуществующий студент — 404", async () => {
+      expect((await get("/billing/students/no-such-id", "ADMIN")).status).toBe(404);
+    });
+  });
+});

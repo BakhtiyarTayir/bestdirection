@@ -1,7 +1,7 @@
 import { requireRole } from "@/lib/auth-guard";
 import { getTranslations, getLocale } from "next-intl/server";
 import { intlLocale } from "@/i18n/config";
-import { getStudentsOverview } from "@/actions/billing-actions";
+import { getStudentsOverview } from "@/lib/api/billing.server";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

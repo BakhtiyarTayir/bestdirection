@@ -30,6 +30,8 @@ export type AppSubjects =
   // конкретного человека (свой профиль есть у всех).
   | "HomeworkStatistics"
   | "UserDirectory"
+  // Деньги: начисления, долги, оплаты — только администратор
+  | "Billing"
   | Subjects<{
       User: User;
       AuditLog: AuditLog;
