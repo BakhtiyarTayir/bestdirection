@@ -43,8 +43,7 @@ type HomeworkItem = {
     };
   };
   submissions: HomeworkSubmission[];
-  _count: { testCases: number };
-  [key: string]: unknown;
+  _count?: { testCases: number };
 }
 
 type Tab = "todo" | "revision" | "pending" | "completed" | "overdue";

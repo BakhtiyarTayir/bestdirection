@@ -26,6 +26,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { createCourse, updateCourse } from "@/lib/api/courses";
 import { Loader2, Upload, X, ImageIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { uploadImage } from "@/lib/api/uploads";
 
 const courseFormSchema = createCourseSchema;
 
@@ -134,26 +135,18 @@ export function CourseForm({
 
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("image", file);
+      const result = await uploadImage(file);
 
-      const res = await fetch("/api/v1/upload/image", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
+      if (!result.success) {
         toast({
           title: t("uploadError"),
-          description: data.error || t("uploadFailed"),
+          description: result.error ? tErrors(result.error) : t("uploadFailed"),
           variant: "destructive",
         });
         return;
       }
 
-      setCoverImage(data.url);
+      setCoverImage(result.data.url);
     } catch {
       toast({
         title: tErrors("error"),

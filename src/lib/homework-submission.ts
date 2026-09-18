@@ -1,3 +1,5 @@
+// Копия в web живёт только ради Telegram-бота: сдача работ уехала в api на
+// этапе 5 (api/src/modules/homework). Уйдёт вместе с ботом на этапе 6.
 // Общая логика сдачи решения (веб + Telegram-бот).
 // НЕ server action: файл без "use server", функция не публикуется наружу.
 import { prisma } from "@/lib/prisma";
@@ -57,6 +59,11 @@ export async function submitSolutionInternal(homeworkId: string, code: string, s
     });
   } catch (error) {
     if (error instanceof Error && error.message === "MAX_ATTEMPTS_REACHED") {
+      return { success: false as const, error: "maxAttemptsReached" };
+    }
+    // P2002 — тот же случай, но пойманный уникальным индексом на номер
+    // попытки: подсчёт в транзакции от гонки не защищал (аудит 3.4)
+    if (typeof error === "object" && error !== null && (error as { code?: string }).code === "P2002") {
       return { success: false as const, error: "maxAttemptsReached" };
     }
     throw error;

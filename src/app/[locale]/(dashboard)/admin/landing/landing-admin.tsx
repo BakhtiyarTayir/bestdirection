@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { intlLocale } from "@/i18n/config";
+import { uploadImage } from "@/lib/api/uploads";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -416,7 +417,7 @@ function LogoSection({ initialUrl }: { initialUrl: string | null }) {
   );
 }
 
-/** Поле изображения: ручной путь + загрузка через /api/v1/upload/image */
+/** Поле изображения: ручной путь + загрузка через api */
 function ImageField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const t = useTranslations("landingAdmin");
   const { toast } = useToast();
@@ -426,12 +427,9 @@ function ImageField({ value, onChange }: { value: string; onChange: (v: string) 
   const upload = async (file: File) => {
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("image", file);
-      const res = await fetch("/api/v1/upload/image", { method: "POST", body: formData });
-      if (!res.ok) throw new Error("upload failed");
-      const data = (await res.json()) as { url: string };
-      onChange(data.url);
+      const result = await uploadImage(file);
+      if (!result.success) throw new Error("upload failed");
+      onChange(result.data.url);
     } catch {
       toast({ variant: "destructive", description: t("error") });
     } finally {

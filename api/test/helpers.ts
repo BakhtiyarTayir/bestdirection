@@ -4,6 +4,8 @@ import { type ModuleMetadata, type Type } from "@nestjs/common";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Test } from "@nestjs/testing";
 import { randomUUID } from "node:crypto";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { inject } from "vitest";
 import { PrismaClient, type Role } from "../generated/prisma";
 import { AppModule } from "../src/app.module";
@@ -13,11 +15,16 @@ export const TEST_SECRET = "test-auth-secret-0123456789abcdef";
 export const TEST_APP_URL = "http://web.test";
 export const TEST_INTERNAL_TOKEN = "test-internal-token-0123456789abcdef";
 
+/** Загрузки тестов пишутся во временный каталог, а не в тома контейнера. */
+export const TEST_UPLOAD_DIR = join(tmpdir(), "bd-api-test-uploads");
+
 export function useTestEnv() {
   process.env.DATABASE_URL = inject("databaseUrl");
   process.env.AUTH_SECRET = TEST_SECRET;
   process.env.APP_URL = TEST_APP_URL;
   process.env.INTERNAL_TOKEN = TEST_INTERNAL_TOKEN;
+  process.env.PUBLIC_UPLOAD_DIR = join(TEST_UPLOAD_DIR, "public");
+  process.env.PRIVATE_UPLOAD_DIR = join(TEST_UPLOAD_DIR, "private");
   process.env.NODE_ENV = "test";
 }
 

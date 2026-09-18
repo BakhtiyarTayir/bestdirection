@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { uploadImage } from "@/lib/api/uploads";
 import Link from "next/link";
 import type EditorJS from "@editorjs/editorjs";
 import { Button } from "@/components/ui/button";
@@ -74,12 +75,9 @@ function useEditor(holderId: string, initial: object | null) {
             config: {
               uploader: {
                 async uploadByFile(file: File) {
-                  const formData = new FormData();
-                  formData.append("image", file);
-                  const res = await fetch("/api/v1/upload/image", { method: "POST", body: formData });
-                  if (!res.ok) return { success: 0 };
-                  const data = (await res.json()) as { url: string };
-                  return { success: 1, file: { url: data.url } };
+                  const result = await uploadImage(file);
+                  if (!result.success) return { success: 0 };
+                  return { success: 1, file: { url: result.data.url } };
                 },
               },
             },

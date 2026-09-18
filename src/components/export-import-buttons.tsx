@@ -19,8 +19,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { Download, Upload, FileSpreadsheet, FileText, Braces, Loader2 } from "lucide-react";
 import { importExamFromFile, importTestFromFile } from "@/lib/api/lessons";
-// Задания по-прежнему импортирует web: они переедут на этапе 5
-import { importHomeworkFromFile } from "@/actions/import-actions";
+import { importHomeworkFromFile } from "@/lib/api/homework";
 import { useTranslations } from "next-intl";
 
 // ---------- ExportButton ----------
@@ -42,7 +41,7 @@ export function ExportButton({ type, id }: ExportButtonProps) {
           ? `/api/v2/assessments/export/test/${id}?format=${format}`
           : type === "exam"
             ? `/api/v2/assessments/export/exam/${id}?format=${format}`
-            : `/api/v1/export/homework/${id}?format=${format}`;
+            : `/api/v2/homework/export/${id}`;
 
       const res = await fetch(url);
       if (!res.ok) {
@@ -148,11 +147,7 @@ export function ImportButton({ type, targetId }: ImportButtonProps) {
       } else if (type === "exam") {
         result = await importExamFromFile(targetId, file);
       } else {
-        // Задания импортирует web: у них свой формат и свои проверки
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("lessonId", targetId);
-        result = await importHomeworkFromFile(formData);
+        result = await importHomeworkFromFile(targetId, file);
       }
 
       if (!result.success) {

@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/auth-guard";
-import { getPendingReviewSubmissions, getReviewHistory } from "@/actions/homework-review-actions";
+import { getPendingReviewSubmissions, getReviewHistory } from "@/lib/api/homework.server";
 import { getTranslations } from "next-intl/server";
 import { TeacherReviewList } from "@/components/homework/teacher-review-list";
 

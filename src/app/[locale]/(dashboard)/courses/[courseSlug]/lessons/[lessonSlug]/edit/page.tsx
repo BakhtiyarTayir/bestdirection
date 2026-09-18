@@ -1,8 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { getLessonHomeworks } from "@/lib/api/homework.server";
 import { getLessonById, getTestByLesson } from "@/lib/api/lessons.server";
-// Задания читаются напрямую: их модуль переезжает на этапе 5
-import { prisma } from "@/lib/prisma";
 import { EditLessonClient } from "./edit-lesson-client";
 import { getTranslations } from "next-intl/server";
 import { resolveFullPath } from "@/lib/slug-resolvers";
@@ -37,16 +36,11 @@ export default async function EditLessonPage({ params }: EditLessonPageProps) {
 
   const lesson = result.data;
 
-  const [assessmentResult, homeworks] = await Promise.all([
+  const [assessmentResult, homeworksResult] = await Promise.all([
     getTestByLesson(lessonId),
-    prisma.homework.findMany({
-      where: { lessonId },
-      include: {
-        _count: { select: { testCases: true, submissions: true } },
-      },
-      orderBy: { sortOrder: "asc" },
-    }),
+    getLessonHomeworks(lessonId),
   ]);
+  const homeworks = homeworksResult.success ? homeworksResult.data : [];
 
   // Теста может не быть — вкладка тогда предложит его создать
   const assessment = assessmentResult.success ? assessmentResult.data : null;
@@ -59,7 +53,7 @@ export default async function EditLessonPage({ params }: EditLessonPageProps) {
         lessonSlug={lessonSlug}
         lesson={lesson}
         assessment={assessment}
-        homeworks={JSON.parse(JSON.stringify(homeworks))}
+        homeworks={homeworks}
       />
     </div>
   );

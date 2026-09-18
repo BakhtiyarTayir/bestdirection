@@ -7,12 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { CodeEditor } from "./code-editor";
-import { TestResultsPanel } from "./test-results-panel";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
-import { submitSolution } from "@/actions/homework-actions";
+import { submitSolution, uploadSubmissionFile } from "@/lib/api/homework";
 import { LANGUAGE_LABELS } from "@/lib/code-runner/config";
 import { formatDateTime } from "@/lib/format-date";
 import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import {
   Clock,
   Target,
@@ -104,6 +104,7 @@ export function HomeworkView({
   attemptsRemaining: initialAttemptsRemaining,
 }: HomeworkViewProps) {
   const { toast } = useToast();
+  const router = useRouter();
   const t = useTranslations("homework");
   const tErrors = useTranslations("errors");
   const tAssessments = useTranslations("assessments");
@@ -111,65 +112,28 @@ export function HomeworkView({
   const [attemptsRemaining, setAttemptsRemaining] = useState(initialAttemptsRemaining);
   const [activeTab, setActiveTab] = useState("task");
   const [code, setCode] = useState(homework.starterCode || "");
-  const [lastResult, setLastResult] = useState<{
-    results: { testCaseId: string; passed: boolean; actualOutput: string | null; error: string | null; executionTime: number }[];
-    percentage: number;
-    finalScore: number;
-    status: string;
-  } | null>(null);
-
   const isFile = homework.type === "FILE";
 
-  // Collect unique error output from test results
-  const errorOutput = lastResult
-    ? [...new Set(
-        lastResult.results
-          .map((r) => r.error)
-          .filter((e): e is string => e !== null)
-      )].join("\n\n") || null
-    : null;
-
+  /**
+   * Решение уходит на проверку преподавателю. Автопроверки кода нет (Piston
+   * отключён решением владельца 2026-09-17), поэтому баллов в ответе тоже нет:
+   * их поставит человек.
+   */
   const handleSubmit = async (code: string) => {
     const result = await submitSolution(homework.id, code);
 
     if (!result.success) {
       toast({
         title: tErrors("generic"),
-        description: result.error || t("submitFailed"),
+        description: result.error ? tErrors(result.error) : t("submitFailed"),
         variant: "destructive",
       });
       return;
     }
 
-    const data = result.data!;
-    setLastResult({
-      results: data.testResults,
-      percentage: data.percentage,
-      finalScore: data.finalScore,
-      status: data.status,
-    });
     setAttemptsRemaining((prev) => prev - 1);
-
-    // Auto-switch to output tab when there are errors
-    const hasErr = data.testResults.some((r: { error: string | null }) => r.error !== null);
-    if (hasErr && data.status !== "PASSED") {
-      setActiveTab("output");
-    }
-
-    if (data.status === "PASSED") {
-      toast({ title: t("allTestsPassed"), description: t("resultPercent", { percent: data.percentage }) });
-    } else if (data.status === "PARTIAL") {
-      toast({
-        title: t("partiallyPassed"),
-        description: t("passedOfTotal", { passed: data.passed, total: data.total }),
-      });
-    } else {
-      toast({
-        title: t("testsFailed"),
-        description: data.status === "ERROR" ? t("executionError") : t("tryAgain"),
-        variant: "destructive",
-      });
-    }
+    toast({ title: t("manualReviewPending"), description: t("submitted") });
+    router.refresh();
   };
 
   const isOverdue = homework.dueDate && new Date(homework.dueDate) < new Date();
@@ -340,9 +304,6 @@ export function HomeworkView({
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="task">{t("editorTab")}</TabsTrigger>
-            <TabsTrigger value="output" className={errorOutput ? "text-red-600" : ""}>
-              {t("outputTab")}
-            </TabsTrigger>
             <TabsTrigger value="tests">
               {t("testsTab", { count: homework.testCases.length })}
             </TabsTrigger>
@@ -373,66 +334,6 @@ export function HomeworkView({
               }}
             />
 
-            {lastResult && (
-              <TestResultsPanel
-                results={lastResult.results}
-                testCases={homework.testCases.map((tc) => ({
-                  ...tc,
-                  isHidden: false,
-                  description: tc.description,
-                }))}
-                percentage={lastResult.percentage}
-                finalScore={lastResult.finalScore}
-                status={lastResult.status}
-                isLate={!!isOverdue}
-                penalty={homework.latePenalty}
-              />
-            )}
-          </TabsContent>
-
-          <TabsContent value="output" className="mt-4">
-            <Card>
-              <CardContent className="pt-6">
-                {!lastResult ? (
-                  <p className="text-muted-foreground text-center py-8">
-                    {t("submitToSeeOutput")}
-                  </p>
-                ) : errorOutput ? (
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-2 p-3 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-900 dark:bg-yellow-950/50 dark:border-yellow-900 dark:text-yellow-200">
-                      <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                      <p className="text-sm">
-                        {t("codeHasErrors")}
-                      </p>
-                    </div>
-                    <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm font-mono whitespace-pre-wrap leading-relaxed">
-                      {errorOutput}
-                    </pre>
-                  </div>
-                ) : lastResult.status === "PASSED" ? (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-green-800 dark:bg-green-950/50 dark:border-green-900 dark:text-green-200">
-                    <p className="text-sm">{t("allTestsPassedSuccess")}</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/50 dark:border-red-900 dark:text-red-200">
-                      <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                      <p className="text-sm">
-                        {t("someTestsFailed")}
-                      </p>
-                    </div>
-                    {lastResult.results
-                      .filter((r) => !r.passed && r.actualOutput)
-                      .map((r, i) => (
-                        <div key={i} className="text-sm">
-                          <span className="text-muted-foreground">{t("testOutput", { number: i + 1 })}</span>
-                          <pre className="bg-muted p-2 rounded mt-1 text-xs">{r.actualOutput}</pre>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           </TabsContent>
 
           <TabsContent value="tests" className="mt-4">
@@ -542,6 +443,7 @@ function FileUploadSection({
   onUploaded: () => void;
 }) {
   const t = useTranslations("homework");
+  const tErrors = useTranslations("errors");
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
@@ -562,25 +464,23 @@ function FileUploadSection({
 
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const res = await fetch(`/api/homework/${homeworkId}/upload`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Upload failed");
+      const result = await uploadSubmissionFile(homeworkId, file);
+      if (!result.success) {
+        toast({
+          title: t("error"),
+          // api отвечает ключом словаря, как и остальные действия
+          description: tErrors(result.error ?? "somethingWentWrong"),
+          variant: "destructive",
+        });
+        return;
       }
 
       setUploadedFile(file.name);
       onUploaded();
-    } catch (err) {
+    } catch {
       toast({
         title: t("error"),
-        description: err instanceof Error ? err.message : t("submitFailed"),
+        description: t("submitFailed"),
         variant: "destructive",
       });
     } finally {

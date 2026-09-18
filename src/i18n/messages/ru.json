@@ -614,7 +614,8 @@
     "manualReviewPending": "На проверке",
     "manualReviewApproved": "Принято",
     "manualReviewRejected": "Отклонено",
-    "teacherComment": "Комментарий преподавателя"
+    "teacherComment": "Комментарий преподавателя",
+    "submitted": "Решение отправлено преподавателю на проверку"
   },
   "attendance": {
     "title": "Посещаемость",
@@ -1050,7 +1051,8 @@
   "datePicker": {
     "selectDate": "Выберите дату"
   },
-  "errors": {    "generic": "Произошла ошибка",
+  "errors": {
+    "generic": "Произошла ошибка",
     "unexpected": "Произошла непредвиденная ошибка.",
     "somethingWentWrong": "Что-то пошло не так",
     "unexpectedError": "Произошла непредвиденная ошибка. Попробуйте обновить страницу.",

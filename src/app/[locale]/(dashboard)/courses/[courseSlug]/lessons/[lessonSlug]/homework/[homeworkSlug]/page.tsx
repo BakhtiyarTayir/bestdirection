@@ -1,6 +1,10 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getHomeworkForStudent, getHomeworkForTeacher, getSubmissions } from "@/actions/homework-actions";
+import {
+  getHomeworkForStudent,
+  getHomeworkForTeacher,
+  getHomeworkSubmissions,
+} from "@/lib/api/homework.server";
 import { HomeworkView } from "@/components/homework/homework-view";
 import { HomeworkSubmissions } from "@/components/homework/homework-submissions";
 import { MarkdownRenderer } from "@/components/markdown-renderer";
@@ -21,7 +25,7 @@ interface HomeworkPageProps {
 
 type GetHomeworkForTeacherResult = Awaited<ReturnType<typeof getHomeworkForTeacher>>;
 type TeacherHomework = Extract<GetHomeworkForTeacherResult, { success: true }>["data"];
-type GetSubmissionsResult = Awaited<ReturnType<typeof getSubmissions>>;
+type GetSubmissionsResult = Awaited<ReturnType<typeof getHomeworkSubmissions>>;
 type HomeworkSubmissionsData = Extract<GetSubmissionsResult, { success: true }>["data"];
 type GetHomeworkForStudentResult = Awaited<ReturnType<typeof getHomeworkForStudent>>;
 type StudentHomeworkData = Extract<GetHomeworkForStudentResult, { success: true }>["data"]["homework"];
@@ -41,17 +45,15 @@ export default async function HomeworkPage({ params }: HomeworkPageProps) {
   if (isTeacherOrAdmin) {
     const [hwResult, subResult] = await Promise.all([
       getHomeworkForTeacher(homeworkId!),
-      getSubmissions(homeworkId!),
+      getHomeworkSubmissions(homeworkId!),
     ]);
 
-    if (!hwResult.success || !hwResult.data) {
-      return (
-        <HomeworkNotFound error={hwResult.error} />
-      );
+    if (!hwResult.success) {
+      return <HomeworkNotFound error={hwResult.error} />;
     }
 
     const homework = hwResult.data;
-    const submissions = subResult.success ? subResult.data! : [];
+    const submissions = subResult.success ? subResult.data : [];
 
     return (
       <TeacherView
@@ -67,10 +69,8 @@ export default async function HomeworkPage({ params }: HomeworkPageProps) {
   // Student view
   const result = await getHomeworkForStudent(homeworkId!);
 
-  if (!result.success || !result.data) {
-    return (
-      <HomeworkNotFound error={result.error} />
-    );
+  if (!result.success) {
+    return <HomeworkNotFound error={result.error} />;
   }
 
   const { homework, submissions, attemptsRemaining } = result.data;

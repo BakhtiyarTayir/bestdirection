@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/auth-guard";
-import { getSubmissionForReview } from "@/actions/homework-review-actions";
+import { getSubmissionForReview } from "@/lib/api/homework.server";
 import { getTranslations } from "next-intl/server";
 import { SubmissionReviewPage } from "@/components/homework/submission-review-page";
 import { notFound } from "next/navigation";

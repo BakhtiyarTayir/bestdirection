@@ -1,5 +1,4 @@
-import { apiFetch } from "./client";
-import { API_PREFIX, toResult, type ApiResult } from "./result";
+import { apiFetch, apiUpload } from "./client";
 
 // Модули lessons и assessments в api. Серверные компоненты берут те же
 // маршруты из ./lessons.server.
@@ -136,11 +135,6 @@ export interface ApiAttempt {
   };
 }
 
-export interface ApiOwnAttempt extends ApiAttempt {
-  /** У незавершённой попытки пусто: ключи к ответам отдаются только после сдачи. */
-  answers: ApiAttemptAnswer[];
-}
-
 export interface ApiStartedAttempt {
   id: string;
   attemptNumber: number;
@@ -269,20 +263,7 @@ export const getCourseLessonNav = (courseSlug: string) =>
  * Загрузка таблицы с вопросами. Отдельно от apiFetch: тело — FormData, и
  * Content-Type браузер проставляет сам вместе с границей частей.
  */
-async function uploadSpreadsheet(path: string, file: File): Promise<ApiResult<ImportResult>> {
-  const body = new FormData();
-  body.append("file", file);
-  try {
-    const response = await fetch(`${API_PREFIX}${path}`, {
-      method: "POST",
-      credentials: "same-origin",
-      body,
-    });
-    return toResult<ImportResult>(response);
-  } catch {
-    return { success: false, error: "somethingWentWrong" };
-  }
-}
+
 
 export interface ImportResult {
   id: string;
@@ -291,7 +272,7 @@ export interface ImportResult {
 }
 
 export const importTestFromFile = (lessonId: string, file: File) =>
-  uploadSpreadsheet(`/assessments/import/test/${lessonId}`, file);
+  apiUpload<ImportResult>(`/assessments/import/test/${lessonId}`, file);
 
 export const importExamFromFile = (courseId: string, file: File) =>
-  uploadSpreadsheet(`/assessments/import/exam/${courseId}`, file);
+  apiUpload<ImportResult>(`/assessments/import/exam/${courseId}`, file);

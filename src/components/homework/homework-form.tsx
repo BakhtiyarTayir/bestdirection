@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { createHomework, updateHomework } from "@/actions/homework-actions";
+import { createHomework, updateHomework } from "@/lib/api/homework";
 import { CODE_HOMEWORK_ENABLED, LANGUAGE_LABELS } from "@/lib/code-runner/config";
 import { Badge } from "@/components/ui/badge";
 import { MarkdownEditor } from "@/components/markdown-editor";
@@ -176,7 +176,8 @@ export function HomeworkForm({ courseSlug, lessonSlug, lessonId, homework }: Hom
             toast({ title: tErrors("generic"), description: result.error, variant: "destructive" });
           }
         } else {
-          const result = await createHomework(lessonId, {
+          const result = await createHomework({
+            lessonId,
             ...baseData,
             ...codeData,
           });

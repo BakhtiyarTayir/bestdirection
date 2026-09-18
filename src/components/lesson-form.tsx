@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "@/i18n/navigation";
 import { z } from "zod";
 import { useTranslations } from "next-intl";
+import { VIDEO_UPLOAD_URL } from "@/lib/api/uploads";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -122,7 +123,8 @@ export function LessonForm({ lesson, courseSlug, onSubmit }: LessonFormProps) {
 
     try {
       const formData = new FormData();
-      formData.append("video", file);
+      // Поле называется file: так его ждёт api
+      formData.append("file", file);
 
       const xhr = new XMLHttpRequest();
 
@@ -144,7 +146,7 @@ export function LessonForm({ lesson, courseSlug, onSubmit }: LessonFormProps) {
         });
 
         xhr.addEventListener("error", () => reject(new Error(t("networkError"))));
-        xhr.open("POST", "/api/v1/upload/video");
+        xhr.open("POST", VIDEO_UPLOAD_URL);
         xhr.send(formData);
       });
 
@@ -370,7 +372,7 @@ export function LessonForm({ lesson, courseSlug, onSubmit }: LessonFormProps) {
             id="content"
             value={watch("content")}
             onChange={(val) => setValue("content", val, { shouldValidate: true })}
-            imageUploadEndpoint="/api/v1/upload/image"
+            allowImageUpload
           />
         ) : (
           <MarkdownEditor
@@ -379,7 +381,7 @@ export function LessonForm({ lesson, courseSlug, onSubmit }: LessonFormProps) {
             onChange={(val) => setValue("content", val, { shouldValidate: true })}
             placeholder={t("contentPlaceholder")}
             rows={15}
-            imageUploadEndpoint="/api/v1/upload/image"
+            allowImageUpload
           />
         )}
         {errors.content && (

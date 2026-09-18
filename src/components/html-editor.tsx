@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { HtmlLessonRenderer } from "@/components/html-lesson-renderer";
 import { FileUp, Image as ImageIcon, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { uploadImage } from "@/lib/api/uploads";
 
 const Editor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
@@ -14,7 +15,8 @@ interface HtmlEditorProps {
   value: string;
   onChange: (value: string) => void;
   id?: string;
-  imageUploadEndpoint?: string;
+  /** Разрешает загрузку картинок в редакторе. */
+  allowImageUpload?: boolean;
 }
 
 /**
@@ -25,7 +27,7 @@ export function HtmlEditor({
   value,
   onChange,
   id,
-  imageUploadEndpoint,
+  allowImageUpload,
 }: HtmlEditorProps) {
   const t = useTranslations("htmlLesson");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -53,15 +55,13 @@ export function HtmlEditor({
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       e.target.value = "";
-      if (!file || !imageUploadEndpoint) return;
+      if (!file || !allowImageUpload) return;
 
       setIsUploading(true);
       try {
-        const formData = new FormData();
-        formData.append("image", file);
-        const res = await fetch(imageUploadEndpoint, { method: "POST", body: formData });
-        if (!res.ok) return;
-        const data = await res.json();
+        const result = await uploadImage(file);
+        if (!result.success) return;
+        const data = result.data;
         if (data.url) {
           // Тег кладём в конец: где ему место в вёрстке, решает автор.
           onChange(`${value}\n<img src="${data.url}" alt="">\n`);
@@ -70,7 +70,7 @@ export function HtmlEditor({
         setIsUploading(false);
       }
     },
-    [imageUploadEndpoint, onChange, value]
+    [allowImageUpload, onChange, value]
   );
 
   return (
@@ -78,7 +78,7 @@ export function HtmlEditor({
       <div className="flex flex-wrap items-center gap-2 border-b p-2">
         <p className="text-xs text-muted-foreground mr-auto">{t("hint")}</p>
 
-        {imageUploadEndpoint && (
+        {allowImageUpload && (
           <>
             <Button
               variant="outline"

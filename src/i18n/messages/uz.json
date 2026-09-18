@@ -614,7 +614,8 @@
     "manualReviewPending": "Tekshiruvda",
     "manualReviewApproved": "Qabul qilindi",
     "manualReviewRejected": "Rad etildi",
-    "teacherComment": "O'qituvchi izohi"
+    "teacherComment": "O'qituvchi izohi",
+    "submitted": "Yechim o'qituvchiga tekshirish uchun yuborildi"
   },
   "attendance": {
     "title": "Davomat",
@@ -1050,7 +1051,8 @@
   "datePicker": {
     "selectDate": "Sanani tanlang"
   },
-  "errors": {    "generic": "Xatolik yuz berdi",
+  "errors": {
+    "generic": "Xatolik yuz berdi",
     "unexpected": "Kutilmagan xatolik yuz berdi.",
     "somethingWentWrong": "Nimadir noto'g'ri ketdi",
     "unexpectedError": "Kutilmagan xatolik yuz berdi. Sahifani yangilashga urinib ko'ring.",

@@ -13,6 +13,12 @@ const envSchema = z.object({
   APP_URL: z.string().url(),
   // Секрет серверных вызовов из web, у которых нет заголовка Origin
   INTERNAL_TOKEN: z.string().min(32),
+  // Каталоги загрузок. Оба — docker-тома, общие с web: пути по умолчанию
+  // совпадают с тем, как они смонтированы в контейнер (docker-compose.prod.yml).
+  // Публичные картинки и видео раздаются по /uploads/..., работы учеников
+  // лежат отдельно и выдаются только с проверкой прав.
+  PUBLIC_UPLOAD_DIR: z.string().min(1).default("/app/public/uploads"),
+  PRIVATE_UPLOAD_DIR: z.string().min(1).default("/app/uploads"),
 });
 
 export type Env = z.infer<typeof envSchema>;

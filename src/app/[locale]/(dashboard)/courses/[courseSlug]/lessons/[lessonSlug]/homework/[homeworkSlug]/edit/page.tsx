@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getHomeworkForTeacher } from "@/actions/homework-actions";
+import { getHomeworkForTeacher } from "@/lib/api/homework.server";
 import { HomeworkForm } from "@/components/homework/homework-form";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
@@ -29,7 +29,7 @@ export default async function EditHomeworkPage({ params }: EditHomeworkPageProps
   const { lessonId, homeworkId } = await resolveFullPath({ courseSlug, lessonSlug, homeworkSlug });
   const result = await getHomeworkForTeacher(homeworkId!);
 
-  if (!result.success || !result.data) {
+  if (!result.success) {
     return <HomeworkNotFound error={result.error} />;
   }
 
