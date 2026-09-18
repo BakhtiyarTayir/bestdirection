@@ -1,5 +1,5 @@
 import { requireAuth } from "@/lib/auth-guard";
-import { getAllGroups } from "@/actions/group-actions";
+import { getAllGroups } from "@/lib/api/groups.server";
 import { Link } from "@/i18n/navigation";
 import { UsersRound } from "lucide-react";
 import { getTranslations } from "next-intl/server";

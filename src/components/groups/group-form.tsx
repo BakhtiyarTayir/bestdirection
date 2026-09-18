@@ -13,7 +13,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "@/i18n/navigation";
 import { useTransition } from "react";
-import { createGroup, updateGroup } from "@/actions/group-actions";
+import { createGroup, updateGroup } from "@/lib/api/groups";
 import { useTranslations } from "next-intl";
 
 interface GroupFormProps {
@@ -26,8 +26,9 @@ interface GroupFormProps {
     schedule: string | null;
     scheduleDays: number[];
     teacherId: string | null;
-    startDate: Date | null;
-    endDate: Date | null;
+    // api отдаёт даты строками ISO
+    startDate: Date | string | null;
+    endDate: Date | string | null;
     price: number | null;
   };
   /** Кандидаты в преподаватели группы; пустой список прячет поле */

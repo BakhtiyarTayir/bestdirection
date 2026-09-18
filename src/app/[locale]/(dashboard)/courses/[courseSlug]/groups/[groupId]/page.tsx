@@ -1,8 +1,8 @@
 import { requireAuth } from "@/lib/auth-guard";
-import { getGroupDetails } from "@/actions/group-actions";
+import { getGroupDetails } from "@/lib/api/groups.server";
 import { notFound } from "next/navigation";
 import { GroupForm } from "@/components/groups/group-form";
-import { getTeacherOptions } from "@/actions/group-actions";
+import { getTeacherOptions } from "@/lib/api/groups.server";
 import { getTemplates } from "@/actions/sms-actions";
 import { BroadcastPanel } from "@/components/sms/broadcast-panel";
 import { getTranslations } from "next-intl/server";

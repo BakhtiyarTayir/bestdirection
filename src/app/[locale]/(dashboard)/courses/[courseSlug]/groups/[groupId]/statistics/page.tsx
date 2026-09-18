@@ -1,6 +1,6 @@
 import { requireAuth } from "@/lib/auth-guard";
 import { getTranslations } from "next-intl/server";
-import { getGroupStatistics } from "@/actions/group-actions";
+import { getGroupStatistics } from "@/lib/api/groups.server";
 import { notFound } from "next/navigation";
 import { GroupStatistics } from "@/components/groups/group-statistics";
 import { resolveCourseSlug } from "@/lib/slug-resolvers";

@@ -24,7 +24,7 @@ import { Link } from "@/i18n/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { useTransition } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { deleteGroup, toggleGroupActive } from "@/actions/group-actions";
+import { deleteGroup, toggleGroupActive } from "@/lib/api/groups";
 import { useTranslations } from "next-intl";
 
 interface GroupData {
@@ -33,8 +33,9 @@ interface GroupData {
   description: string | null;
   schedule: string | null;
   isActive: boolean;
-  startDate: Date | null;
-  endDate: Date | null;
+  // api отдаёт даты строками ISO
+  startDate: Date | string | null;
+  endDate: Date | string | null;
   _count: { enrollments: number };
 }
 

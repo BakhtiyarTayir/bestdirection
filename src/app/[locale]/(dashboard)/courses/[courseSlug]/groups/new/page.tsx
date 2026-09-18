@@ -1,6 +1,6 @@
 import { requireAuth } from "@/lib/auth-guard";
 import { GroupForm } from "@/components/groups/group-form";
-import { getTeacherOptions } from "@/actions/group-actions";
+import { getTeacherOptions } from "@/lib/api/groups.server";
 import { getTranslations } from "next-intl/server";
 import { resolveCourseSlug } from "@/lib/slug-resolvers";
 

@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getEnrolledStudents, getCourseById } from "@/lib/api/courses.server";
 import { getAttendanceSessions } from "@/actions/attendance-actions";
-import { getTeacherOptions } from "@/actions/group-actions";
+import { getTeacherOptions } from "@/lib/api/groups.server";
 import { AttendanceMarking } from "@/components/attendance-marking";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

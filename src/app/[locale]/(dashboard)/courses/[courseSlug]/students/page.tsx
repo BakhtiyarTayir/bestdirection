@@ -5,7 +5,7 @@ import {
   getEnrolledStudents,
   getAvailableStudents,
 } from "@/lib/api/courses.server";
-import { getCourseGroups } from "@/actions/group-actions";
+import { getCourseGroups } from "@/lib/api/groups.server";
 import { StudentEnrollment } from "@/components/student-enrollment";
 import { notFound } from "next/navigation";
 import { resolveCourseSlug } from "@/lib/slug-resolvers";

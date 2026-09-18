@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { createAttendanceSession } from "@/actions/attendance-actions";
-import { getCourseGroups } from "@/actions/group-actions";
+import { getCourseGroups } from "@/lib/api/groups";
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 

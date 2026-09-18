@@ -26,7 +26,7 @@ import {
   addStudentsToGroup,
   removeStudentFromGroup,
   moveStudentToGroup,
-} from "@/actions/group-actions";
+} from "@/lib/api/groups";
 import { useTranslations } from "next-intl";
 
 interface Student {

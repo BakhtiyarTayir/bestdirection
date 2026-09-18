@@ -4,7 +4,7 @@ import {
   getGroupDetails,
   getAvailableStudentsForGroup,
   getCourseGroups,
-} from "@/actions/group-actions";
+} from "@/lib/api/groups.server";
 import { notFound } from "next/navigation";
 import { GroupStudentsManager } from "@/components/groups/group-students-manager";
 import { resolveCourseSlug } from "@/lib/slug-resolvers";

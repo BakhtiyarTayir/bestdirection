@@ -22,9 +22,10 @@ export function toNoonUtc(date: string): Date {
  * храним полднем UTC: локальные дали бы тот же день, но только пока таймзона
  * не дальше 12 часов от Гринвича.
  */
-export function toDateInput(date: Date | null | undefined): string {
+export function toDateInput(date: Date | string | null | undefined): string {
   if (!date) return "";
-  return date.toISOString().slice(0, 10);
+  // Из api дата приходит строкой ISO, из формы — объектом Date
+  return (date instanceof Date ? date : new Date(date)).toISOString().slice(0, 10);
 }
 
 /**
