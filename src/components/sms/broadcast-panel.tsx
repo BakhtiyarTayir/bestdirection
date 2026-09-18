@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { previewGroupBroadcast, sendGroupBroadcast } from "@/actions/sms-actions";
+import { previewBroadcast, sendBroadcast } from "@/lib/api/sms";
 import { AlertTriangle, Loader2, Send, Eye } from "lucide-react";
 
 interface Template {
@@ -71,7 +71,7 @@ export function BroadcastPanel({
   const handlePreview = () => {
     if (!templateId) return;
     startTransition(async () => {
-      const res = await previewGroupBroadcast({ groupId, templateId });
+      const res = await previewBroadcast({ groupId, templateId });
       if (res.success) {
         setPlan(res.data as Plan);
       } else {
@@ -91,7 +91,7 @@ export function BroadcastPanel({
     if (!ok) return;
 
     startTransition(async () => {
-      const res = await sendGroupBroadcast({ groupId, templateId });
+      const res = await sendBroadcast({ groupId, templateId });
       if (res.success) {
         toast({ title: t("sent", { count: res.data.sent }) });
         setPlan(null);

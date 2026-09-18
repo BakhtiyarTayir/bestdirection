@@ -27,5 +27,7 @@ import { UploadsService } from "./uploads.service";
     UploadsService,
     HomeworkTransferService,
   ],
+  // SubmissionsService нужен боту: у него своей копии проверок нет
+  exports: [SubmissionsService],
 })
 export class HomeworkModule {}

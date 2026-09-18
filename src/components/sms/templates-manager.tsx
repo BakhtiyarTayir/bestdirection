@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { createTemplate, syncTemplates } from "@/actions/sms-actions";
+import { createSmsTemplate, syncSmsTemplates } from "@/lib/api/sms";
 import { TEMPLATE_VARIABLES } from "@/lib/sms/templates";
 import { Loader2, RefreshCw, Plus } from "lucide-react";
 
@@ -45,7 +45,7 @@ export function TemplatesManager({ templates }: { templates: Template[] }) {
 
   const handleSync = () => {
     startTransition(async () => {
-      const res = await syncTemplates();
+      const res = await syncSmsTemplates();
       if (res.success) {
         toast({ title: t("synced", { created: res.data.created, updated: res.data.updated }) });
         router.refresh();
@@ -57,7 +57,7 @@ export function TemplatesManager({ templates }: { templates: Template[] }) {
 
   const handleCreate = () => {
     startTransition(async () => {
-      const res = await createTemplate({ title, textRu, textUz: textUz || textRu, submitToEskiz });
+      const res = await createSmsTemplate({ title, textRu, textUz: textUz || textRu, submitToEskiz });
       if (res.success) {
         // Ошибку подачи показываем отдельно: шаблон сохранён, повторить можно
         toast({

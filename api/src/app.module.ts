@@ -20,6 +20,7 @@ import { EnrollmentRequestsModule } from "./modules/enrollment-requests/enrollme
 import { GroupsModule } from "./modules/groups/groups.module";
 import { HomeworkModule } from "./modules/homework/homework.module";
 import { LessonsModule } from "./modules/lessons/lessons.module";
+import { NotificationsModule } from "./modules/notifications/notifications.module";
 import { ParentsModule } from "./modules/parents/parents.module";
 import { HealthController } from "./modules/health/health.controller";
 import { MeController } from "./modules/me/me.controller";
@@ -44,6 +45,7 @@ import { UsersModule } from "./modules/users/users.module";
     AttendanceModule,
     LessonsModule,
     HomeworkModule,
+    NotificationsModule,
     AssessmentsModule,
     ParentsModule,
     TelegramModule,
