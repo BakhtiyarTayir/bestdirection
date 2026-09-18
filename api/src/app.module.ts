@@ -12,8 +12,10 @@ import { OriginGuard } from "./common/security/origin.guard";
 import { ApiThrottlerGuard } from "./common/security/throttler.guard";
 import { EnvModule } from "./config/env.module";
 import { AuditLogModule } from "./modules/audit-log/audit-log.module";
+import { BillingModule } from "./modules/billing/billing.module";
 import { HealthController } from "./modules/health/health.controller";
 import { MeController } from "./modules/me/me.controller";
+import { TrashModule } from "./modules/trash/trash.module";
 import { UsersModule } from "./modules/users/users.module";
 
 @Module({
@@ -26,6 +28,8 @@ import { UsersModule } from "./modules/users/users.module";
     ThrottlerModule.forRoot({ throttlers: [{ ttl: 60_000, limit: 120 }] }),
     UsersModule,
     AuditLogModule,
+    BillingModule,
+    TrashModule,
   ],
   controllers: [HealthController, MeController],
   providers: [
