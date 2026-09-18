@@ -7,7 +7,7 @@ import {
   type Subjects,
 } from "@casl/prisma/runtime";
 import { Injectable } from "@nestjs/common";
-import type { Prisma, User } from "../../../generated/prisma";
+import type { AuditLog, Prisma, User } from "../../../generated/prisma";
 import type { SessionUser } from "../auth/session-user";
 
 // Все права api описываются здесь. Условия пишутся синтаксисом Prisma where:
@@ -24,8 +24,15 @@ export type Action = "manage" | "create" | "read" | "update" | "delete";
 
 export type AppSubjects =
   | "all"
+  // Виртуальные субъекты: отчёт и справочник — не таблицы, но права на них
+  // описываются так же, как на модели, и проверка маршрута остаётся однородной.
+  // UserDirectory — доступ к списку людей вообще, отдельно от права видеть
+  // конкретного человека (свой профиль есть у всех).
+  | "HomeworkStatistics"
+  | "UserDirectory"
   | Subjects<{
       User: User;
+      AuditLog: AuditLog;
     }>;
 
 export type PrismaQuery<T extends PrismaModel = PrismaModel> = PrismaQueryOf<Prisma.TypeMap, T>;
@@ -43,9 +50,17 @@ export function defineAbilityFor(user: Pick<SessionUser, "id" | "role">): AppAbi
       break;
 
     case "TEACHER":
+      // Ученики целиком (преподаватели подменяют друг друга — решение владельца
+      // от 2026-09-16) и свой профиль
+      can("read", "User", { role: "STUDENT" });
+      can("read", "User", { id: user.id });
+      can("read", "UserDirectory");
+      can("read", "HomeworkStatistics");
+      break;
+
     case "STUDENT":
     case "PARENT":
-      // Свой профиль. Остальные права появляются вместе с модулями.
+      // Только свой профиль. Остальные права появляются вместе с модулями.
       can("read", "User", { id: user.id });
       break;
   }

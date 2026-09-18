@@ -1,4 +1,5 @@
 import { encode } from "@auth/core/jwt";
+import bcrypt from "bcryptjs";
 import { type ModuleMetadata, type Type } from "@nestjs/common";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Test } from "@nestjs/testing";
@@ -40,7 +41,13 @@ export function testDb() {
   return db;
 }
 
-export async function createUser(data: { role: Role; isActive?: boolean; deletedAt?: Date | null }) {
+export async function createUser(data: {
+  role: Role;
+  isActive?: boolean;
+  deletedAt?: Date | null;
+  password?: string;
+  telegramChatId?: string | null;
+}) {
   const id = randomUUID().slice(0, 8);
   return testDb().user.create({
     data: {
@@ -50,6 +57,8 @@ export async function createUser(data: { role: Role; isActive?: boolean; deleted
       role: data.role,
       isActive: data.isActive ?? true,
       deletedAt: data.deletedAt ?? null,
+      passwordHash: data.password ? await bcrypt.hash(data.password, 4) : null,
+      telegramChatId: data.telegramChatId ?? null,
     },
   });
 }

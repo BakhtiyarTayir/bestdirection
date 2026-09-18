@@ -11,8 +11,10 @@ import { PrismaModule } from "./common/prisma/prisma.module";
 import { OriginGuard } from "./common/security/origin.guard";
 import { ApiThrottlerGuard } from "./common/security/throttler.guard";
 import { EnvModule } from "./config/env.module";
+import { AuditLogModule } from "./modules/audit-log/audit-log.module";
 import { HealthController } from "./modules/health/health.controller";
 import { MeController } from "./modules/me/me.controller";
+import { UsersModule } from "./modules/users/users.module";
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { MeController } from "./modules/me/me.controller";
     AuthModule,
     // 120 запросов в минуту с одного IP — с запасом для живого пользователя
     ThrottlerModule.forRoot({ throttlers: [{ ttl: 60_000, limit: 120 }] }),
+    UsersModule,
+    AuditLogModule,
   ],
   controllers: [HealthController, MeController],
   providers: [
