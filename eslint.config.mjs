@@ -34,11 +34,18 @@ const eslintConfig = defineConfig([
       "src/app/**/courses/catalog/**",
       "src/app/**/courses/requests/**",
       "src/app/**/admin/compare/**",
+      "src/app/**/attendance/**",
+      "src/app/**/my-children/**",
+      "src/app/**/groups/**",
       "src/components/telegram-link.tsx",
       "src/components/trash-table.tsx",
       "src/components/course-form.tsx",
       "src/components/copy-course-dialog.tsx",
       "src/components/student-enrollment.tsx",
+      "src/components/attendance-marking.tsx",
+      "src/components/create-session-dialog.tsx",
+      "src/components/parents-panel.tsx",
+      "src/components/groups/**",
     ],
     rules: {
       "@typescript-eslint/no-restricted-imports": [

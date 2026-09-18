@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getCourseById, getEnrolledStudents } from "@/lib/api/courses.server";
-import { getAttendanceSessions } from "@/actions/attendance-actions";
+import { getAttendanceSessions } from "@/lib/api/attendance.server";
 import { AttendanceGrid } from "@/components/attendance-grid";
 import { CreateSessionDialog } from "@/components/create-session-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

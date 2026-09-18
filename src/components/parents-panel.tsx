@@ -23,7 +23,7 @@ import {
   searchParentCandidates,
   unlinkParent,
   updateParentLink,
-} from "@/actions/parent-actions";
+} from "@/lib/api/attendance";
 import type { ParentRelation } from "@/validators/parent";
 import { Loader2, Phone, Star, Trash2, UserPlus, Search } from "lucide-react";
 
@@ -140,11 +140,11 @@ export function ParentsPanel({ studentId }: { studentId: string }) {
   };
 
   const handleRelation = (id: string, value: ParentRelation) => {
-    startTransition(async () => report(await updateParentLink({ id, relation: value }), "saved"));
+    startTransition(async () => report(await updateParentLink(id, { relation: value }), "saved"));
   };
 
   const handlePrimary = (id: string) => {
-    startTransition(async () => report(await updateParentLink({ id, isPrimary: true }), "saved"));
+    startTransition(async () => report(await updateParentLink(id, { isPrimary: true }), "saved"));
   };
 
   const handleUnlink = (id: string) => {

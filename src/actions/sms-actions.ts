@@ -16,7 +16,8 @@ import {
 import { callbackUrl } from "@/lib/sms/notify";
 import { countSmsParts, normalizePhone } from "@/lib/sms/phone";
 import { findUnresolved, mapTemplateStatus, renderTemplate } from "@/lib/sms/templates";
-import { getGroupParents } from "@/actions/parent-actions";
+// Родители уже в api (этап 3c); рассылки переедут на этапе 6
+import { getGroupRecipients } from "@/lib/api/attendance.server";
 
 // Цена одной части СМС в сумах. Только для предварительной оценки в
 // интерфейсе: фактическую сумму возвращает шлюз и она пишется в журнал.
@@ -210,7 +211,7 @@ async function buildBroadcastPlan(params: {
       select: { id: true, name: true, course: { select: { title: true } } },
     }),
     prisma.smsTemplate.findUnique({ where: { id: params.templateId } }),
-    getGroupParents(params.groupId),
+    getGroupRecipients(params.groupId),
   ]);
 
   if (!group) return { ok: false, error: "groupNotFound" };

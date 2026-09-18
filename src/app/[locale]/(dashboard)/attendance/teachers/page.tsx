@@ -2,7 +2,7 @@ import { requireRole } from "@/lib/auth-guard";
 import {
   getTeacherAttendanceReport,
   getTeacherSessions,
-} from "@/actions/attendance-actions";
+} from "@/lib/api/attendance.server";
 import { getTranslations } from "next-intl/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {

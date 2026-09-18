@@ -23,7 +23,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { createAttendanceSession } from "@/actions/attendance-actions";
+import { createAttendanceSession } from "@/lib/api/attendance";
 import { getCourseGroups } from "@/lib/api/groups";
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -62,7 +62,7 @@ export function CreateSessionDialog({
       setIsLoadingGroups(true);
       getCourseGroups(courseId)
         .then((result) => {
-          if (result.success && result.data) {
+          if (result.success) {
             setGroups(result.data);
           }
         })
@@ -94,7 +94,7 @@ export function CreateSessionDialog({
         groupId: groupId || undefined,
       });
 
-      if (result.success && result.data) {
+      if (result.success) {
         toast({
           title: t("sessionCreated"),
           description: t("sessionCreatedSuccess"),
@@ -107,7 +107,8 @@ export function CreateSessionDialog({
       } else {
         toast({
           title: tErrors("error"),
-          description: result.error ?? t("sessionCreateFailed"),
+          // Ключ ошибки от api переводится общим словарём, запасной текст — свой
+          description: result.error ? tErrors(result.error) : t("sessionCreateFailed"),
           variant: "destructive",
         });
       }

@@ -22,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
-import { setTeacherAttendance } from "@/actions/attendance-actions";
+import { setTeacherAttendance } from "@/lib/api/attendance";
 import type { AttendanceStatus } from "@/validators/attendance";
 
 export interface TeacherSessionRow {

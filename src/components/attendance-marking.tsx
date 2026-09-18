@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { updateAttendanceRecords } from "@/actions/attendance-actions";
+import { updateAttendanceRecords } from "@/lib/api/attendance";
 import { Check } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { AttendanceStatus } from "@/validators/attendance";
@@ -162,8 +162,7 @@ export function AttendanceMarking({
   const handleSave = async () => {
     setIsLoading(true);
     try {
-      const result = await updateAttendanceRecords({
-        sessionId,
+      const result = await updateAttendanceRecords(sessionId, {
         records: records.map((r) => ({
           studentId: r.studentId,
           status: r.status as AttendanceStatus,

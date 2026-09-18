@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { deleteAttendanceSession } from "@/actions/attendance-actions";
+import { deleteAttendanceSession } from "@/lib/api/attendance";
 import { Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 

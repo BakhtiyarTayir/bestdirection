@@ -10,7 +10,6 @@
     "db:migrate": "npx prisma migrate dev",
     "db:seed": "npx tsx prisma/seed.ts",
     "check:assessment-scoring": "npx tsx scripts/check-assessment-scoring.ts",
-    "check:attendance-db": "npx tsx scripts/check-attendance-db.ts",
     "db:reset": "npx prisma migrate reset"
   },
   "prisma": {

@@ -66,12 +66,12 @@ jobs:
           npx tsc --noEmit
           npx eslint
 
-      # Проверки биллинга уехали в тесты api вместе с расчётом (этап 3a)
-      - name: web — проверки посещаемости и баллов
+      # Проверки биллинга и посещаемости уехали в тесты api вместе с их
+      # кодом (этапы 3a и 3c)
+      - name: web — проверка подсчёта баллов
         run: |
           DATABASE_URL="$TEST_DATABASE_URL" npx prisma migrate deploy
           npm run check:assessment-scoring
-          ATTENDANCE_DB_TEST_URL="$TEST_DATABASE_URL" npm run check:attendance-db
 
       - name: api — зависимости и клиент Prisma
         working-directory: api

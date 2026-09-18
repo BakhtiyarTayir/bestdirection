@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/auth-guard";
-import { getParentChildren } from "@/actions/parent-actions";
+import { getParentChildren } from "@/lib/api/attendance.server";
 import { getTranslations } from "next-intl/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
