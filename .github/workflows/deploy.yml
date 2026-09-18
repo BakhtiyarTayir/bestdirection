@@ -202,7 +202,9 @@ jobs:
 
             # Caddyfile примонтирован файлом: up не перезапускает caddy, если
             # поменялось только содержимое, — перечитываем конфигурацию явно.
-            docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+            # < /dev/null обязателен: exec -T прокидывает stdin в контейнер, а
+            # сам этот скрипт приходит на сервер по stdin — иначе съест остаток
+            docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile < /dev/null
 
             docker logout ghcr.io
 
@@ -218,11 +220,13 @@ jobs:
             "EXPECTED_SHA='${{ github.sha }}' bash -s" <<'REMOTE'
             set -euo pipefail
             cd /opt/bestdirection
-            image=$(docker inspect "$(docker compose ps -q app)" --format '{{.Config.Image}}')
-            case "$image" in
-              *":$EXPECTED_SHA") echo "app работает на $image" ;;
-              *) echo "app работает на $image, а ожидался тег $EXPECTED_SHA" >&2; exit 1 ;;
-            esac
+            for service in app api; do
+              image=$(docker inspect "$(docker compose ps -q "$service")" --format '{{.Config.Image}}')
+              case "$image" in
+                *":$EXPECTED_SHA") echo "$service работает на $image" ;;
+                *) echo "$service работает на $image, а ожидался тег $EXPECTED_SHA" >&2; exit 1 ;;
+              esac
+            done
           REMOTE
 
       - name: Проверка, что сайт поднялся
