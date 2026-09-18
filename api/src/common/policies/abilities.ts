@@ -7,7 +7,7 @@ import {
   type Subjects,
 } from "@casl/prisma/runtime";
 import { Injectable } from "@nestjs/common";
-import type { AuditLog, Course, EnrollmentRequest, Prisma, User } from "../../../generated/prisma";
+import type { AuditLog, Course, EnrollmentRequest, Group, Prisma, User } from "../../../generated/prisma";
 import type { SessionUser } from "../auth/session-user";
 
 // Все права api описываются здесь. Условия пишутся синтаксисом Prisma where:
@@ -40,6 +40,7 @@ export type AppSubjects =
       AuditLog: AuditLog;
       Course: Course;
       EnrollmentRequest: EnrollmentRequest;
+      Group: Group;
     }>;
 
 export type PrismaQuery<T extends PrismaModel = PrismaModel> = PrismaQueryOf<Prisma.TypeMap, T>;
@@ -69,6 +70,9 @@ export function defineAbilityFor(user: Pick<SessionUser, "id" | "role">): AppAbi
       can("manage", "Course", { teacherId: user.id });
       // Заявки на свои курсы: список сужает сервис, право — общее
       can("update", "EnrollmentRequest");
+      // Группы: смотреть можно любые (подмены), менять — только в своих курсах
+      can("read", "Group");
+      can("manage", "Group", { course: { is: { teacherId: user.id } } });
       break;
 
     case "STUDENT":

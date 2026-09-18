@@ -15,6 +15,7 @@ import { AuditLogModule } from "./modules/audit-log/audit-log.module";
 import { BillingModule } from "./modules/billing/billing.module";
 import { CoursesModule } from "./modules/courses/courses.module";
 import { EnrollmentRequestsModule } from "./modules/enrollment-requests/enrollment-requests.module";
+import { GroupsModule } from "./modules/groups/groups.module";
 import { HealthController } from "./modules/health/health.controller";
 import { MeController } from "./modules/me/me.controller";
 import { TelegramModule } from "./common/telegram/telegram.module";
@@ -34,6 +35,7 @@ import { UsersModule } from "./modules/users/users.module";
     BillingModule,
     CoursesModule,
     EnrollmentRequestsModule,
+    GroupsModule,
     TelegramModule,
     TrashModule,
   ],
