@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/auth-guard";
-import { prisma } from "@/lib/prisma";
+import { getCourseById } from "@/lib/api/courses.server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GraduationCap } from "lucide-react";
@@ -30,12 +30,9 @@ async function NewExamPageAsync({
 
   const session = await requireRole(["ADMIN", "TEACHER"]);
 
-  const course = await prisma.course.findUnique({
-    where: { id: courseId },
-    select: { id: true, title: true, teacherId: true },
-  });
-
-  if (!course) redirect("/courses");
+  const courseResult = await getCourseById(courseId);
+  if (!courseResult.success) redirect("/courses");
+  const course = courseResult.data;
 
   // Teachers can only create exams for their own courses
   if (

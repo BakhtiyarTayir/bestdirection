@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { Trash2 } from "lucide-react";
-import { deleteLesson } from "@/actions/lesson-actions";
+import { deleteLesson } from "@/lib/api/lessons";
 import { useTranslations } from "next-intl";
 
 interface DeleteLessonButtonProps {

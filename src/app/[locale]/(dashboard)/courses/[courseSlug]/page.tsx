@@ -1,6 +1,10 @@
 import { requireAuth } from "@/lib/auth-guard";
 import { getCourseById } from "@/lib/api/courses.server";
-import { prisma } from "@/lib/prisma";
+import {
+  getAssessmentsByCourse,
+  getCourseLessonNav,
+  getCourseProgress,
+} from "@/lib/api/lessons.server";
 import { resolveCourseSlug } from "@/lib/slug-resolvers";
 import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
@@ -81,58 +85,21 @@ async function CourseDetailPageAsync({
   const course = result.data;
   const isOwnerOrAdmin = role === "ADMIN" || (role === "TEACHER" && course.teacherId === session.user.id);
 
-  // Fetch lessons for this course
-  const lessons = await prisma.lesson.findMany({
-    where: { courseId },
-    orderBy: { sortOrder: "asc" },
-    select: {
-      id: true,
-      slug: true,
-      title: true,
-      videoUrl: true,
-      isPublished: true,
-      sortOrder: true,
-    },
-  });
+  // Уроки, экзамены и прогресс — из api; черновики он прячет сам
+  const [navResult, examsResult, progressResult] = await Promise.all([
+    getCourseLessonNav(courseSlug),
+    getAssessmentsByCourse(courseId, "EXAM"),
+    role === "STUDENT" ? getCourseProgress(courseId) : null,
+  ]);
 
-  // Fetch enrolled count
-  const enrolledCount = await prisma.enrollment.count({
-    where: { courseId },
-  });
-
-  // Fetch exams count
-  const examsCount = await prisma.assessment.count({
-    where: {
-      courseId,
-      type: "EXAM",
-      ...(role === "STUDENT" ? { isPublished: true } : {}),
-    },
-  });
-
-  // Fetch progress for students
-  let courseProgress = { total: 0, completed: 0, percentage: 0 };
-  const completedLessonIds = new Set<string>();
-  if (role === "STUDENT") {
-    const publishedLessons = lessons.filter((l) => l.isPublished);
-    if (publishedLessons.length > 0) {
-      const progressRecords = await prisma.lessonProgress.findMany({
-        where: {
-          studentId: session.user.id,
-          lessonId: { in: publishedLessons.map((l) => l.id) },
-          completedAt: { not: null },
-        },
-        select: { lessonId: true },
-      });
-      for (const p of progressRecords) {
-        completedLessonIds.add(p.lessonId);
-      }
-      courseProgress = {
-        total: publishedLessons.length,
-        completed: completedLessonIds.size,
-        percentage: Math.round((completedLessonIds.size / publishedLessons.length) * 100),
-      };
-    }
-  }
+  const lessons = navResult.success ? navResult.data.lessons : [];
+  const completedLessonIds = new Set(navResult.success ? navResult.data.completedIds : []);
+  const enrolledCount = course._count.enrollments;
+  const examsCount = examsResult.success ? examsResult.data.length : 0;
+  const courseProgress =
+    progressResult?.success
+      ? progressResult.data
+      : { total: 0, completed: 0, percentage: 0 };
 
   return (
     <div>

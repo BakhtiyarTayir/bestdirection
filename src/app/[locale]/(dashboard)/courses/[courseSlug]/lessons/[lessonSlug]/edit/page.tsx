@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getLessonById } from "@/actions/lesson-actions";
+import { getLessonById, getTestByLesson } from "@/lib/api/lessons.server";
+// Задания читаются напрямую: их модуль переезжает на этапе 5
 import { prisma } from "@/lib/prisma";
 import { EditLessonClient } from "./edit-lesson-client";
 import { getTranslations } from "next-intl/server";
@@ -25,7 +26,7 @@ export default async function EditLessonPage({ params }: EditLessonPageProps) {
   const { courseId, lessonId } = await resolveFullPath({ courseSlug, lessonSlug });
   const result = await getLessonById(lessonId);
 
-  if (!result.success || !result.data) {
+  if (!result.success) {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">{tErrors("lessonNotFound")}</h1>
@@ -36,23 +37,8 @@ export default async function EditLessonPage({ params }: EditLessonPageProps) {
 
   const lesson = result.data;
 
-  const [assessment, homeworks] = await Promise.all([
-    prisma.assessment.findUnique({
-      where: { lessonId },
-      include: {
-        questions: {
-          include: {
-            options: {
-              orderBy: { sortOrder: "asc" },
-            },
-          },
-          orderBy: { sortOrder: "asc" },
-        },
-        _count: {
-          select: { attempts: true },
-        },
-      },
-    }),
+  const [assessmentResult, homeworks] = await Promise.all([
+    getTestByLesson(lessonId),
     prisma.homework.findMany({
       where: { lessonId },
       include: {
@@ -61,6 +47,9 @@ export default async function EditLessonPage({ params }: EditLessonPageProps) {
       orderBy: { sortOrder: "asc" },
     }),
   ]);
+
+  // Теста может не быть — вкладка тогда предложит его создать
+  const assessment = assessmentResult.success ? assessmentResult.data : null;
 
   return (
     <div className="space-y-6">

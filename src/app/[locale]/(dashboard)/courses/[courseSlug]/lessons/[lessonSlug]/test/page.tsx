@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { getLessonById, getMyAssessmentAttempts, getTestByLesson } from "@/lib/api/lessons.server";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -54,57 +54,18 @@ async function TestPageAsync({
   if (!session?.user) redirect("/login");
 
   const role = session.user.role;
-  const userId = session.user.id;
 
-  const lesson = await prisma.lesson.findUnique({
-    where: { id: lessonId },
-    include: {
-      course: {
-        select: { id: true, title: true, teacherId: true },
-      },
-    },
-  });
+  const lessonResult = await getLessonById(lessonId);
+  if (!lessonResult.success) redirect(`/courses/${courseSlug}`);
+  const lesson = lessonResult.data;
 
-  if (!lesson) redirect(`/courses/${courseSlug}`);
+  // Теста может не быть вовсе — тогда персонал увидит форму создания
+  const assessmentResult = await getTestByLesson(lessonId);
+  const assessment = assessmentResult.success ? assessmentResult.data : null;
 
-  // Use Assessment model
-  const assessment = await prisma.assessment.findUnique({
-    where: { lessonId },
-    include: {
-      questions: {
-        include: {
-          options: {
-            orderBy: { sortOrder: "asc" },
-          },
-        },
-        orderBy: { sortOrder: "asc" },
-      },
-      _count: {
-        select: { attempts: true },
-      },
-    },
-  });
-
-  const studentAttempts = role === "STUDENT" && assessment
-    ? await prisma.assessmentAttempt.findMany({
-        where: {
-          assessmentId: assessment.id,
-          studentId: userId,
-        },
-        include: {
-          answers: {
-            include: {
-              question: {
-                include: {
-                  options: { orderBy: { sortOrder: "asc" } },
-                },
-              },
-            },
-          },
-        },
-        orderBy: { startedAt: "desc" },
-      })
-    : [];
+  const attemptsResult =
+    role === "STUDENT" && assessment ? await getMyAssessmentAttempts(assessment.id) : null;
+  const studentAttempts = attemptsResult?.success ? attemptsResult.data : [];
 
   const isTeacherOrAdmin = role === "ADMIN" || role === "TEACHER";
 
@@ -157,7 +118,7 @@ async function TestPageAsync({
                       <Link href={`/courses/${courseSlug}/lessons/${lessonSlug}/test/attempts`}>
                         <Button variant="outline" size="sm">
                           <BarChart3 className="h-4 w-4 mr-2" />
-                          {t("results", { count: assessment._count.attempts })}
+                          {t("results", { count: assessment._count?.attempts ?? 0 })}
                         </Button>
                       </Link>
                       <ExportButton type="test" id={lessonId} />
@@ -233,7 +194,7 @@ async function TestPageAsync({
                                 options: question.options.map((o) => ({
                                   id: o.id,
                                   text: o.text,
-                                  isCorrect: o.isCorrect,
+                                  isCorrect: o.isCorrect ?? false,
                                   sortOrder: o.sortOrder,
                                 })),
                               }}
@@ -409,7 +370,7 @@ async function TestPageAsync({
                     <CardTitle>{t("myAttempts")}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {studentAttempts.map((attempt, index) => (
+                    {studentAttempts.map((attempt) => (
                       <AssessmentResults
                         key={attempt.id}
                         attempt={{
@@ -418,8 +379,8 @@ async function TestPageAsync({
                           maxScore: attempt.maxScore,
                           percentage: attempt.percentage,
                           isPassed: attempt.isPassed,
-                          startedAt: attempt.startedAt.toISOString(),
-                          completedAt: attempt.completedAt?.toISOString() || null,
+                          startedAt: attempt.startedAt,
+                          completedAt: attempt.completedAt,
                           answers: attempt.answers.map((a) => ({
                             id: a.id,
                             questionId: a.questionId,
@@ -439,7 +400,7 @@ async function TestPageAsync({
                             },
                           })),
                         }}
-                        attemptNumber={studentAttempts.length - index}
+                        attemptNumber={attempt.attemptNumber}
                       />
                     ))}
                   </CardContent>

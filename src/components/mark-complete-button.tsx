@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
-import { markLessonComplete } from "@/actions/progress-actions";
+import { markLessonComplete } from "@/lib/api/lessons";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 

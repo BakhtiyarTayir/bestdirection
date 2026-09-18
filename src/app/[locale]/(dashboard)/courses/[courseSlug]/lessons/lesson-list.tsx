@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { deleteLesson } from "@/actions/lesson-actions";
+import { deleteLesson } from "@/lib/api/lessons";
 import { Video, FileText, Edit, Trash2, Eye, GripVertical } from "lucide-react";
 import { useTranslations } from "next-intl";
 

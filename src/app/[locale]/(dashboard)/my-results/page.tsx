@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { getStudentAssessmentResults } from "@/lib/api/lessons.server";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -42,39 +42,12 @@ async function MyResultsPageAsync({
     redirect("/dashboard");
   }
 
-  const allAttempts = await prisma.assessmentAttempt.findMany({
-    where: { studentId: session.user.id },
-    include: {
-      assessment: {
-        select: {
-          id: true,
-          title: true,
-          type: true,
-          passingScore: true,
-          courseId: true,
-          lessonId: true,
-          lesson: {
-            select: {
-              id: true,
-              slug: true,
-              title: true,
-            },
-          },
-          course: {
-            select: {
-              id: true,
-              slug: true,
-              title: true,
-            },
-          },
-        },
-      },
-    },
-    orderBy: { startedAt: "desc" },
-  });
+  // Только завершённые попытки: начатую показывать нечем
+  const resultsResult = await getStudentAssessmentResults();
+  const allAttempts = resultsResult.success ? resultsResult.data : [];
 
-  const testAttempts = allAttempts.filter((a) => a.assessment.type === "TEST");
-  const examAttempts = allAttempts.filter((a) => a.assessment.type === "EXAM");
+  const testAttempts = allAttempts.filter((a) => a.assessment?.type === "TEST");
+  const examAttempts = allAttempts.filter((a) => a.assessment?.type === "EXAM");
 
   // Stats (combined)
   const totalAttempts = allAttempts.length;
@@ -158,12 +131,12 @@ async function MyResultsPageAsync({
                   {testAttempts.map((attempt) => (
                     <TableRow key={attempt.id}>
                       <TableCell className="font-medium">
-                        {attempt.assessment.course.title}
+                        {attempt.assessment?.course.title}
                       </TableCell>
                       <TableCell>
-                        {attempt.assessment.lesson?.title ?? "\u2014"}
+                        {attempt.assessment?.lesson?.title ?? "\u2014"}
                       </TableCell>
-                      <TableCell>{attempt.assessment.title}</TableCell>
+                      <TableCell>{attempt.assessment?.title}</TableCell>
                       <TableCell className="text-center">
                         {attempt.score} / {attempt.maxScore}
                       </TableCell>
@@ -183,9 +156,9 @@ async function MyResultsPageAsync({
                         {formatDateTime(attempt.startedAt)}
                       </TableCell>
                       <TableCell>
-                        {attempt.assessment.lessonId && (
+                        {attempt.assessment?.lessonId && (
                           <Link
-                            href={`/courses/${attempt.assessment.course.slug}/lessons/${attempt.assessment.lesson?.slug}/test`}
+                            href={`/courses/${attempt.assessment?.course.slug}/lessons/${attempt.assessment?.lesson?.slug}/test`}
                           >
                             <Button variant="ghost" size="sm">
                               {tCommon("details")}
@@ -233,9 +206,9 @@ async function MyResultsPageAsync({
                   {examAttempts.map((attempt) => (
                     <TableRow key={attempt.id}>
                       <TableCell className="font-medium">
-                        {attempt.assessment.course.title}
+                        {attempt.assessment?.course.title}
                       </TableCell>
-                      <TableCell>{attempt.assessment.title}</TableCell>
+                      <TableCell>{attempt.assessment?.title}</TableCell>
                       <TableCell className="text-center">
                         {attempt.score} / {attempt.maxScore}
                       </TableCell>
@@ -256,7 +229,7 @@ async function MyResultsPageAsync({
                       </TableCell>
                       <TableCell>
                         <Link
-                          href={`/courses/${attempt.assessment.course.slug}/exams/${attempt.assessment.id}`}
+                          href={`/courses/${attempt.assessment?.course.slug}/exams/${attempt.assessment?.id}`}
                         >
                           <Button variant="ghost" size="sm">
                             {tCommon("details")}

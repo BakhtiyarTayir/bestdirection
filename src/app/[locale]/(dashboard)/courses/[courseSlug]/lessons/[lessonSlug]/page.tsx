@@ -1,9 +1,14 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Link } from "@/i18n/navigation";
+// Задания и их результаты переедут в api на этапе 5
 import { prisma } from "@/lib/prisma";
-import { getLessonById } from "@/actions/lesson-actions";
-import { getLessonProgress } from "@/actions/progress-actions";
+import {
+  getCourseLessonNav,
+  getLessonById,
+  getLessonProgress,
+  getMyBestAttempt,
+} from "@/lib/api/lessons.server";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -55,7 +60,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
   const { lessonId } = await resolveFullPath({ courseSlug, lessonSlug });
   const result = await getLessonById(lessonId);
 
-  if (!result.success || !result.data) {
+  if (!result.success) {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">{tErrors("lessonNotFound")}</h1>
@@ -70,16 +75,10 @@ export default async function LessonPage({ params }: LessonPageProps) {
   const isStudent = session.user.role === "STUDENT";
   const homeworks = (lesson.homeworks ?? []) as LessonHomework[];
 
-  // Sibling lessons for prev/next navigation and position label
-  const siblings = await prisma.lesson.findMany({
-    where: {
-      courseId: lesson.courseId,
-      deletedAt: null,
-      ...(isStudent ? { isPublished: true } : {}),
-    },
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-    select: { id: true, slug: true, title: true },
-  });
+  // Sibling lessons for prev/next navigation and position label.
+  // Черновики прячет api: видимость зависит от прав, а не от роли STUDENT.
+  const navResult = await getCourseLessonNav(courseSlug);
+  const siblings = navResult.success ? navResult.data.lessons : [];
   const currentIndex = siblings.findIndex((l) => l.id === lessonId);
   const prevLesson = currentIndex > 0 ? siblings[currentIndex - 1] : null;
   const nextLesson =
@@ -101,15 +100,8 @@ export default async function LessonPage({ params }: LessonPageProps) {
     }
 
     if (lesson.assessment) {
-      bestAttempt = await prisma.assessmentAttempt.findFirst({
-        where: {
-          assessmentId: lesson.assessment.id,
-          studentId: session.user.id,
-          completedAt: { not: null },
-        },
-        orderBy: { percentage: "desc" },
-        select: { percentage: true, isPassed: true },
-      });
+      const bestResult = await getMyBestAttempt(lesson.assessment.id);
+      if (bestResult.success) bestAttempt = bestResult.data;
     }
 
     if (homeworks.length > 0) {

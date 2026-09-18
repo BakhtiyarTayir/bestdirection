@@ -1,4 +1,8 @@
-import * as XLSX from "xlsx";
+// Перенесено из src/lib/spreadsheet-utils.ts в web; поменялся только пакет.
+// @e965/xlsx — поддерживаемый форк SheetJS 0.20.3. Пакет xlsx в npm заброшен
+// на 0.18.5, где известны prototype pollution и ReDoS без исправлений
+// (аудит 2.6), а он разбирает загружаемые пользователем файлы.
+import * as XLSX from "@e965/xlsx";
 
 // ---------- Types ----------
 

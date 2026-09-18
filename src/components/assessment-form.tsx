@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
-import { createAssessment, updateAssessment } from "@/actions/assessment-actions";
+import { createAssessment, updateAssessment } from "@/lib/api/lessons";
 import { Loader2, Save } from "lucide-react";
 import type { AssessmentType } from "@/validators/assessment";
 
@@ -65,7 +65,7 @@ export function AssessmentForm({ type, courseId, courseSlug, lessonId, assessmen
         if (assessment) {
           const result = await updateAssessment(assessment.id, {
             title: title.trim(),
-            description: description.trim() || null,
+            description: description.trim() || undefined,
             passingScore,
             timeLimitMin: timeLimitMin ? parseInt(timeLimitMin) : null,
             maxAttempts,

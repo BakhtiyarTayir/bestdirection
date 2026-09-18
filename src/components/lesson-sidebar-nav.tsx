@@ -5,7 +5,7 @@ import { Link } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, CheckCircle2, EyeOff } from "lucide-react";
-import { getCourseLessonNav } from "@/actions/lesson-actions";
+import { getCourseLessonNav } from "@/lib/api/lessons";
 import {
   Tooltip,
   TooltipContent,

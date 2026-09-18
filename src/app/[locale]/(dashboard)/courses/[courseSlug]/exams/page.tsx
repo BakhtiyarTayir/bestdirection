@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { getCourseById } from "@/lib/api/courses.server";
+import { checkCourseExamEligibility, getAssessmentsByCourse } from "@/lib/api/lessons.server";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,58 +50,24 @@ async function ExamsPageAsync({
   const role = session.user.role;
   const userId = session.user.id;
 
-  const course = await prisma.course.findUnique({
-    where: { id: courseId },
-    select: { id: true, title: true, teacherId: true },
-  });
-
-  if (!course) redirect("/courses");
+  const courseResult = await getCourseById(courseId);
+  if (!courseResult.success) redirect("/courses");
+  const course = courseResult.data;
 
   const isTeacherOrAdmin =
     role === "ADMIN" || (role === "TEACHER" && course.teacherId === userId);
 
-  const exams = await prisma.assessment.findMany({
-    where: {
-      courseId,
-      type: "EXAM",
-      ...(role === "STUDENT" ? { isPublished: true } : {}),
-    },
-    include: {
-      _count: { select: { questions: true, attempts: true } },
-    },
-    orderBy: { sortOrder: "asc" },
-  });
+  // Черновики экзаменов api отдаёт только тем, кто вправе их видеть
+  const examsResult = await getAssessmentsByCourse(courseId, "EXAM");
+  const exams = examsResult.success ? examsResult.data : [];
 
-  // For students, check eligibility
-  let eligible = false;
-  let unpassedCount = 0;
-  if (role === "STUDENT") {
-    const lessonTests = await prisma.assessment.findMany({
-      where: {
-        courseId,
-        type: "TEST",
-        isPublished: true,
-        lessonId: { not: null },
-      },
-      select: { id: true },
-    });
-
-    let allPassed = true;
-    for (const test of lessonTests) {
-      const passedAttempt = await prisma.assessmentAttempt.findFirst({
-        where: {
-          assessmentId: test.id,
-          studentId: userId,
-          isPassed: true,
-        },
-      });
-      if (!passedAttempt) {
-        allPassed = false;
-        unpassedCount++;
-      }
-    }
-    eligible = allPassed;
-  }
+  // Допуск к экзаменам считает api: там же он проверяется при самой сдаче
+  const eligibilityResult =
+    role === "STUDENT" ? await checkCourseExamEligibility(courseId) : null;
+  const eligible = eligibilityResult ? eligibilityResult.success && eligibilityResult.data.eligible : true;
+  const unpassedCount = eligibilityResult?.success
+    ? eligibilityResult.data.unpassedTests.length
+    : 0;
 
   return (
     <div className="space-y-6">

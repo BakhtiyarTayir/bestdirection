@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Link } from "@/i18n/navigation";
-import { getLessons } from "@/actions/lesson-actions";
+import { getLessons } from "@/lib/api/lessons.server";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { LessonList } from "./lesson-list";

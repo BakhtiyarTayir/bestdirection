@@ -37,6 +37,12 @@ const eslintConfig = defineConfig([
       "src/app/**/attendance/**",
       "src/app/**/my-children/**",
       "src/app/**/groups/**",
+      // Этап 4: уроки, тесты и экзамены. Страницы урока и его правки пока
+      // не в списке — там остаётся прямое чтение заданий до этапа 5.
+      "src/app/**/lessons/**/test/**",
+      "src/app/**/lessons/new/**",
+      "src/app/**/exams/**",
+      "src/app/**/my-results/**",
       "src/components/telegram-link.tsx",
       "src/components/trash-table.tsx",
       "src/components/course-form.tsx",
@@ -46,6 +52,17 @@ const eslintConfig = defineConfig([
       "src/components/create-session-dialog.tsx",
       "src/components/parents-panel.tsx",
       "src/components/groups/**",
+      "src/components/assessment-form.tsx",
+      "src/components/assessment-management-buttons.tsx",
+      "src/components/assessment-question-form.tsx",
+      "src/components/assessment-taking.tsx",
+      "src/components/attempt-detail-row.tsx",
+      "src/components/export-import-buttons.tsx",
+      "src/components/lesson-sidebar-nav.tsx",
+      "src/components/lesson-test-tab.tsx",
+      "src/components/mark-complete-button.tsx",
+      "src/components/presence-heartbeat.tsx",
+      "src/components/video-player.tsx",
     ],
     rules: {
       "@typescript-eslint/no-restricted-imports": [
