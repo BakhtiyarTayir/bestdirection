@@ -7,7 +7,7 @@ import {
   type Subjects,
 } from "@casl/prisma/runtime";
 import { Injectable } from "@nestjs/common";
-import type { AuditLog, Prisma, User } from "../../../generated/prisma";
+import type { AuditLog, Course, Prisma, User } from "../../../generated/prisma";
 import type { SessionUser } from "../auth/session-user";
 
 // Все права api описываются здесь. Условия пишутся синтаксисом Prisma where:
@@ -35,6 +35,7 @@ export type AppSubjects =
   | Subjects<{
       User: User;
       AuditLog: AuditLog;
+      Course: Course;
     }>;
 
 export type PrismaQuery<T extends PrismaModel = PrismaModel> = PrismaQueryOf<Prisma.TypeMap, T>;
@@ -58,16 +59,48 @@ export function defineAbilityFor(user: Pick<SessionUser, "id" | "role">): AppAbi
       can("read", "User", { id: user.id });
       can("read", "UserDirectory");
       can("read", "HomeworkStatistics");
+      // Чужой курс преподаватель может открыть (подмены), но менять и удалять —
+      // только свои. Решение владельца от 2026-09-16.
+      can("read", "Course");
+      can("manage", "Course", { teacherId: user.id });
       break;
 
     case "STUDENT":
+      can("read", "User", { id: user.id });
+      // Опубликованный курс, на который записан
+      can("read", "Course", { isPublished: true, enrollments: { some: { studentId: user.id } } });
+      break;
+
     case "PARENT":
-      // Только свой профиль. Остальные права появляются вместе с модулями.
+      // Только свой профиль. Права на данные детей появятся на этапе 3c.
       can("read", "User", { id: user.id });
       break;
   }
 
   return build();
+}
+
+/**
+ * Условие выборки по правам, пригодное для подстановки в AND.
+ *
+ * Прямо accessibleBy() внутрь AND класть нельзя: когда правил на модель нет,
+ * он возвращает { OR: [] }, а Prisma игнорирует пустой OR внутри AND — запрос
+ * молча отдаёт ВСЕ строки вместо ни одной. Проверено на настоящей базе.
+ * Поэтому пустые права заменяются заведомо невыполнимым условием.
+ */
+/**
+ * Тип условия задаёт вызывающий: Prisma.CourseWhereInput и подобные. Выводить
+ * его из имени модели здесь нельзя — объединение по всем моделям слишком
+ * большое, и TypeScript отказывается его считать.
+ */
+export function accessibleWhere<TWhere>(
+  ability: AppAbility,
+  subject: Extract<AppSubjects, string>,
+  action: Action = "read"
+): TWhere {
+  const where = accessibleBy(ability, action).ofType(subject as never) as TWhere & { OR?: unknown[] };
+  const hasNoRules = Array.isArray(where.OR) && where.OR.length === 0;
+  return hasNoRules ? ({ id: { in: [] } } as TWhere) : where;
 }
 
 @Injectable()

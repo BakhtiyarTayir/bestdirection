@@ -13,6 +13,7 @@ import { ApiThrottlerGuard } from "./common/security/throttler.guard";
 import { EnvModule } from "./config/env.module";
 import { AuditLogModule } from "./modules/audit-log/audit-log.module";
 import { BillingModule } from "./modules/billing/billing.module";
+import { CoursesModule } from "./modules/courses/courses.module";
 import { HealthController } from "./modules/health/health.controller";
 import { MeController } from "./modules/me/me.controller";
 import { TrashModule } from "./modules/trash/trash.module";
@@ -29,6 +30,7 @@ import { UsersModule } from "./modules/users/users.module";
     UsersModule,
     AuditLogModule,
     BillingModule,
+    CoursesModule,
     TrashModule,
   ],
   controllers: [HealthController, MeController],

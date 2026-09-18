@@ -9,7 +9,7 @@ import { Prisma } from "../../../generated/prisma";
 import { AuditService, computeChanges } from "../../common/audit/audit.service";
 import { SessionUserCache } from "../../common/auth/session-user.cache";
 import type { SessionUser } from "../../common/auth/session-user";
-import { accessibleBy, type AppAbility } from "../../common/policies/abilities";
+import { accessibleWhere, type AppAbility } from "../../common/policies/abilities";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import type { CreateUserDto, UpdateProfileDto, UpdateUserDto } from "./dto/user.dto";
 
@@ -47,7 +47,7 @@ export class UsersService {
     // Кого видно, решают правила: администратор — всех, преподаватель —
     // учеников и себя. Раньше это был ручной if по роли внутри действия.
     return this.prisma.user.findMany({
-      where: accessibleBy(ability).ofType("User"),
+      where: accessibleWhere<Prisma.UserWhereInput>(ability, "User"),
       orderBy: { createdAt: "desc" },
       select: USER_SELECT,
     });
@@ -55,7 +55,7 @@ export class UsersService {
 
   async byId(ability: AppAbility, id: string) {
     const user = await this.prisma.user.findFirst({
-      where: { AND: [accessibleBy(ability).ofType("User"), { id }] },
+      where: { AND: [accessibleWhere<Prisma.UserWhereInput>(ability, "User"), { id }] },
       select: USER_SELECT,
     });
     // Недоступный объект — 404, а не 403: иначе ответ подтверждает, что такой
