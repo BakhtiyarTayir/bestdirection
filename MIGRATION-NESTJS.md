@@ -479,6 +479,18 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
 
 **Решение владельца от 2026-09-18:** разбор ответов ученику не показывается вовсе — ни после первой попытки, ни после последней. Ученик видит баллы, процент и результат; правильные варианты остаются у преподавателя. До переноса разбор был открыт, и оставшиеся попытки сдавались по подсмотренным ключам.
 
+### Этап 5 — homework, uploads
+
+**Статус: сделано 2026-09-18**, ветка `stage-5-homework`.
+
+- `homework-actions`, `homework-review-actions` и загрузка заданий из `import-actions` перенесены целиком; из `web` удалены маршруты `files/[fileId]`, `files/[fileId]/download`, `homework/[homeworkId]/upload`, `v1/export/homework`, `v1/upload/image`, `v1/upload/video`, `upload/video`.
+- Закрыты находки 3.5, 3.6, 4.1 и остаток 3.4 (работы).
+- Гостевые страницы урока и задания читают `@Public()`-маршруты `/public/lessons/...` и `/public/homework/...`: открыты только бесплатные курсы (2.9).
+- Тома загрузок примонтированы и к `api` теми же путями, что у `app`: в базе у файлов работ лежит абсолютный путь, и он должен читаться из обоих контейнеров. Раздаёт публичные файлы по-прежнему `app` (`src/app/uploads/[...path]`).
+- Панель запуска кода у преподавателя удалена: без Piston она всё равно не работала. Вернётся вместе с ним.
+- `src/lib/homework-submission.ts` и `src/lib/submission-files.ts` остаются в `web` до этапа 6 — ими пользуется Telegram-бот. В боте добавлена обработка столкновения номера попытки.
+- 23 теста модуля, всего в api 314.
+
 **Первый блок переноса закрыт.** В `web` осталось 13 файлов действий: уроки и тесты, домашние задания, импорт, прогресс, СМС, лендинг, заявки с сайта, настройки сайта и вход. После этапа 4 — 9: домашние задания, импорт заданий, СМС, лендинг, заявки с сайта, настройки сайта и вход.
 
 ### Этап 9 — вход и сессии переезжают в api
@@ -499,7 +511,7 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
 | 2 | `src/app/[locale]/(dashboard)/audit/page.tsx` |
 | 3 | `src/app/[locale]/(dashboard)/courses/[courseSlug]/page.tsx`; `src/lib/slug-resolvers.ts` (разрешение slug → id используется почти всеми страницами курса — в `api` отдельный эндпоинт); `src/lib/trash.ts` |
 | 4 | **сделано:** `.../lessons/[lessonSlug]/test/page.tsx`, `.../lessons/[lessonSlug]/test/attempts/page.tsx`, `.../exams/*` (все пять), `.../my-results/page.tsx`, `.../courses/[courseSlug]/page.tsx`. **Перенесено на этап 5** (нужны задания): `.../lessons/[lessonSlug]/page.tsx`, `.../lessons/[lessonSlug]/edit/page.tsx`, публичная `src/app/[locale]/(public)/lessons/open/[courseSlug]/[lessonSlug]/page.tsx` (в `api` — эндпоинт с `@Public()`) |
-| 5 | публичная `src/app/[locale]/(public)/homework/open/[courseSlug]/[lessonSlug]/[homeworkSlug]/page.tsx` (`@Public()`); `src/lib/homework-submission.ts` |
+| 5 | **сделано:** обе публичные страницы (урока и задания), страница урока и её правка, все страницы `homework/*`. `src/lib/homework-submission.ts` остаётся в `web` до этапа 6 — он нужен Telegram-боту |
 | 6 | `src/lib/sms/eskiz.ts`, `src/lib/sms/notify.ts`, `src/lib/telegram/bot.ts` |
 | 7 | `src/app/[locale]/(dashboard)/admin/landing/page.tsx`, `.../admin/landing/pages/page.tsx`, `.../admin/landing/pages/[id]/page.tsx`; `src/lib/marketing-content.ts`; `src/lib/site-settings.ts` (логотип читает layout кабинета — после переноса каждая страница кабинета зависит от `api`) |
 | 8 | `src/app/[locale]/(dashboard)/dashboard/page.tsx` (сводка по нескольким модулям — переносится последней из страниц); `src/lib/billing-ledger.ts` |
