@@ -21,7 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDateTime } from "@/lib/format-date";
-import type { HomeworkSubmissionState } from "@/actions/user-actions";
+import type { HomeworkSubmissionState } from "@/lib/api/users";
 
 interface UsersHomeworkStatisticsProps {
   courses: { id: string; title: string; slug: string }[];
@@ -39,7 +39,8 @@ interface UsersHomeworkStatisticsProps {
     bestPercent: number;
     submissionState: "PASSED" | "FAILED" | "NOT_SUBMITTED";
     hasSubmission: boolean;
-    lastSubmittedAt: Date | null;
+    // Строка: даты приходят из api в JSON; форматтер принимает и то и другое
+    lastSubmittedAt: Date | string | null;
   }[];
   summary: {
     totalStudents: number;

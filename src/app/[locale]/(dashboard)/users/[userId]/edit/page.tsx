@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/auth-guard";
-import { getUserById } from "@/actions/user-actions";
+import { getUserById } from "@/lib/api/users.server";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { EditUserForm } from "./edit-user-form";

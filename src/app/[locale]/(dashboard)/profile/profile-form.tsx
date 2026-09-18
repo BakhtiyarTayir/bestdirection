@@ -16,13 +16,14 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { updateProfile, changePassword } from "@/actions/user-actions";
+import { updateProfile, changePassword } from "@/lib/api/users";
 import { profileSchema, changePasswordSchema, type ProfileInput, type ChangePasswordInput } from "@/validators/profile";
 import { Loader2 } from "lucide-react";
 
 interface ProfileUser {
   id: string;
-  email: string;
+  // У аккаунтов, созданных через Telegram, почты нет
+  email: string | null;
   firstName: string;
   lastName: string;
   phone: string | null;
@@ -163,7 +164,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
               <Input
                 id="email"
                 type="email"
-                value={user.email}
+                value={user.email ?? ""}
                 disabled
                 className="bg-muted"
               />

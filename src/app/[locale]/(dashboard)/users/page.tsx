@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/auth-guard";
-import { getUsers, getDeactivatedUsers } from "@/actions/user-actions";
+import { getUsers, getDeactivatedUsers } from "@/lib/api/users.server";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

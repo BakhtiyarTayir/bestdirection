@@ -468,15 +468,23 @@ async function handleLoginConfirm(ctx: Context, code: string) {
 async function handleLinkAccount(ctx: Context, linkCode: string) {
   if (!ctx.chat) return;
 
-  // Find pending link by code (stored as telegramChatId temporarily with prefix)
-  const pendingUser = await prisma.user.findFirst({
-    where: { telegramChatId: `pending:${linkCode}` },
+  // Код живёт в отдельной таблице (api создаёт его по кнопке «привязать»).
+  // Раньше он лежал в User.telegramChatId как "pending:<код>" и затирал
+  // настоящий chat id — вторая попытка привязки ломала вход (аудит 2.8).
+  const request = await prisma.telegramLinkRequest.findUnique({
+    where: { code: linkCode },
+    include: { user: { select: { id: true, firstName: true, lastName: true } } },
   });
 
-  if (!pendingUser) {
+  if (!request || request.expiresAt < new Date()) {
+    if (request) {
+      await prisma.telegramLinkRequest.delete({ where: { id: request.id } }).catch(() => {});
+    }
     await ctx.reply(botMessages.linkCodeNotFound);
     return;
   }
+
+  const pendingUser = request.user;
 
   // Этот Telegram может быть уже занят другим аккаунтом
   // (например, автосозданным при входе через Telegram)
@@ -484,21 +492,23 @@ async function handleLinkAccount(ctx: Context, linkCode: string) {
     where: { telegramChatId: String(ctx.chat.id) },
   });
   if (holder && holder.id !== pendingUser.id) {
-    await prisma.user.update({
-      where: { id: pendingUser.id },
-      data: { telegramChatId: null },
-    });
+    // Код больше не нужен: привязать не к чему
+    await prisma.telegramLinkRequest.delete({ where: { id: request.id } }).catch(() => {});
     await ctx.reply(botMessages.telegramAlreadyTaken(holder.firstName, holder.lastName));
     return;
   }
 
-  await prisma.user.update({
-    where: { id: pendingUser.id },
-    data: {
-      telegramChatId: String(ctx.chat.id),
-      telegramUsername: ctx.from?.username || null,
-    },
-  });
+  // Код одноразовый: привязка и удаление кода — одной транзакцией
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: pendingUser.id },
+      data: {
+        telegramChatId: String(ctx.chat.id),
+        telegramUsername: ctx.from?.username || null,
+      },
+    }),
+    prisma.telegramLinkRequest.deleteMany({ where: { userId: pendingUser.id } }),
+  ]);
 
   await ctx.reply(botMessages.accountLinked(pendingUser.firstName, pendingUser.lastName));
 }

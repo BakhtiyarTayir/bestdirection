@@ -10,7 +10,7 @@ import {
   generateTelegramLinkCode,
   getTelegramStatus,
   unlinkTelegram,
-} from "@/actions/telegram-actions";
+} from "@/lib/api/users";
 import { MessageCircle, Link2, Unlink, Loader2 } from "lucide-react";
 import { getTelegramBotUsername } from "@/actions/telegram-auth-actions";
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { UserForm } from "@/components/user-form";
-import { createUser } from "@/actions/user-actions";
+import { createUser } from "@/lib/api/users";
 import type { CreateUserInput, UpdateUserInput } from "@/validators/user";
 
 export function CreateUserForm() {

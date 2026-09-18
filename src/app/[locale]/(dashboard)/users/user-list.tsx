@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { deactivateUser } from "@/actions/user-actions";
+import { deactivateUser } from "@/lib/api/users";
 import { Pencil, UserX, Loader2 } from "lucide-react";
 
 const roleBadgeVariant: Record<string, "destructive" | "default" | "secondary"> = {

@@ -30,7 +30,8 @@ interface AuditLog {
   action: string;
   changes: unknown;
   metadata: unknown;
-  createdAt: Date;
+  // Строка: api отдаёт даты в JSON, formatDateTime принимает и то и другое
+  createdAt: Date | string;
   user: {
     id: string;
     firstName: string;

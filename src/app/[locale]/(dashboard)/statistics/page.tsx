@@ -2,10 +2,9 @@ import { requireRole } from "@/lib/auth-guard";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { getTranslations } from "next-intl/server";
-import {
-  getUsersHomeworkStatistics,
-  type HomeworkSubmissionState,
-} from "@/actions/user-actions";
+import { getUsersHomeworkStatistics } from "@/lib/api/users.server";
+import type { HomeworkSubmissionState } from "@/lib/api/users";
+import { getLocale } from "next-intl/server";
 import { UsersHomeworkStatistics } from "./users-homework-statistics";
 import { ArrowLeft } from "lucide-react";
 
@@ -40,6 +39,8 @@ export default async function UsersStatisticsPage({
     homeworkId: params.homeworkId,
     groupId: params.groupId,
     submissionState,
+    // Имена сортирует api, порядок букв зависит от языка интерфейса
+    locale: await getLocale(),
   });
 
   const data = result.success

@@ -24,7 +24,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { restoreUser, purgeUser } from "@/actions/user-actions";
+import { restoreUser, purgeUser } from "@/lib/api/users";
 import { RotateCcw, Trash2, Loader2 } from "lucide-react";
 
 const roleBadgeVariant: Record<string, "destructive" | "default" | "secondary"> = {

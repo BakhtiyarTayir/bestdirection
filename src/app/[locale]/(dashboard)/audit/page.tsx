@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/auth-guard";
-import { prisma } from "@/lib/prisma";
+import { getAuditLog } from "@/lib/api/users.server";
 import { AuditTable } from "./audit-table";
 import { getTranslations } from "next-intl/server";
 
@@ -13,8 +13,6 @@ interface AuditPageProps {
   }>;
 }
 
-const PAGE_SIZE = 50;
-
 export default async function AuditPage({ searchParams }: AuditPageProps) {
   const t = await getTranslations("audit");
   await requireRole(["ADMIN"]);
@@ -24,27 +22,9 @@ export default async function AuditPage({ searchParams }: AuditPageProps) {
   const action = params.action || undefined;
   const page = Math.max(1, parseInt(params.page || "1", 10));
 
-  const where = {
-    ...(entityType ? { entityType } : {}),
-    ...(action ? { action } : {}),
-  };
-
-  const [logs, total] = await Promise.all([
-    prisma.auditLog.findMany({
-      where,
-      include: {
-        user: {
-          select: { id: true, firstName: true, lastName: true, email: true },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-      take: PAGE_SIZE,
-      skip: (page - 1) * PAGE_SIZE,
-    }),
-    prisma.auditLog.count({ where }),
-  ]);
-
-  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const result = await getAuditLog({ entityType, action, page });
+  const logs = result.success ? result.data.logs : [];
+  const totalPages = result.success ? result.data.totalPages : 0;
 
   return (
     <div className="space-y-6">

@@ -1,7 +1,7 @@
 "use client";
 
 import { UserForm } from "@/components/user-form";
-import { updateUser } from "@/actions/user-actions";
+import { updateUser } from "@/lib/api/users";
 import type { CreateUserInput, UpdateUserInput } from "@/validators/user";
 import type { Role } from "@/validators/user";
 

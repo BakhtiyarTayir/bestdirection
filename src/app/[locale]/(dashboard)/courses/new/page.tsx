@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/auth-guard";
-import { getUsers } from "@/actions/user-actions";
+import { getUsers } from "@/lib/api/users.server";
 import { CourseForm } from "@/components/course-form";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";

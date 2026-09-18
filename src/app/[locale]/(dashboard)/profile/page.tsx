@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth";
-import { getUserById } from "@/actions/user-actions";
+import { getUserById } from "@/lib/api/users.server";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { ProfileForm } from "./profile-form";
@@ -18,7 +18,11 @@ export default async function ProfilePage() {
   return <ProfilePageContent user={user} />;
 }
 
-async function ProfilePageContent({ user }: { user: { id: string; email: string; firstName: string; lastName: string; phone: string | null } }) {
+async function ProfilePageContent({
+  user,
+}: {
+  user: { id: string; email: string | null; firstName: string; lastName: string; phone: string | null };
+}) {
   const t = await getTranslations("profile");
 
   return (
