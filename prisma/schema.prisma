@@ -644,13 +644,20 @@ model AssessmentAnswerOption {
 }
 
 model AssessmentAttempt {
-  id          String    @id @default(cuid())
-  score       Int       @default(0)
-  maxScore    Int       @default(0)
-  percentage  Float     @default(0)
-  isPassed    Boolean   @default(false)
-  startedAt   DateTime  @default(now())
-  completedAt DateTime?
+  id            String    @id @default(cuid())
+  score         Int       @default(0)
+  maxScore      Int       @default(0)
+  percentage    Float     @default(0)
+  isPassed      Boolean   @default(false)
+  // Попытка создаётся при старте, а не при отправке: без этого серверу нечем
+  // проверить ограничение по времени — startedAt совпадал с completedAt, и
+  // таймер existовал только в браузере (аудит 3.3).
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+  // Номер попытки. Уникальность пары (тест, ученик, номер) не даёт двум
+  // параллельным запросам создать лишнюю попытку сверх лимита: count() внутри
+  // транзакции от гонки не защищал (аудит 3.4).
+  attemptNumber Int       @default(1)
 
   studentId String
   student   User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
@@ -660,6 +667,7 @@ model AssessmentAttempt {
 
   answers AssessmentAttemptAnswer[]
 
+  @@unique([assessmentId, studentId, attemptNumber])
   @@index([studentId])
   @@index([assessmentId])
 }

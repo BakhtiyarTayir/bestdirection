@@ -1,5 +1,6 @@
+// Перенесено из src/lib/assessment-scoring.ts в web без изменений.
 // Подсчёт баллов попытки теста или экзамена. Чистая функция без "use server":
-// так её можно проверить скриптом (scripts/check-assessment-scoring.ts), а
+// так её можно проверить скриптом (assessment-scoring.spec.ts), а
 // экспорт не становится открытым эндпоинтом.
 
 export type SubmittedAnswer = { questionId: string; selectedOptionIds: string[] };

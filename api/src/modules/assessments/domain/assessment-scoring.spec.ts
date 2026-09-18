@@ -1,21 +1,15 @@
-/**
- * Проверка подсчёта баллов теста: npm run check:assessment-scoring
- *
- * Ответы приходят прямым вызовом server action, и раньше дубли ответа на один
- * вопрос накручивали процент (аудит 3.1). Скрипт воспроизводит эту атаку и
- * падает с ненулевым кодом, если хоть одна проверка не сошлась.
- */
-import { scoreAssessment } from "../src/lib/assessment-scoring";
+import { describe, expect, it } from "vitest";
+import { scoreAssessment } from "./assessment-scoring";
 
-let failed = 0;
+// Проверки перенесены из scripts/check-assessment-scoring.ts в web один в один:
+// они воспроизводят накрутку баллов дублями ответа (аудит 3.1).
 function check(name: string, actual: unknown, expected: unknown) {
-  const a = JSON.stringify(actual);
-  const e = JSON.stringify(expected);
-  const ok = a === e;
-  if (!ok) failed++;
-  console.log(`${ok ? "OK  " : "FAIL"} ${name}${ok ? ` = ${a}` : `\n       ожидалось ${e}\n       получено  ${a}`}`);
+  it(name, () => {
+    expect(JSON.stringify(actual)).toBe(JSON.stringify(expected));
+  });
 }
 
+describe("подсчёт баллов теста", () => {
 // Два вопроса по 1 баллу, у первого верный вариант a, у второго — d.
 const questions = [
   { id: "q1", points: 1, options: [{ id: "a", isCorrect: true }, { id: "b", isCorrect: false }] },
@@ -79,8 +73,4 @@ check(
 
 check("пустой тест", pick(scoreAssessment([], [])), [0, 0, 0]);
 
-if (failed > 0) {
-  console.error(`\n${failed} проверок не сошлись`);
-  process.exit(1);
-}
-console.log("\nВсе проверки сошлись");
+});

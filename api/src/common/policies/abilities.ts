@@ -37,6 +37,13 @@ export type AppSubjects =
   | "Trash"
   // Вести занятия, смотреть отчёт по преподавателям, править связи «родитель —
   // ученик». Объектные проверки (чьё занятие, чей ребёнок) делают сервисы.
+  // Черновики: неопубликованные уроки, тесты и задания. Право есть у персонала,
+  // и именно оно заменило проверку `role === "STUDENT"`, из-за которой
+  // черновики доставались роли PARENT (аудит 2.4).
+  | "UnpublishedContent"
+  // Правильные ответы в тестах. Отдельно от чтения теста: ученик видит вопросы,
+  // но не ключи.
+  | "AssessmentAnswers"
   | "Attendance"
   | "TeacherAttendance"
   | "ParentLink"
@@ -82,6 +89,9 @@ export function defineAbilityFor(user: Pick<SessionUser, "id" | "role">): AppAbi
       // это решает canManageSession в модуле посещаемости
       can("manage", "Attendance");
       can("read", "TeacherAttendance");
+      // Черновики и ключи к тестам — часть работы преподавателя
+      can("read", "UnpublishedContent");
+      can("read", "AssessmentAnswers");
       break;
 
     case "STUDENT":
