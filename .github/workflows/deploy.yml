@@ -210,6 +210,21 @@ jobs:
             docker image prune -af --filter "until=168h" || true
           REMOTE
 
+      - name: Проверка, что развернулся нужный образ
+        # Деплой уже проходил «успешно», не перезапустив контейнер: команда
+        # внутри скрипта съела его остаток через stdin. Теперь сверяем тег.
+        run: |
+          ssh -i ~/.ssh/id_deploy "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "EXPECTED_SHA='${{ github.sha }}' bash -s" <<'REMOTE'
+            set -euo pipefail
+            cd /opt/bestdirection
+            image=$(docker inspect "$(docker compose ps -q app)" --format '{{.Config.Image}}')
+            case "$image" in
+              *":$EXPECTED_SHA") echo "app работает на $image" ;;
+              *) echo "app работает на $image, а ожидался тег $EXPECTED_SHA" >&2; exit 1 ;;
+            esac
+          REMOTE
+
       - name: Проверка, что сайт поднялся
         run: |
           # Домен, а не IP: наружу теперь отвечает Caddy, и по IP сертификата нет
