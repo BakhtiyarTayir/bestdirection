@@ -2,7 +2,7 @@
 
 import { LessonForm } from "@/components/lesson-form";
 import type { LessonFormSubmitData } from "@/components/lesson-form";
-import { createLesson } from "@/actions/lesson-actions";
+import { createLesson } from "@/lib/api/lessons";
 
 interface NewLessonClientProps {
   courseSlug: string;

@@ -18,34 +18,11 @@ import { AssessmentForm } from "@/components/assessment-form";
 import { AssessmentQuestionForm } from "@/components/assessment-question-form";
 import { DeleteAssessmentButton, DeleteAssessmentQuestionButton } from "@/components/assessment-management-buttons";
 import { ExportButton, ImportButton } from "@/components/export-import-buttons";
+import type { ApiAssessment } from "@/lib/api/lessons";
 
-interface AssessmentOption {
-  id: string;
-  text: string;
-  isCorrect: boolean;
-  sortOrder: number;
-}
-
-interface AssessmentQuestion {
-  id: string;
-  text: string;
-  type: "SINGLE_CHOICE" | "MULTIPLE_CHOICE";
-  points: number;
-  sortOrder: number;
-  options: AssessmentOption[];
-}
-
-export interface LessonTestTabAssessment {
-  id: string;
-  title: string;
-  description: string | null;
-  passingScore: number;
-  timeLimitMin: number | null;
-  maxAttempts: number;
-  isPublished: boolean;
-  questions: AssessmentQuestion[];
-  _count: { attempts: number };
-}
+// Форма теста берёт тест из api как есть: свой набор полей быстро расходился
+// с тем, что отдаёт сервер
+export type LessonTestTabAssessment = ApiAssessment;
 
 interface LessonTestTabProps {
   courseSlug: string;
@@ -98,7 +75,7 @@ export function LessonTestTab({ courseSlug, lessonSlug, courseId, lessonId, asse
               <Link href={`/courses/${courseSlug}/lessons/${lessonSlug}/test/attempts`}>
                 <Button variant="outline" size="sm">
                   <BarChart3 className="h-4 w-4 mr-2" />
-                  {t("results", { count: assessment._count.attempts })}
+                  {t("results", { count: assessment._count?.attempts ?? 0 })}
                 </Button>
               </Link>
               <ExportButton type="test" id={lessonId} />
@@ -174,7 +151,7 @@ export function LessonTestTab({ courseSlug, lessonSlug, courseId, lessonId, asse
                         options: question.options.map((o) => ({
                           id: o.id,
                           text: o.text,
-                          isCorrect: o.isCorrect,
+                          isCorrect: o.isCorrect ?? false,
                           sortOrder: o.sortOrder,
                         })),
                       }}

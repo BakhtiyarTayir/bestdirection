@@ -18,7 +18,9 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { Download, Upload, FileSpreadsheet, FileText, Braces, Loader2 } from "lucide-react";
-import { importTestFromFile, importExamFromFile, importHomeworkFromFile } from "@/actions/import-actions";
+import { importExamFromFile, importTestFromFile } from "@/lib/api/lessons";
+// Задания по-прежнему импортирует web: они переедут на этапе 5
+import { importHomeworkFromFile } from "@/actions/import-actions";
 import { useTranslations } from "next-intl";
 
 // ---------- ExportButton ----------
@@ -37,9 +39,9 @@ export function ExportButton({ type, id }: ExportButtonProps) {
     try {
       const url =
         type === "test"
-          ? `/api/v1/export/test/${id}?format=${format}`
+          ? `/api/v2/assessments/export/test/${id}?format=${format}`
           : type === "exam"
-            ? `/api/v1/export/exam/${id}?format=${format}`
+            ? `/api/v2/assessments/export/exam/${id}?format=${format}`
             : `/api/v1/export/homework/${id}?format=${format}`;
 
       const res = await fetch(url);
@@ -140,23 +142,18 @@ export function ImportButton({ type, targetId }: ImportButtonProps) {
     setError(null);
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-
+      let result;
       if (type === "test") {
-        formData.append("lessonId", targetId);
+        result = await importTestFromFile(targetId, file);
       } else if (type === "exam") {
-        formData.append("courseId", targetId);
+        result = await importExamFromFile(targetId, file);
       } else {
+        // Задания импортирует web: у них свой формат и свои проверки
+        const formData = new FormData();
+        formData.append("file", file);
         formData.append("lessonId", targetId);
+        result = await importHomeworkFromFile(formData);
       }
-
-      const result =
-        type === "test"
-          ? await importTestFromFile(formData)
-          : type === "exam"
-            ? await importExamFromFile(formData)
-            : await importHomeworkFromFile(formData);
 
       if (!result.success) {
         setError(result.error || t("importError"));

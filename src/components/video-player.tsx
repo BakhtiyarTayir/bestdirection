@@ -29,7 +29,7 @@ export function VideoPlayer({ url, source, lessonId, initialPosition }: VideoPla
       lastPosition: Math.round(current),
     });
 
-    navigator.sendBeacon("/api/v1/progress", new Blob([payload], { type: "application/json" }));
+    navigator.sendBeacon(`/api/v2/lessons/${lessonId}/progress`, new Blob([payload], { type: "application/json" }));
   }, [lessonId]);
 
   // Auto-save every 30s

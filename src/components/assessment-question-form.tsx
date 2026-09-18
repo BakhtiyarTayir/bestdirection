@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { addAssessmentQuestion, updateAssessmentQuestion } from "@/actions/assessment-actions";
+import { addAssessmentQuestion, updateAssessmentQuestion } from "@/lib/api/lessons";
 import { z } from "zod";
 import { Loader2, Plus, Pencil, Trash2 } from "lucide-react";
 

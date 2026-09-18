@@ -1,5 +1,6 @@
 import { requireRole } from "@/lib/auth-guard";
-import { prisma } from "@/lib/prisma";
+import { getCourseById } from "@/lib/api/courses.server";
+import { getAssessment } from "@/lib/api/lessons.server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GraduationCap } from "lucide-react";
@@ -30,12 +31,9 @@ async function EditExamPageAsync({
 
   const session = await requireRole(["ADMIN", "TEACHER"]);
 
-  const course = await prisma.course.findUnique({
-    where: { id: courseId },
-    select: { id: true, title: true, teacherId: true },
-  });
-
-  if (!course) redirect("/courses");
+  const courseResult = await getCourseById(courseId);
+  if (!courseResult.success) redirect("/courses");
+  const course = courseResult.data;
 
   if (
     session.user.role === "TEACHER" &&
@@ -44,11 +42,10 @@ async function EditExamPageAsync({
     redirect(`/courses/${courseSlug}`);
   }
 
-  const assessment = await prisma.assessment.findUnique({
-    where: { id: examId },
-  });
-
-  if (!assessment || assessment.type !== "EXAM") redirect(`/courses/${courseSlug}/exams`);
+  const assessmentResult = await getAssessment(examId);
+  if (!assessmentResult.success) redirect(`/courses/${courseSlug}/exams`);
+  const assessment = assessmentResult.data;
+  if (assessment.type !== "EXAM") redirect(`/courses/${courseSlug}/exams`);
 
   return (
     <div className="space-y-6">

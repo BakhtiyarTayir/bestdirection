@@ -14,7 +14,7 @@ export function PresenceHeartbeat() {
       if (typeof navigator !== "undefined" && !navigator.onLine) return;
 
       try {
-        await fetch("/api/v1/presence/ping", {
+        await fetch("/api/v2/lessons/presence/ping", {
           method: "POST",
           cache: "no-store",
           keepalive: true,

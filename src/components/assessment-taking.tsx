@@ -22,7 +22,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { submitAssessmentAttempt } from "@/actions/assessment-actions";
+import { startAssessmentAttempt, submitAssessmentAttempt } from "@/lib/api/lessons";
 import {
   Clock,
   CheckCircle2,
@@ -69,6 +69,8 @@ export function AssessmentTaking({ assessment }: AssessmentTakingProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [state, setState] = useState<TakingState>("idle");
+  // Попытку заводит сервер: у него же и крайний срок, браузер только показывает
+  const [attemptId, setAttemptId] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [result, setResult] = useState<AttemptResult | null>(null);
@@ -95,12 +97,14 @@ export function AssessmentTaking({ assessment }: AssessmentTakingProps) {
         selectedOptionIds: answers[q.id] || [],
       }));
 
-      const res = await submitAssessmentAttempt({
-        assessmentId: assessment.id,
-        answers: formattedAnswers,
-      });
+      if (!attemptId) {
+        setState("taking");
+        return;
+      }
 
-      if (res.success && res.data) {
+      const res = await submitAssessmentAttempt(attemptId, { answers: formattedAnswers });
+
+      if (res.success) {
         setResult({
           score: res.data.score,
           maxScore: res.data.maxScore,
@@ -125,7 +129,7 @@ export function AssessmentTaking({ assessment }: AssessmentTakingProps) {
       });
       setState("taking");
     }
-  }, [state, assessment, answers, router, toast, t, tErrors]);
+  }, [state, assessment, answers, attemptId, router, toast, t, tErrors]);
 
   // Timer
   useEffect(() => {
@@ -157,15 +161,35 @@ export function AssessmentTaking({ assessment }: AssessmentTakingProps) {
     };
   }, [state, assessment.timeLimitMin, timeLeft, handleSubmit, toast, isTest, t]);
 
-  const startAssessment = () => {
+  const startAssessment = async () => {
     if (isStarting) return;
     setIsStarting(true);
+
+    // Попытка создаётся на сервере: только так ограничение по времени и лимит
+    // попыток проверяются по-настоящему, а не в браузере
+    const res = await startAssessmentAttempt(assessment.id);
+    if (!res.success) {
+      toast({
+        title: tErrors("error"),
+        description: tErrors(res.error),
+        variant: "destructive",
+      });
+      setIsStarting(false);
+      return;
+    }
+
+    setAttemptId(res.data.id);
     setState("taking");
     setAnswers({});
     hasAutoSubmittedRef.current = false;
-    if (assessment.timeLimitMin) {
-      setTimeLeft(assessment.timeLimitMin * 60);
+    if (res.data.expiresAt) {
+      const secondsLeft = Math.max(
+        0,
+        Math.round((new Date(res.data.expiresAt).getTime() - Date.now()) / 1000)
+      );
+      setTimeLeft(secondsLeft);
     }
+    setIsStarting(false);
   };
 
   const handleSingleChoice = (questionId: string, optionId: string) => {

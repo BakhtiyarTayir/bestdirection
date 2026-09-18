@@ -5,7 +5,7 @@ import type { LessonFormSubmitData } from "@/components/lesson-form";
 import { LessonTestTab } from "@/components/lesson-test-tab";
 import type { LessonTestTabAssessment } from "@/components/lesson-test-tab";
 import { HomeworkManagement } from "@/components/homework/homework-management";
-import { updateLesson } from "@/actions/lesson-actions";
+import { updateLesson } from "@/lib/api/lessons";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslations } from "next-intl";
 

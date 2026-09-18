@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { getAssessment, getAssessmentAttempts } from "@/lib/api/lessons.server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -47,44 +47,16 @@ async function ExamAttemptsPageAsync({
     redirect(`/courses/${courseSlug}/exams/${examId}`);
   }
 
-  const assessment = await prisma.assessment.findUnique({
-    where: { id: examId },
-    include: {
-      course: {
-        select: { id: true, title: true, teacherId: true },
-      },
-    },
-  });
+  const assessmentResult = await getAssessment(examId);
+  if (!assessmentResult.success) redirect(`/courses/${courseSlug}/exams`);
+  const assessment = assessmentResult.data;
+  if (assessment.type !== "EXAM") redirect(`/courses/${courseSlug}/exams`);
 
-  if (!assessment || assessment.type !== "EXAM") redirect(`/courses/${courseSlug}/exams`);
-
-  if (role === "TEACHER" && assessment.course.teacherId !== session.user.id) {
-    redirect(`/courses/${courseSlug}`);
-  }
-
-  const attempts = await prisma.assessmentAttempt.findMany({
-    where: { assessmentId: examId },
-    include: {
-      student: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-        },
-      },
-      answers: {
-        include: {
-          question: {
-            include: {
-              options: { orderBy: { sortOrder: "asc" } },
-            },
-          },
-        },
-      },
-    },
-    orderBy: { startedAt: "desc" },
-  });
+  // Чужой курс отсекает api: разбор попыток открыт только тому, кто вправе
+  // править этот экзамен
+  const attemptsResult = await getAssessmentAttempts(examId);
+  if (!attemptsResult.success) redirect(`/courses/${courseSlug}`);
+  const attempts = attemptsResult.data;
 
   const totalAttempts = attempts.length;
   const passedAttempts = attempts.filter((a) => a.isPassed).length;
@@ -100,7 +72,7 @@ async function ExamAttemptsPageAsync({
     <div className="space-y-6">
       <div>
         <p className="text-sm text-muted-foreground">
-          {assessment.course.title} / {t("exams")}
+          {assessment.course?.title} / {t("exams")}
         </p>
         <h1 className="text-3xl font-bold mt-1">
           {t("resultsPageTitle", { title: assessment.title })}
@@ -178,9 +150,9 @@ async function ExamAttemptsPageAsync({
                         percentage: attempt.percentage,
                         isPassed: attempt.isPassed,
                         startedAt: formatDateTime(attempt.startedAt),
-                        studentName: `${attempt.student.lastName} ${attempt.student.firstName}`,
-                        studentEmail: attempt.student.email,
-                        answers: attempt.answers.map((a) => ({
+                        studentName: `${attempt.student?.lastName ?? ""} ${attempt.student?.firstName ?? ""}`.trim(),
+                        studentEmail: attempt.student?.email ?? null,
+                        answers: (attempt.answers ?? []).map((a) => ({
                           id: a.id,
                           selectedOptionIds: a.selectedOptionIds,
                           isCorrect: a.isCorrect,

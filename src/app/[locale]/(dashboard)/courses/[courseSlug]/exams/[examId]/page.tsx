@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { getCourseById } from "@/lib/api/courses.server";
+import { getAssessment, getMyAssessmentAttempts } from "@/lib/api/lessons.server";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -57,51 +58,21 @@ async function ExamPageAsync({
   const role = session.user.role;
   const userId = session.user.id;
 
-  // Get course info
-  const course = await prisma.course.findUnique({
-    where: { id: courseId },
-    select: { id: true, title: true, teacherId: true },
-  });
+  const courseResult = await getCourseById(courseId);
+  if (!courseResult.success) redirect("/courses");
+  const course = courseResult.data;
 
-  if (!course) redirect("/courses");
-
-  // Get assessment (exam) with questions
-  const assessment = await prisma.assessment.findUnique({
-    where: { id: examId },
-    include: {
-      questions: {
-        include: {
-          options: { orderBy: { sortOrder: "asc" } },
-        },
-        orderBy: { sortOrder: "asc" },
-      },
-      _count: { select: { attempts: true } },
-    },
-  });
-
-  if (!assessment || assessment.type !== "EXAM") redirect(`/courses/${courseSlug}/exams`);
+  // Черновик экзамена api покажет только персоналу
+  const assessmentResult = await getAssessment(examId);
+  if (!assessmentResult.success) redirect(`/courses/${courseSlug}/exams`);
+  const assessment = assessmentResult.data;
+  if (assessment.type !== "EXAM") redirect(`/courses/${courseSlug}/exams`);
 
   const isTeacherOrAdmin =
     role === "ADMIN" || (role === "TEACHER" && course.teacherId === userId);
 
-  // Get student attempts
-  const studentAttempts = role === "STUDENT"
-    ? await prisma.assessmentAttempt.findMany({
-        where: { assessmentId: examId, studentId: userId },
-        include: {
-          answers: {
-            include: {
-              question: {
-                include: {
-                  options: { orderBy: { sortOrder: "asc" } },
-                },
-              },
-            },
-          },
-        },
-        orderBy: { startedAt: "desc" },
-      })
-    : [];
+  const attemptsResult = role === "STUDENT" ? await getMyAssessmentAttempts(examId) : null;
+  const studentAttempts = attemptsResult?.success ? attemptsResult.data : [];
 
   return (
     <div className="space-y-6">
@@ -138,7 +109,7 @@ async function ExamPageAsync({
                   <Link href={`/courses/${courseSlug}/exams/${examId}/attempts`}>
                     <Button variant="outline" size="sm">
                       <BarChart3 className="h-4 w-4 mr-2" />
-                      {t("results", { count: assessment._count.attempts })}
+                      {t("results", { count: assessment._count?.attempts ?? 0 })}
                     </Button>
                   </Link>
                 </div>
@@ -214,7 +185,7 @@ async function ExamPageAsync({
                             options: question.options.map((o) => ({
                               id: o.id,
                               text: o.text,
-                              isCorrect: o.isCorrect,
+                              isCorrect: o.isCorrect ?? false,
                               sortOrder: o.sortOrder,
                             })),
                           }}
@@ -391,7 +362,7 @@ async function ExamPageAsync({
                     <CardTitle>{t("myAttempts")}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {studentAttempts.map((attempt, index) => (
+                    {studentAttempts.map((attempt) => (
                       <AssessmentResults
                         key={attempt.id}
                         attempt={{
@@ -400,8 +371,8 @@ async function ExamPageAsync({
                           maxScore: attempt.maxScore,
                           percentage: attempt.percentage,
                           isPassed: attempt.isPassed,
-                          startedAt: attempt.startedAt.toISOString(),
-                          completedAt: attempt.completedAt?.toISOString() || null,
+                          startedAt: attempt.startedAt,
+                          completedAt: attempt.completedAt,
                           answers: attempt.answers.map((a) => ({
                             id: a.id,
                             questionId: a.questionId,
@@ -421,7 +392,7 @@ async function ExamPageAsync({
                             },
                           })),
                         }}
-                        attemptNumber={studentAttempts.length - index}
+                        attemptNumber={attempt.attemptNumber}
                       />
                     ))}
                   </CardContent>
