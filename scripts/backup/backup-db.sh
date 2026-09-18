@@ -26,7 +26,10 @@ umask 077
 mkdir -p "$DIR"
 
 FILE="$DIR/bestdirection-$(date +%Y%m%d-%H%M%S)-$LABEL.dump"
-docker compose exec -T db pg_dump -U bestdirection -d bestdirection -Fc > "$FILE.tmp"
+# stdin закрыт намеренно: скрипт запускается и внутри команд, которые сами
+# приходят на сервер по stdin (деплой шлёт их через ssh), а docker compose
+# exec -T прокидывает stdin в контейнер и съедает остаток такого скрипта.
+docker compose exec -T db pg_dump -U bestdirection -d bestdirection -Fc < /dev/null > "$FILE.tmp"
 # Пустой файл значит, что дамп не удался, даже если команда вернула 0
 if [ ! -s "$FILE.tmp" ]; then
   rm -f "$FILE.tmp"
