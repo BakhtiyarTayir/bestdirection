@@ -7,7 +7,7 @@ import {
   type Subjects,
 } from "@casl/prisma/runtime";
 import { Injectable } from "@nestjs/common";
-import type { AuditLog, Course, Prisma, User } from "../../../generated/prisma";
+import type { AuditLog, Course, EnrollmentRequest, Prisma, User } from "../../../generated/prisma";
 import type { SessionUser } from "../auth/session-user";
 
 // Все права api описываются здесь. Условия пишутся синтаксисом Prisma where:
@@ -32,10 +32,14 @@ export type AppSubjects =
   | "UserDirectory"
   // Деньги: начисления, долги, оплаты — только администратор
   | "Billing"
+  // Каталог самозаписи — ученику; заявки подтверждает персонал; Корзина — администратор
+  | "Catalog"
+  | "Trash"
   | Subjects<{
       User: User;
       AuditLog: AuditLog;
       Course: Course;
+      EnrollmentRequest: EnrollmentRequest;
     }>;
 
 export type PrismaQuery<T extends PrismaModel = PrismaModel> = PrismaQueryOf<Prisma.TypeMap, T>;
@@ -63,12 +67,17 @@ export function defineAbilityFor(user: Pick<SessionUser, "id" | "role">): AppAbi
       // только свои. Решение владельца от 2026-09-16.
       can("read", "Course");
       can("manage", "Course", { teacherId: user.id });
+      // Заявки на свои курсы: список сужает сервис, право — общее
+      can("update", "EnrollmentRequest");
       break;
 
     case "STUDENT":
       can("read", "User", { id: user.id });
       // Опубликованный курс, на который записан
       can("read", "Course", { isPublished: true, enrollments: { some: { studentId: user.id } } });
+      // Каталог и заявка на курс — только ученику
+      can("read", "Catalog");
+      can("create", "EnrollmentRequest");
       break;
 
     case "PARENT":

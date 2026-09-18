@@ -41,3 +41,16 @@ export class CreateCourseDto extends createZodDto(createCourseSchema) {}
 export class UpdateCourseDto extends createZodDto(updateCourseSchema) {}
 export class EnrollStudentDto extends createZodDto(enrollStudentSchema) {}
 export class EnrolledStudentsQueryDto extends createZodDto(enrolledStudentsQuerySchema) {}
+
+export const copyCourseSchema = z.object({
+  sourceCourseId: z.string().min(1).max(40),
+  newTitle: text(200).min(1).optional(),
+});
+
+export const compareQuerySchema = z.object({
+  courseAId: z.string().min(1).max(40),
+  courseBId: z.string().min(1).max(40),
+});
+
+export class CopyCourseDto extends createZodDto(copyCourseSchema) {}
+export class CompareQueryDto extends createZodDto(compareQuerySchema) {}

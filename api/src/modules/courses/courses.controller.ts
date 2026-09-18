@@ -3,8 +3,12 @@ import { Authenticated, CurrentAbility, CurrentUser } from "../../common/auth/de
 import type { SessionUser } from "../../common/auth/session-user";
 import type { AppAbility } from "../../common/policies/abilities";
 import { CheckPolicies } from "../../common/policies/check-policies.decorator";
+import { CourseCompareService } from "./course-compare.service";
+import { CourseCopyService } from "./course-copy.service";
 import { CoursesService } from "./courses.service";
 import {
+  CompareQueryDto,
+  CopyCourseDto,
   CreateCourseDto,
   EnrolledStudentsQueryDto,
   EnrollStudentDto,
@@ -16,7 +20,11 @@ import {
 // приходит пустым, а чужой курс отдаёт 404, как было до переноса.
 @Controller("courses")
 export class CoursesController {
-  constructor(private readonly courses: CoursesService) {}
+  constructor(
+    private readonly courses: CoursesService,
+    private readonly copyService: CourseCopyService,
+    private readonly compareService: CourseCompareService
+  ) {}
 
   @Authenticated()
   @Get()
@@ -32,6 +40,38 @@ export class CoursesController {
     @CurrentUser() actor: SessionUser
   ) {
     return this.courses.create(body, ability, actor);
+  }
+
+  /** Каталог для копирования: шаблоны и опубликованные курсы. */
+  @CheckPolicies((ability) => ability.can("create", "Course"))
+  @Get("for-copy")
+  coursesForCopy() {
+    return this.copyService.coursesForCopy();
+  }
+
+  @CheckPolicies((ability) => ability.can("create", "Course"))
+  @Post("copy")
+  copy(@Body() body: CopyCourseDto, @CurrentUser() actor: SessionUser) {
+    return this.copyService.copy(body.sourceCourseId, actor, { newTitle: body.newTitle });
+  }
+
+  /** Сравнение двух курсов — администратору. */
+  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @Get("compare")
+  compare(@Query() query: CompareQueryDto) {
+    return this.compareService.compare(query.courseAId, query.courseBId);
+  }
+
+  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @Get("for-comparison")
+  coursesForComparison() {
+    return this.compareService.coursesForComparison();
+  }
+
+  @CheckPolicies((ability) => ability.can("read", "Course"))
+  @Get(":id/lineage")
+  lineage(@Param("id") id: string) {
+    return this.copyService.lineage(id);
   }
 
   /** Адреса кабинета построены на slug, связи в базе — на id. */

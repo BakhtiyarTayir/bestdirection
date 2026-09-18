@@ -14,8 +14,10 @@ import { EnvModule } from "./config/env.module";
 import { AuditLogModule } from "./modules/audit-log/audit-log.module";
 import { BillingModule } from "./modules/billing/billing.module";
 import { CoursesModule } from "./modules/courses/courses.module";
+import { EnrollmentRequestsModule } from "./modules/enrollment-requests/enrollment-requests.module";
 import { HealthController } from "./modules/health/health.controller";
 import { MeController } from "./modules/me/me.controller";
+import { TelegramModule } from "./common/telegram/telegram.module";
 import { TrashModule } from "./modules/trash/trash.module";
 import { UsersModule } from "./modules/users/users.module";
 
@@ -31,6 +33,8 @@ import { UsersModule } from "./modules/users/users.module";
     AuditLogModule,
     BillingModule,
     CoursesModule,
+    EnrollmentRequestsModule,
+    TelegramModule,
     TrashModule,
   ],
   controllers: [HealthController, MeController],

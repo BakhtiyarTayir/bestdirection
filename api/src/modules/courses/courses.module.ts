@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
 import { BillingModule } from "../billing/billing.module";
+import { CourseCompareService } from "./course-compare.service";
+import { CourseCopyService } from "./course-copy.service";
 import { CoursesController } from "./courses.controller";
 import { CoursesService } from "./courses.service";
 
@@ -8,6 +10,6 @@ import { CoursesService } from "./courses.service";
 @Module({
   imports: [BillingModule],
   controllers: [CoursesController],
-  providers: [CoursesService],
+  providers: [CoursesService, CourseCopyService, CourseCompareService],
 })
 export class CoursesModule {}
