@@ -155,11 +155,11 @@ jobs:
       - name: Обновить конфигурацию на сервере
         # .env на сервере не трогаем — там секреты, сгенерированные на месте
         run: |
-          scp -i ~/.ssh/id_deploy docker-compose.prod.yml \
+          scp -i ~/.ssh/id_deploy -o ServerAliveInterval=30 docker-compose.prod.yml \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/bestdirection/docker-compose.yml"
-          scp -i ~/.ssh/id_deploy Caddyfile \
+          scp -i ~/.ssh/id_deploy -o ServerAliveInterval=30 Caddyfile \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/bestdirection/Caddyfile"
-          scp -i ~/.ssh/id_deploy scripts/backup/backup-db.sh \
+          scp -i ~/.ssh/id_deploy -o ServerAliveInterval=30 scripts/backup/backup-db.sh \
             scripts/backup/bestdirection-backup.service scripts/backup/bestdirection-backup.timer \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/bestdirection/"
 
@@ -167,7 +167,8 @@ jobs:
         # GITHUB_TOKEN живёт только на время задания — его хватает, чтобы
         # сервер стянул образы прямо сейчас, и хранить пароль на сервере не надо.
         run: |
-          ssh -i ~/.ssh/id_deploy "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" bash -s <<REMOTE
+          ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" bash -s <<REMOTE
             set -euo pipefail
             cd /opt/bestdirection
 
@@ -189,7 +190,9 @@ jobs:
             systemctl daemon-reload
             systemctl enable --now bestdirection-backup.timer
 
-            docker compose pull
+            # --quiet обязателен: прогресс скачивания двух образов забивает
+            # SSH-канал, и соединение рвётся на середине деплоя
+            docker compose pull --quiet
 
             # Бэкап до того, как новый контейнер накатит миграции. Не удался —
             # деплой останавливается. На пустом сервере базы ещё нет.
@@ -207,15 +210,16 @@ jobs:
 
             docker logout ghcr.io
 
-            # Место на диске 20 ГБ — старые образы копятся быстро
-            docker image prune -af --filter "until=168h" || true
+            # Место на диске 20 ГБ, а деплой приносит два образа — чистим чаще
+            docker image prune -af --filter "until=72h" || true
           REMOTE
 
       - name: Проверка, что развернулся нужный образ
         # Деплой уже проходил «успешно», не перезапустив контейнер: команда
         # внутри скрипта съела его остаток через stdin. Теперь сверяем тег.
         run: |
-          ssh -i ~/.ssh/id_deploy "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+          ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
             "EXPECTED_SHA='${{ github.sha }}' bash -s" <<'REMOTE'
             set -euo pipefail
             cd /opt/bestdirection
@@ -245,7 +249,8 @@ jobs:
         # С сервера и через Caddy: /api/v2/* маршрутизируется только на домене
         # CRM, а какой домен в SITE_DOMAIN — лендинг или CRM — здесь не важно.
         run: |
-          ssh -i ~/.ssh/id_deploy "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" bash -s <<'REMOTE'
+          ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" bash -s <<'REMOTE'
             set -uo pipefail
             domain=$(grep '^APP_DOMAIN=' /opt/bestdirection/.env | cut -d= -f2-)
             url="https://${domain}/api/v2/health"
