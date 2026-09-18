@@ -58,6 +58,10 @@ services:
       NEXTAUTH_URL: ${NEXTAUTH_URL:-${AUTH_URL}}
       AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-true}
       MARKETING_DOMAIN: ${MARKETING_DOMAIN:?нужен MARKETING_DOMAIN}
+      # Серверные компоненты ходят в api по внутренней сети, мимо Caddy.
+      # Внутренний токен заменяет заголовок Origin, которого у таких запросов нет.
+      API_INTERNAL_URL: http://api:4000
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:?нужен INTERNAL_TOKEN}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
       # Без префикса NEXT_PUBLIC_: username отдаётся серверным действием в
