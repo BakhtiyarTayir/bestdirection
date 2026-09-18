@@ -136,11 +136,6 @@ export interface ApiAttempt {
   };
 }
 
-export interface ApiOwnAttempt extends ApiAttempt {
-  /** У незавершённой попытки пусто: ключи к ответам отдаются только после сдачи. */
-  answers: ApiAttemptAnswer[];
-}
-
 export interface ApiStartedAttempt {
   id: string;
   attemptNumber: number;

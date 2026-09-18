@@ -338,14 +338,18 @@ describe("уроки, тесты и экзамены", () => {
       return started.body.id as string;
     };
 
-    it("ученик видит свои попытки с разбором, но не чужие", async () => {
+    it("ученик видит свои попытки — с баллами, но без разбора и не чужие", async () => {
       await attempt(own.wrong);
       await attempt(own.right);
 
       const mine = await get(`/assessments/${own.assessment}/attempts/mine`, "STUDENT");
       expect(mine.status).toBe(200);
       expect(mine.body).toHaveLength(2);
-      expect(mine.body[0].answers[0].question.options[0]).toHaveProperty("isCorrect");
+      expect(mine.body[0]).toHaveProperty("percentage");
+      // Разбор ответов ученику не отдаётся: иначе оставшиеся попытки сдаются
+      // по подсмотренным ключам (решение владельца от 2026-09-18)
+      expect(mine.body[0].answers).toBeUndefined();
+      expect(JSON.stringify(mine.body)).not.toContain("isCorrect");
 
       // У другого ученика того же курса свой, пустой список
       const other = await createUser({ role: "STUDENT" });
@@ -358,12 +362,12 @@ describe("уроки, тесты и экзамены", () => {
       expect(foreign.body).toHaveLength(0);
     });
 
-    it("незавершённая попытка приходит без ответов: иначе это подсказка во время теста", async () => {
+    it("разбор не приходит и по начатой попытке", async () => {
       const started = await send("post", `/assessments/${own.assessment}/attempts`, "STUDENT");
       expect(started.status).toBe(201);
 
-      // Сейчас ответы пишутся только при сдаче, поэтому строку заводим руками:
-      // проверяем саму отсечку, а не то, что писать пока нечего
+      // Строку ответа заводим руками: проверяем саму отсечку, а не то, что
+      // по начатой попытке писать пока нечего
       await testDb().assessmentAttemptAnswer.create({
         data: {
           attemptId: started.body.id,
@@ -377,7 +381,7 @@ describe("уроки, тесты и экзамены", () => {
       const mine = await get(`/assessments/${own.assessment}/attempts/mine`, "STUDENT");
       const pending = mine.body.find((a: { id: string }) => a.id === started.body.id);
       expect(pending.completedAt).toBeNull();
-      expect(pending.answers).toEqual([]);
+      expect(pending.answers).toBeUndefined();
 
       // прибираем за собой, иначе попытка съест лимит следующей проверки
       await testDb().assessmentAttempt.delete({ where: { id: started.body.id } });

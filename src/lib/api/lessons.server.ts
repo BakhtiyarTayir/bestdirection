@@ -5,7 +5,6 @@ import type {
   ApiAttempt,
   ApiLesson,
   ApiLessonDetails,
-  ApiOwnAttempt,
 } from "./lessons";
 import { apiServerFetch } from "./server";
 
@@ -55,8 +54,9 @@ export const getAssessmentsByCourse = (courseId: string, type?: "TEST" | "EXAM")
 export const getAssessmentAttempts = (assessmentId: string) =>
   apiServerFetch<ApiAttempt[]>(`/assessments/${assessmentId}/attempts`);
 
+/** Свои попытки ученика: баллы и результат, без разбора ответов. */
 export const getMyAssessmentAttempts = (assessmentId: string) =>
-  apiServerFetch<ApiOwnAttempt[]>(`/assessments/${assessmentId}/attempts/mine`);
+  apiServerFetch<ApiAttempt[]>(`/assessments/${assessmentId}/attempts/mine`);
 
 export const getMyBestAttempt = (assessmentId: string) =>
   apiServerFetch<{ percentage: number; isPassed: boolean } | null>(

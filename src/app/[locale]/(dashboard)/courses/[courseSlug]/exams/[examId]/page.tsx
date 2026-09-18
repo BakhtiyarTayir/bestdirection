@@ -373,24 +373,6 @@ async function ExamPageAsync({
                           isPassed: attempt.isPassed,
                           startedAt: attempt.startedAt,
                           completedAt: attempt.completedAt,
-                          answers: attempt.answers.map((a) => ({
-                            id: a.id,
-                            questionId: a.questionId,
-                            selectedOptionIds: a.selectedOptionIds,
-                            isCorrect: a.isCorrect,
-                            pointsEarned: a.pointsEarned,
-                            question: {
-                              id: a.question.id,
-                              text: a.question.text,
-                              type: a.question.type,
-                              points: a.question.points,
-                              options: a.question.options.map((o) => ({
-                                id: o.id,
-                                text: o.text,
-                                isCorrect: o.isCorrect,
-                              })),
-                            },
-                          })),
                         }}
                         attemptNumber={attempt.attemptNumber}
                       />

@@ -390,24 +390,16 @@ export class AssessmentsService {
   }
 
   /**
-   * Свои попытки — для ученика. Ответы отдаются только по завершённым
-   * попыткам: в них лежат правильные варианты, и по начатой попытке это был
-   * бы способ подсмотреть ответы прямо во время теста.
+   * Свои попытки — для ученика: баллы, процент и результат, без разбора
+   * ответов. Решение владельца от 2026-09-18: разбор видит только
+   * преподаватель. Раньше ученик получал правильные варианты после первой
+   * попытки и сдавал тест повторно на 100%.
    */
-  async myAttempts(assessmentId: string, user: SessionUser) {
-    const attempts = await this.prisma.assessmentAttempt.findMany({
+  myAttempts(assessmentId: string, user: SessionUser) {
+    return this.prisma.assessmentAttempt.findMany({
       where: { assessmentId, studentId: user.id },
-      include: {
-        answers: {
-          include: { question: { include: { options: { orderBy: { sortOrder: "asc" } } } } },
-        },
-      },
       orderBy: [{ startedAt: "desc" }],
     });
-
-    return attempts.map((attempt) =>
-      attempt.completedAt ? attempt : { ...attempt, answers: [] }
-    );
   }
 
   /** Лучший результат ученика по тесту — для плашки на странице урока. */
