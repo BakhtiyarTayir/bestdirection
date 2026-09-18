@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { getPublicLesson } from "@/lib/api/public.server";
 import { Link, redirect } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,47 +24,15 @@ export default async function PublicLessonPage({ params }: PublicLessonPageProps
 
   // Гостю открыты только уроки бесплатных курсов. Платный или закрытый курс,
   // как и несуществующий урок, ведёт на вход: после входа кабинет сам решит,
-  // есть ли доступ. Раньше уроки платных курсов читались без регистрации.
-  const lesson = await prisma.lesson.findFirst({
-    where: {
-      slug: lessonSlug,
-      isPublished: true,
-      course: {
-        slug: courseSlug,
-        isPublished: true,
-        accessType: "FREE",
-      },
-    },
-    select: {
-      id: true,
-      title: true,
-      content: true,
-      contentFormat: true,
-      courseId: true,
-      course: { select: { title: true } },
-      homeworks: {
-        where: { isPublished: true },
-        orderBy: { sortOrder: "asc" },
-        select: {
-          id: true,
-          slug: true,
-          title: true,
-          language: true,
-          passingScore: true,
-        },
-      },
-    },
-  });
+  // есть ли доступ. Проверяет это api.
+  const result = await getPublicLesson(courseSlug, lessonSlug);
 
-  if (!lesson) {
+  if (!result.success) {
     return redirect({ href: { pathname: "/login", query: { callbackUrl: callbackPath } }, locale: await getLocale() });
   }
 
-  const siblings = await prisma.lesson.findMany({
-    where: { courseId: lesson.courseId, isPublished: true },
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-    select: { id: true, slug: true, title: true },
-  });
+  const { lesson, siblings } = result.data;
+
   const currentIndex = siblings.findIndex((l) => l.id === lesson.id);
   const prevLesson = currentIndex > 0 ? siblings[currentIndex - 1] : null;
   const nextLesson =

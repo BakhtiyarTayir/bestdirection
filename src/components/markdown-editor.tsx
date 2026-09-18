@@ -20,6 +20,7 @@ import {
   FileUp,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { uploadImage } from "@/lib/api/uploads";
 
 interface MarkdownEditorProps {
   value: string;
@@ -27,7 +28,8 @@ interface MarkdownEditorProps {
   placeholder?: string;
   rows?: number;
   id?: string;
-  imageUploadEndpoint?: string;
+  /** Разрешает загрузку картинок в редакторе. */
+  allowImageUpload?: boolean;
 }
 
 export function MarkdownEditor({
@@ -36,7 +38,7 @@ export function MarkdownEditor({
   placeholder,
   rows = 15,
   id,
-  imageUploadEndpoint,
+  allowImageUpload,
 }: MarkdownEditorProps) {
   const t = useTranslations("markdown");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -108,21 +110,13 @@ export function MarkdownEditor({
     [onChange]
   );
 
-  const uploadImage = useCallback(
+  const sendImage = useCallback(
     async (file: File): Promise<string | null> => {
-      if (!imageUploadEndpoint) return null;
-      const formData = new FormData();
-      formData.append("image", file);
-      try {
-        const res = await fetch(imageUploadEndpoint, { method: "POST", body: formData });
-        if (!res.ok) return null;
-        const data = await res.json();
-        return data.url || null;
-      } catch {
-        return null;
-      }
+      if (!allowImageUpload) return null;
+      const result = await uploadImage(file);
+      return result.success ? (result.data.url ?? null) : null;
     },
-    [imageUploadEndpoint]
+    [allowImageUpload]
   );
 
   const insertImageAtCursor = useCallback(
@@ -136,7 +130,7 @@ export function MarkdownEditor({
       const after = value.substring(start);
       onChange(before + loadingPlaceholder + after);
 
-      uploadImage(file).then((url) => {
+      sendImage(file).then((url) => {
         if (url) {
           const currentValue = before + loadingPlaceholder + after;
           onChange(currentValue.replace(loadingPlaceholder, `![screenshot](${url})`));
@@ -146,12 +140,12 @@ export function MarkdownEditor({
         }
       });
     },
-    [value, onChange, uploadImage, t]
+    [value, onChange, sendImage, t]
   );
 
   const handlePaste = useCallback(
     (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-      if (!imageUploadEndpoint) return;
+      if (!allowImageUpload) return;
       const items = e.clipboardData?.items;
       if (!items) return;
       for (const item of items) {
@@ -163,7 +157,7 @@ export function MarkdownEditor({
         }
       }
     },
-    [imageUploadEndpoint, insertImageAtCursor]
+    [allowImageUpload, insertImageAtCursor]
   );
 
   const handleImageFileSelect = useCallback(
@@ -313,7 +307,7 @@ export function MarkdownEditor({
           className="h-8 w-8"
           title={t("image")}
           onClick={() => {
-            if (imageUploadEndpoint) {
+            if (allowImageUpload) {
               openImagePicker();
             } else {
               insertMarkdown("![", "](url)", t("imageAlt"));
@@ -339,7 +333,7 @@ export function MarkdownEditor({
             className="hidden"
             onChange={handleFileUpload}
           />
-          {imageUploadEndpoint && (
+          {allowImageUpload && (
             <input
               ref={imageInputRef}
               type="file"

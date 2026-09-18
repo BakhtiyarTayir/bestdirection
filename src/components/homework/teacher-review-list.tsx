@@ -35,12 +35,10 @@ interface PendingSubmission {
       title: string;
       course: { id: string; slug: string; title: string };
     };
-    _count: { testCases: number };
-    [key: string]: unknown;
+    _count?: { testCases: number };
   };
-  testResults: { passed: boolean }[];
-  files: { id: string; filename: string; size: number }[];
-  [key: string]: unknown;
+  testResults?: { passed: boolean }[];
+  files?: { id: string; filename: string; size: number }[];
 }
 
 interface HistorySubmission {
@@ -59,10 +57,8 @@ interface HistorySubmission {
       title: string;
       course: { slug: string; title: string };
     };
-    [key: string]: unknown;
   };
-  reviewedBy: { firstName: string; lastName: string } | null;
-  [key: string]: unknown;
+  reviewedBy?: { firstName: string; lastName: string } | null;
 }
 
 const TYPE_ICONS: Record<string, React.ElementType> = {
@@ -165,8 +161,8 @@ function PendingTable({ submissions }: { submissions: PendingSubmission[] }) {
               <TableBody>
                 {items.map((sub) => {
                   const TypeIcon = TYPE_ICONS[sub.homework.type] || Code2;
-                  const passed = sub.testResults.filter((r) => r.passed).length;
-                  const total = sub.homework._count.testCases;
+                  const passed = (sub.testResults ?? []).filter((r) => r.passed).length;
+                  const total = sub.homework._count?.testCases ?? 0;
                   const timeAgo = format.relativeTime(new Date(sub.createdAt), now);
 
                   return (

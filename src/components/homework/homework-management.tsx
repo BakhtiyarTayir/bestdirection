@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
-import { deleteHomework } from "@/actions/homework-actions";
+import { deleteHomework } from "@/lib/api/homework";
 import { LANGUAGE_LABELS } from "@/lib/code-runner/config";
 import { useTranslations } from "next-intl";
 import { ExportButton, ImportButton } from "@/components/export-import-buttons";
@@ -28,7 +28,7 @@ interface HomeworkItem {
   isPublished: boolean;
   maxAttempts: number;
   passingScore: number;
-  _count: { testCases: number; submissions: number };
+  _count?: { testCases: number; submissions: number };
 }
 
 interface HomeworkManagementProps {
@@ -130,11 +130,11 @@ export function HomeworkManagement({
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <FileText className="h-3.5 w-3.5" />
-                    {t("testCasesCount", { count: hw._count.testCases })}
+                    {t("testCasesCount", { count: hw._count?.testCases ?? 0 })}
                   </span>
                   <span className="flex items-center gap-1">
                     <Users className="h-3.5 w-3.5" />
-                    {t("submissionsCount", { count: hw._count.submissions })}
+                    {t("submissionsCount", { count: hw._count?.submissions ?? 0 })}
                   </span>
                   <span>{t("passingScoreInfo", { score: hw.passingScore })}</span>
                   <span>{t("attemptsInfo", { count: hw.maxAttempts })}</span>

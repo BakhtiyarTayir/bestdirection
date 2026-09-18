@@ -15,8 +15,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { CheckCircle2, XCircle, RotateCcw, User, Code2, FileText, TestTube, Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
-import { reviewSubmission } from "@/actions/homework-review-actions";
-import { CodeRunnerPanel } from "./code-runner-panel";
+import { reviewSubmission } from "@/lib/api/homework";
 import { LANGUAGE_CONFIG, LANGUAGE_LABELS, detectLanguageFromExtension } from "@/lib/code-runner/config";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
@@ -27,17 +26,17 @@ interface TestResult {
   errorOutput: string | null;
   testCase: {
     description: string | null;
-    expected: string;
-    input: string;
-    isHidden: boolean;
+    // У ученика эти поля вырезаны, преподавателю приходят целиком
+    expected: string | null;
+    input: string | null;
+    isHidden?: boolean;
   };
 }
 
 interface SubmissionFile {
   id: string;
   filename: string;
-  path: string;
-  mimeType: string;
+  mimeType?: string;
   size: number;
 }
 
@@ -53,7 +52,7 @@ interface SubmissionData {
   manualStatus: string | null;
   manualScore: number | null;
   teacherComment: string | null;
-  student: { id: string; firstName: string; lastName: string; email: string };
+  student: { id: string; firstName: string; lastName: string; email?: string | null };
   homework: {
     id: string;
     title: string;
@@ -61,7 +60,7 @@ interface SubmissionData {
     language: string | null;
     description: string;
     requiresManualReview: boolean;
-    reviewInstructions: string | null;
+    reviewInstructions?: string | null;
     timeLimitSec: number;
     lesson: {
       slug: string;
@@ -89,7 +88,6 @@ export function SubmissionReviewPage({ submission }: { submission: SubmissionDat
   const hasTests = submission.testResults.length > 0;
 
   // Track edited code from FILE tab for running
-  const [fileEditedCode, setFileEditedCode] = useState<string | undefined>(undefined);
   const firstRunnableFileIndex = submission.files.findIndex(
     (f) => detectLanguageFromExtension(f.filename) !== null
   );
@@ -100,7 +98,7 @@ export function SubmissionReviewPage({ submission }: { submission: SubmissionDat
 
   useEffect(() => {
     if (isFilePlaceholder && submission.files.length > 0) {
-      fetch(`/api/files/${submission.files[0].id}`)
+      fetch(`/api/v2/files/${submission.files[0].id}`)
         .then((res) => res.text())
         .then(setCodeContent)
         .catch(() => setCodeContent(submission.code));
@@ -187,7 +185,6 @@ export function SubmissionReviewPage({ submission }: { submission: SubmissionDat
                   key={file.id}
                   file={file}
                   editable={!hasCode && index === firstRunnableFileIndex}
-                  onContentChange={!hasCode && index === firstRunnableFileIndex ? setFileEditedCode : undefined}
                 />
               ))}
             </TabsContent>
@@ -226,16 +223,6 @@ export function SubmissionReviewPage({ submission }: { submission: SubmissionDat
           )}
         </Tabs>
 
-        {/* Code runner */}
-        {(() => {
-          const detectedLanguage =
-            hw.language ||
-            (submission.files[0] ? detectLanguageFromExtension(submission.files[0].filename) : null);
-          const codeOverride = hasCode ? (codeContent || undefined) : fileEditedCode;
-          return detectedLanguage ? (
-            <CodeRunnerPanel submissionId={submission.id} codeOverride={codeOverride} />
-          ) : null;
-        })()}
       </div>
 
       {/* Right column - student info + review form */}
@@ -314,7 +301,7 @@ export function SubmissionReviewPage({ submission }: { submission: SubmissionDat
                 onChange={setComment}
                 placeholder={t("review.commentPlaceholder")}
                 rows={4}
-                imageUploadEndpoint="/api/v1/upload/image"
+                allowImageUpload
               />
             </div>
 
@@ -396,7 +383,7 @@ function FilePreview({ file, editable, onContentChange }: { file: SubmissionFile
 
   useEffect(() => {
     if (!isPreviewable) return;
-    fetch(`/api/files/${file.id}`)
+    fetch(`/api/v2/files/${file.id}`)
       .then((res) => {
         if (!res.ok) throw new Error();
         return res.text();
@@ -415,7 +402,7 @@ function FilePreview({ file, editable, onContentChange }: { file: SubmissionFile
             ({Math.round(file.size / 1024)} KB)
           </span>
         </div>
-        <a href={`/api/files/${file.id}/download`}>
+        <a href={`/api/v2/files/${file.id}/download`}>
           <Button size="sm" variant="ghost">↓</Button>
         </a>
       </div>
@@ -449,7 +436,7 @@ function FilePreview({ file, editable, onContentChange }: { file: SubmissionFile
       )}
       {!isPreviewable && (
         <div className="p-4 text-sm text-muted-foreground text-center">
-          <a href={`/api/files/${file.id}`} target="_blank" rel="noopener">
+          <a href={`/api/v2/files/${file.id}`} target="_blank" rel="noopener">
             <Button size="sm" variant="outline">{t("review.check")}</Button>
           </a>
         </div>

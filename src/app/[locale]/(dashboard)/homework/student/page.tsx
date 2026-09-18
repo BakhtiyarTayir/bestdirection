@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/auth-guard";
-import { getStudentHomeworks } from "@/actions/homework-review-actions";
+import { getStudentHomeworks } from "@/lib/api/homework.server";
 import { getTranslations } from "next-intl/server";
 import { StudentHomeworkList } from "@/components/homework/student-homework-list";
 

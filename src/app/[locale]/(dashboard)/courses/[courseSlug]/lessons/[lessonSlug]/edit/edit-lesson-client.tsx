@@ -17,7 +17,7 @@ interface HomeworkItem {
   isPublished: boolean;
   maxAttempts: number;
   passingScore: number;
-  _count: { testCases: number; submissions: number };
+  _count?: { testCases: number; submissions: number };
 }
 
 interface EditLessonClientProps {

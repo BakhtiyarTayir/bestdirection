@@ -1,8 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Link } from "@/i18n/navigation";
-// Задания и их результаты переедут в api на этапе 5
-import { prisma } from "@/lib/prisma";
+import { getMyBestSubmissions } from "@/lib/api/homework.server";
 import {
   getCourseLessonNav,
   getLessonById,
@@ -105,16 +104,11 @@ export default async function LessonPage({ params }: LessonPageProps) {
     }
 
     if (homeworks.length > 0) {
-      const grouped = await prisma.submission.groupBy({
-        by: ["homeworkId"],
-        where: {
-          studentId: session.user.id,
-          homeworkId: { in: homeworks.map((hw) => hw.id) },
-        },
-        _max: { percentage: true },
-      });
-      for (const row of grouped) {
-        bestSubmission.set(row.homeworkId, Math.round(row._max.percentage ?? 0));
+      const bestResults = await getMyBestSubmissions(lessonId);
+      if (bestResults.success) {
+        for (const row of bestResults.data) {
+          bestSubmission.set(row.homeworkId, row.percentage);
+        }
       }
     }
   }

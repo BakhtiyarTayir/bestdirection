@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { getPublicHomework } from "@/lib/api/public.server";
 import { Link, redirect } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,42 +18,9 @@ export default async function PublicHomeworkPage({ params }: PublicHomeworkPageP
   const { courseSlug, lessonSlug, homeworkSlug } = await params;
   const callbackPath = `/courses/${courseSlug}/lessons/${lessonSlug}/homework/${homeworkSlug}`;
 
-  // Как у публичного урока: гостю — только задания бесплатных курсов,
-  // остальное через вход.
-  const homework = await prisma.homework.findFirst({
-    where: {
-      slug: homeworkSlug,
-      isPublished: true,
-      lesson: {
-        slug: lessonSlug,
-        isPublished: true,
-        course: {
-          slug: courseSlug,
-          isPublished: true,
-          accessType: "FREE",
-        },
-      },
-    },
-    select: {
-      title: true,
-      description: true,
-      type: true,
-      language: true,
-      passingScore: true,
-      maxAttempts: true,
-      timeLimitSec: true,
-      testCases: {
-        where: { isHidden: false },
-        orderBy: { sortOrder: "asc" },
-        select: {
-          id: true,
-          input: true,
-          expected: true,
-          description: true,
-        },
-      },
-    },
-  });
+  // Гостю открыты только задания бесплатных курсов — это проверяет api
+  const result = await getPublicHomework(courseSlug, lessonSlug, homeworkSlug);
+  const homework = result.success ? result.data : null;
 
   if (!homework) {
     return redirect({ href: { pathname: "/login", query: { callbackUrl: callbackPath } }, locale: await getLocale() });

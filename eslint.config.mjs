@@ -43,6 +43,11 @@ const eslintConfig = defineConfig([
       "src/app/**/lessons/new/**",
       "src/app/**/exams/**",
       "src/app/**/my-results/**",
+      // Этап 5: задания, работы и файлы
+      "src/app/**/homework/**",
+      "src/app/**/lessons/**/edit/**",
+      "src/app/(public)/**",
+      "src/app/**/(public)/**",
       "src/components/telegram-link.tsx",
       "src/components/trash-table.tsx",
       "src/components/course-form.tsx",
@@ -63,6 +68,11 @@ const eslintConfig = defineConfig([
       "src/components/mark-complete-button.tsx",
       "src/components/presence-heartbeat.tsx",
       "src/components/video-player.tsx",
+      "src/components/homework/**",
+      "src/components/course-form.tsx",
+      "src/components/lesson-form.tsx",
+      "src/components/html-editor.tsx",
+      "src/components/markdown-editor.tsx",
     ],
     rules: {
       "@typescript-eslint/no-restricted-imports": [
