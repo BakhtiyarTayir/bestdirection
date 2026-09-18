@@ -5,9 +5,18 @@ import type { SessionUser } from "./session-user";
 
 export const IS_PUBLIC_KEY = "access:public";
 export const IS_AUTHENTICATED_KEY = "access:authenticated";
+export const IS_WEBHOOK_KEY = "access:webhook";
 
 /** Маршрут без входа. Используется явно и редко: лендинг, вебхуки, health. */
 export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
+
+/**
+ * Входящий вебхук стороннего сервиса: заголовка Origin у него нет и быть не
+ * может, поэтому проверка CSRF к нему не применяется. Такой маршрут обязан
+ * проверять запрос сам — секретом в пути (Eskiz) или в заголовке (Telegram).
+ * Ставится вместе с @Public().
+ */
+export const Webhook = () => SetMetadata(IS_WEBHOOK_KEY, true);
 
 /**
  * Любой вошедший пользователь, без проверки прав на объект. Для того, что

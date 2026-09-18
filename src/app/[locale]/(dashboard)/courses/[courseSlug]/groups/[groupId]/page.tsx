@@ -3,7 +3,7 @@ import { getGroupDetails } from "@/lib/api/groups.server";
 import { notFound } from "next/navigation";
 import { GroupForm } from "@/components/groups/group-form";
 import { getTeacherOptions } from "@/lib/api/groups.server";
-import { getTemplates } from "@/actions/sms-actions";
+import { getSmsTemplates } from "@/lib/api/sms.server";
 import { BroadcastPanel } from "@/components/sms/broadcast-panel";
 import { getTranslations } from "next-intl/server";
 import { resolveCourseSlug } from "@/lib/slug-resolvers";
@@ -28,7 +28,7 @@ export default async function GroupDetailPage({ params }: GroupDetailPageProps) 
   const teacherResult = await getTeacherOptions();
   const teachers = teacherResult.success ? teacherResult.data : [];
 
-  const templatesResult = await getTemplates();
+  const templatesResult = await getSmsTemplates();
   const templates = templatesResult.success
     ? templatesResult.data.map((tpl) => ({ id: tpl.id, title: tpl.title, status: tpl.status }))
     : [];

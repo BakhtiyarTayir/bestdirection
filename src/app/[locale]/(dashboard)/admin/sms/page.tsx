@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/auth-guard";
-import { getSmsAccount, getSmsLog, getTemplates } from "@/actions/sms-actions";
+import { getSmsAccount, getSmsLog, getSmsTemplates } from "@/lib/api/sms.server";
 import { getLocale, getTranslations } from "next-intl/server";
 import { intlLocale } from "@/i18n/config";
 import { formatDate, formatShortDateTime } from "@/lib/format-date";
@@ -35,8 +35,8 @@ export default async function SmsPage() {
   const numberLocale = intlLocale(await getLocale());
   const [accountResult, templatesResult, logResult] = await Promise.all([
     getSmsAccount(),
-    getTemplates(),
-    getSmsLog({ limit: 50 }),
+    getSmsTemplates(),
+    getSmsLog(50),
   ]);
 
   const account = accountResult.success ? accountResult.data : null;
