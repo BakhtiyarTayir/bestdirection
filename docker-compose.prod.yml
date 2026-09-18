@@ -104,6 +104,9 @@ services:
       APP_URL: ${AUTH_URL:?нужен AUTH_URL}
       # Секрет серверных вызовов app → api; деплой создаёт его в .env один раз
       INTERNAL_TOKEN: ${INTERNAL_TOKEN:?нужен INTERNAL_TOKEN}
+      # api шлёт уведомления по заявкам на курсы; приём обновлений остаётся
+      # у app до этапа 6
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
     depends_on:
       db:
         condition: service_healthy
