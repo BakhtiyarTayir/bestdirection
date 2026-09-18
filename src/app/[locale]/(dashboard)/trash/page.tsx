@@ -1,13 +1,6 @@
 import { requireRole } from "@/lib/auth-guard";
 import { getTranslations } from "next-intl/server";
-import {
-  getDeletedCourses,
-  getDeletedLessons,
-  restoreCourse,
-  restoreLesson,
-  hardDeleteCourse,
-  hardDeleteLesson,
-} from "@/actions/admin-actions";
+import { getDeletedCourses, getDeletedLessons } from "@/lib/api/courses.server";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TrashTable } from "@/components/trash-table";
 
@@ -51,21 +44,11 @@ export default async function TrashPage() {
         </TabsList>
 
         <TabsContent value="courses" className="mt-4">
-          <TrashTable
-            items={courses}
-            type="course"
-            onRestore={restoreCourse}
-            onHardDelete={hardDeleteCourse}
-          />
+          <TrashTable items={courses} type="course" />
         </TabsContent>
 
         <TabsContent value="lessons" className="mt-4">
-          <TrashTable
-            items={lessons}
-            type="lesson"
-            onRestore={restoreLesson}
-            onHardDelete={hardDeleteLesson}
-          />
+          <TrashTable items={lessons} type="lesson" />
         </TabsContent>
       </Tabs>
     </div>

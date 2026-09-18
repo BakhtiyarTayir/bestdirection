@@ -4,7 +4,7 @@ import {
   getCourseById,
   getEnrolledStudents,
   getAvailableStudents,
-} from "@/actions/course-actions";
+} from "@/lib/api/courses.server";
 import { getCourseGroups } from "@/actions/group-actions";
 import { StudentEnrollment } from "@/components/student-enrollment";
 import { notFound } from "next/navigation";

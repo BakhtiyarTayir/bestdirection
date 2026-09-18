@@ -1,13 +1,16 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
+import { getCourseIdBySlug } from "@/lib/api/courses.server";
 
+/**
+ * Курс уже переехал в api (этап 3a), поэтому его адрес разрешает api — и сразу
+ * по правам вызывающего: недоступный курс отдаёт 404, как и несуществующий.
+ * Уроки и задания остаются на прямом запросе к базе до этапа 4.
+ */
 export async function resolveCourseSlug(courseSlug: string): Promise<string> {
-  const course = await prisma.course.findUnique({
-    where: { slug: courseSlug, deletedAt: null },
-    select: { id: true },
-  });
-  if (!course) notFound();
-  return course.id;
+  const result = await getCourseIdBySlug(courseSlug);
+  if (!result.success) notFound();
+  return result.data.id;
 }
 
 export async function resolveLessonSlug(

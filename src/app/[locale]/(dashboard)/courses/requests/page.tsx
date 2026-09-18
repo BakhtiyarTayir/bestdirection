@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/auth-guard";
-import { getEnrollmentRequests } from "@/actions/enrollment-request-actions";
+import { getEnrollmentRequests } from "@/lib/api/courses.server";
 import { getTranslations } from "next-intl/server";
 import { RequestsList } from "./requests-list";
 
@@ -22,7 +22,7 @@ export default async function EnrollmentRequestsPage() {
         requests={requests.map((r) => ({
           id: r.id,
           status: r.status,
-          createdAt: r.createdAt.toISOString(),
+          createdAt: r.createdAt,
           course: { title: r.course.title, price: r.course.price },
           student: {
             firstName: r.student.firstName,

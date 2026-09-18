@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/auth-guard";
-import { getCourseById } from "@/actions/course-actions";
+import { getCourseById } from "@/lib/api/courses.server";
 import { getUsers } from "@/lib/api/users.server";
 import { CourseForm } from "@/components/course-form";
 import { notFound } from "next/navigation";

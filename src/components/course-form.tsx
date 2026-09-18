@@ -3,6 +3,7 @@
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "@/i18n/navigation";
+import { toDateInput } from "@/lib/date-only";
 import { useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { createCourseSchema, type CreateCourseInput } from "@/validators/course";
@@ -22,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { createCourse, updateCourse } from "@/actions/course-actions";
+import { createCourse, updateCourse } from "@/lib/api/courses";
 import { Loader2, Upload, X, ImageIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -49,7 +50,8 @@ interface CourseData {
   price?: number | null;
   publicSummaryRu?: string | null;
   publicSummaryUz?: string | null;
-  intakeStartDate?: Date | null;
+  // Из api дата приходит строкой ISO, из формы — объектом Date
+  intakeStartDate?: Date | string | null;
   intakeSeats?: number | null;
   intakeNoteRu?: string | null;
   intakeNoteUz?: string | null;
@@ -114,7 +116,7 @@ export function CourseForm({
       price: course?.price ?? undefined,
       publicSummaryRu: course?.publicSummaryRu || "",
       publicSummaryUz: course?.publicSummaryUz || "",
-      intakeStartDate: course?.intakeStartDate ?? undefined,
+      intakeStartDate: course?.intakeStartDate ? new Date(course.intakeStartDate) : undefined,
       intakeSeats: course?.intakeSeats ?? undefined,
       intakeNoteRu: course?.intakeNoteRu || "",
       intakeNoteUz: course?.intakeNoteUz || "",
@@ -178,12 +180,13 @@ export function CourseForm({
             price: data.price,
             publicSummaryRu: data.publicSummaryRu,
             publicSummaryUz: data.publicSummaryUz,
-            intakeStartDate: data.intakeStartDate,
+            // api ждёт календарную дату строкой: Date уехал бы на сутки
+            intakeStartDate: toDateInput(data.intakeStartDate) || undefined,
             intakeSeats: data.intakeSeats,
             intakeNoteRu: data.intakeNoteRu,
             intakeNoteUz: data.intakeNoteUz,
           });
-          if (result.success && result.data) {
+          if (result.success) {
             toast({ title: t("courseUpdated") });
             router.push(`/courses/${result.data.slug}`);
             router.refresh();
@@ -203,7 +206,7 @@ export function CourseForm({
             accessType: data.accessType,
             price: data.price,
           });
-          if (result.success && result.data) {
+          if (result.success) {
             toast({ title: t("courseCreated") });
             router.push(`/courses/${result.data.slug}`);
             router.refresh();

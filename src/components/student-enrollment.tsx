@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { enrollStudent, unenrollStudent } from "@/actions/course-actions";
+import { enrollStudent, unenrollStudent } from "@/lib/api/courses";
 import { refreshBadges } from "@/lib/badge-refresh";
 import { Loader2, Search, TriangleAlert } from "lucide-react";
 import { Link } from "@/i18n/navigation";
@@ -34,7 +34,8 @@ interface Student {
 }
 
 interface EnrolledStudent extends Student {
-  enrolledAt: Date;
+  // api отдаёт дату строкой ISO
+  enrolledAt: Date | string;
 }
 
 interface StudentEnrollmentProps {

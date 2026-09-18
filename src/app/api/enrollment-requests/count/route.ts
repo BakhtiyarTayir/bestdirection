@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getEnrollmentRequestsCount } from "@/actions/enrollment-request-actions";
+import { getEnrollmentRequestsCount } from "@/lib/api/courses.server";
 
 export async function GET() {
   const result = await getEnrollmentRequestsCount();

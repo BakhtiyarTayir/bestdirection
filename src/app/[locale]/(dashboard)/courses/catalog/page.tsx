@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/auth-guard";
-import { getCoursesForCopy } from "@/actions/course-copy-actions";
+import { getCoursesForCopy } from "@/lib/api/courses.server";
 import { CourseCatalogList } from "@/components/course-catalog-list";
 import { useTranslations } from "next-intl";
 

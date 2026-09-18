@@ -1,5 +1,5 @@
 import { requireAuth } from "@/lib/auth-guard";
-import { getCourseById } from "@/actions/course-actions";
+import { getCourseById } from "@/lib/api/courses.server";
 import { getCourseGroups } from "@/actions/group-actions";
 import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";

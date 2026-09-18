@@ -1,5 +1,5 @@
 import { requireAuth } from "@/lib/auth-guard";
-import { getCourseById } from "@/actions/course-actions";
+import { getCourseById } from "@/lib/api/courses.server";
 import { prisma } from "@/lib/prisma";
 import { resolveCourseSlug } from "@/lib/slug-resolvers";
 import { notFound } from "next/navigation";

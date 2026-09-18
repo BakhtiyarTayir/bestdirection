@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { hardDeleteCourse, hardDeleteLesson, restoreCourse, restoreLesson } from "@/lib/api/courses";
 import {
   Table,
   TableBody,
@@ -29,29 +30,31 @@ import { useTranslations } from "next-intl";
 interface TrashItem {
   id: string;
   title?: string;
-  deletedAt: Date | null;
-  [key: string]: unknown;
+  // api отдаёт дату строкой ISO
+  deletedAt: Date | string | null;
 }
 
 interface TrashTableProps {
   items: TrashItem[];
   type: "course" | "lesson";
-  onRestore: (id: string) => Promise<{ success: boolean; error?: string }>;
-  onHardDelete: (id: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 // typeLabels moved to component body using translations
 
 function getItemName(item: TrashItem, noTitle: string): string {
-  return (item.title as string) ?? noTitle;
+  return item.title ?? noTitle;
 }
 
-function formatDeletedAt(date: Date | null): string {
+function formatDeletedAt(date: Date | string | null): string {
   if (!date) return "—";
   return formatDateTime(date);
 }
 
-export function TrashTable({ items, type, onRestore, onHardDelete }: TrashTableProps) {
+export function TrashTable({ items, type }: TrashTableProps) {
+  // Действия берём по типу записи: server actions в пропсах больше нет,
+  // компонент ходит в api сам
+  const onRestore = type === "course" ? restoreCourse : restoreLesson;
+  const onHardDelete = type === "course" ? hardDeleteCourse : hardDeleteLesson;
   const t = useTranslations("trash");
   const tCommon = useTranslations("common");
   const [localItems, setLocalItems] = useState(items);

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "@/i18n/navigation";
-import { copyCourse } from "@/actions/course-copy-actions";
+import { copyCourse } from "@/lib/api/courses";
 import {
   Dialog,
   DialogContent,

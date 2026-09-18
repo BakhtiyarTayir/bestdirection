@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/auth-guard";
-import { getCatalogCourses } from "@/actions/enrollment-request-actions";
+import { getCatalogCourses } from "@/lib/api/courses.server";
 import { getTranslations } from "next-intl/server";
 import { BookOpen } from "lucide-react";
 import { CatalogCourseCard } from "./catalog-course-card";

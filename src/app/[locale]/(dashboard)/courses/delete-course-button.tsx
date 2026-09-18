@@ -16,7 +16,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { deleteCourse } from "@/actions/course-actions";
+import { deleteCourse } from "@/lib/api/courses";
 import { Trash2, Loader2 } from "lucide-react";
 
 interface DeleteCourseButtonProps {

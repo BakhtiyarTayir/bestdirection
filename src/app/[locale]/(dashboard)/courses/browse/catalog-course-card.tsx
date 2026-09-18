@@ -19,7 +19,7 @@ import { BookOpen, Loader2, Check, Clock, RotateCcw } from "lucide-react";
 import {
   enrollInFreeCourse,
   requestEnrollment,
-} from "@/actions/enrollment-request-actions";
+} from "@/lib/api/courses";
 
 interface CatalogCourse {
   id: string;

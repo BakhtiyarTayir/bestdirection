@@ -20,7 +20,7 @@ import { Check, X, Loader2 } from "lucide-react";
 import {
   approveEnrollmentRequest,
   rejectEnrollmentRequest,
-} from "@/actions/enrollment-request-actions";
+} from "@/lib/api/courses";
 
 type RequestStatus = "PENDING" | "APPROVED" | "REJECTED";
 

@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getCourseById, getEnrolledStudents } from "@/actions/course-actions";
+import { getCourseById, getEnrolledStudents } from "@/lib/api/courses.server";
 import { getAttendanceSessions } from "@/actions/attendance-actions";
 import { AttendanceGrid } from "@/components/attendance-grid";
 import { CreateSessionDialog } from "@/components/create-session-dialog";

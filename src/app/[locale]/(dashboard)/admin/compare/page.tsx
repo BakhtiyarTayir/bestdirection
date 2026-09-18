@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import {
   compareCourses,
   getCoursesForComparison,
-} from "@/actions/course-compare-actions";
-import type { CourseDiff } from "@/actions/course-compare-actions";
+} from "@/lib/api/courses";
+import type { CourseDiff } from "@/lib/api/courses";
 import { Button } from "@/components/ui/button";
 import {
   Select,
