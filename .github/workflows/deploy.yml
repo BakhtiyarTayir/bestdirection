@@ -162,9 +162,11 @@ jobs:
             scripts/backup/bestdirection-backup.service scripts/backup/bestdirection-backup.timer \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/bestdirection/"
 
-      - name: Забрать образы и перезапустить
-        # GITHUB_TOKEN живёт только на время задания — его хватает, чтобы
-        # сервер стянул образы прямо сейчас, и хранить пароль на сервере не надо.
+      - name: Подготовить сервер и запустить скачивание образов
+        # Скачивание двух образов по 600 МБ идёт минуты, и SSH-канал за это
+        # время рвался дважды (13:42 и 13:44 18.09). Поэтому pull уходит в
+        # отдельный процесс на сервере (setsid), а CI только опрашивает
+        # результат короткими запросами — обрыв связи больше ничего не ломает.
         run: |
           ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" bash -s <<REMOTE
@@ -189,9 +191,42 @@ jobs:
             systemctl daemon-reload
             systemctl enable --now bestdirection-backup.timer
 
-            # --quiet обязателен: прогресс скачивания двух образов забивает
-            # SSH-канал, и соединение рвётся на середине деплоя
-            docker compose pull --quiet
+            # Пароль реестра уже в ~/.docker/config.json — в фоновый скрипт он
+            # не попадает. --quiet: прогресс скачивания в лог не нужен.
+            rm -f pull.done pull.log
+            setsid nohup bash -c 'docker compose pull --quiet; echo \$? > pull.done' \
+              > pull.log 2>&1 < /dev/null &
+            echo "скачивание запущено"
+          REMOTE
+
+      - name: Дождаться образов
+        # Каждая проверка — отдельное короткое соединение: если оно оборвётся,
+        # следующая попытка просто продолжит ждать, а скачивание идёт своим ходом.
+        timeout-minutes: 20
+        run: |
+          for i in $(seq 1 120); do
+            code=$(ssh -i ~/.ssh/id_deploy -o ConnectTimeout=15 \
+              "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+              'cat /opt/bestdirection/pull.done 2>/dev/null' || true)
+            if [ -n "$code" ]; then
+              if [ "$code" = "0" ]; then echo "образы скачаны"; exit 0; fi
+              echo "скачивание завершилось с кодом $code" >&2
+              ssh -i ~/.ssh/id_deploy "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+                'tail -20 /opt/bestdirection/pull.log' || true
+              exit 1
+            fi
+            echo "попытка $i: образы ещё качаются"
+            sleep 10
+          done
+          echo "образы не скачались за 20 минут" >&2
+          exit 1
+
+      - name: Перезапустить с новыми образами
+        run: |
+          ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" bash -s <<REMOTE
+            set -euo pipefail
+            cd /opt/bestdirection
 
             # Бэкап до того, как новый контейнер накатит миграции. Не удался —
             # деплой останавливается. На пустом сервере базы ещё нет.
@@ -213,9 +248,9 @@ jobs:
             docker image prune -af --filter "until=72h" || true
           REMOTE
 
-      - name: Проверка, что развернулся нужный образ
-        # Деплой уже проходил «успешно», не перезапустив контейнер: команда
-        # внутри скрипта съела его остаток через stdin. Теперь сверяем тег.
+      - name: Проверить, что запустился нужный образ
+        # Молчаливый «успешный» деплой уже случался: контейнер оставался на
+        # старом образе, а шаг заканчивался без ошибки.
         run: |
           ssh -i ~/.ssh/id_deploy -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
