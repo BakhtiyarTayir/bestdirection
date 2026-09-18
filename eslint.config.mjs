@@ -48,6 +48,9 @@ const eslintConfig = defineConfig([
       "src/app/**/lessons/**/edit/**",
       "src/app/(public)/**",
       "src/app/**/(public)/**",
+      // Этап 6: рассылки и бот
+      "src/app/**/admin/sms/**",
+      "src/components/sms/**",
       "src/components/telegram-link.tsx",
       "src/components/trash-table.tsx",
       "src/components/course-form.tsx",
