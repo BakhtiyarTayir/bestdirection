@@ -18,6 +18,7 @@ import { BillingModule } from "./modules/billing/billing.module";
 import { CoursesModule } from "./modules/courses/courses.module";
 import { EnrollmentRequestsModule } from "./modules/enrollment-requests/enrollment-requests.module";
 import { GroupsModule } from "./modules/groups/groups.module";
+import { HomeworkModule } from "./modules/homework/homework.module";
 import { LessonsModule } from "./modules/lessons/lessons.module";
 import { ParentsModule } from "./modules/parents/parents.module";
 import { HealthController } from "./modules/health/health.controller";
@@ -42,6 +43,7 @@ import { UsersModule } from "./modules/users/users.module";
     GroupsModule,
     AttendanceModule,
     LessonsModule,
+    HomeworkModule,
     AssessmentsModule,
     ParentsModule,
     TelegramModule,

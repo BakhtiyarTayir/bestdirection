@@ -791,6 +791,9 @@ model Submission {
   testResults TestResult[]
   files       SubmissionFile[]
 
+  // Номер попытки уникален на пару (задание, ученик): две параллельные сдачи
+  // не займут один номер, и лимит попыток не обходится гонкой (аудит 3.4)
+  @@unique([homeworkId, studentId, attemptNumber])
   @@index([studentId])
   @@index([homeworkId])
   @@index([manualStatus])
