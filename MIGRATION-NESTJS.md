@@ -467,7 +467,19 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
 - Рассылки (`sms-actions`) пока в `web`, но получателей по группе берут из api — до этапа 6.
 - 24 теста модулей.
 
-**Первый блок переноса закрыт.** В `web` осталось 13 файлов действий: уроки и тесты, домашние задания, импорт, прогресс, СМС, лендинг, заявки с сайта, настройки сайта и вход.
+### Этап 4 — lessons, assessments
+
+**Статус: сделано 2026-09-18**, ветка `stage-4-lessons`.
+
+- `lesson-actions`, `progress-actions`, `assessment-actions` и импорт тестов и экзаменов перенесены целиком; из `web` удалены `src/lib/assessment-scoring.ts`, `src/lib/spreadsheet-utils.ts`, `scripts/check-assessment-scoring.ts` и маршруты `v1/progress`, `progress`, `v1/presence/ping`, `v1/export/test`, `v1/export/exam`, `export/*`.
+- Закрыты находки 3.2, 3.3, 3.4 (тесты; задания — этап 5), остаток 2.4 и 2.6 в части `xlsx`: пакет заменён на `@e965/xlsx` и живёт только в api.
+- Прогресс просмотра принимается по POST: `navigator.sendBeacon` другого метода не умеет.
+- Страницы уроков, тестов, экзаменов, «моих результатов» и страница курса читают данные из api. Прямое чтение осталось только там, где нужны задания: страница урока, её правка и публичный урок — они уедут на этапе 5 вместе с модулем `homework`.
+- 291 тест в api (было 262).
+
+**Открытый вопрос к владельцу:** после первой попытки ученик видит разбор со своими ответами и правильными вариантами, а оставшиеся попытки при этом не сгорают — второй раз тест сдаётся на 100%. Так было и до переноса. Нужно решить, показывать ли разбор только после последней попытки.
+
+**Первый блок переноса закрыт.** В `web` осталось 13 файлов действий: уроки и тесты, домашние задания, импорт, прогресс, СМС, лендинг, заявки с сайта, настройки сайта и вход. После этапа 4 — 9: домашние задания, импорт заданий, СМС, лендинг, заявки с сайта, настройки сайта и вход.
 
 ### Этап 9 — вход и сессии переезжают в api
 
@@ -486,7 +498,7 @@ export async function apiFetch(path: string, init: RequestInit = {}) {
 |---|---|
 | 2 | `src/app/[locale]/(dashboard)/audit/page.tsx` |
 | 3 | `src/app/[locale]/(dashboard)/courses/[courseSlug]/page.tsx`; `src/lib/slug-resolvers.ts` (разрешение slug → id используется почти всеми страницами курса — в `api` отдельный эндпоинт); `src/lib/trash.ts` |
-| 4 | `src/app/[locale]/(dashboard)/courses/[courseSlug]/lessons/[lessonSlug]/page.tsx`, `.../lessons/[lessonSlug]/edit/page.tsx`, `.../lessons/[lessonSlug]/test/page.tsx`, `.../lessons/[lessonSlug]/test/attempts/page.tsx`; `.../exams/page.tsx`, `.../exams/new/page.tsx`, `.../exams/[examId]/page.tsx`, `.../exams/[examId]/edit/page.tsx`, `.../exams/[examId]/attempts/page.tsx`; `src/app/[locale]/(dashboard)/my-results/page.tsx`; публичная `src/app/[locale]/(public)/lessons/open/[courseSlug]/[lessonSlug]/page.tsx` (в `api` — эндпоинт с `@Public()`) |
+| 4 | **сделано:** `.../lessons/[lessonSlug]/test/page.tsx`, `.../lessons/[lessonSlug]/test/attempts/page.tsx`, `.../exams/*` (все пять), `.../my-results/page.tsx`, `.../courses/[courseSlug]/page.tsx`. **Перенесено на этап 5** (нужны задания): `.../lessons/[lessonSlug]/page.tsx`, `.../lessons/[lessonSlug]/edit/page.tsx`, публичная `src/app/[locale]/(public)/lessons/open/[courseSlug]/[lessonSlug]/page.tsx` (в `api` — эндпоинт с `@Public()`) |
 | 5 | публичная `src/app/[locale]/(public)/homework/open/[courseSlug]/[lessonSlug]/[homeworkSlug]/page.tsx` (`@Public()`); `src/lib/homework-submission.ts` |
 | 6 | `src/lib/sms/eskiz.ts`, `src/lib/sms/notify.ts`, `src/lib/telegram/bot.ts` |
 | 7 | `src/app/[locale]/(dashboard)/admin/landing/page.tsx`, `.../admin/landing/pages/page.tsx`, `.../admin/landing/pages/[id]/page.tsx`; `src/lib/marketing-content.ts`; `src/lib/site-settings.ts` (логотип читает layout кабинета — после переноса каждая страница кабинета зависит от `api`) |
