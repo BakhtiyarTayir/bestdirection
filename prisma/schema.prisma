@@ -145,25 +145,26 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  courses              Course[]
-  enrollments          Enrollment[]
-  assessmentAttempts   AssessmentAttempt[]
-  attendanceRecords    AttendanceRecord[]
-  lessonProgress       LessonProgress[]
-  auditLogs            AuditLog[]
-  submissions          Submission[]
-  reviewedSubmissions  Submission[]  @relation("ReviewedSubmissions")
+  courses                    Course[]
+  enrollments                Enrollment[]
+  assessmentAttempts         AssessmentAttempt[]
+  attendanceRecords          AttendanceRecord[]
+  lessonProgress             LessonProgress[]
+  auditLogs                  AuditLog[]
+  submissions                Submission[]
+  reviewedSubmissions        Submission[]        @relation("ReviewedSubmissions")
   enrollmentRequests         EnrollmentRequest[] @relation("StudentEnrollmentRequests")
   reviewedEnrollmentRequests EnrollmentRequest[] @relation("ReviewedEnrollmentRequests")
   payments                   Payment[]           @relation("StudentPayments")
   recordedPayments           Payment[]           @relation("RecordedPayments")
-  telegramChatId       String?   @unique
-  telegramUsername     String?
+  telegramChatId             String?             @unique
+  telegramUsername           String?
 
   // Родитель ↔ ученик. Связь многие-ко-многим: у ученика может быть двое
   // родителей, у родителя — несколько детей в разных группах.
-  childLinks  ParentStudent[] @relation("ParentOf")
-  parentLinks ParentStudent[] @relation("ChildOf")
+  telegramLinkRequests TelegramLinkRequest[]
+  childLinks           ParentStudent[]       @relation("ParentOf")
+  parentLinks          ParentStudent[]       @relation("ChildOf")
 
   // Преподавание: группы под ведением и проведённые занятия
   taughtGroups   Group[]             @relation("GroupTeacher")
@@ -339,12 +340,12 @@ model Enrollment {
   // ─── Биллинг ────────────────────────────────────────────────────────────
   // Первый учебный день. Отдельно от createdAt: строку в базе могли завести
   // раньше или позже, чем студент реально начал ходить.
-  startsAt DateTime?
+  startsAt         DateTime?
   // Последний оплачиваемый день: студент ушёл или встал на паузу. Начисления
   // после этой даты прекращаются, история оплат остаётся.
-  billingEndsAt DateTime?
+  billingEndsAt    DateTime?
   // Индивидуальная цена за месяц вместо Course.price (скидка/надбавка)
-  priceOverride Int?
+  priceOverride    Int?
   // Начисление за первый неполный месяц. Считается по занятиям, но хранится
   // отдельно: админ округляет сумму рукой, иначе дробный остаток навсегда
   // повесит студента в должниках (Payment.amount — целое число сумов).
@@ -354,7 +355,7 @@ model Enrollment {
   student   User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   courseId String
-  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   groupId String?
   group   Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
@@ -405,29 +406,29 @@ model MonthlyCharge {
 }
 
 model Group {
-  id          String    @id @default(cuid())
-  name        String
-  description String?
+  id           String    @id @default(cuid())
+  name         String
+  description  String?
   // Расписание в свободной форме — для показа («Пн/Ср/Пт 18:00»)
-  schedule    String?
+  schedule     String?
   // Дни занятий по ISO (1 = понедельник … 7 = воскресенье). Нужны для
   // пропорционального начисления за неполный месяц: считаем занятия, а не дни.
   // Пустой массив — расписание не задано, пропорцию админ вводит вручную.
   scheduleDays Int[]
-  startDate   DateTime?
-  endDate     DateTime?
+  startDate    DateTime?
+  endDate      DateTime?
   // Цена группы за месяц. Пусто — берётся цена курса. Индивидуальная цена
   // студента (Enrollment.priceOverride) важнее цены группы. Меняется только
   // вперёд: закрытые месяцы уже лежат в MonthlyCharge со своей priceUsed.
-  price       Int?
-  settings    Json?
-  isActive    Boolean   @default(true)
-  sortOrder   Int       @default(0)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  price        Int?
+  settings     Json?
+  isActive     Boolean   @default(true)
+  sortOrder    Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   courseId String
-  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   // Преподаватель группы. Course.teacherId задаёт одного педагога на весь
   // курс — этого мало: две группы одного курса могут вести разные люди.
@@ -453,15 +454,15 @@ model Lesson {
   content       String              @default("")
   contentFormat LessonContentFormat @default(MARKDOWN)
   videoUrl      String?
-  videoSource VideoSource?
-  sortOrder   Int          @default(0)
-  isPublished Boolean      @default(false)
-  deletedAt   DateTime?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  videoSource   VideoSource?
+  sortOrder     Int                 @default(0)
+  isPublished   Boolean             @default(false)
+  deletedAt     DateTime?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
 
   courseId String
-  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   assessment Assessment?
   homeworks  Homework[]
@@ -484,6 +485,23 @@ model EmailVerificationCode {
 }
 
 // Одноразовая заявка на вход через Telegram-бота (deep-link t.me/bot?start=login_<code>)
+// Код привязки Telegram к существующему аккаунту: пользователь жмёт
+// «привязать» в кабинете и отправляет код боту. Раньше код клали прямо в
+// User.telegramChatId как "pending:<код>" — вторая попытка затирала реальный
+// chat id, и вход через Telegram терялся навсегда (аудит 2.8).
+model TelegramLinkRequest {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  userId    String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
 model TelegramAuthRequest {
   id               String   @id @default(cuid())
   code             String   @unique
@@ -517,7 +535,7 @@ model AttendanceSession {
   endedAt   DateTime?
 
   courseId String
-  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   groupId String?
   group   Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
@@ -544,7 +562,7 @@ model AttendanceRecord {
   session   AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   studentId String
-  student   User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student   User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([sessionId, studentId])
   @@index([studentId])
@@ -559,7 +577,7 @@ model LessonProgress {
   updatedAt    DateTime  @updatedAt
 
   studentId String
-  student   User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student   User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   lessonId String
   lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
@@ -587,7 +605,7 @@ model Assessment {
   updatedAt    DateTime       @updatedAt
 
   courseId String
-  course  Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   lessonId String? @unique
   lesson   Lesson? @relation(fields: [lessonId], references: [id], onDelete: Cascade)
@@ -635,7 +653,7 @@ model AssessmentAttempt {
   completedAt DateTime?
 
   studentId String
-  student   User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student   User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   assessmentId String
   assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
@@ -673,7 +691,7 @@ model AuditLog {
   createdAt  DateTime @default(now())
 
   userId String
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([entityType, entityId])
   @@index([userId])
@@ -686,34 +704,34 @@ model AuditLog {
 // =============================================
 
 model Homework {
-  id            String              @id @default(cuid())
-  slug          String
-  title         String
-  description   String
-  type          HomeworkType        @default(CODE)
-  language      ProgrammingLanguage?
-  starterCode   String?
-  solutionCode  String?
-  maxAttempts   Int                 @default(10)
-  timeLimitSec  Int                 @default(5)
-  maxScore      Int                 @default(100)
-  passingScore  Int                 @default(60)
-  dueDate       DateTime?
-  allowLate     Boolean             @default(true)
-  latePenalty   Int                 @default(20)
-  sortOrder     Int                 @default(0)
-  isPublished   Boolean             @default(false)
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
+  id           String               @id @default(cuid())
+  slug         String
+  title        String
+  description  String
+  type         HomeworkType         @default(CODE)
+  language     ProgrammingLanguage?
+  starterCode  String?
+  solutionCode String?
+  maxAttempts  Int                  @default(10)
+  timeLimitSec Int                  @default(5)
+  maxScore     Int                  @default(100)
+  passingScore Int                  @default(60)
+  dueDate      DateTime?
+  allowLate    Boolean              @default(true)
+  latePenalty  Int                  @default(20)
+  sortOrder    Int                  @default(0)
+  isPublished  Boolean              @default(false)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
 
-  lessonId      String
-  lesson        Lesson              @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  lessonId String
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
-  requiresManualReview Boolean   @default(false)
+  requiresManualReview Boolean @default(false)
   reviewInstructions   String?
 
-  testCases     TestCase[]
-  submissions   Submission[]
+  testCases   TestCase[]
+  submissions Submission[]
 
   @@unique([lessonId, slug])
   @@index([lessonId])
@@ -721,17 +739,17 @@ model Homework {
 }
 
 model TestCase {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   input       String
   expected    String
-  isHidden    Boolean  @default(false)
-  points      Int      @default(1)
+  isHidden    Boolean @default(false)
+  points      Int     @default(1)
   description String?
-  sortOrder   Int      @default(0)
+  sortOrder   Int     @default(0)
 
-  homeworkId  String
-  homework    Homework @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
-  results     TestResult[]
+  homeworkId String
+  homework   Homework     @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
+  results    TestResult[]
 
   @@index([homeworkId])
 }
@@ -754,16 +772,16 @@ model Submission {
   manualStatus   ManualReviewStatus?
   teacherComment String?
   reviewedById   String?
-  reviewedBy     User?            @relation("ReviewedSubmissions", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedBy     User?               @relation("ReviewedSubmissions", fields: [reviewedById], references: [id], onDelete: SetNull)
   reviewedAt     DateTime?
   manualScore    Int?
 
-  studentId     String
-  student       User             @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  homeworkId    String
-  homework      Homework         @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
-  testResults   TestResult[]
-  files         SubmissionFile[]
+  studentId   String
+  student     User             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  homeworkId  String
+  homework    Homework         @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
+  testResults TestResult[]
+  files       SubmissionFile[]
 
   @@index([studentId])
   @@index([homeworkId])
@@ -771,12 +789,12 @@ model Submission {
 }
 
 model SubmissionFile {
-  id           String     @id @default(cuid())
-  filename     String
-  path         String
-  mimeType     String
-  size         Int
-  createdAt    DateTime   @default(now())
+  id        String   @id @default(cuid())
+  filename  String
+  path      String
+  mimeType  String
+  size      Int
+  createdAt DateTime @default(now())
 
   submissionId String
   submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
@@ -785,16 +803,16 @@ model SubmissionFile {
 }
 
 model TestResult {
-  id            String   @id @default(cuid())
+  id            String  @id @default(cuid())
   passed        Boolean
   actualOutput  String?
   errorOutput   String?
   executionTime Int?
 
-  submissionId  String
-  submission    Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-  testCaseId    String
-  testCase      TestCase   @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  submissionId String
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  testCaseId   String
+  testCase     TestCase   @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
 
   @@index([submissionId])
 }
@@ -900,7 +918,6 @@ model MarketingPage {
   @@index([published])
 }
 
-
 // ─── СМС через eskiz.uz ───────────────────────────────────────────────────
 
 // Токен внешнего сервиса. В БД, а не в памяти процесса: контейнер
@@ -924,8 +941,8 @@ model SmsTemplate {
   status  SmsTemplateStatus @default(DRAFT)
 
   syncedAt  DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   broadcasts SmsBroadcast[]
 
