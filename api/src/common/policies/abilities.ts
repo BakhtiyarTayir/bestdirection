@@ -35,6 +35,11 @@ export type AppSubjects =
   // Каталог самозаписи — ученику; заявки подтверждает персонал; Корзина — администратор
   | "Catalog"
   | "Trash"
+  // Вести занятия, смотреть отчёт по преподавателям, править связи «родитель —
+  // ученик». Объектные проверки (чьё занятие, чей ребёнок) делают сервисы.
+  | "Attendance"
+  | "TeacherAttendance"
+  | "ParentLink"
   | Subjects<{
       User: User;
       AuditLog: AuditLog;
@@ -73,6 +78,10 @@ export function defineAbilityFor(user: Pick<SessionUser, "id" | "role">): AppAbi
       // Группы: смотреть можно любые (подмены), менять — только в своих курсах
       can("read", "Group");
       can("manage", "Group", { course: { is: { teacherId: user.id } } });
+      // Занятия ведёт педагог курса, педагог группы или записанный заменяющий —
+      // это решает canManageSession в модуле посещаемости
+      can("manage", "Attendance");
+      can("read", "TeacherAttendance");
       break;
 
     case "STUDENT":

@@ -11,11 +11,13 @@ import { PrismaModule } from "./common/prisma/prisma.module";
 import { OriginGuard } from "./common/security/origin.guard";
 import { ApiThrottlerGuard } from "./common/security/throttler.guard";
 import { EnvModule } from "./config/env.module";
+import { AttendanceModule } from "./modules/attendance/attendance.module";
 import { AuditLogModule } from "./modules/audit-log/audit-log.module";
 import { BillingModule } from "./modules/billing/billing.module";
 import { CoursesModule } from "./modules/courses/courses.module";
 import { EnrollmentRequestsModule } from "./modules/enrollment-requests/enrollment-requests.module";
 import { GroupsModule } from "./modules/groups/groups.module";
+import { ParentsModule } from "./modules/parents/parents.module";
 import { HealthController } from "./modules/health/health.controller";
 import { MeController } from "./modules/me/me.controller";
 import { TelegramModule } from "./common/telegram/telegram.module";
@@ -36,6 +38,8 @@ import { UsersModule } from "./modules/users/users.module";
     CoursesModule,
     EnrollmentRequestsModule,
     GroupsModule,
+    AttendanceModule,
+    ParentsModule,
     TelegramModule,
     TrashModule,
   ],
