@@ -147,7 +147,17 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
-          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+          # Сканирование ключа хоста иногда не проходит с первого раза из-за
+          # сети раннера, и весь деплой падал на первом же шаге. Повторяем.
+          for i in 1 2 3 4 5; do
+            if ssh-keyscan -T 15 -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null; then
+              if [ -s ~/.ssh/known_hosts ]; then echo "ключ хоста получен"; break; fi
+            fi
+            echo "попытка $i не удалась, повтор через 10 секунд"
+            sleep 10
+          done
+          test -s ~/.ssh/known_hosts
 
       - uses: actions/checkout@v7
 
