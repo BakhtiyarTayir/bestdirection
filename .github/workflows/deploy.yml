@@ -66,12 +66,11 @@ jobs:
           npx tsc --noEmit
           npx eslint
 
-      # Проверки биллинга и посещаемости уехали в тесты api вместе с их
-      # кодом (этапы 3a и 3c)
-      - name: web — проверка подсчёта баллов
-        run: |
-          DATABASE_URL="$TEST_DATABASE_URL" npx prisma migrate deploy
-          npm run check:assessment-scoring
+      # Проверки биллинга, посещаемости и подсчёта баллов уехали в тесты api
+      # вместе с их кодом (этапы 3a, 3c и 4). Здесь осталась сама накатка:
+      # на чистой базе она ловит битую миграцию до деплоя.
+      - name: миграции применяются на чистой базе
+        run: DATABASE_URL="$TEST_DATABASE_URL" npx prisma migrate deploy
 
       - name: api — зависимости и клиент Prisma
         working-directory: api

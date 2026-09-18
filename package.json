@@ -9,7 +9,6 @@
     "lint": "eslint",
     "db:migrate": "npx prisma migrate dev",
     "db:seed": "npx tsx prisma/seed.ts",
-    "check:assessment-scoring": "npx tsx scripts/check-assessment-scoring.ts",
     "db:reset": "npx prisma migrate reset"
   },
   "prisma": {
