@@ -1,6 +1,6 @@
 import { requireRole } from "@/lib/auth-guard";
-import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
+import { getMarketingAdminContent } from "@/lib/api/marketing.server";
 import { PagesList } from "./pages-list";
 
 export const dynamic = "force-dynamic";
@@ -9,18 +9,8 @@ export default async function AdminLandingPagesPage() {
   await requireRole(["ADMIN"]);
   const t = await getTranslations("landingAdmin");
 
-  const pages = await prisma.marketingPage.findMany({
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-    select: {
-      id: true,
-      slug: true,
-      titleRu: true,
-      titleUz: true,
-      published: true,
-      showInFooter: true,
-      sortOrder: true,
-    },
-  });
+  const result = await getMarketingAdminContent();
+  const pages = result.success ? result.data.pages : [];
 
   return (
     <div>

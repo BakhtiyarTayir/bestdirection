@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireRole } from "@/lib/auth-guard";
-import { prisma } from "@/lib/prisma";
+import { getMarketingPageById } from "@/lib/api/marketing.server";
 import { PageEditor } from "./page-editor";
 import { MARKETING_DOMAIN } from "@/lib/marketing-domain";
 
@@ -18,8 +18,9 @@ export default async function AdminPageEditorPage({ params }: AdminPageEditorPro
     return <PageEditor page={null} marketingDomain={MARKETING_DOMAIN} />;
   }
 
-  const page = await prisma.marketingPage.findUnique({ where: { id } });
-  if (!page) notFound();
+  const result = await getMarketingPageById(id);
+  if (!result.success) notFound();
+  const page = result.data;
 
   return (
     <PageEditor
