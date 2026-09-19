@@ -31,18 +31,15 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
 import {
+  deleteMarketingItem,
   saveMarketingCourse,
-  deleteMarketingCourse,
-  saveMarketingReel,
-  deleteMarketingReel,
   saveMarketingGalleryItem,
-  deleteMarketingGalleryItem,
+  saveMarketingReel,
   saveMarketingTestimonial,
-  deleteMarketingTestimonial,
   saveMarketingTexts,
+  saveSiteLogo,
   seedMarketingContent,
-} from "@/actions/marketing-content-actions";
-import { saveSiteLogo } from "@/actions/site-settings-actions";
+} from "@/lib/api/marketing";
 import { Loader2, Pencil, Plus, Trash2, Upload, DownloadCloud } from "lucide-react";
 
 // Типы = сериализованные строки Prisma-таблиц
@@ -54,7 +51,7 @@ interface CourseRow {
   summaryUz: string | null;
   cover: string | null;
   price: number | null;
-  intakeStartDate: Date | null;
+  intakeStartDate: string | Date | null;
   intakeSeats: number | null;
   intakeNoteRu: string | null;
   intakeNoteUz: string | null;
@@ -105,6 +102,12 @@ interface LandingAdminProps {
   texts: TextRow[];
   /** Загруженный логотип или null — тогда показывается файл из public */
   logoUrl: string | null;
+  /**
+   * Значения для первичного наполнения: статичные тексты и переводы живут в
+   * web, а записывает их api — поэтому страница передаёт их сюда, а кнопка
+   * отправляет дальше.
+   */
+  seedPayload: Record<string, unknown>;
   initialTab?: string;
 }
 
@@ -144,6 +147,7 @@ export function LandingAdmin({
   testimonials,
   texts,
   logoUrl,
+  seedPayload,
   initialTab,
 }: LandingAdminProps) {
   const t = useTranslations("landingAdmin");
@@ -175,12 +179,12 @@ export function LandingAdmin({
   const handleSeed = async () => {
     setSeeding(true);
     try {
-      const result = await seedMarketingContent();
+      const result = await seedMarketingContent(seedPayload);
       if (result.success) {
         toast({
           description:
-            result.seeded.length > 0
-              ? t("seedDone", { count: result.seeded.length })
+            result.data.seeded.length > 0
+              ? t("seedDone", { count: result.data.seeded.length })
               : t("seedNothing"),
         });
         router.refresh();
@@ -491,7 +495,7 @@ function CoursesTab({ rows, notify }: { rows: CourseRow[]; notify: Notify }) {
 
   const remove = async (id: string) => {
     setDeletingId(id);
-    notify(await deleteMarketingCourse(id), t("deleted"));
+    notify(await deleteMarketingItem("courses", id), t("deleted"));
     setDeletingId(null);
   };
 
@@ -686,7 +690,7 @@ function GalleryTab({ rows, notify }: { rows: GalleryRow[]; notify: Notify }) {
 
   const remove = async (id: string) => {
     setDeletingId(id);
-    notify(await deleteMarketingGalleryItem(id), t("deleted"));
+    notify(await deleteMarketingItem("gallery", id), t("deleted"));
     setDeletingId(null);
   };
 
@@ -835,7 +839,7 @@ function ReelsTab({ rows, notify }: { rows: ReelRow[]; notify: Notify }) {
 
   const remove = async (id: string) => {
     setDeletingId(id);
-    notify(await deleteMarketingReel(id), t("deleted"));
+    notify(await deleteMarketingItem("reels", id), t("deleted"));
     setDeletingId(null);
   };
 
@@ -983,7 +987,7 @@ function TestimonialsTab({ rows, notify }: { rows: TestimonialRow[]; notify: Not
 
   const remove = async (id: string) => {
     setDeletingId(id);
-    notify(await deleteMarketingTestimonial(id), t("deleted"));
+    notify(await deleteMarketingItem("testimonials", id), t("deleted"));
     setDeletingId(null);
   };
 

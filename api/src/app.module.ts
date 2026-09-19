@@ -8,6 +8,7 @@ import { SessionGuard } from "./common/auth/session.guard";
 import { ApiExceptionFilter } from "./common/errors/api-exception.filter";
 import { PoliciesGuard } from "./common/policies/policies.guard";
 import { PrismaModule } from "./common/prisma/prisma.module";
+import { RevalidateModule } from "./common/revalidate/revalidate.module";
 import { OriginGuard } from "./common/security/origin.guard";
 import { ApiThrottlerGuard } from "./common/security/throttler.guard";
 import { EnvModule } from "./config/env.module";
@@ -20,6 +21,7 @@ import { EnrollmentRequestsModule } from "./modules/enrollment-requests/enrollme
 import { GroupsModule } from "./modules/groups/groups.module";
 import { HomeworkModule } from "./modules/homework/homework.module";
 import { LessonsModule } from "./modules/lessons/lessons.module";
+import { MarketingModule } from "./modules/marketing/marketing.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
 import { ParentsModule } from "./modules/parents/parents.module";
 import { HealthController } from "./modules/health/health.controller";
@@ -32,6 +34,7 @@ import { UsersModule } from "./modules/users/users.module";
   imports: [
     EnvModule,
     PrismaModule,
+    RevalidateModule,
     AuditModule,
     AuthModule,
     // 120 запросов в минуту с одного IP — с запасом для живого пользователя
@@ -46,6 +49,7 @@ import { UsersModule } from "./modules/users/users.module";
     LessonsModule,
     HomeworkModule,
     NotificationsModule,
+    MarketingModule,
     AssessmentsModule,
     ParentsModule,
     TelegramModule,

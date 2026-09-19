@@ -115,6 +115,9 @@ services:
       # Каталоги загрузок внутри контейнера — те же тома, что у app
       PUBLIC_UPLOAD_DIR: /app/public/uploads
       PRIVATE_UPLOAD_DIR: /app/uploads
+      # Куда стучаться, чтобы сбросить кэш лендинга: по внутренней сети,
+      # мимо Caddy (см. /api/internal/revalidate в web)
+      APP_INTERNAL_URL: http://app:3000
     volumes:
       # Те же тома, что у app: api принимает картинки, видео и работы учеников,
       # а раздаёт публичные файлы по-прежнему app (src/app/uploads/[...path]).

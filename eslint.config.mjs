@@ -51,6 +51,12 @@ const eslintConfig = defineConfig([
       // Этап 6: рассылки и бот
       "src/app/**/admin/sms/**",
       "src/components/sms/**",
+      // Этап 7: лендинг, заявки, настройки
+      "src/app/**/admin/landing/**",
+      "src/app/**/admin/leads/**",
+      "src/app/marketing/**",
+      "src/lib/marketing-content.ts",
+      "src/lib/site-settings.ts",
       "src/components/telegram-link.tsx",
       "src/components/trash-table.tsx",
       "src/components/course-form.tsx",

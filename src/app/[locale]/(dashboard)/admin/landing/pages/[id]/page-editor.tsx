@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
-import { saveMarketingPage } from "@/actions/marketing-content-actions";
+import { saveMarketingPage } from "@/lib/api/marketing";
 import type { EditorContent } from "@/lib/marketing-content";
 import { ArrowLeft, ExternalLink, Loader2 } from "lucide-react";
 
@@ -146,7 +146,7 @@ export function PageEditor({ page, marketingDomain }: PageEditorProps) {
       if (result.success) {
         toast({ description: t("saved") });
         if (!page) {
-          router.replace(`/admin/landing/pages/${result.id}`);
+          router.replace(`/admin/landing/pages/${result.data.id}`);
         }
         router.refresh();
       } else {

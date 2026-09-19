@@ -32,3 +32,33 @@ export async function apiServerFetch<T>(path: string, init: ApiRequestInit = {})
 
   return toResult<T>(response);
 }
+
+/**
+ * Вызов публичного маршрута api без куки пользователя.
+ *
+ * Нужен там, где кэшируется ответ (лендинг): внутри unstable_cache читать
+ * cookies() нельзя. Заодно куки кабинета не уезжают на публичные маршруты.
+ */
+export async function apiPublicFetch<T>(
+  path: string,
+  init: ApiRequestInit = {}
+): Promise<ApiResult<T>> {
+  const { method = "GET", body, query } = init;
+
+  let response: Response;
+  try {
+    response = await fetch(`${INTERNAL_URL}${buildPath(path, query)}`, {
+      method,
+      cache: "no-store",
+      headers: {
+        ...(process.env.INTERNAL_TOKEN ? { "x-internal-token": process.env.INTERNAL_TOKEN } : {}),
+        ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch {
+    return { success: false, error: "somethingWentWrong" };
+  }
+
+  return toResult<T>(response);
+}

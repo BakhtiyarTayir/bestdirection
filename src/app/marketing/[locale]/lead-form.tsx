@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { submitCourseLead } from "@/actions/lead-actions";
+import { submitCourseLead } from "@/lib/api/marketing";
 import { Loader2 } from "lucide-react";
 
 interface LeadFormProps {

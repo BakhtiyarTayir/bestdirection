@@ -14,7 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
-import { markLeadContacted } from "@/actions/lead-actions";
+import { markLeadContacted } from "@/lib/api/marketing";
 import { Loader2 } from "lucide-react";
 
 interface Lead {
@@ -23,7 +23,8 @@ interface Lead {
   phone: string;
   message: string | null;
   contacted: boolean;
-  createdAt: Date;
+  // api отдаёт дату строкой
+  createdAt: string | Date;
   courseName: string;
 }
 
