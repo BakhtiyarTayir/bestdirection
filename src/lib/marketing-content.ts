@@ -1,8 +1,13 @@
-// Контент лендинга из БД (редактируется в /admin/landing) с кэшем на тег
-// "marketing". Пока таблица пуста, используются статичные значения по
-// умолчанию — лендинг работает и до сида, и до миграции.
+// Контент лендинга из api (правится в /admin/landing) с кэшем на тег
+// "marketing": сбрасывает его сам api через /api/internal/revalidate после
+// правки. Пока таблицы пусты, используются статичные значения по умолчанию —
+// лендинг работает и до первичного наполнения.
 import { unstable_cache } from "next/cache";
-import { prisma } from "@/lib/prisma";
+import {
+  getLandingContent,
+  getLandingPage,
+  type ApiLandingContent,
+} from "@/lib/api/marketing.server";
 import { marketingCourses as defaultCourses } from "@/lib/marketing-courses";
 import { marketingReels as defaultReels } from "@/lib/marketing-reels";
 
@@ -71,67 +76,54 @@ export const defaultGalleryItems: LandingGalleryItem[] = [
   },
 ];
 
-export const getLandingCourses = unstable_cache(
-  async (): Promise<LandingCourse[]> => {
-    const rows = await prisma.marketingCourse.findMany({
-      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-    });
-    if (rows.length === 0) return defaultCourses;
-    return rows.filter((r) => r.published);
+/** Один запрос в api на весь лендинг; дальше всё берётся отсюда. */
+const loadLanding = unstable_cache(
+  async (): Promise<ApiLandingContent> => {
+    const result = await getLandingContent();
+    if (result.success) return result.data;
+
+    // api недоступен — лендинг показываем на значениях по умолчанию, а не 500
+    return { courses: [], reels: [], gallery: [], testimonials: [], texts: {}, pages: [], logo: null };
   },
-  ["landing-courses"],
+  ["landing-content"],
   { tags: [MARKETING_TAG] }
 );
 
-export const getLandingReels = unstable_cache(
-  async (): Promise<string[]> => {
-    const rows = await prisma.marketingReel.findMany({
-      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-    });
-    if (rows.length === 0) return defaultReels;
-    return rows.filter((r) => r.published).map((r) => r.url);
-  },
-  ["landing-reels"],
-  { tags: [MARKETING_TAG] }
-);
+export async function getLandingCourses(): Promise<LandingCourse[]> {
+  const { courses } = await loadLanding();
+  if (courses.length === 0) return defaultCourses;
+  return courses.map((course) => ({
+    ...course,
+    intakeStartDate: course.intakeStartDate ? new Date(course.intakeStartDate) : null,
+  }));
+}
 
-export const getLandingGallery = unstable_cache(
-  async (): Promise<LandingGalleryItem[]> => {
-    const rows = await prisma.marketingGalleryItem.findMany({
-      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-    });
-    if (rows.length === 0) return defaultGalleryItems;
-    return rows.filter((r) => r.published);
-  },
-  ["landing-gallery"],
-  { tags: [MARKETING_TAG] }
-);
+export async function getLandingReels(): Promise<string[]> {
+  const { reels } = await loadLanding();
+  return reels.length === 0 ? defaultReels : reels;
+}
 
-// Пустой массив = «отзывов в БД нет» — страница возьмёт их из messages.
-export const getLandingTestimonials = unstable_cache(
-  async (): Promise<LandingTestimonial[]> => {
-    const rows = await prisma.marketingTestimonial.findMany({
-      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-    });
-    return rows.filter((r) => r.published);
-  },
-  ["landing-testimonials"],
-  { tags: [MARKETING_TAG] }
-);
+export async function getLandingGallery(): Promise<LandingGalleryItem[]> {
+  const { gallery } = await loadLanding();
+  return gallery.length === 0 ? defaultGalleryItems : gallery;
+}
 
-export const getLandingTexts = unstable_cache(
-  async (): Promise<Record<string, { ru: string; uz: string }>> => {
-    const rows = await prisma.marketingText.findMany();
-    return Object.fromEntries(rows.map((r) => [r.key, { ru: r.ru, uz: r.uz }]));
-  },
-  ["landing-texts"],
-  { tags: [MARKETING_TAG] }
-);
+/** Пустой массив = «отзывов нет» — страница возьмёт их из messages. */
+export async function getLandingTestimonials(): Promise<LandingTestimonial[]> {
+  const { testimonials } = await loadLanding();
+  return testimonials;
+}
 
-/**
- * Хелпер текстов лендинга: значение из БД, а если ключа нет — фолбэк на
- * next-intl. Плейсхолдеры вида {count}/{date} подставляются простой заменой.
- */
+export async function getLandingTexts(): Promise<Record<string, { ru: string; uz: string }>> {
+  const { texts } = await loadLanding();
+  return texts;
+}
+
+export async function getLandingLogo(): Promise<string | null> {
+  const { logo } = await loadLanding();
+  return logo;
+}
+
 export function makeLandingText(
   texts: Record<string, { ru: string; uz: string }>,
   locale: string,
@@ -158,57 +150,22 @@ export async function findLandingCourse(slug: string): Promise<LandingCourse | u
 
 // ─── Страницы (best-direction.uz/<slug>) ──────────────────────────────────
 
-/** Блок Editor.js; data зависит от типа блока */
-export interface EditorBlock {
-  id?: string;
-  type: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: any;
-}
-
-export interface EditorContent {
-  time?: number;
-  blocks: EditorBlock[];
-  version?: string;
-}
+export type { EditorBlock, EditorContent } from "@/lib/api/marketing.server";
 
 export interface LandingPage {
   slug: string;
   titleRu: string;
   titleUz: string;
-  contentRu: EditorContent | null;
-  contentUz: EditorContent | null;
-  seoTitleRu: string | null;
-  seoTitleUz: string | null;
-  seoDescRu: string | null;
-  seoDescUz: string | null;
   showInFooter: boolean;
 }
 
-export const getLandingPages = unstable_cache(
-  async (): Promise<LandingPage[]> => {
-    const rows = await prisma.marketingPage.findMany({
-      where: { published: true },
-      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-    });
-    return rows.map((r) => ({
-      slug: r.slug,
-      titleRu: r.titleRu,
-      titleUz: r.titleUz,
-      contentRu: (r.contentRu as unknown as EditorContent) ?? null,
-      contentUz: (r.contentUz as unknown as EditorContent) ?? null,
-      seoTitleRu: r.seoTitleRu,
-      seoTitleUz: r.seoTitleUz,
-      seoDescRu: r.seoDescRu,
-      seoDescUz: r.seoDescUz,
-      showInFooter: r.showInFooter,
-    }));
-  },
-  ["landing-pages"],
-  { tags: [MARKETING_TAG] }
-);
+/** Список страниц для подвала. Содержимое грузится отдельной страницей. */
+export async function getLandingPages(): Promise<LandingPage[]> {
+  const { pages } = await loadLanding();
+  return pages;
+}
 
-export async function findLandingPage(slug: string): Promise<LandingPage | undefined> {
-  const pages = await getLandingPages();
-  return pages.find((p) => p.slug === slug);
+export async function findLandingPage(slug: string) {
+  const result = await getLandingPage(slug);
+  return result.success ? result.data : undefined;
 }

@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/auth-guard";
-import { getLeads } from "@/actions/lead-actions";
+import { getLeads } from "@/lib/api/marketing.server";
 import { getTranslations } from "next-intl/server";
 import { LeadList } from "./lead-list";
 

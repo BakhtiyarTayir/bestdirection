@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
-import { deleteMarketingPage } from "@/actions/marketing-content-actions";
+import { deleteMarketingItem } from "@/lib/api/marketing";
 import { Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 
 interface PageListRow {
@@ -36,7 +36,7 @@ export function PagesList({ rows }: { rows: PageListRow[] }) {
 
   const remove = async (id: string) => {
     setDeletingId(id);
-    const result = await deleteMarketingPage(id);
+    const result = await deleteMarketingItem("pages", id);
     if (result.success) {
       toast({ description: t("deleted") });
       router.refresh();
