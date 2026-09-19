@@ -1,6 +1,14 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createTestApp, createUser, sessionCookie, TEST_APP_URL, testDb, type TestApp } from "./helpers";
+import {
+  createTestApp,
+  createUser,
+  sessionCookie,
+  TEST_APP_URL,
+  TEST_MARKETING_URL,
+  testDb,
+  type TestApp,
+} from "./helpers";
 
 describe("лендинг и заявки", () => {
   let app: TestApp;
@@ -206,6 +214,30 @@ describe("лендинг и заявки", () => {
       });
       expect(res.status).toBe(201);
       expect(await testDb().courseLead.count()).toBe(before);
+    });
+
+    it("заявка приходит с домена лендинга, а не кабинета", async () => {
+      // На лендинге форма живёт на своём домене — его Origin и приходит
+      const res = await http()
+        .post("/api/v2/leads")
+        .set("Origin", TEST_MARKETING_URL)
+        .send({
+          courseSlug: `kurs-${run}`,
+          fullName: "С Лендинга",
+          phone: "+998901119999",
+        });
+      expect(res.status).toBe(201);
+
+      const foreign = await http()
+        .post("/api/v2/leads")
+        .set("Origin", "https://zloy-sayt.example")
+        .send({
+          courseSlug: `kurs-${run}`,
+          fullName: "Чужой Сайт",
+          phone: "+998901118888",
+        });
+      expect(foreign.status).toBe(403);
+      expect(await testDb().courseLead.count({ where: { fullName: "Чужой Сайт" } })).toBe(0);
     });
 
     it("несуществующий курс заявку не принимает", async () => {

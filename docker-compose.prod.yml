@@ -100,8 +100,10 @@ services:
       DATABASE_URL: postgresql://bestdirection:${DB_PASSWORD:?нужен DB_PASSWORD}@db:5432/bestdirection?schema=public
       # Тот же секрет, что у app: api читает сессионную куку web
       AUTH_SECRET: ${AUTH_SECRET:?нужен AUTH_SECRET}
-      # Откуда разрешены изменяющие запросы (проверка Origin)
+      # Откуда разрешены изменяющие запросы (проверка Origin): кабинет и
+      # лендинг — с него приходит форма заявки
       APP_URL: ${AUTH_URL:?нужен AUTH_URL}
+      MARKETING_URL: https://${MARKETING_DOMAIN:?нужен MARKETING_DOMAIN}
       # Секрет серверных вызовов app → api; деплой создаёт его в .env один раз
       INTERNAL_TOKEN: ${INTERNAL_TOKEN:?нужен INTERNAL_TOKEN}
       # Бот целиком в api с этапа 6: и отправка уведомлений, и приём обновлений

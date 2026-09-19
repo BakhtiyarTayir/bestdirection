@@ -11,7 +11,17 @@
 # Лендинг
 {$MARKETING_DOMAIN} {
 	encode zstd gzip
-	reverse_proxy app:3000
+
+	# Форма заявки на лендинге обращается к api по своему же домену: так
+	# браузер считает запрос однодоменным и не нужен CORS. Маршрут тот же,
+	# что и на домене CRM.
+	handle /api/v2/* {
+		reverse_proxy api:4000
+	}
+
+	handle {
+		reverse_proxy app:3000
+	}
 }
 
 # www — на канонический адрес без www
