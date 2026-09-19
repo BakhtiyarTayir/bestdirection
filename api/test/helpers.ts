@@ -13,6 +13,7 @@ import { configureApp } from "../src/app.setup";
 
 export const TEST_SECRET = "test-auth-secret-0123456789abcdef";
 export const TEST_APP_URL = "http://web.test";
+export const TEST_MARKETING_URL = "http://landing.test";
 export const TEST_INTERNAL_TOKEN = "test-internal-token-0123456789abcdef";
 
 /** Загрузки тестов пишутся во временный каталог, а не в тома контейнера. */
@@ -22,6 +23,7 @@ export function useTestEnv() {
   process.env.DATABASE_URL = inject("databaseUrl");
   process.env.AUTH_SECRET = TEST_SECRET;
   process.env.APP_URL = TEST_APP_URL;
+  process.env.MARKETING_URL = TEST_MARKETING_URL;
   process.env.INTERNAL_TOKEN = TEST_INTERNAL_TOKEN;
   process.env.PUBLIC_UPLOAD_DIR = join(TEST_UPLOAD_DIR, "public");
   process.env.PRIVATE_UPLOAD_DIR = join(TEST_UPLOAD_DIR, "private");

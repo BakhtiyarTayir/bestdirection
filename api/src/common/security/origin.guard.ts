@@ -11,19 +11,22 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
  * Первый глобальный guard: защита от CSRF. Server Actions в Next сверяют
  * Origin сами, а при переходе на REST эта защита пропадает — возвращаем её.
  *
- * Изменяющий запрос принимается, если Origin совпадает с адресом web, либо если
- * Origin нет, но есть верный X-Internal-Token (серверный вызов из web).
+ * Изменяющий запрос принимается, если Origin совпадает с адресом кабинета или
+ * лендинга, либо если Origin нет, но есть верный X-Internal-Token (серверный
+ * вызов из web).
  * Origin: null (песочница, редирект) не совпадает ни с чем — отказ.
  */
 @Injectable()
 export class OriginGuard implements CanActivate {
-  private readonly appOrigin: string;
+  /** Свои источники: кабинет и лендинг. Оба ходят на одни и те же маршруты. */
+  private readonly allowedOrigins: Set<string>;
 
   constructor(
     @Inject(ENV) private readonly env: Env,
     private readonly reflector: Reflector
   ) {
-    this.appOrigin = new URL(env.APP_URL).origin;
+    this.allowedOrigins = new Set([new URL(env.APP_URL).origin]);
+    if (env.MARKETING_URL) this.allowedOrigins.add(new URL(env.MARKETING_URL).origin);
   }
 
   canActivate(context: ExecutionContext): boolean {
@@ -39,7 +42,7 @@ export class OriginGuard implements CanActivate {
 
     const origin = request.headers.origin;
     if (origin !== undefined) {
-      if (origin === this.appOrigin) return true;
+      if (this.allowedOrigins.has(origin)) return true;
       throw new ForbiddenException("forbiddenOrigin");
     }
 
