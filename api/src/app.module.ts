@@ -16,6 +16,7 @@ import { AssessmentsModule } from "./modules/assessments/assessments.module";
 import { AttendanceModule } from "./modules/attendance/attendance.module";
 import { AuditLogModule } from "./modules/audit-log/audit-log.module";
 import { BillingModule } from "./modules/billing/billing.module";
+import { BranchesModule } from "./modules/branches/branches.module";
 import { CoursesModule } from "./modules/courses/courses.module";
 import { EnrollmentRequestsModule } from "./modules/enrollment-requests/enrollment-requests.module";
 import { GroupsModule } from "./modules/groups/groups.module";
@@ -44,6 +45,7 @@ import { UsersModule } from "./modules/users/users.module";
     UsersModule,
     AuditLogModule,
     BillingModule,
+    BranchesModule,
     CoursesModule,
     EnrollmentRequestsModule,
     GroupsModule,
