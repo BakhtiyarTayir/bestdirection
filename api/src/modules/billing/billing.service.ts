@@ -236,7 +236,7 @@ export class BillingService {
   async studentBilling(studentId: string) {
     const student = await this.prisma.user.findUnique({
       where: { id: studentId },
-      select: { id: true, firstName: true, lastName: true, phone: true, email: true, telegramUsername: true },
+      select: { id: true, firstName: true, lastName: true, phone: true, login: true, telegramUsername: true },
     });
     if (!student) throw new NotFoundException("userNotFound");
 
@@ -370,7 +370,7 @@ export class BillingService {
           firstName: true,
           lastName: true,
           phone: true,
-          email: true,
+          login: true,
           isActive: true,
           branch: { select: { id: true, name: true } },
         },

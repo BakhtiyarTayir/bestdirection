@@ -86,7 +86,7 @@ export class HomeworkStatisticsService {
       },
       include: {
         student: {
-          select: { id: true, firstName: true, lastName: true, email: true, isActive: true, lastSeenAt: true },
+          select: { id: true, firstName: true, lastName: true, login: true, isActive: true, lastSeenAt: true },
         },
         group: { select: { id: true, name: true } },
       },
@@ -164,7 +164,7 @@ export class HomeworkStatisticsService {
       return {
         studentId: enrollment.student.id,
         fullName: `${enrollment.student.firstName} ${enrollment.student.lastName}`,
-        email: enrollment.student.email,
+        login: enrollment.student.login,
         isActive: enrollment.student.isActive,
         isOnlineNow,
         groupId: enrollment.group?.id ?? null,

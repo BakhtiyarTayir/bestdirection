@@ -219,7 +219,7 @@ export class CoursesService {
       where: { courseId, ...(groupId ? { groupId } : {}) },
       include: {
         student: {
-          select: { id: true, firstName: true, lastName: true, email: true, phone: true, isActive: true },
+          select: { id: true, firstName: true, lastName: true, login: true, phone: true, isActive: true },
         },
       },
       orderBy: { createdAt: "asc" },
@@ -230,7 +230,7 @@ export class CoursesService {
   availableStudents(courseId: string) {
     return this.prisma.user.findMany({
       where: { role: "STUDENT", isActive: true, enrollments: { none: { courseId } } },
-      select: { id: true, firstName: true, lastName: true, email: true, phone: true },
+      select: { id: true, firstName: true, lastName: true, login: true, phone: true },
       orderBy: { firstName: "asc" },
     });
   }

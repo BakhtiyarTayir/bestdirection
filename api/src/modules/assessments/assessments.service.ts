@@ -418,7 +418,7 @@ export class AssessmentsService {
     return this.prisma.assessmentAttempt.findMany({
       where: { assessmentId },
       include: {
-        student: { select: { id: true, firstName: true, lastName: true, email: true } },
+        student: { select: { id: true, firstName: true, lastName: true, login: true } },
         answers: {
           include: { question: { include: { options: { orderBy: { sortOrder: "asc" } } } } },
         },
@@ -465,7 +465,7 @@ export class AssessmentsService {
             course: { select: { id: true, slug: true, title: true } },
           },
         },
-        student: { select: { id: true, firstName: true, lastName: true, email: true } },
+        student: { select: { id: true, firstName: true, lastName: true, login: true } },
       },
       orderBy: { startedAt: "desc" },
     });
