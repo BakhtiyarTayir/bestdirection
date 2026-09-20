@@ -7,8 +7,6 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   PORT: z.coerce.number().int().positive().default(4000),
   DATABASE_URL: z.string().min(1),
-  // Тот же секрет, что у web: им зашифрована сессионная кука Auth.js
-  AUTH_SECRET: z.string().min(16),
   // Адрес web, откуда разрешены изменяющие запросы (проверка Origin)
   APP_URL: z.string().url(),
   // Адрес лендинга: с него приходит форма заявки, и это второй допустимый

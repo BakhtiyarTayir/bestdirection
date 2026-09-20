@@ -43,10 +43,16 @@ COPY --from=builder --chown=api:nodejs /app/api/package.json ./
 COPY --from=prod-deps --chown=api:nodejs /app/api/node_modules ./node_modules
 COPY --from=builder --chown=api:nodejs /app/api/generated ./generated
 COPY --from=builder --chown=api:nodejs /app/api/dist ./dist
+# Схема и миграции нужны в рантайме: их накатывает entrypoint
+COPY --from=builder --chown=api:nodejs /app/prisma ./prisma
+
+COPY api/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 USER api
 EXPOSE 4000
 
-# Миграций здесь нет: до этапа 9 ими владеет web (docker-entrypoint.sh).
-# Два параллельных migrate deploy — гонка.
+# Миграции накатывает api: с этапа 9 схема принадлежит ему, а web с базой
+# не разговаривает вовсе.
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", "dist/main.js"]

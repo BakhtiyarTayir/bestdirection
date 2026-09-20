@@ -12,7 +12,7 @@ import {
   unlinkTelegram,
 } from "@/lib/api/users";
 import { MessageCircle, Link2, Unlink, Loader2 } from "lucide-react";
-import { getTelegramBotUsername } from "@/actions/telegram-auth-actions";
+import { getTelegramBotUsername } from "@/lib/api/auth";
 
 export function TelegramLink() {
   const t = useTranslations("profile");
@@ -28,7 +28,7 @@ export function TelegramLink() {
     let isMounted = true;
 
     void getTelegramBotUsername().then((result) => {
-      if (isMounted && result.data.username) {
+      if (isMounted && result.success && result.data.username) {
         setBotUsername(result.data.username);
       }
     });

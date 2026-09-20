@@ -51,37 +51,22 @@ services:
     expose:
       - "3000"
     environment:
-      DATABASE_URL: postgresql://bestdirection:${DB_PASSWORD:?нужен DB_PASSWORD}@db:5432/bestdirection?schema=public
-      AUTH_SECRET: ${AUTH_SECRET:?нужен AUTH_SECRET}
-      AUTH_URL: ${AUTH_URL:?нужен AUTH_URL}
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-${AUTH_SECRET}}
+      # Ни доступа к базе, ни секретов входа: с этапа 9 web ходит только в api.
+      # NEXTAUTH_URL остался адресом кабинета для ссылок с лендинга.
       NEXTAUTH_URL: ${NEXTAUTH_URL:-${AUTH_URL}}
-      AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-true}
       MARKETING_DOMAIN: ${MARKETING_DOMAIN:?нужен MARKETING_DOMAIN}
       # Серверные компоненты ходят в api по внутренней сети, мимо Caddy.
       # Внутренний токен заменяет заголовок Origin, которого у таких запросов нет.
       API_INTERNAL_URL: http://api:4000
       INTERNAL_TOKEN: ${INTERNAL_TOKEN:?нужен INTERNAL_TOKEN}
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
-      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
-      # Без префикса NEXT_PUBLIC_: username отдаётся серверным действием в
-      # рантайме, потому что NEXT_PUBLIC_-переменные Next вшивает при сборке,
-      # а образ собирается без .env. См. src/actions/telegram-auth-actions.ts.
-      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
-      NEXT_PUBLIC_TELEGRAM_BOT_USERNAME: ${NEXT_PUBLIC_TELEGRAM_BOT_USERNAME:-}
-      RESEND_API_KEY: ${RESEND_API_KEY:-}
-      EMAIL_FROM: ${EMAIL_FROM:-}
       # SMS-шлюз eskiz.uz. Пустые значения приложение переживает: модуль
       # молча выключается, а не падает.
-      ESKIZ_EMAIL: ${ESKIZ_EMAIL:-}
-      ESKIZ_PASSWORD: ${ESKIZ_PASSWORD:-}
-      ESKIZ_FROM: ${ESKIZ_FROM:-4546}
     volumes:
       - uploads:/app/public/uploads
       - private_uploads:/app/uploads
     depends_on:
-      db:
-        condition: service_healthy
+      api:
+        condition: service_started
     mem_limit: 512m
 
   api:
@@ -98,8 +83,6 @@ services:
       NODE_ENV: production
       PORT: "4000"
       DATABASE_URL: postgresql://bestdirection:${DB_PASSWORD:?нужен DB_PASSWORD}@db:5432/bestdirection?schema=public
-      # Тот же секрет, что у app: api читает сессионную куку web
-      AUTH_SECRET: ${AUTH_SECRET:?нужен AUTH_SECRET}
       # Откуда разрешены изменяющие запросы (проверка Origin): кабинет и
       # лендинг — с него приходит форма заявки
       APP_URL: ${AUTH_URL:?нужен AUTH_URL}
@@ -112,7 +95,6 @@ services:
       TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
       # Имя бота для кнопки входа: его api отдаёт странице входа
       TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
-      NEXT_PUBLIC_TELEGRAM_BOT_USERNAME: ${NEXT_PUBLIC_TELEGRAM_BOT_USERNAME:-}
       # Письма с кодами: регистрация и сброс пароля
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-}

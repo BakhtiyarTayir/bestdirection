@@ -30,5 +30,6 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "lms_server_files", ".design-sync", ".ds-sync", "ds-bundle", "api"]
+  // prisma/ принадлежит api с этапа 9: схема, миграции и наполнение
+  "exclude": ["node_modules", "lms_server_files", ".design-sync", ".ds-sync", "ds-bundle", "api", "prisma"]
 }
