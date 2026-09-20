@@ -28,7 +28,7 @@ export class PaymentsService {
    * месяц), а не по периоду forMonth.
    */
   async list(filters: PaymentFiltersDto) {
-    const { month, courseId, groupId, studentId, method } = filters;
+    const { month, courseId, groupId, studentId, method, branchId } = filters;
     const where = {
       deletedAt: null,
       ...(month ? { paidAt: monthRange(month) } : {}),
@@ -36,6 +36,9 @@ export class PaymentsService {
       ...(groupId ? { groupId } : {}),
       ...(studentId ? { studentId } : {}),
       ...(method ? { method } : {}),
+      // Снимок на платеже, а не через группу: касса за закрытый месяц не
+      // должна дрожать от перевода или удаления группы
+      ...(branchId ? { branchId } : {}),
     };
 
     const [payments, totals] = await Promise.all([
@@ -114,12 +117,22 @@ export class PaymentsService {
     });
     if (!enrollment) throw new NotFoundException("notEnrolled");
 
+    // Группу берём из записи студента: в форме она справочная
+    const groupId = data.groupId || enrollment.groupId;
+    // Филиал — снимок на момент приёма денег (раздел 3.3 плана филиалов):
+    // группу могут потом перевести или удалить, а касса за закрытый месяц
+    // меняться не должна. Группа есть — берём её филиал, иначе филиал ученика.
+    const branchId = groupId
+      ? (await this.prisma.group.findUnique({ where: { id: groupId }, select: { branchId: true } }))?.branchId ?? null
+      : (await this.prisma.user.findUnique({ where: { id: data.studentId }, select: { branchId: true } }))
+          ?.branchId ?? null;
+
     const payment = await this.prisma.payment.create({
       data: {
         studentId: data.studentId,
         courseId: data.courseId,
-        // Группу берём из записи студента: в форме она справочная
-        groupId: data.groupId || enrollment.groupId,
+        groupId,
+        branchId,
         amount: data.amount,
         method: data.method,
         paidAt: toNoonUtc(data.paidAt),

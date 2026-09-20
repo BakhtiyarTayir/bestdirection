@@ -88,11 +88,12 @@ export class BillingService {
     });
   }
 
-  async debtors(params: { month?: string; courseId?: string; groupId?: string }) {
+  async debtors(params: { month?: string; courseId?: string; groupId?: string; branchId?: string }) {
     const month = params.month && isValidMonth(params.month) ? params.month : monthKey(new Date());
     const rows = await this.computeBillingRows(month, {
       courseId: params.courseId,
       groupId: params.groupId,
+      branchId: params.branchId,
     });
 
     const debtors = rows.filter((row) => row.debt > 0).sort((a, b) => b.debt - a.debt);
@@ -351,12 +352,28 @@ export class BillingService {
    * Список всех студентов с балансом на текущий месяц. Нужен как вход в
    * карточку: список должников показывает только должников.
    */
-  async studentsOverview() {
+  async studentsOverview(branchId?: string) {
     const [students, rows] = await Promise.all([
       this.prisma.user.findMany({
-        where: { role: "STUDENT" },
+        where: {
+          role: "STUDENT",
+          // Ученик может ходить на курсы в разных филиалах — фильтр смотрит
+          // на его группы, а не на «основной» branchId (ловушка 3.8.5 плана
+          // филиалов). Баланс ниже при этом считаем по ВСЕМ его курсам:
+          // фильтр решает, кто попал в список, а не что показать про него.
+          ...(branchId ? { enrollments: { some: { group: { is: { branchId } } } } } : {}),
+        },
         orderBy: [{ isActive: "desc" }, { lastName: "asc" }, { firstName: "asc" }],
-        select: { id: true, number: true, firstName: true, lastName: true, phone: true, email: true, isActive: true },
+        select: {
+          id: true,
+          number: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          email: true,
+          isActive: true,
+          branch: { select: { id: true, name: true } },
+        },
       }),
       this.computeBillingRows(monthKey(new Date())),
     ]);

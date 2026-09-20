@@ -41,18 +41,26 @@ export const paymentFiltersSchema = z.object({
   groupId: z.string().max(40).optional(),
   studentId: z.string().max(40).optional(),
   method: z.enum(paymentMethods).optional(),
+  branchId: z.string().max(40).optional(),
 });
 
 export const debtorsQuerySchema = z.object({
   month: monthString.optional(),
   courseId: z.string().max(40).optional(),
   groupId: z.string().max(40).optional(),
+  // Должник считается через группу (Enrollment своего филиала не хранит):
+  // ученик без группы при этом фильтре выпадает — это ожидаемо, счётчик
+  // withoutGroup в ответе не даёт этому потеряться незаметно
+  branchId: z.string().max(40).optional(),
 });
 
 export const monthQuerySchema = z.object({ month: monthString });
+
+export const studentsQuerySchema = z.object({ branchId: z.string().max(40).optional() });
 
 export class UpdateEnrollmentBillingDto extends createZodDto(updateEnrollmentBillingSchema) {}
 export class CreatePaymentDto extends createZodDto(createPaymentSchema) {}
 export class PaymentFiltersDto extends createZodDto(paymentFiltersSchema) {}
 export class DebtorsQueryDto extends createZodDto(debtorsQuerySchema) {}
 export class MonthQueryDto extends createZodDto(monthQuerySchema) {}
+export class StudentsQueryDto extends createZodDto(studentsQuerySchema) {}
