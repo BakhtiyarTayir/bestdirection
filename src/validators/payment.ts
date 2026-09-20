@@ -42,6 +42,7 @@ export const paymentFiltersSchema = z.object({
   groupId: z.string().optional(),
   studentId: z.string().optional(),
   method: z.enum(paymentMethods).optional(),
+  branchId: z.string().optional(),
 });
 
 export type PaymentFilters = z.infer<typeof paymentFiltersSchema>;

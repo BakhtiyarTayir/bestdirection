@@ -73,9 +73,10 @@ interface PaymentsListProps {
   payments: PaymentRow[];
   total: number;
   count: number;
-  filters: { month?: string; courseId?: string; method?: PaymentMethodValue };
+  filters: { month?: string; courseId?: string; method?: PaymentMethodValue; branchId?: string };
   students: PaymentStudentOption[];
   courses: { id: string; title: string }[];
+  branches: { id: string; name: string }[];
 }
 
 /** Значение-заглушка для «все»: SelectItem не принимает пустую строку */
@@ -88,6 +89,7 @@ export function PaymentsList({
   filters,
   students,
   courses,
+  branches,
 }: PaymentsListProps) {
   const t = useTranslations("payments");
   const tErrors = useTranslations("errors");
@@ -188,6 +190,28 @@ export function PaymentsList({
               </SelectContent>
             </Select>
           </div>
+
+          {branches.length > 0 && (
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">{t("filterBranch")}</Label>
+              <Select
+                value={filters.branchId ?? ALL}
+                onValueChange={(value) => setFilter("branchId", value)}
+              >
+                <SelectTrigger className="w-56">
+                  <SelectValue placeholder={t("allBranches")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>{t("allBranches")}</SelectItem>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.id}>
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         <CreatePaymentDialog students={students} />

@@ -20,6 +20,10 @@ export interface ApiUser {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  // Приписка справочная — настоящая привязка ученика к филиалу идёт через
+  // группу (ловушка 3.8.5 плана филиалов)
+  branchId: string | null;
+  branch: { id: string; name: string } | null;
 }
 
 export interface ApiDeactivatedUser {
@@ -122,6 +126,7 @@ export const createUser = (body: {
   lastName: string;
   phone?: string;
   role: Role;
+  branchId?: string;
 }): Promise<ApiResult<ApiUser>> => apiFetch("/users", { method: "POST", body });
 
 export const updateUser = (
@@ -133,6 +138,7 @@ export const updateUser = (
     phone?: string;
     role?: Role;
     isActive?: boolean;
+    branchId?: string;
   }
 ): Promise<ApiResult<ApiUser>> => apiFetch(`/users/${id}`, { method: "PATCH", body });
 

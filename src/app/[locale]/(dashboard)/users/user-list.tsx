@@ -42,6 +42,7 @@ interface User {
   email: string | null;
   role: string;
   isActive: boolean;
+  branch?: { id: string; name: string } | null;
 }
 
 interface UserListProps {
@@ -112,6 +113,7 @@ export function UserList({ initialUsers, canManageUsers = true }: UserListProps)
               <TableHead className="w-16">{tCommon("number")}</TableHead>
               <TableHead>{tCommon("firstName")}</TableHead>
               <TableHead>{tCommon("email")}</TableHead>
+              <TableHead>{t("branch")}</TableHead>
               <TableHead>{tCommon("role")}</TableHead>
               <TableHead>{tCommon("status")}</TableHead>
               {canManageUsers && <TableHead className="text-right">{tCommon("actions")}</TableHead>}
@@ -120,7 +122,7 @@ export function UserList({ initialUsers, canManageUsers = true }: UserListProps)
           <TableBody>
             {optimisticUsers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={canManageUsers ? 6 : 5} className="text-center text-muted-foreground">
+                <TableCell colSpan={canManageUsers ? 7 : 6} className="text-center text-muted-foreground">
                   {t("noUsersFound")}
                 </TableCell>
               </TableRow>
@@ -134,6 +136,7 @@ export function UserList({ initialUsers, canManageUsers = true }: UserListProps)
                     {user.firstName} {user.lastName}
                   </TableCell>
                   <TableCell>{user.email}</TableCell>
+                  <TableCell className="text-muted-foreground">{user.branch?.name ?? "—"}</TableCell>
                   <TableCell>
                     <Badge variant={roleBadgeVariant[user.role] ?? "secondary"}>
                       {tRoles(user.role as "ADMIN" | "TEACHER" | "STUDENT")}

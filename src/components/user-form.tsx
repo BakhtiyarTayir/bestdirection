@@ -36,15 +36,18 @@ interface UserData {
   phone: string | null;
   role: Role;
   isActive: boolean;
+  branchId?: string | null;
 }
 
 interface UserFormProps {
   user?: UserData;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onSubmit: (data: CreateUserInput | UpdateUserInput) => Promise<{ success: boolean; error?: string; [key: string]: any }>;
+  /** Филиал — приписка справочная, поле необязательно (см. validators/user.ts) */
+  branches?: { id: string; name: string }[];
 }
 
-export function UserForm({ user, onSubmit }: UserFormProps) {
+export function UserForm({ user, onSubmit, branches = [] }: UserFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const t = useTranslations("users");
@@ -78,6 +81,7 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
           lastName: user.lastName,
           phone: user.phone ?? "",
           role: user.role,
+          branchId: user.branchId ?? "",
         }
       : {
           email: "",
@@ -86,6 +90,7 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
           lastName: "",
           phone: "",
           role: "STUDENT" as const,
+          branchId: "",
         },
   });
 
@@ -243,6 +248,26 @@ export function UserForm({ user, onSubmit }: UserFormProps) {
               </p>
             )}
           </div>
+
+          {branches.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="branchId">{t("branch")}</Label>
+              {/* Обычный select: "" осмысленно ("не выбран"), а SelectItem
+                  пустую строку не принимает (как в group-form.tsx) */}
+              <select
+                id="branchId"
+                {...form.register("branchId")}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">{t("selectBranchPlaceholder")}</option>
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {isEditing && (
             <div className="flex items-center space-x-2">

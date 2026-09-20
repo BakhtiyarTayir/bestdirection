@@ -16,13 +16,15 @@ interface EditUserFormProps {
     isActive: boolean;
     createdAt: Date;
     updatedAt: Date;
+    branchId?: string | null;
   };
+  branches: { id: string; name: string }[];
 }
 
-export function EditUserForm({ user }: EditUserFormProps) {
+export function EditUserForm({ user, branches }: EditUserFormProps) {
   const handleSubmit = async (data: CreateUserInput | UpdateUserInput) => {
     return await updateUser(user.id, data as UpdateUserInput);
   };
 
-  return <UserForm user={user} onSubmit={handleSubmit} />;
+  return <UserForm user={user} onSubmit={handleSubmit} branches={branches} />;
 }

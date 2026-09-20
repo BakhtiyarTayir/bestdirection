@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/auth-guard";
 import { getTranslations } from "next-intl/server";
 import { getPayments, getPaymentFormOptions } from "@/lib/api/billing.server";
+import { getBranches } from "@/lib/api/branches.server";
 import { paymentFiltersSchema } from "@/validators/payment";
 import { PaymentsList } from "./payments-list";
 
@@ -25,12 +26,14 @@ export default async function PaymentsPage({
     month: single("month"),
     courseId: single("courseId"),
     method: single("method"),
+    branchId: single("branchId"),
   });
   const filters = parsedFilters.success ? parsedFilters.data : {};
 
-  const [paymentsResult, optionsResult] = await Promise.all([
+  const [paymentsResult, optionsResult, branchesResult] = await Promise.all([
     getPayments(filters),
     getPaymentFormOptions(),
+    getBranches(),
   ]);
 
   const paymentsData =
@@ -40,6 +43,7 @@ export default async function PaymentsPage({
     optionsResult.success && optionsResult.data
       ? optionsResult.data
       : { students: [], courses: [] };
+  const branches = branchesResult.success && branchesResult.data ? branchesResult.data : [];
 
   return (
     <div>
@@ -74,6 +78,7 @@ export default async function PaymentsPage({
         filters={filters}
         students={options.students}
         courses={options.courses}
+        branches={branches}
       />
     </div>
   );

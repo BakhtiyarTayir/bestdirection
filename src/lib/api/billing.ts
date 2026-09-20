@@ -108,6 +108,9 @@ export interface ApiStudentsOverview {
   isActive: boolean;
   courses: { enrollmentId: string; title: string; groupName: string | null }[];
   balance: number;
+  // Приписка справочная: фильтр списка идёт через группы (ловушка 3.8.5
+  // плана филиалов), это поле — только для показа
+  branch: { id: string; name: string } | null;
 }
 
 export interface ApiPaymentsPage {

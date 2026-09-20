@@ -68,6 +68,8 @@ interface DebtorsListProps {
   groupWithoutSchedule: number;
   courseId?: string;
   courses: { id: string; title: string }[];
+  branchId?: string;
+  branches: { id: string; name: string }[];
 }
 
 const ALL = "all";
@@ -83,6 +85,8 @@ export function DebtorsList({
   groupWithoutSchedule,
   courseId,
   courses,
+  branchId,
+  branches,
 }: DebtorsListProps) {
   const t = useTranslations("debtors");
   const tPayments = useTranslations("payments");
@@ -97,7 +101,7 @@ export function DebtorsList({
   const money = new Intl.NumberFormat(intlLocale(locale));
 
   const setFilter = (key: string, value: string) => {
-    const next = { month, courseId, [key]: value === ALL ? "" : value };
+    const next = { month, courseId, branchId, [key]: value === ALL ? "" : value };
     const params = new URLSearchParams();
     for (const [k, v] of Object.entries(next)) {
       if (v) params.set(k, v);
@@ -154,6 +158,24 @@ export function DebtorsList({
             </SelectContent>
           </Select>
         </div>
+        {branches.length > 0 && (
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">{t("filterBranch")}</Label>
+            <Select value={branchId ?? ALL} onValueChange={(value) => setFilter("branchId", value)}>
+              <SelectTrigger className="w-56">
+                <SelectValue placeholder={t("allBranches")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>{t("allBranches")}</SelectItem>
+                {branches.map((branch) => (
+                  <SelectItem key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">

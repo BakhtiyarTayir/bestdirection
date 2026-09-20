@@ -17,6 +17,9 @@ export const createGroupSchema = z.object({
     .string()
     .min(1, "groupNameRequired")
     .max(100, "maxChars100"),
+  // Обязателен: группа всегда занимается в конкретном филиале (решение
+  // владельца 2026-09-20). Имя группы уникально внутри (courseId, branchId).
+  branchId: z.string().min(1, "branchRequired"),
   description: z
     .string()
     .max(500, "maxChars500")

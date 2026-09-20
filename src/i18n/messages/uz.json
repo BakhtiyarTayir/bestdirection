@@ -147,7 +147,8 @@
     "teacherAttendance": "O‘qituvchilar",
     "sms": "SMS",
     "teachers": "O'qituvchilar",
-    "students": "Talabalar"
+    "students": "Talabalar",
+    "branches": "Filiallar"
   },
   "weekdays": {
     "mon": "Du",
@@ -751,7 +752,11 @@
     "statsLastSubmission": "Oxirgi topshirish",
     "statsUngrouped": "Guruhsiz",
     "statsSelectCourseAndHomework": "Hisobot uchun kurs va uy vazifasini tanlang.",
-    "statsNoData": "Tanlangan filtrlarga mos ma'lumot yo'q."
+    "statsNoData": "Tanlangan filtrlarga mos ma'lumot yo'q.",
+    "branch": "Filial",
+    "selectBranchPlaceholder": "Tanlanmagan",
+    "filterBranch": "Filial",
+    "allBranches": "Barcha filiallar"
   },
   "groups": {
     "title": "Guruhlar",
@@ -819,7 +824,11 @@
     "removeUnenrollHint": "«Kursdan chiqarish» — yozuv o'chiriladi, hisoblash to'xtaydi. Qabul qilingan to'lovlar jurnalda qoladi.",
     "removeOnlyGroup": "Guruhdan chiqarish",
     "removeUnenroll": "Kursdan chiqarish",
-    "studentUnenrolled": "Talaba kursdan chiqarildi"
+    "studentUnenrolled": "Talaba kursdan chiqarildi",
+    "branch": "Filial",
+    "selectBranchPlaceholder": "Filialni tanlang",
+    "filterBranch": "Filial",
+    "allBranches": "Barcha filiallar"
   },
   "profile": {
     "title": "Mening profilim",
@@ -1121,7 +1130,10 @@
     "noRecipients": "To‘g‘ri telefonli qabul qiluvchilar yo‘q",
     "languageNotDetected": "Dasturlash tilini aniqlab bo'lmadi",
     "studentNotFound": "Talaba topilmadi",
-    "alreadyEnrolled": "Talaba bu kursga allaqachon yozilgan"
+    "alreadyEnrolled": "Talaba bu kursga allaqachon yozilgan",
+    "branchNotFound": "Filial topilmadi",
+    "branchNameExists": "Bunday nomdagi filial allaqachon mavjud",
+    "branchHasGroups": "Filialda guruhlar bor — avval ularni ko'chiring yoki o'chiring"
   },
   "success": {
     "saved": "Saqlandi",
@@ -1170,7 +1182,9 @@
     "descriptionRequired": "Tavsif majburiy",
     "minOneTestCase": "Kamida 1 ta test-keys",
     "homeworkTitleRequired": "Nom majburiy",
-    "homeworkDescriptionRequired": "Tavsif majburiy"
+    "homeworkDescriptionRequired": "Tavsif majburiy",
+    "branchRequired": "Filial majburiy",
+    "branchNameRequired": "Filial nomi majburiy"
   },
   "language": {
     "title": "Til",
@@ -1567,7 +1581,9 @@
       "PAYME": "Payme",
       "CLICK": "Click",
       "TRANSFER": "O'tkazma"
-    }
+    },
+    "filterBranch": "Filial",
+    "allBranches": "Barcha filiallar"
   },
   "debtors": {
     "title": "Qarzdorlar",
@@ -1617,7 +1633,9 @@
     "byDaysTitle": "To'liqsiz oy kunlar bo'yicha hisoblandi",
     "withoutGroupHint": "{count, plural, other {# yozuv}} guruhga biriktirilmagan. Darslar guruh jadvalidan olinadi — talabani guruhga qo'shing, va hisob darslar bo'yicha ketadi.",
     "effectiveStartsAt": "Aslida {date} dan hisoblanadi — guruh keyinroq boshlanadi",
-    "closedMonthsNote": "O'tgan oylar yopilgan va qayta hisoblanmaydi: bu o'zgarishlar joriy oydan boshlab amal qiladi. Yopilgan oyni talaba kartochkasida qayta hisoblash mumkin."
+    "closedMonthsNote": "O'tgan oylar yopilgan va qayta hisoblanmaydi: bu o'zgarishlar joriy oydan boshlab amal qiladi. Yopilgan oyni talaba kartochkasida qayta hisoblash mumkin.",
+    "filterBranch": "Filial",
+    "allBranches": "Barcha filiallar"
   },
   "parents": {
     "title": "Ota-onalar",
@@ -1763,6 +1781,24 @@
     "contacts": "Kontaktlar",
     "courses": "Kurslar",
     "noCourses": "Pullik kurslar yo'q",
-    "openCard": "Karta"
+    "openCard": "Karta",
+    "branch": "Filial",
+    "filterBranch": "Filial",
+    "allBranches": "Barcha filiallar"
+  },
+  "branches": {
+    "title": "Filiallar",
+    "subtitle": "O'quv markazi manzillari va kassalari",
+    "createBranch": "Filial qo'shish",
+    "editBranch": "Filialni tahrirlash",
+    "branchName": "Nomi",
+    "branchAddress": "Manzil",
+    "branchPhone": "Telefon",
+    "branchCreated": "Filial yaratildi",
+    "branchUpdated": "Filial yangilandi",
+    "branchDeleted": "Filial o'chirildi",
+    "deleteBranch": "Filial o'chirilsinmi?",
+    "deleteBranchConfirm": "«{name}» filiali qaytarib bo'lmaydigan tarzda o'chiriladi.",
+    "noBranches": "Hozircha filiallar yo'q"
   }
 }
