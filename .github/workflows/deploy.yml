@@ -56,27 +56,29 @@ jobs:
             package-lock.json
             api/package-lock.json
 
-      - name: web — зависимости и клиент Prisma
-        run: |
-          npm ci
-          npx prisma generate --generator client
+      - name: web — зависимости
+        # Клиента Prisma здесь больше нет: с этапа 9 web с базой не
+        # разговаривает, схема и миграции принадлежат api
+        run: npm ci
 
       - name: web — типы и линтер
         run: |
           npx tsc --noEmit
           npx eslint
 
-      # Проверки биллинга, посещаемости и подсчёта баллов уехали в тесты api
-      # вместе с их кодом (этапы 3a, 3c и 4). Здесь осталась сама накатка:
-      # на чистой базе она ловит битую миграцию до деплоя.
-      - name: миграции применяются на чистой базе
-        run: DATABASE_URL="$TEST_DATABASE_URL" npx prisma migrate deploy
-
       - name: api — зависимости и клиент Prisma
         working-directory: api
         run: |
           npm ci
           npm run prisma:generate
+
+      # Проверки биллинга, посещаемости и подсчёта баллов уехали в тесты api
+      # вместе с их кодом (этапы 3a, 3c и 4). Здесь осталась сама накатка:
+      # на чистой базе она ловит битую миграцию до деплоя. Схема у api,
+      # поэтому шаг идёт после установки его зависимостей.
+      - name: миграции применяются на чистой базе
+        working-directory: api
+        run: DATABASE_URL="$TEST_DATABASE_URL" npm run db:deploy
 
       - name: api — типы, линтер, тесты
         # Тесты поднимают свою Postgres через Testcontainers (Docker на раннере есть)
