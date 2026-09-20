@@ -547,8 +547,14 @@ model TeacherSalaryAccrual {
 
   month String // "YYYY-MM" строкой, как MonthlyCharge.month и Payment.forMonth
 
-  base          Int // сумма начислений учеников группы за месяц (MonthlyCharge)
-  percentUsed   Int // базисные пункты, по которым посчитали (User/Group.salaryPercentBp)
+  base Int // сумма начислений учеников группы за месяц (MonthlyCharge)
+  // Базисные пункты, по которым посчитали (User/Group.salaryPercentBp).
+  // NULL — ставки не было ни у группы, ни у преподавателя, и amount = 0 по
+  // этой причине, а не потому что месяц пустой. План (5.3) описывал колонку
+  // как обязательную, но это не позволяет заморозить закрытый месяц БЕЗ
+  // ставки: NOT NULL пришлось бы подменить нулём, а ноль неотличим от «месяц
+  // был пустой» — то самое смешение, от которого предостерегает раздел 5.2.
+  percentUsed   Int?
   amount        Int
   studentsCount Int
 

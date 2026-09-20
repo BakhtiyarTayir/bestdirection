@@ -17,7 +17,7 @@ CREATE TABLE "TeacherSalaryAccrual" (
     "branchId" TEXT,
     "month" TEXT NOT NULL,
     "base" INTEGER NOT NULL,
-    "percentUsed" INTEGER NOT NULL,
+    "percentUsed" INTEGER,
     "amount" INTEGER NOT NULL,
     "studentsCount" INTEGER NOT NULL,
     "manualAmount" INTEGER,
