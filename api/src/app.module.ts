@@ -19,6 +19,7 @@ import { BillingModule } from "./modules/billing/billing.module";
 import { CoursesModule } from "./modules/courses/courses.module";
 import { EnrollmentRequestsModule } from "./modules/enrollment-requests/enrollment-requests.module";
 import { GroupsModule } from "./modules/groups/groups.module";
+import { AuthModule as AuthApiModule } from "./modules/auth/auth.module";
 import { DashboardModule } from "./modules/dashboard/dashboard.module";
 import { HomeworkModule } from "./modules/homework/homework.module";
 import { LessonsModule } from "./modules/lessons/lessons.module";
@@ -52,6 +53,7 @@ import { UsersModule } from "./modules/users/users.module";
     NotificationsModule,
     MarketingModule,
     DashboardModule,
+    AuthApiModule,
     AssessmentsModule,
     ParentsModule,
     TelegramModule,
