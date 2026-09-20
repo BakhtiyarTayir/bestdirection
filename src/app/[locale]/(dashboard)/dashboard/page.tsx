@@ -1,92 +1,72 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, Users, ClipboardCheck, FileText, GraduationCap } from "lucide-react";
 import { getTranslations } from "next-intl/server";
+import { getDashboardSummary } from "@/lib/api/dashboard.server";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Сводка на главной. Числа считает api и по роли вызывающего — интерфейс
+ * только раскладывает их по карточкам.
+ */
 export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const role = session.user.role;
-
-  if (role === "ADMIN") return <AdminDashboard />;
-  if (role === "TEACHER") return <TeacherDashboard userId={session.user.id} />;
-  return <StudentDashboard userId={session.user.id} />;
-}
-
-async function AdminDashboard() {
   const t = await getTranslations("dashboard");
-  const [userCount, courseCount, studentCount, teacherCount] = await Promise.all([
-    prisma.user.count(),
-    prisma.course.count(),
-    prisma.user.count({ where: { role: "STUDENT" } }),
-    prisma.user.count({ where: { role: "TEACHER" } }),
-  ]);
+  const result = await getDashboardSummary();
+  if (!result.success) return <DashboardError title={t("studentTitle")} />;
 
-  return (
-    <div>
-      <h1 className="text-3xl font-bold mb-6">{t("adminTitle")}</h1>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard title={t("users")} value={userCount} icon={Users} />
-        <StatCard title={t("courses")} value={courseCount} icon={BookOpen} />
-        <StatCard title={t("teachers")} value={teacherCount} icon={GraduationCap} />
-        <StatCard title={t("students")} value={studentCount} icon={ClipboardCheck} />
+  const summary = result.data;
+
+  if (summary.role === "ADMIN") {
+    return (
+      <div>
+        <h1 className="text-3xl font-bold mb-6">{t("adminTitle")}</h1>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <StatCard title={t("users")} value={summary.users} icon={Users} />
+          <StatCard title={t("courses")} value={summary.courses} icon={BookOpen} />
+          <StatCard title={t("teachers")} value={summary.teachers} icon={GraduationCap} />
+          <StatCard title={t("students")} value={summary.students} icon={ClipboardCheck} />
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
-async function TeacherDashboard({ userId }: { userId: string }) {
-  const t = await getTranslations("dashboard");
-  const [courseCount, studentCount] = await Promise.all([
-    prisma.course.count({ where: { teacherId: userId } }),
-    prisma.enrollment.count({
-      where: { course: { teacherId: userId } },
-    }),
-  ]);
-
-  return (
-    <div>
-      <h1 className="text-3xl font-bold mb-6">{t("teacherTitle")}</h1>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          title={t("myCourses")}
-          value={courseCount}
-          icon={BookOpen}
-          href="/courses"
-        />
-        <StatCard
-          title={t("enrolledStudents")}
-          value={studentCount}
-          icon={Users}
-          href="/statistics"
-        />
+  if (summary.role === "TEACHER") {
+    return (
+      <div>
+        <h1 className="text-3xl font-bold mb-6">{t("teacherTitle")}</h1>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <StatCard title={t("myCourses")} value={summary.courses} icon={BookOpen} href="/courses" />
+          <StatCard
+            title={t("enrolledStudents")}
+            value={summary.students}
+            icon={Users}
+            href="/statistics"
+          />
+        </div>
       </div>
-    </div>
-  );
-}
-
-async function StudentDashboard({ userId }: { userId: string }) {
-  const t = await getTranslations("dashboard");
-  const [enrollmentCount, attemptCount] = await Promise.all([
-    prisma.enrollment.count({ where: { studentId: userId } }),
-    prisma.assessmentAttempt.count({ where: { studentId: userId } }),
-  ]);
+    );
+  }
 
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">{t("studentTitle")}</h1>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <StatCard title={t("myCourses")} value={enrollmentCount} icon={BookOpen} />
-        <StatCard title={t("testsPassed")} value={attemptCount} icon={FileText} />
+        <StatCard title={t("myCourses")} value={summary.courses} icon={BookOpen} />
+        <StatCard title={t("testsPassed")} value={summary.tests} icon={FileText} />
       </div>
     </div>
   );
+}
+
+/** api недоступен — показываем заголовок без чисел, а не пустой экран. */
+function DashboardError({ title }: { title: string }) {
+  return <h1 className="text-3xl font-bold mb-6">{title}</h1>;
 }
 
 function StatCard({

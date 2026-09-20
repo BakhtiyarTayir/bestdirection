@@ -1,40 +1,21 @@
-import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { getCourseIdBySlug } from "@/lib/api/courses.server";
+import { resolvePath } from "@/lib/api/dashboard.server";
 
 /**
- * Курс уже переехал в api (этап 3a), поэтому его адрес разрешает api — и сразу
- * по правам вызывающего: недоступный курс отдаёт 404, как и несуществующий.
- * Уроки и задания остаются на прямом запросе к базе до этапа 4.
+ * Адреса кабинета построены на slug. Превращает их в идентификаторы — этим
+ * занимается api и сразу по правам вызывающего: чужой курс, черновик урока и
+ * неопубликованное задание отдаются как несуществующие.
  */
 export async function resolveCourseSlug(courseSlug: string): Promise<string> {
-  const result = await getCourseIdBySlug(courseSlug);
+  const result = await resolvePath({ courseSlug });
   if (!result.success) notFound();
-  return result.data.id;
+  return result.data.courseId;
 }
 
-export async function resolveLessonSlug(
-  courseId: string,
-  lessonSlug: string
-): Promise<string> {
-  const lesson = await prisma.lesson.findUnique({
-    where: { courseId_slug: { courseId, slug: lessonSlug } },
-    select: { id: true },
-  });
-  if (!lesson) notFound();
-  return lesson.id;
-}
-
-export async function resolveHomeworkSlug(
-  lessonId: string,
-  homeworkSlug: string
-): Promise<string> {
-  const homework = await prisma.homework.findUnique({
-    where: { lessonId_slug: { lessonId, slug: homeworkSlug } },
-    select: { id: true },
-  });
-  if (!homework) notFound();
-  return homework.id;
+export async function resolveLessonSlug(courseSlug: string, lessonSlug: string): Promise<string> {
+  const result = await resolvePath({ courseSlug, lessonSlug });
+  if (!result.success || !result.data.lessonId) notFound();
+  return result.data.lessonId;
 }
 
 export async function resolveFullPath(params: {
@@ -56,46 +37,13 @@ export async function resolveFullPath(params: {
   courseSlug: string;
   lessonSlug?: string;
   homeworkSlug?: string;
-}): Promise<{
-  courseId: string;
-  lessonId?: string;
-  homeworkId?: string;
-}> {
-  if (params.homeworkSlug && params.lessonSlug) {
-    const homework = await prisma.homework.findFirst({
-      where: {
-        slug: params.homeworkSlug,
-        lesson: {
-          slug: params.lessonSlug,
-          course: { slug: params.courseSlug },
-        },
-      },
-      select: {
-        id: true,
-        lessonId: true,
-        lesson: { select: { courseId: true } },
-      },
-    });
-    if (!homework) notFound();
-    return {
-      courseId: homework.lesson.courseId,
-      lessonId: homework.lessonId,
-      homeworkId: homework.id,
-    };
-  }
+}): Promise<{ courseId: string; lessonId?: string; homeworkId?: string }> {
+  const result = await resolvePath(params);
+  if (!result.success) notFound();
 
-  if (params.lessonSlug) {
-    const lesson = await prisma.lesson.findFirst({
-      where: {
-        slug: params.lessonSlug,
-        course: { slug: params.courseSlug },
-      },
-      select: { id: true, courseId: true },
-    });
-    if (!lesson) notFound();
-    return { courseId: lesson.courseId, lessonId: lesson.id };
-  }
+  // Запрошенная часть адреса обязана разрешиться: иначе это не тот адрес
+  if (params.lessonSlug && !result.data.lessonId) notFound();
+  if (params.homeworkSlug && !result.data.homeworkId) notFound();
 
-  const courseId = await resolveCourseSlug(params.courseSlug);
-  return { courseId };
+  return result.data;
 }
