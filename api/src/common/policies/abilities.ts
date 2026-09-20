@@ -32,6 +32,9 @@ export type AppSubjects =
   | "UserDirectory"
   // Деньги: начисления, долги, оплаты — только администратор
   | "Billing"
+  // Зарплата преподавателей: администратор — всё, преподаватель — только
+  // свою (сужение по teacherId делает сервис, как TeacherAttendanceService)
+  | "Salary"
   // Каталог самозаписи — ученику; заявки подтверждает персонал; Корзина — администратор
   | "Catalog"
   | "Trash"
@@ -95,6 +98,9 @@ export function defineAbilityFor(user: Pick<SessionUser, "id" | "role">): AppAbi
       can("read", "AssessmentAnswers");
       // Справочник филиалов: нужен, чтобы показать название филиала группы
       can("read", "Branch");
+      // Своя зарплата — сумма чужих начислений и составов групп ему не
+      // видна: сервис сужает GET /salary/:teacherId и /salary/me до себя
+      can("read", "Salary");
       break;
 
     case "STUDENT":

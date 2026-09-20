@@ -46,6 +46,12 @@ export const createGroupSchema = z.object({
   price: z
     .union([z.coerce.number().int().positive("pricePositive"), z.literal("")])
     .optional(),
+  // Ставка зарплаты группы в базисных пунктах (4000 = 40.00%). Важнее ставки
+  // преподавателя (план зарплат, 5.2). Пустая строка — своей ставки нет, ноль
+  // допускаем: 0% — осознанное решение админа, а не то же самое, что «пусто».
+  salaryPercentBp: z
+    .union([z.coerce.number().int().min(0, "percentPositive").max(10_000, "percentTooLarge"), z.literal("")])
+    .optional(),
 });
 
 export type CreateGroupInput = z.infer<typeof createGroupSchema>;

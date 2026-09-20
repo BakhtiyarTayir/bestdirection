@@ -140,9 +140,11 @@ model Branch {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  groups   Group[]
-  users    User[]
-  payments Payment[]
+  groups                Group[]
+  users                 User[]
+  payments              Payment[]
+  teacherSalaryAccruals TeacherSalaryAccrual[]
+  teacherPayouts        TeacherPayout[]
 
   @@index([isActive])
 }
@@ -187,6 +189,16 @@ model User {
   recordedPayments           Payment[]           @relation("RecordedPayments")
   telegramChatId             String?             @unique
   telegramUsername           String?
+
+  // Ставка преподавателя по умолчанию в базисных пунктах: 4000 = 40 %.
+  // Сотые доли процента, а не целые проценты: в договорах встречаются
+  // половины процента, а менять тип колонки задним числом дороже, чем сразу
+  // взять базисные пункты (план зарплат, 5.2). Пусто — ставки у преподавателя
+  // нет; отличается от 0 % (см. TeacherSalaryAccrual.percentUsed).
+  salaryPercentBp       Int?
+  teacherSalaryAccruals TeacherSalaryAccrual[] @relation("TeacherSalaryAccruals")
+  teacherPayouts        TeacherPayout[]        @relation("TeacherPayouts")
+  recordedPayouts       TeacherPayout[]        @relation("RecordedPayouts")
 
   // Родитель ↔ ученик. Связь многие-ко-многим: у ученика может быть двое
   // родителей, у родителя — несколько детей в разных группах.
@@ -278,6 +290,7 @@ model Course {
   groups             Group[]
   enrollmentRequests EnrollmentRequest[]
   payments           Payment[]
+  salaryAccruals     TeacherSalaryAccrual[]
 
   @@index([teacherId])
   @@index([isPublished])
@@ -466,6 +479,13 @@ model Group {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
+  // Ставка зарплаты по этой группе в базисных пунктах (4000 = 40 %).
+  // Важнее ставки преподавателя (User.salaryPercentBp), но уступает ей в
+  // приоритете назначения: группа — «ставка потока», а не персональная.
+  // Пусто — берётся ставка преподавателя. Меняется только вперёд: закрытые
+  // месяцы уже лежат в TeacherSalaryAccrual со своим percentUsed.
+  salaryPercentBp Int?
+
   courseId String
   course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
@@ -485,6 +505,7 @@ model Group {
   attendanceSessions AttendanceSession[]
   payments           Payment[]
   smsBroadcasts      SmsBroadcast[]
+  salaryAccruals     TeacherSalaryAccrual[]
 
   // Имя уникально внутри филиала, а не на весь центр: «Python-1» есть в
   // каждом филиале, и это нормально. Работает только потому, что branchId
@@ -494,6 +515,100 @@ model Group {
   @@index([courseId])
   @@index([isActive])
   @@index([branchId])
+}
+
+/// Начисление зарплаты преподавателю за календарный месяц по одной группе
+/// (или по курсу целиком — для записей без группы, groupId пуст).
+///
+/// Зачем отдельная таблица, а не расчёт на лету: Enrollment.groupId и
+/// Group.teacherId хранят ТЕКУЩЕЕ состояние. Ученик, переведённый в другую
+/// группу в ноябре, утащил бы туда свои октябрьские начисления, и зарплата
+/// преподавателя за закрытый октябрь задним числом упала бы. Ровно от этого
+/// MonthlyCharge защищает начисления учеников — здесь тот же приём
+/// (план зарплат, 5.3).
+model TeacherSalaryAccrual {
+  id String @id @default(cuid())
+
+  teacherId String
+  teacher   User   @relation("TeacherSalaryAccruals", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  // Пусто — начисление по записям курса без группы
+  groupId String?
+  group   Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
+  // Снимок филиала на момент начисления: группу могут перевести в другой
+  // филиал, а отчёт по уже закрытому месяцу меняться не должен (тот же приём,
+  // что у Payment.branchId).
+  branchId String?
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  month String // "YYYY-MM" строкой, как MonthlyCharge.month и Payment.forMonth
+
+  base Int // сумма начислений учеников группы за месяц (MonthlyCharge)
+  // Базисные пункты, по которым посчитали (User/Group.salaryPercentBp).
+  // NULL — ставки не было ни у группы, ни у преподавателя, и amount = 0 по
+  // этой причине, а не потому что месяц пустой. План (5.3) описывал колонку
+  // как обязательную, но это не позволяет заморозить закрытый месяц БЕЗ
+  // ставки: NOT NULL пришлось бы подменить нулём, а ноль неотличим от «месяц
+  // был пустой» — то самое смешение, от которого предостерегает раздел 5.2.
+  percentUsed   Int?
+  amount        Int
+  studentsCount Int
+
+  // Сумма, зафиксированная администратором вместо формулы: болезнь, отпуск,
+  // разовая договорённость. Заполнена — формула отступает (как
+  // Enrollment.firstMonthCharge в начислениях учеников).
+  manualAmount Int?
+
+  // Проставлен — месяц закрыт и пересчёту формулой не подлежит (isClosedMonth)
+  lockedAt  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Ловушка NULL в составном уникальном ключе: groupId необязателен, а в
+  // Postgres NULL не равен NULL — обычный @@unique пропустил бы два начисления
+  // одному педагогу по одному курсу за один месяц без группы. Тот же случай
+  // уже закрыт частичным индексом для AttendanceSession (миграция
+  // 20260916090000_attendance_no_group_unique); здесь — миграцией этой таблицы:
+  // CREATE UNIQUE INDEX "TeacherSalaryAccrual_no_group_unique"
+  //   ON "TeacherSalaryAccrual" ("teacherId", "courseId", "month")
+  //   WHERE "groupId" IS NULL;
+  @@unique([teacherId, courseId, groupId, month])
+  @@index([month])
+  @@index([teacherId])
+  @@index([branchId])
+  @@index([lockedAt])
+}
+
+/// Выплата преподавателю. Журнал, а не счёт: правок суммы нет, ошибочную
+/// запись помечают deletedAt и вносят заново — как Payment.
+model TeacherPayout {
+  id        String        @id @default(cuid())
+  amount    Int
+  method    PaymentMethod @default(CASH)
+  paidAt    DateTime
+  forMonth  String? // за какой месяц платят, "YYYY-MM"
+  comment   String?
+  deletedAt DateTime?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  teacherId String
+  teacher   User   @relation("TeacherPayouts", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  branchId String?
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  createdById String
+  createdBy   User   @relation("RecordedPayouts", fields: [createdById], references: [id])
+
+  @@index([teacherId])
+  @@index([paidAt])
+  @@index([forMonth])
+  @@index([deletedAt])
 }
 
 model Lesson {

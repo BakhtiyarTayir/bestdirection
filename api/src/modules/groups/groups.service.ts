@@ -6,6 +6,7 @@ import { accessibleWhere, type AppAbility } from "../../common/policies/abilitie
 import { PrismaService } from "../../common/prisma/prisma.service";
 import type { Prisma } from "../../../generated/prisma";
 import { BillingLedgerService } from "../billing/billing-ledger.service";
+import { SalaryService } from "../salary/salary.service";
 import type { CreateGroupDto, UpdateGroupDto } from "./dto/group.dto";
 
 /** Перенесено из src/actions/group-actions.ts в web. */
@@ -14,7 +15,8 @@ export class GroupsService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly audit: AuditService,
-    private readonly ledger: BillingLedgerService
+    private readonly ledger: BillingLedgerService,
+    private readonly salary: SalaryService
   ) {}
 
   private get prisma() {
@@ -106,6 +108,10 @@ export class GroupsService {
         isActive: data.isActive,
         // Пустая строка из формы — цены у группы нет, берётся цена курса
         price: data.price === "" || data.price === undefined ? null : data.price,
+        // Пустая строка — ставки у группы нет, зарплата берёт ставку
+        // преподавателя (план зарплат, 5.2)
+        salaryPercentBp:
+          data.salaryPercentBp === "" || data.salaryPercentBp === undefined ? null : data.salaryPercentBp,
         // Даты группы двигают начисления, поэтому нормализуем их к полудню UTC —
         // как startsAt у записи и paidAt у оплаты
         startDate: dateInputToDb(data.startDate) ?? null,
@@ -152,6 +158,10 @@ export class GroupsService {
     // окончательны, но заморозка ленивая: фиксируем их ДО записи, иначе
     // месяц, который ещё никто не открывал, заморозился бы по новым данным
     await this.ledger.freezeClosedMonths({ groupId });
+    // Зарплата опирается на начисления — её заморозка идёт СТРОГО ПОСЛЕ
+    // биллинговой (план зарплат, 5.4). Тот же вызов покрывает и педагога, и
+    // цену/расписание, и salaryPercentBp — все они меняются здесь же.
+    await this.salary.freezeClosedMonths({ groupId });
 
     const updated = await this.prisma.group.update({
       where: { id: groupId },
@@ -165,6 +175,9 @@ export class GroupsService {
         ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
         // undefined — не трогаем, "" — убираем цену группы
         price: data.price === undefined ? undefined : data.price === "" ? null : data.price,
+        // undefined — не трогаем, "" — снимаем ставку группы (берётся ставка преподавателя)
+        salaryPercentBp:
+          data.salaryPercentBp === undefined ? undefined : data.salaryPercentBp === "" ? null : data.salaryPercentBp,
         // undefined — поле не трогаем, "" — очищаем, дата — полдень UTC
         startDate: dateInputToDb(data.startDate),
         endDate: dateInputToDb(data.endDate),
@@ -189,6 +202,9 @@ export class GroupsService {
     // Студенты теряют цену и расписание группы — сначала фиксируем их
     // закрытые месяцы по нынешним данным
     await this.ledger.freezeClosedMonths({ groupId });
+    // И зарплату преподавателя группы — ДО удаления строки Group: после
+    // delete() педагога и ставку группы взять будет неоткуда (план, 5.4)
+    await this.salary.freezeClosedMonths({ groupId });
 
     // Записи на курс сохраняются, группа с них снимается
     await this.prisma.enrollment.updateMany({ where: { groupId }, data: { groupId: null } });
@@ -228,13 +244,17 @@ export class GroupsService {
     for (const { id: studentId } of eligible) {
       const existing = await this.prisma.enrollment.findUnique({
         where: { studentId_courseId: { studentId, courseId: group.courseId } },
-        select: { id: true },
+        select: { id: true, groupId: true },
       });
 
       if (existing) {
         // Перевод из другой группы меняет цену и расписание — закрытые
         // месяцы фиксируем по прежней группе
         await this.ledger.freezeClosedMonths({ studentId, courseId: group.courseId });
+        // База ПРЕЖНЕЙ группы (или записей без группы, если existing.groupId
+        // пуст) теряет этого студента — фиксируем её зарплату ДО перевода,
+        // иначе закрытый месяц пересчитается уже без его начислений
+        await this.salary.freezeClosedMonths({ groupId: existing.groupId, courseId: group.courseId });
         await this.prisma.enrollment.update({
           where: { studentId_courseId: { studentId, courseId: group.courseId } },
           data: { groupId },
@@ -258,6 +278,11 @@ export class GroupsService {
     const group = await this.manageableGroup(ability, groupId);
 
     if (alsoUnenroll) {
+      // Запись удаляется целиком — вместе с ней уходят и её MonthlyCharge
+      // (Cascade). Замораживаем зарплату группы ДО удаления: иначе её база
+      // за закрытые месяцы задним числом уменьшится на этого студента —
+      // ровно то, от чего TeacherSalaryAccrual хранит собственный снимок.
+      await this.salary.freezeClosedMonths({ groupId });
       // Запись удаляется целиком: начисления прекращаются. Принятые оплаты
       // остаются — они привязаны к паре студент+курс, а не к записи.
       await this.prisma.enrollment.delete({
@@ -267,6 +292,7 @@ export class GroupsService {
       // Запись остаётся без группы — теряет её цену и расписание, поэтому
       // закрытые месяцы фиксируем по нынешней группе
       await this.ledger.freezeClosedMonths({ studentId, courseId: group.courseId });
+      await this.salary.freezeClosedMonths({ groupId });
       await this.prisma.enrollment.update({
         where: { studentId_courseId: { studentId, courseId: group.courseId } },
         data: { groupId: null },
@@ -286,9 +312,19 @@ export class GroupsService {
   async moveStudent(toGroupId: string, studentId: string, courseId: string, ability: AppAbility) {
     await this.manageableGroup(ability, toGroupId);
 
+    // Прежняя группа нужна, чтобы заморозить именно её зарплату — Enrollment
+    // хранит только текущий groupId, после update() старую уже не узнать
+    const current = await this.prisma.enrollment.findUnique({
+      where: { studentId_courseId: { studentId, courseId } },
+      select: { groupId: true },
+    });
+
     // Новая группа — новая цена и расписание: сначала фиксируем закрытые
     // месяцы по старой, иначе перевод в октябре переписал бы сентябрь
     await this.ledger.freezeClosedMonths({ studentId, courseId });
+    // База ПРЕЖНЕЙ группы теряет этого студента — фиксируем её зарплату тоже,
+    // строго после биллинговой заморозки (план зарплат, 5.4)
+    await this.salary.freezeClosedMonths({ groupId: current?.groupId ?? null, courseId });
 
     await this.prisma.enrollment.update({
       where: { studentId_courseId: { studentId, courseId } },

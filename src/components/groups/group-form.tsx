@@ -31,6 +31,7 @@ interface GroupFormProps {
     startDate: Date | string | null;
     endDate: Date | string | null;
     price: number | null;
+    salaryPercentBp?: number | null;
   };
   /** Кандидаты в преподаватели группы; пустой список прячет поле */
   teachers?: { id: string; firstName: string; lastName: string }[];
@@ -78,6 +79,7 @@ export function GroupForm({ courseId, courseSlug, group, teachers = [], branches
       startDate: toDateInput(group?.startDate),
       endDate: toDateInput(group?.endDate),
       price: group?.price ?? "",
+      salaryPercentBp: group?.salaryPercentBp ?? "",
     },
   });
 
@@ -223,6 +225,47 @@ export function GroupForm({ courseId, courseSlug, group, teachers = [], branches
           <p className="text-sm text-destructive">{t("pricePositive")}</p>
         )}
         <p className="text-sm text-muted-foreground">{t("priceHint")}</p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="salaryPercentBp">{t("salaryPercent")}</Label>
+        {/* Поле хранит базисные пункты (validators/group.ts), но вводится и
+            показывается процентом с одним знаком после запятой (план
+            зарплат, 5.2) — конвертация только здесь, на границе формы */}
+        <Controller
+          name="salaryPercentBp"
+          control={control}
+          render={({ field }) => (
+            <Input
+              id="salaryPercentBp"
+              type="number"
+              step={0.1}
+              min={0}
+              max={100}
+              inputMode="decimal"
+              value={
+                field.value === "" || field.value === undefined || field.value === null
+                  ? ""
+                  : String(Number(field.value) / 100)
+              }
+              onChange={(e) => {
+                const raw = e.target.value;
+                if (raw === "") {
+                  field.onChange("");
+                  return;
+                }
+                const percent = Number(raw);
+                if (Number.isNaN(percent)) return;
+                field.onChange(Math.round(percent * 100));
+              }}
+              placeholder={t("salaryPercentPlaceholder")}
+            />
+          )}
+        />
+        {errors.salaryPercentBp && (
+          <p className="text-sm text-destructive">{t("salaryPercentInvalid")}</p>
+        )}
+        <p className="text-sm text-muted-foreground">{t("salaryPercentHint")}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

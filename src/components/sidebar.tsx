@@ -101,6 +101,7 @@ const navItems: NavItem[] = [
   { href: "/courses/requests", labelKey: "enrollmentRequests", icon: Inbox, roles: ["ADMIN", "TEACHER"], badge: "enrollmentRequests" },
   { href: "/payments", labelKey: "payments", icon: Wallet, roles: ["ADMIN"], exact: true },
   { href: "/payments/debtors", labelKey: "debtors", icon: TriangleAlert, roles: ["ADMIN"], badge: "debtors" },
+  { href: "/salaries", labelKey: "salaries", icon: Wallet, roles: ["ADMIN"] },
   { href: "/admin/compare", labelKey: "compare", icon: GitCompare, roles: ["ADMIN"] },
   { href: "/admin/branches", labelKey: "branches", icon: Building2, roles: ["ADMIN"] },
   { href: "/admin/leads", labelKey: "leads", icon: Inbox, roles: ["ADMIN"] },
@@ -120,6 +121,7 @@ const navItems: NavItem[] = [
   { href: "/homework", labelKey: "homework", icon: ClipboardList, roles: ["ADMIN", "TEACHER", "STUDENT"], badge: "homework" },
   { href: "/my-results", labelKey: "myResults", icon: FileText, roles: ["STUDENT"] },
   { href: "/my-children", labelKey: "myChildren", icon: UsersRound, roles: ["PARENT"] },
+  { href: "/salaries/me", labelKey: "mySalary", icon: Wallet, roles: ["TEACHER"] },
   { href: "/profile", labelKey: "profile", icon: User, roles: ["ADMIN", "TEACHER", "STUDENT", "PARENT"] },
 ];
 

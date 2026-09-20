@@ -27,6 +27,7 @@ import { LessonsModule } from "./modules/lessons/lessons.module";
 import { MarketingModule } from "./modules/marketing/marketing.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
 import { ParentsModule } from "./modules/parents/parents.module";
+import { SalaryModule } from "./modules/salary/salary.module";
 import { HealthController } from "./modules/health/health.controller";
 import { MeController } from "./modules/me/me.controller";
 import { TelegramModule } from "./common/telegram/telegram.module";
@@ -60,6 +61,7 @@ import { UsersModule } from "./modules/users/users.module";
     ParentsModule,
     TelegramModule,
     TrashModule,
+    SalaryModule,
   ],
   controllers: [HealthController, MeController],
   providers: [
