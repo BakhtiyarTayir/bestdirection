@@ -31,12 +31,23 @@ export function useTestEnv() {
 }
 
 /** Приложение как в проде (те же guards, фильтр, pipe) плюс тестовые контроллеры. */
-export async function createTestApp(extra: { controllers?: Type[]; imports?: ModuleMetadata["imports"] } = {}) {
+export async function createTestApp(
+  extra: {
+    controllers?: Type[];
+    imports?: ModuleMetadata["imports"];
+    /** Подмена провайдера: так письма в тестах никуда не уходят. */
+    overrides?: { provide: unknown; useValue: unknown }[];
+  } = {}
+) {
   useTestEnv();
-  const moduleRef = await Test.createTestingModule({
+  let builder = Test.createTestingModule({
     imports: [AppModule, ...(extra.imports ?? [])],
     controllers: extra.controllers ?? [],
-  }).compile();
+  });
+  for (const override of extra.overrides ?? []) {
+    builder = builder.overrideProvider(override.provide as never).useValue(override.useValue);
+  }
+  const moduleRef = await builder.compile();
   const app = moduleRef.createNestApplication<NestExpressApplication>({ logger: false });
   configureApp(app);
   await app.init();

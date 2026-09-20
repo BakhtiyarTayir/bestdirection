@@ -7,6 +7,7 @@ import {
 import bcrypt from "bcryptjs";
 import { Prisma } from "../../../generated/prisma";
 import { AuditService, computeChanges } from "../../common/audit/audit.service";
+import { SessionsService } from "../../common/auth/sessions.service";
 import { SessionUserCache } from "../../common/auth/session-user.cache";
 import type { SessionUser } from "../../common/auth/session-user";
 import { accessibleWhere, type AppAbility } from "../../common/policies/abilities";
@@ -31,7 +32,8 @@ export class UsersService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly audit: AuditService,
-    private readonly sessionUsers: SessionUserCache
+    private readonly sessionUsers: SessionUserCache,
+    private readonly sessions: SessionsService
   ) {}
 
   private get prisma() {
@@ -138,6 +140,7 @@ export class UsersService {
     // Роль и активность guard берёт из БД, но у него кэш на 30 секунд —
     // сбрасываем, чтобы изменение подействовало сразу (аудит 2.1)
     this.sessionUsers.forget(id);
+    if (data.isActive === false) await this.sessions.destroyAllFor(id);
 
     const changes = computeChanges(existing, { ...data });
     if (changes) {
@@ -181,6 +184,8 @@ export class UsersService {
 
     await this.prisma.user.update({ where: { id }, data: { isActive: false } });
     this.sessionUsers.forget(id);
+    // Выключенный аккаунт не должен доживать смену на открытой вкладке
+    await this.sessions.destroyAllFor(id);
 
     await this.audit.record({
       userId: actor.id,

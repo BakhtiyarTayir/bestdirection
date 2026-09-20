@@ -163,6 +163,7 @@ model User {
   // Родитель ↔ ученик. Связь многие-ко-многим: у ученика может быть двое
   // родителей, у родителя — несколько детей в разных группах.
   telegramLinkRequests TelegramLinkRequest[]
+  sessions             Session[]
   childLinks           ParentStudent[]       @relation("ParentOf")
   parentLinks          ParentStudent[]       @relation("ChildOf")
 
@@ -475,6 +476,25 @@ model Lesson {
 }
 
 // Код подтверждения email при регистрации: один активный код на адрес
+/// Сессия входа. Хранится в базе, а не в JWT: так выход, смена пароля и
+/// деактивация обрывают доступ сразу, а не через 30 дней (аудит 2.1).
+/// В базе лежит хэш токена — утечка таблицы не даёт войти под чужим именем.
+model Session {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  userAgent  String?
+  ip         String?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
 model EmailVerificationCode {
   id        String   @id @default(cuid())
   email     String   @unique

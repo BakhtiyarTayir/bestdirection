@@ -11,6 +11,9 @@ export default defineConfig({
     fileParallelism: false,
     testTimeout: 30_000,
     hookTimeout: 180_000,
+    // Предел попыток входа в тестах поднят: проверок больше, чем разрешено в
+    // проде, а сам предел там остаётся прежним (см. AuthController).
+    env: { AUTH_RATE_LIMIT: "1000", AUTH_CODE_RATE_LIMIT: "1000" },
   },
   plugins: [swc.vite({ module: { type: "es6" } })],
 });
