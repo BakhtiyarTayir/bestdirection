@@ -4,7 +4,7 @@ interface WithAuthOptions {
   roles?: string[];
 }
 
-type AuthSession = { user: { id: string; role: string; email?: string; name?: string | null } };
+type AuthSession = { user: { id: string; role: string; login?: string | null; name?: string | null } };
 
 type ActionError = { success: false; error: string };
 

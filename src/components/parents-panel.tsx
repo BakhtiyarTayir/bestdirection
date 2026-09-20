@@ -38,7 +38,6 @@ interface ParentLink {
     firstName: string;
     lastName: string;
     phone: string | null;
-    email: string | null;
     isActive: boolean;
   };
 }
@@ -48,7 +47,6 @@ interface Candidate {
   firstName: string;
   lastName: string;
   phone: string | null;
-  email: string | null;
   isActive: boolean;
   _count: { childLinks: number };
 }

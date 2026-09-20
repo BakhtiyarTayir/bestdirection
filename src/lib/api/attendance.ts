@@ -11,7 +11,7 @@ export interface ApiAttendanceRecord {
   note: string | null;
   sessionId: string;
   studentId: string;
-  student: { id: string; firstName: string; lastName: string; email: string | null };
+  student: { id: string; firstName: string; lastName: string };
 }
 
 export interface ApiAttendanceSession {
@@ -34,7 +34,7 @@ export interface ApiAttendanceSession {
 export interface ApiAttendanceReport {
   sessions: { id: string; date: string; note: string | null }[];
   students: {
-    student: { id: string; firstName: string; lastName: string; email: string | null };
+    student: { id: string; firstName: string; lastName: string };
     attendance: Record<string, { status: AttendanceStatus; note?: string | null }>;
   }[];
 }
@@ -79,7 +79,6 @@ export interface ApiParentLink {
     firstName: string;
     lastName: string;
     phone: string | null;
-    email: string | null;
     isActive: boolean;
   };
 }
@@ -89,7 +88,6 @@ export interface ApiParentCandidate {
   firstName: string;
   lastName: string;
   phone: string | null;
-  email: string | null;
   isActive: boolean;
   _count: { childLinks: number };
 }
@@ -103,7 +101,6 @@ export interface ApiChildLink {
     firstName: string;
     lastName: string;
     phone: string | null;
-    email: string | null;
     enrollments: {
       course: { id: string; title: string; slug: string };
       group: { id: string; name: string; schedule: string | null } | null;
@@ -163,7 +160,6 @@ export const createParentForStudent = (body: {
   firstName: string;
   lastName: string;
   phone: string;
-  email?: string;
   relation?: string;
   isPrimary?: boolean;
 }) => apiFetch<ApiParentLink["parent"]>("/parents", { method: "POST", body });

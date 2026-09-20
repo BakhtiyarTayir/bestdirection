@@ -32,7 +32,6 @@ export const createParentSchema = z.object({
   // Телефон обязателен: родитель заводится ради связи и СМС-рассылок,
   // контакт без номера в них не попадёт.
   phone: z.string().min(1, "phoneRequired"),
-  email: z.union([z.string().email("emailInvalid"), z.literal("")]).optional(),
   relation: ParentRelationEnum.default("OTHER"),
   isPrimary: z.boolean().default(false),
 });

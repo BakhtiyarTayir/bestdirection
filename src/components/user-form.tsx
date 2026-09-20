@@ -33,7 +33,6 @@ import { Loader2, Wand2, Copy, Check } from "lucide-react";
 interface UserData {
   id: string;
   login?: string | null;
-  email: string | null;
   firstName: string;
   lastName: string;
   phone: string | null;
@@ -89,7 +88,6 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
     defaultValues: isEditing
       ? {
           id: user.id,
-          email: user.email ?? "",
           login: user.login ?? "",
           password: "",
           firstName: user.firstName,
@@ -289,7 +287,7 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {/* autoComplete="off": иначе Chrome принимает пару email+пароль за
+        {/* autoComplete="off": иначе Chrome принимает пару логин+пароль за
             форму входа и подставляет сюда сохранённые данные администратора */}
         <form
           onSubmit={form.handleSubmit(handleSubmit)}
@@ -357,19 +355,6 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
               </p>
             )}
           </div>
-
-          {isEditing && (
-            <div className="space-y-2">
-              <Label htmlFor="email">{t("email")}</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="user@example.com"
-                autoComplete="off"
-                {...form.register("email")}
-              />
-            </div>
-          )}
 
           <div className="space-y-2">
             <Label htmlFor="password">{isEditing ? t("newPasswordOptional") : t("password")}</Label>
