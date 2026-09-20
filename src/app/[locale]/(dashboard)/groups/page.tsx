@@ -1,16 +1,28 @@
 import { requireAuth } from "@/lib/auth-guard";
 import { getAllGroups } from "@/lib/api/groups.server";
+import { getBranches } from "@/lib/api/branches.server";
 import { Link } from "@/i18n/navigation";
 import { UsersRound } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { GroupList } from "@/components/groups/group-list";
+import { BranchFilter } from "@/components/branch-filter";
 
-export default async function AllGroupsPage() {
+export const dynamic = "force-dynamic";
+
+interface AllGroupsPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function AllGroupsPage({ searchParams }: AllGroupsPageProps) {
   const t = await getTranslations("groups");
   await requireAuth();
 
-  const result = await getAllGroups();
+  const params = await searchParams;
+  const branchId = typeof params.branchId === "string" && params.branchId ? params.branchId : undefined;
+
+  const [result, branchesResult] = await Promise.all([getAllGroups(branchId), getBranches()]);
   const groups = result.success ? result.data : [];
+  const branches = branchesResult.success && branchesResult.data ? branchesResult.data : [];
 
   // Group by course
   const courseMap = new Map<string, { title: string; courseSlug: string; groups: typeof groups }>();
@@ -24,7 +36,10 @@ export default async function AllGroupsPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-bold">{t("allGroups")}</h1>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <h1 className="text-2xl font-bold">{t("allGroups")}</h1>
+        <BranchFilter branchId={branchId} branches={branches} namespace="groups" />
+      </div>
 
       {courseMap.size === 0 ? (
         <div className="rounded-lg border border-dashed p-12 text-center">

@@ -22,6 +22,11 @@ export const createUserSchema = z.object({
     .string()
     .optional(),
   role: roleEnum,
+  // Приписка справочная (настоящая привязка ученика — через группу),
+  // поэтому необязательна и здесь
+  branchId: z
+    .string()
+    .optional(),
 });
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;
@@ -47,6 +52,9 @@ export const updateUserSchema = z.object({
     .string()
     .optional(),
   role: roleEnum.optional(),
+  branchId: z
+    .string()
+    .optional(),
 });
 
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;

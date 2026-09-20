@@ -31,6 +31,7 @@ import {
   Megaphone,
   Wallet,
   TriangleAlert,
+  Building2,
 } from "lucide-react";
 import { logout } from "@/lib/api/auth";
 import { Button } from "./ui/button";
@@ -101,6 +102,7 @@ const navItems: NavItem[] = [
   { href: "/payments", labelKey: "payments", icon: Wallet, roles: ["ADMIN"], exact: true },
   { href: "/payments/debtors", labelKey: "debtors", icon: TriangleAlert, roles: ["ADMIN"], badge: "debtors" },
   { href: "/admin/compare", labelKey: "compare", icon: GitCompare, roles: ["ADMIN"] },
+  { href: "/admin/branches", labelKey: "branches", icon: Building2, roles: ["ADMIN"] },
   { href: "/admin/leads", labelKey: "leads", icon: Inbox, roles: ["ADMIN"] },
   { href: "/admin/sms", labelKey: "sms", icon: MessageSquare, roles: ["ADMIN"] },
   {

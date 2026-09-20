@@ -25,6 +25,8 @@ const USER_SELECT = {
   isActive: true,
   createdAt: true,
   updatedAt: true,
+  branchId: true,
+  branch: { select: { id: true, name: true } },
 } as const;
 
 @Injectable()
@@ -45,11 +47,16 @@ export class UsersService {
     return this.prismaService.prismaUnscoped;
   }
 
-  list(ability: AppAbility) {
+  list(ability: AppAbility, branchId?: string) {
     // Кого видно, решают правила: администратор — всех, преподаватель —
     // учеников и себя. Раньше это был ручной if по роли внутри действия.
+    // Фильтр здесь — по «домашнему» branchId пользователя: для списка
+    // персонала (в отличие от студентов-должников) это справочная приписка,
+    // а не привязка через группу.
     return this.prisma.user.findMany({
-      where: accessibleWhere<Prisma.UserWhereInput>(ability, "User"),
+      where: {
+        AND: [accessibleWhere<Prisma.UserWhereInput>(ability, "User"), ...(branchId ? [{ branchId }] : [])],
+      },
       orderBy: { createdAt: "desc" },
       select: USER_SELECT,
     });
@@ -72,6 +79,9 @@ export class UsersService {
     const email = data.email?.trim() ? data.email.trim() : null;
     if (email && (await this.emailTakenBy(email))) throw new ConflictException("emailExists");
 
+    const branchId = data.branchId?.trim() ? data.branchId.trim() : null;
+    if (branchId && !(await this.branchExists(branchId))) throw new NotFoundException("branchNotFound");
+
     const passwordHash = await bcrypt.hash(data.password, 10);
 
     let user;
@@ -84,6 +94,7 @@ export class UsersService {
           lastName: data.lastName,
           phone: data.phone,
           role: data.role,
+          branchId,
         },
         select: USER_SELECT,
       });
@@ -108,7 +119,7 @@ export class UsersService {
   async update(id: string, data: UpdateUserDto, actor: SessionUser) {
     const existing = await this.prisma.user.findUnique({
       where: { id },
-      select: { email: true, firstName: true, lastName: true, phone: true, role: true, isActive: true },
+      select: { email: true, firstName: true, lastName: true, phone: true, role: true, isActive: true, branchId: true },
     });
     if (!existing) throw new NotFoundException("userNotFound");
 
@@ -118,6 +129,10 @@ export class UsersService {
       const holderId = await this.emailTakenBy(email);
       if (holderId && holderId !== id) throw new ConflictException("emailExists");
     }
+
+    // undefined — не трогаем, пустая строка — очищаем приписку к филиалу
+    const branchId = data.branchId !== undefined ? data.branchId.trim() || null : undefined;
+    if (branchId && !(await this.branchExists(branchId))) throw new NotFoundException("branchNotFound");
 
     const losesAdmin =
       existing.role === "ADMIN" &&
@@ -133,6 +148,7 @@ export class UsersService {
         ...(data.phone !== undefined && { phone: data.phone }),
         ...(data.role !== undefined && { role: data.role }),
         ...(data.isActive !== undefined && { isActive: data.isActive }),
+        ...(branchId !== undefined && { branchId }),
       },
       select: USER_SELECT,
     });
@@ -344,6 +360,10 @@ export class UsersService {
     // строка, в том числе невидимая обычному клиенту
     const holder = await this.prismaUnscoped.user.findUnique({ where: { email }, select: { id: true } });
     return holder?.id ?? null;
+  }
+
+  private async branchExists(id: string): Promise<boolean> {
+    return (await this.prisma.branch.findUnique({ where: { id }, select: { id: true } })) !== null;
   }
 
   /** Единственный администратор не может разжаловать, выключить или стереть себя (аудит 3.7). */

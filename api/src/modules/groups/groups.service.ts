@@ -25,20 +25,24 @@ export class GroupsService {
   byCourse(courseId: string) {
     return this.prisma.group.findMany({
       where: { courseId },
-      include: { _count: { select: { enrollments: true } } },
+      include: { branch: { select: { id: true, name: true } }, _count: { select: { enrollments: true } } },
       orderBy: { sortOrder: "asc" },
     });
   }
 
   /**
    * Все группы. Преподавателю — только по его курсам: это раскладка раздела
-   * «Группы», как было до переноса.
+   * «Группы», как было до переноса. branchId — необязательный фильтр списка.
    */
-  all(user: SessionUser) {
+  all(user: SessionUser, branchId?: string) {
     return this.prisma.group.findMany({
-      where: user.role === "TEACHER" ? { course: { teacherId: user.id } } : {},
+      where: {
+        ...(user.role === "TEACHER" ? { course: { teacherId: user.id } } : {}),
+        ...(branchId ? { branchId } : {}),
+      },
       include: {
         course: { select: { id: true, slug: true, title: true } },
+        branch: { select: { id: true, name: true } },
         _count: { select: { enrollments: true } },
       },
       orderBy: [{ course: { title: "asc" } }, { sortOrder: "asc" }],
@@ -50,6 +54,7 @@ export class GroupsService {
       where: { id: groupId },
       include: {
         course: { select: { id: true, title: true, teacherId: true } },
+        branch: { select: { id: true, name: true } },
         teacher: { select: { id: true, firstName: true, lastName: true } },
         enrollments: {
           include: {
@@ -68,8 +73,11 @@ export class GroupsService {
   async create(data: CreateGroupDto, ability: AppAbility, actor: SessionUser) {
     const course = await this.manageableCourse(ability, data.courseId);
 
+    const branch = await this.prisma.branch.findUnique({ where: { id: data.branchId }, select: { id: true } });
+    if (!branch) throw new NotFoundException("branchNotFound");
+
     const existing = await this.prisma.group.findUnique({
-      where: { courseId_name: { courseId: course.id, name: data.name } },
+      where: { courseId_branchId_name: { courseId: course.id, branchId: data.branchId, name: data.name } },
       select: { id: true },
     });
     if (existing) throw new ConflictException("groupNameExists");
@@ -93,6 +101,7 @@ export class GroupsService {
         startDate: dateInputToDb(data.startDate) ?? null,
         endDate: dateInputToDb(data.endDate) ?? null,
         courseId: course.id,
+        branchId: data.branchId,
         // Не указан явно — ведёт преподаватель курса. Отчёт по занятиям
         // опирается на это поле, и пустое значение выкинуло бы группу из него.
         teacherId: data.teacherId?.trim() ? data.teacherId : course.teacherId,
@@ -113,9 +122,17 @@ export class GroupsService {
   async update(groupId: string, data: UpdateGroupDto, ability: AppAbility, actor: SessionUser) {
     const group = await this.manageableGroup(ability, groupId);
 
-    if (data.name && data.name !== group.name) {
+    // Ключ уникальности — (courseId, branchId, name): «Python-1» разрешена в
+    // каждом филиале. Проверяем, если меняется хоть одна часть ключа.
+    const nextBranchId = data.branchId ?? group.branchId;
+    const nextName = data.name ?? group.name;
+    if (nextBranchId !== group.branchId || nextName !== group.name) {
+      if (data.branchId !== undefined) {
+        const branch = await this.prisma.branch.findUnique({ where: { id: data.branchId }, select: { id: true } });
+        if (!branch) throw new NotFoundException("branchNotFound");
+      }
       const existing = await this.prisma.group.findUnique({
-        where: { courseId_name: { courseId: group.courseId, name: data.name } },
+        where: { courseId_branchId_name: { courseId: group.courseId, branchId: nextBranchId, name: nextName } },
         select: { id: true },
       });
       if (existing) throw new ConflictException("groupNameExists");
@@ -130,6 +147,7 @@ export class GroupsService {
       where: { id: groupId },
       data: {
         ...(data.name !== undefined && { name: data.name }),
+        ...(data.branchId !== undefined && { branchId: data.branchId }),
         ...(data.description !== undefined && { description: data.description }),
         ...(data.schedule !== undefined && { schedule: data.schedule }),
         ...(data.scheduleDays !== undefined && { scheduleDays: data.scheduleDays }),
@@ -340,7 +358,7 @@ export class GroupsService {
   private async manageableGroup(ability: AppAbility, groupId: string) {
     const group = await this.prisma.group.findFirst({
       where: { AND: [accessibleWhere<Prisma.GroupWhereInput>(ability, "Group", "update"), { id: groupId }] },
-      select: { id: true, name: true, courseId: true, isActive: true, price: true, startDate: true, endDate: true, scheduleDays: true, teacherId: true, description: true, schedule: true, sortOrder: true },
+      select: { id: true, name: true, courseId: true, branchId: true, isActive: true, price: true, startDate: true, endDate: true, scheduleDays: true, teacherId: true, description: true, schedule: true, sortOrder: true },
     });
     if (!group) throw new NotFoundException("groupNotFound");
     return group;

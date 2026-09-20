@@ -15,12 +15,14 @@ export interface ApiGroup {
   isActive: boolean;
   sortOrder: number;
   courseId: string;
+  branchId: string;
   teacherId: string | null;
   createdAt: string;
   updatedAt: string;
   _count: { enrollments: number };
   // В общем списке групп курс приходит всегда, в списке по курсу — нет
   course?: { id: string; slug: string; title: string };
+  branch?: { id: string; name: string } | null;
 }
 
 export interface ApiGroupStudent {
@@ -91,6 +93,7 @@ export interface ApiGroupStatistics {
 
 export interface GroupInput {
   name?: string;
+  branchId?: string;
   description?: string;
   schedule?: string;
   scheduleDays?: number[];
@@ -133,6 +136,9 @@ export const moveStudentToGroup = (studentId: string, courseId: string, toGroupI
 
 export const getCourseGroups = (courseId: string) =>
   apiFetch<ApiGroup[]>("/groups/by-course", { query: { courseId } });
+
+export const getAllGroups = (branchId?: string) =>
+  apiFetch<ApiGroupWithCourse[]>("/groups", { query: { branchId } });
 
 export const getAvailableStudentsForGroup = (groupId: string) =>
   apiFetch<ApiGroupCandidate[]>(`/groups/${groupId}/available-students`);

@@ -1,6 +1,6 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createTestApp, createUser, sessionCookie, TEST_APP_URL, testDb, type TestApp } from "./helpers";
+import { createBranch, createTestApp, createUser, sessionCookie, TEST_APP_URL, testDb, type TestApp } from "./helpers";
 import { SmsService } from "../src/modules/notifications/sms.service";
 
 describe("уведомления: СМС", () => {
@@ -20,8 +20,9 @@ describe("уведомления: СМС", () => {
     const course = await testDb().course.create({
       data: { slug: `sms-${run}`, title: "Курс", teacherId: ids.TEACHER, isPublished: true },
     });
+    const branch = await createBranch();
     const group = await testDb().group.create({
-      data: { name: `Группа ${run}`, courseId: course.id, teacherId: ids.TEACHER },
+      data: { name: `Группа ${run}`, courseId: course.id, teacherId: ids.TEACHER, branchId: branch.id },
     });
     ids.group = group.id;
     await testDb().enrollment.create({

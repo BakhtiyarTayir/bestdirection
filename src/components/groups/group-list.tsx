@@ -37,6 +37,9 @@ interface GroupData {
   startDate: Date | string | null;
   endDate: Date | string | null;
   _count: { enrollments: number };
+  // Показываем всегда: имя группы уникально внутри филиала, а не на весь
+  // центр — без бейджа две «Python-1» в разных филиалах не различить
+  branch?: { id: string; name: string } | null;
 }
 
 interface GroupListProps {
@@ -106,6 +109,9 @@ export function GroupList({ groups, courseSlug }: GroupListProps) {
                   <Badge variant="secondary">{tCommon("inactive")}</Badge>
                 )}
               </CardTitle>
+              {group.branch && (
+                <p className="text-xs text-muted-foreground">{group.branch.name}</p>
+              )}
               {group.description && (
                 <p className="text-sm text-muted-foreground line-clamp-2">
                   {group.description}

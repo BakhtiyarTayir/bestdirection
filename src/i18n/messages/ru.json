@@ -147,7 +147,8 @@
     "teacherAttendance": "Преподаватели",
     "sms": "СМС",
     "teachers": "Преподаватели",
-    "students": "Студенты"
+    "students": "Студенты",
+    "branches": "Филиалы"
   },
   "weekdays": {
     "mon": "Пн",
@@ -751,7 +752,11 @@
     "statsLastSubmission": "Последняя сдача",
     "statsUngrouped": "Без группы",
     "statsSelectCourseAndHomework": "Выберите курс и домашнее задание для отчета.",
-    "statsNoData": "По выбранным фильтрам данных нет."
+    "statsNoData": "По выбранным фильтрам данных нет.",
+    "branch": "Филиал",
+    "selectBranchPlaceholder": "Не выбран",
+    "filterBranch": "Филиал",
+    "allBranches": "Все филиалы"
   },
   "groups": {
     "title": "Группы",
@@ -819,7 +824,11 @@
     "removeUnenrollHint": "«Отчислить с курса» — запись удаляется, начисления прекращаются. Принятые оплаты остаются в журнале.",
     "removeOnlyGroup": "Убрать из группы",
     "removeUnenroll": "Отчислить с курса",
-    "studentUnenrolled": "Студент отчислен с курса"
+    "studentUnenrolled": "Студент отчислен с курса",
+    "branch": "Филиал",
+    "selectBranchPlaceholder": "Выберите филиал",
+    "filterBranch": "Филиал",
+    "allBranches": "Все филиалы"
   },
   "profile": {
     "title": "Мой профиль",
@@ -1121,7 +1130,10 @@
     "noRecipients": "Нет получателей с корректным телефоном",
     "languageNotDetected": "Не удалось определить язык программирования",
     "studentNotFound": "Студент не найден",
-    "alreadyEnrolled": "Студент уже записан на этот курс"
+    "alreadyEnrolled": "Студент уже записан на этот курс",
+    "branchNotFound": "Филиал не найден",
+    "branchNameExists": "Филиал с таким названием уже существует",
+    "branchHasGroups": "В филиале есть группы — сначала перенесите или удалите их"
   },
   "success": {
     "saved": "Сохранено",
@@ -1170,7 +1182,9 @@
     "descriptionRequired": "Описание обязательно",
     "minOneTestCase": "Минимум 1 тест-кейс",
     "homeworkTitleRequired": "Название обязательно",
-    "homeworkDescriptionRequired": "Описание обязательно"
+    "homeworkDescriptionRequired": "Описание обязательно",
+    "branchRequired": "Филиал обязателен",
+    "branchNameRequired": "Название филиала обязательно"
   },
   "language": {
     "title": "Язык",
@@ -1567,7 +1581,9 @@
       "PAYME": "Payme",
       "CLICK": "Click",
       "TRANSFER": "Перечисление"
-    }
+    },
+    "filterBranch": "Филиал",
+    "allBranches": "Все филиалы"
   },
   "debtors": {
     "title": "Должники",
@@ -1617,7 +1633,9 @@
     "byDaysTitle": "Неполный месяц посчитан по дням",
     "withoutGroupHint": "{count, plural, one {# запись не привязана} few {# записи не привязаны} other {# записей не привязаны}} к группе. Занятия берутся из расписания группы — добавьте студента в группу, и расчёт пойдёт по занятиям.",
     "effectiveStartsAt": "Фактически начисляется с {date} — группа начинается позже",
-    "closedMonthsNote": "Прошедшие месяцы закрыты и не пересчитываются: эти правки действуют с текущего месяца. Закрытый месяц можно пересчитать в карточке студента."
+    "closedMonthsNote": "Прошедшие месяцы закрыты и не пересчитываются: эти правки действуют с текущего месяца. Закрытый месяц можно пересчитать в карточке студента.",
+    "filterBranch": "Филиал",
+    "allBranches": "Все филиалы"
   },
   "parents": {
     "title": "Родители",
@@ -1763,6 +1781,24 @@
     "contacts": "Контакты",
     "courses": "Курсы",
     "noCourses": "Нет платных курсов",
-    "openCard": "Карточка"
+    "openCard": "Карточка",
+    "branch": "Филиал",
+    "filterBranch": "Филиал",
+    "allBranches": "Все филиалы"
+  },
+  "branches": {
+    "title": "Филиалы",
+    "subtitle": "Адреса и кассы учебного центра",
+    "createBranch": "Добавить филиал",
+    "editBranch": "Редактировать филиал",
+    "branchName": "Название",
+    "branchAddress": "Адрес",
+    "branchPhone": "Телефон",
+    "branchCreated": "Филиал создан",
+    "branchUpdated": "Филиал обновлён",
+    "branchDeleted": "Филиал удалён",
+    "deleteBranch": "Удалить филиал?",
+    "deleteBranchConfirm": "Филиал «{name}» будет удалён без возможности восстановления.",
+    "noBranches": "Филиалов пока нет"
   }
 }

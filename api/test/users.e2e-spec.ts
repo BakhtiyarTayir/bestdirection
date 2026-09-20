@@ -189,6 +189,47 @@ describe("модуль users", () => {
     });
   });
 
+  describe("филиал пользователя — справочная приписка (этап 1 плана филиалов)", () => {
+    it("несуществующий филиал — 404, а не 500 от внешнего ключа", async () => {
+      const res = await send("post", "/users", "ADMIN", {
+        password: "12345678",
+        firstName: "A",
+        lastName: "B",
+        role: "STUDENT",
+        branchId: "no-such-branch",
+      });
+      expect(res.status).toBe(404);
+      expect(res.body.message).toBe("branchNotFound");
+    });
+
+    it("создание и фильтр списка по филиалу", async () => {
+      const branch = await testDb().branch.create({ data: { name: `Users-${Date.now().toString(36)}` } });
+      const res = await send("post", "/users", "ADMIN", {
+        password: "12345678",
+        firstName: "Филиальный",
+        lastName: "Ученик",
+        role: "STUDENT",
+        branchId: branch.id,
+      });
+      expect(res.status).toBe(201);
+      expect(res.body.branchId).toBe(branch.id);
+
+      const filtered = await get(`/users?branchId=${branch.id}`, "ADMIN");
+      expect(filtered.body.map((u: { id: string }) => u.id)).toContain(res.body.id);
+      expect(filtered.body.every((u: { branchId: string | null }) => u.branchId === branch.id)).toBe(true);
+    });
+
+    it("PATCH пустой строкой очищает приписку к филиалу", async () => {
+      const branch = await testDb().branch.create({ data: { name: `Users2-${Date.now().toString(36)}` } });
+      const target = await createUser({ role: "STUDENT" });
+      await testDb().user.update({ where: { id: target.id }, data: { branchId: branch.id } });
+
+      const res = await send("patch", `/users/${target.id}`, "ADMIN", { branchId: "" });
+      expect(res.status).toBe(200);
+      expect(res.body.branchId).toBeNull();
+    });
+  });
+
   describe("деактивация и удаление", () => {
     it("нельзя выключить или стереть себя", async () => {
       expect((await send("post", `/users/${ids.ADMIN}/deactivate`, "ADMIN")).body.message).toBe(

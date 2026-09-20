@@ -1,11 +1,13 @@
 import { requireRole } from "@/lib/auth-guard";
 import { getUsers, getDeactivatedUsers } from "@/lib/api/users.server";
+import { getBranches } from "@/lib/api/branches.server";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart3, Plus } from "lucide-react";
 import { UserList } from "./user-list";
 import { DeactivatedUserList } from "./deactivated-user-list";
+import { BranchFilter } from "@/components/branch-filter";
 import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +20,7 @@ interface ActiveUser {
   email: string | null;
   role: string;
   isActive: boolean;
+  branch: { id: string; name: string } | null;
 }
 
 interface DeactivatedUser {
@@ -30,27 +33,38 @@ interface DeactivatedUser {
   telegramChatId: string | null;
 }
 
-export default async function UsersPage() {
+interface UsersPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function UsersPage({ searchParams }: UsersPageProps) {
   const session = await requireRole(["ADMIN", "TEACHER"]);
   const canManageUsers = session.user.role === "ADMIN";
 
+  const params = await searchParams;
+  const branchId = typeof params.branchId === "string" && params.branchId ? params.branchId : undefined;
+
   // Вкладка деактивированных — только для администратора, поэтому и запрос
   // делаем только ему: преподавателю действие всё равно ответит "forbidden".
-  const [usersResult, deactivatedResult] = await Promise.all([
-    getUsers(),
+  const [usersResult, deactivatedResult, branchesResult] = await Promise.all([
+    getUsers(branchId),
     canManageUsers ? getDeactivatedUsers() : null,
+    getBranches(),
   ]);
 
   const allUsers = usersResult.success && usersResult.data ? usersResult.data : [];
   const activeUsers = allUsers.filter((user) => user.isActive);
   const deactivatedUsers =
     deactivatedResult?.success && deactivatedResult.data ? deactivatedResult.data : [];
+  const branches = branchesResult.success && branchesResult.data ? branchesResult.data : [];
 
   return (
     <UsersPageContent
       users={activeUsers}
       deactivatedUsers={deactivatedUsers}
       canManageUsers={canManageUsers}
+      branchId={branchId}
+      branches={branches}
     />
   );
 }
@@ -59,10 +73,14 @@ async function UsersPageContent({
   users,
   deactivatedUsers,
   canManageUsers,
+  branchId,
+  branches,
 }: {
   users: ActiveUser[];
   deactivatedUsers: DeactivatedUser[];
   canManageUsers: boolean;
+  branchId?: string;
+  branches: { id: string; name: string }[];
 }) {
   const t = await getTranslations("users");
 
@@ -86,6 +104,10 @@ async function UsersPageContent({
             </Link>
           )}
         </div>
+      </div>
+
+      <div className="mb-4">
+        <BranchFilter branchId={branchId} branches={branches} namespace="users" />
       </div>
 
       {canManageUsers ? (

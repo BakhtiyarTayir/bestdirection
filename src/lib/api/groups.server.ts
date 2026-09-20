@@ -12,7 +12,8 @@ import { apiServerFetch } from "./server";
 
 // Те же маршруты групп для серверных компонентов, см. users.server.
 
-export const getAllGroups = () => apiServerFetch<ApiGroupWithCourse[]>("/groups");
+export const getAllGroups = (branchId?: string) =>
+  apiServerFetch<ApiGroupWithCourse[]>("/groups", { query: { branchId } });
 
 export const getCourseGroups = (courseId: string) =>
   apiServerFetch<ApiGroup[]>("/groups/by-course", { query: { courseId } });

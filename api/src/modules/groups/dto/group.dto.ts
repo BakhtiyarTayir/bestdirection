@@ -36,11 +36,15 @@ const groupFields = {
 export const createGroupSchema = z.object({
   courseId: z.string().min(1, "courseRequired").max(40),
   name: z.string().min(1, "groupNameRequired").max(100, "maxChars100"),
+  // Обязателен: группа всегда занимается в конкретном филиале (решение
+  // владельца 2026-09-20). Имя группы уникально внутри (courseId, branchId).
+  branchId: z.string().min(1, "branchRequired").max(40),
   ...groupFields,
 });
 
 export const updateGroupSchema = z.object({
   name: z.string().min(1, "groupNameRequired").max(100, "maxChars100").optional(),
+  branchId: z.string().min(1, "branchRequired").max(40).optional(),
   ...groupFields,
 });
 
@@ -54,6 +58,7 @@ export const moveStudentSchema = z.object({
 });
 
 export const courseIdQuerySchema = z.object({ courseId: z.string().min(1).max(40) });
+export const groupsQuerySchema = z.object({ branchId: z.string().max(40).optional() });
 export const removeStudentQuerySchema = z.object({
   // true — отчислить с курса совсем, иначе только убрать из группы
   alsoUnenroll: z.coerce.boolean().default(false),
@@ -64,4 +69,5 @@ export class UpdateGroupDto extends createZodDto(updateGroupSchema) {}
 export class AddStudentsDto extends createZodDto(addStudentsSchema) {}
 export class MoveStudentDto extends createZodDto(moveStudentSchema) {}
 export class CourseIdQueryDto extends createZodDto(courseIdQuerySchema) {}
+export class GroupsQueryDto extends createZodDto(groupsQuerySchema) {}
 export class RemoveStudentQueryDto extends createZodDto(removeStudentQuerySchema) {}

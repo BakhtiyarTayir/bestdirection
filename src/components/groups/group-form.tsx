@@ -22,6 +22,7 @@ interface GroupFormProps {
   group?: {
     id: string;
     name: string;
+    branchId: string;
     description: string | null;
     schedule: string | null;
     scheduleDays: number[];
@@ -33,6 +34,8 @@ interface GroupFormProps {
   };
   /** Кандидаты в преподаватели группы; пустой список прячет поле */
   teachers?: { id: string; firstName: string; lastName: string }[];
+  /** Филиалы — справочник; поле обязательно (решение владельца 2026-09-20) */
+  branches: { id: string; name: string }[];
 }
 
 /** ISO: 1 = понедельник … 7 = воскресенье */
@@ -46,11 +49,12 @@ const WEEKDAYS = [
   { iso: 7, key: "sun" },
 ] as const;
 
-export function GroupForm({ courseId, courseSlug, group, teachers = [] }: GroupFormProps) {
+export function GroupForm({ courseId, courseSlug, group, teachers = [], branches }: GroupFormProps) {
   const t = useTranslations("groups");
   const tWeekdays = useTranslations("weekdays");
   const tCommon = useTranslations("common");
   const tErrors = useTranslations("errors");
+  const tValidation = useTranslations("validation");
   const tDatePicker = useTranslations("datePicker");
   const { toast } = useToast();
   const router = useRouter();
@@ -66,6 +70,7 @@ export function GroupForm({ courseId, courseSlug, group, teachers = [] }: GroupF
     resolver: zodResolver(createGroupSchema),
     defaultValues: {
       name: group?.name || "",
+      branchId: group?.branchId || branches[0]?.id || "",
       description: group?.description || "",
       schedule: group?.schedule || "",
       teacherId: group?.teacherId || "",
@@ -100,6 +105,25 @@ export function GroupForm({ courseId, courseSlug, group, teachers = [] }: GroupF
         <Input id="name" {...register("name")} placeholder={t("groupNamePlaceholder")} />
         {errors.name && (
           <p className="text-sm text-destructive">{errors.name.message}</p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="branchId">{t("branch")}</Label>
+        <select
+          id="branchId"
+          {...register("branchId")}
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {branches.length === 0 && <option value="">{t("selectBranchPlaceholder")}</option>}
+          {branches.map((branch) => (
+            <option key={branch.id} value={branch.id}>
+              {branch.name}
+            </option>
+          ))}
+        </select>
+        {errors.branchId && (
+          <p className="text-sm text-destructive">{tValidation.has(errors.branchId.message ?? "") ? tValidation(errors.branchId.message as never) : errors.branchId.message}</p>
         )}
       </div>
 

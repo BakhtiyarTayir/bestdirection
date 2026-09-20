@@ -19,6 +19,10 @@ export interface LedgerFilters {
   courseId?: string;
   groupId?: string;
   studentId?: string;
+  // У Enrollment своего филиала нет (ловушка 3.8.3 плана филиалов): фильтр
+  // идёт через группу, а записи без группы при этом фильтре не попадают —
+  // это решает вызывающий код (withoutGroup в счётчиках должников)
+  branchId?: string;
 }
 
 /**
@@ -68,6 +72,7 @@ export class BillingLedgerService {
         ...(filters.courseId ? { courseId: filters.courseId } : {}),
         ...(filters.groupId ? { groupId: filters.groupId } : {}),
         ...(filters.studentId ? { studentId: filters.studentId } : {}),
+        ...(filters.branchId ? { group: { is: { branchId: filters.branchId } } } : {}),
       },
       select: {
         id: true,

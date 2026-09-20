@@ -1,5 +1,6 @@
 import { requireRole } from "@/lib/auth-guard";
 import { getUserById } from "@/lib/api/users.server";
+import { getBranches } from "@/lib/api/branches.server";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { EditUserForm } from "./edit-user-form";
@@ -23,17 +24,22 @@ export default async function EditUserPage({ params }: EditUserPageProps) {
 
   const user = result.data;
 
-  return <EditUserPageContent user={user} />;
+  const branchesResult = await getBranches();
+  const branches = (branchesResult.success && branchesResult.data ? branchesResult.data : []).filter(
+    (branch) => branch.isActive || branch.id === user.branchId
+  );
+
+  return <EditUserPageContent user={user} branches={branches} />;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function EditUserPageContent({ user }: { user: any }) {
+async function EditUserPageContent({ user, branches }: { user: any; branches: { id: string; name: string }[] }) {
   const t = await getTranslations("users");
 
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">{t("editUser")}</h1>
-      <EditUserForm user={user} />
+      <EditUserForm user={user} branches={branches} />
       {/* Родители — только у учеников: у остальных ролей связь не имеет смысла */}
       {user.role === "STUDENT" && <ParentsPanel studentId={user.id} />}
     </div>

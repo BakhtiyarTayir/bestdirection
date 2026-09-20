@@ -8,6 +8,7 @@ import {
   DebtorsQueryDto,
   MonthQueryDto,
   PaymentFiltersDto,
+  StudentsQueryDto,
   UpdateEnrollmentBillingDto,
 } from "./dto/billing.dto";
 import { PaymentsService } from "./payments.service";
@@ -38,8 +39,8 @@ export class BillingController {
 
   @CheckPolicies(adminOnly)
   @Get("students")
-  studentsOverview() {
-    return this.billing.studentsOverview();
+  studentsOverview(@Query() query: StudentsQueryDto) {
+    return this.billing.studentsOverview(query.branchId);
   }
 
   @CheckPolicies(adminOnly)

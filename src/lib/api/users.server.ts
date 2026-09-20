@@ -13,7 +13,7 @@ import type {
 // внутренней сети с пробросом куки. Отдельный модуль, потому что ./server
 // импортирует next/headers — в браузерный бандл он попасть не должен.
 
-export const getUsers = () => apiServerFetch<ApiUser[]>("/users");
+export const getUsers = (branchId?: string) => apiServerFetch<ApiUser[]>("/users", { query: { branchId } });
 export const getDeactivatedUsers = () => apiServerFetch<ApiDeactivatedUser[]>("/users/deactivated");
 export const getTeachers = () => apiServerFetch<ApiTeacher[]>("/users/teachers");
 export const getUserById = (id: string) => apiServerFetch<ApiUser>(`/users/${id}`);
