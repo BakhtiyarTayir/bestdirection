@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generateUniqueLogin, loginBaseFromEmail, loginBaseFromName, LOGIN_REGEX } from "./login-generator";
+import { generateUniqueLogin, loginBaseFromName, LOGIN_REGEX } from "./login-generator";
 
 /** Заглушка prismaUnscoped: занятыми считаются перечисленные логины. */
 const prismaWith = (takenLogins: string[]) => ({
@@ -21,8 +21,7 @@ describe("генератор логинов", () => {
   });
 
   // База длиной ровно в предел: раньше `${base}${suffix}`.slice(0, 30) возвращал
-  // саму базу, кандидат не менялся и цикл крутился вечно — контейнер api,
-  // вызывающий это при старте (backfill), не поднимался бы вовсе.
+  // саму базу, кандидат не менялся и цикл крутился вечно
   it("не зацикливается на базе предельной длины", async () => {
     const base = "a".repeat(30);
     const login = await generateUniqueLogin(prismaWith([base]), base);
@@ -41,9 +40,7 @@ describe("генератор логинов", () => {
     expect(login.length).toBeLessThanOrEqual(30);
   });
 
-  it("из почты берёт локальную часть, из имени — транслитерацию", async () => {
-    expect(loginBaseFromEmail("Ivan.Ivanov@gmail.com")).toBe("ivan.ivanov");
-    expect(loginBaseFromEmail("ab@gmail.com")).toBeNull();
+  it("из имени и фамилии делает транслитерацию", async () => {
     expect(loginBaseFromName("Иван", "Иванов")).toBe("ivan.ivanov");
   });
 

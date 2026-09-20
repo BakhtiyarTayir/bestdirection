@@ -16,7 +16,6 @@ export const createParentSchema = z.object({
   firstName: z.string().trim().min(1).max(100),
   lastName: z.string().trim().min(1).max(100),
   phone: z.string().trim().min(1).max(30),
-  email: z.union([z.string().trim().email("emailInvalid").max(200), z.literal("")]).optional(),
   relation: relation.optional(),
   isPrimary: z.boolean().optional(),
 });

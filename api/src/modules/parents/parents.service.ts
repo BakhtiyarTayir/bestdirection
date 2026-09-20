@@ -1,7 +1,9 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "node:crypto";
+import { Prisma } from "../../../generated/prisma";
 import { AuditService } from "../../common/audit/audit.service";
+import { generateUniqueLogin, loginBaseFromName } from "../../common/auth/login-generator";
 import type { SessionUser } from "../../common/auth/session-user";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import type { CreateParentDto, LinkParentDto, UpdateLinkDto } from "./dto/parent.dto";
@@ -11,7 +13,6 @@ const PARENT_SELECT = {
   firstName: true,
   lastName: true,
   phone: true,
-  email: true,
   isActive: true,
 } as const;
 
@@ -20,7 +21,6 @@ const STUDENT_SELECT = {
   firstName: true,
   lastName: true,
   phone: true,
-  email: true,
 } as const;
 
 /** Перенесено из src/actions/parent-actions.ts в web. */
@@ -158,51 +158,61 @@ export class ParentsService {
     if (!student) throw new NotFoundException("userNotFound");
     if (student.role !== "STUDENT") throw new BadRequestException("notAStudent");
 
-    // Без фильтра мягкого удаления: почту держит занятой любая строка в
-    // таблице, в том числе деактивированная
-    const email = data.email?.trim() ? data.email.trim() : null;
-    const emailTaken = email
-      ? await this.prismaService.prismaUnscoped.user.findUnique({ where: { email }, select: { id: true } })
-      : null;
-    if (emailTaken) throw new ConflictException("emailAlreadyExists");
+    // Логин обязателен (login NOT NULL) — у родителя своей формы логина нет,
+    // он генерируется так же, как в форме создания пользователя
+    const login = await generateUniqueLogin(
+      this.prismaService.prismaUnscoped,
+      loginBaseFromName(data.firstName, data.lastName)
+    );
 
     // Пароль случайный: родителя заводит администратор, вход — через Telegram
-    // или восстановление пароля по почте. Пустой passwordHash оставлять нельзя,
-    // иначе форма входа сравнивает с null.
+    // или восстановление пароля по нему (сброс кодом в Telegram). Пустой
+    // passwordHash оставлять нельзя, иначе форма входа сравнивает с null.
     const passwordHash = await bcrypt.hash(randomBytes(24).toString("hex"), 10);
 
-    const result = await this.prisma.$transaction(async (tx) => {
-      const parent = await tx.user.create({
-        data: {
-          passwordHash,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          phone: data.phone,
-          role: "PARENT",
-          email,
-        },
-        select: PARENT_SELECT,
-      });
-
-      if (data.isPrimary) {
-        await tx.parentStudent.updateMany({
-          where: { studentId: data.studentId, isPrimary: true },
-          data: { isPrimary: false },
+    let result;
+    try {
+      result = await this.prisma.$transaction(async (tx) => {
+        const parent = await tx.user.create({
+          data: {
+            login,
+            passwordHash,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            phone: data.phone,
+            role: "PARENT",
+          },
+          select: PARENT_SELECT,
         });
-      }
 
-      const link = await tx.parentStudent.create({
-        data: {
-          parentId: parent.id,
-          studentId: data.studentId,
-          relation: data.relation ?? "OTHER",
-          isPrimary: data.isPrimary ?? false,
-        },
-        select: { id: true },
+        if (data.isPrimary) {
+          await tx.parentStudent.updateMany({
+            where: { studentId: data.studentId, isPrimary: true },
+            data: { isPrimary: false },
+          });
+        }
+
+        const link = await tx.parentStudent.create({
+          data: {
+            parentId: parent.id,
+            studentId: data.studentId,
+            relation: data.relation ?? "OTHER",
+            isPrimary: data.isPrimary ?? false,
+          },
+          select: { id: true },
+        });
+
+        return { parent, link };
       });
-
-      return { parent, link };
-    });
+    } catch (error) {
+      // Гонка на логине: крайне маловероятна (генератор уже проверил
+      // занятость), но точка входа публична для персонала — лучше понятная
+      // ошибка, чем 500
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw new ConflictException("loginExists");
+      }
+      throw error;
+    }
 
     await this.audit.record({
       userId: actor.id,
