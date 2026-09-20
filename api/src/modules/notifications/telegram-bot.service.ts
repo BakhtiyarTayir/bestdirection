@@ -82,6 +82,24 @@ export class TelegramBotService implements OnModuleDestroy {
     // бесконечно повторяет обновление и очередь бота встаёт.
     bot.catch((err) => this.logger.error(`Ошибка бота: ${String(err.error)}`));
 
+    // Telegram позволяет сменить @имя в любой момент, а в базе оно записано
+    // в момент привязки и само не обновляется — ссылка «Написать в Telegram»
+    // на карточках людей (4.2) вела бы в никуда. Обновляем при КАЖДОМ
+    // взаимодействии с ботом, а не только при входе/привязке.
+    bot.use(async (ctx, next) => {
+      const chatId = ctx.chat ? String(ctx.chat.id) : null;
+      const username = ctx.from?.username ?? null;
+      if (chatId && username) {
+        await this.prisma.user
+          .updateMany({
+            where: { telegramChatId: chatId, telegramUsername: { not: username } },
+            data: { telegramUsername: username },
+          })
+          .catch(() => undefined);
+      }
+      await next();
+    });
+
     bot.command("start", async (ctx) => {
       const code = ctx.match;
       if (code && code.startsWith("login_")) {
