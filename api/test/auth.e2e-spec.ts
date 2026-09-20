@@ -3,26 +3,14 @@ import { randomBytes } from "node:crypto";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createTestApp, createUser, sessionCookie, TEST_APP_URL, testDb, type TestApp } from "./helpers";
-import { hashVerificationCode } from "../src/common/email/codes";
-import { EmailService } from "../src/common/email/email.service";
 import { TelegramNotifyService } from "../src/common/telegram/telegram-notify.service";
 
 // Предел попыток входа в тестах поднят через vitest.config.mts: проверок
 // здесь больше, чем разрешено в проде.
-
-/** Письма никуда не уходят: запоминаем, кому и какой код «отправили». */
-class EmailStub {
-  readonly sent: { to: string; code: string; kind: string }[] = [];
-
-  isConfigured() {
-    return true;
-  }
-
-  async sendVerificationCode(to: string, code: string, _locale: string, kind = "register") {
-    this.sent.push({ to, code, kind });
-    return true;
-  }
-}
+//
+// Почта убрана целиком (шаг 2 отказа от почты, PLAN-SALARY-PROFILE-BRANCH-2026-09-20.md,
+// 4.1): вход только по логину, самостоятельная регистрация закрыта, сброс
+// пароля без администратора — только через Telegram.
 
 /** Сообщения в Telegram никуда не уходят: запоминаем, куда и что «отправили». */
 class TelegramNotifyStub {
@@ -38,22 +26,18 @@ describe("вход и сессии", () => {
   let app: TestApp;
   const run = Date.now().toString(36);
   const password = "pravilnyy-parol-123";
-  const emailOf = (name: string) => `${name}-${run}@test.local`;
+  const loginOf = (name: string) => `${name}-${run}`;
 
-  const email = new EmailStub();
   const telegram = new TelegramNotifyStub();
 
   beforeAll(async () => {
     app = await createTestApp({
-      overrides: [
-        { provide: EmailService, useValue: email },
-        { provide: TelegramNotifyService, useValue: telegram },
-      ],
+      overrides: [{ provide: TelegramNotifyService, useValue: telegram }],
     });
 
     await testDb().user.create({
       data: {
-        email: emailOf("student"),
+        login: loginOf("student"),
         passwordHash: await bcrypt.hash(password, 10),
         firstName: "Иван",
         lastName: "Петров",
@@ -63,7 +47,7 @@ describe("вход и сессии", () => {
 
     await testDb().user.create({
       data: {
-        email: emailOf("vyklyuchennyy"),
+        login: loginOf("vyklyuchennyy"),
         passwordHash: await bcrypt.hash(password, 10),
         firstName: "Выключенный",
         lastName: "Аккаунт",
@@ -89,9 +73,9 @@ describe("вход и сессии", () => {
 
   describe("вход по паролю", () => {
     it("верный пароль заводит сессию и ставит куку", async () => {
-      const res = await post("/auth/login", { login: emailOf("student"), password });
+      const res = await post("/auth/login", { login: loginOf("student"), password });
       expect(res.status).toBe(201);
-      expect(res.body.user.email).toBe(emailOf("student"));
+      expect(res.body.user.login).toBe(loginOf("student"));
 
       const cookie = sessionCookieOf(res);
       expect(cookie).toBeTruthy();
@@ -108,7 +92,7 @@ describe("вход и сессии", () => {
     });
 
     it("в базе лежит хэш токена, а не сам токен", async () => {
-      const res = await post("/auth/login", { login: emailOf("student"), password });
+      const res = await post("/auth/login", { login: loginOf("student"), password });
       const cookie = sessionCookieOf(res)!;
       const token = cookie.split("=")[1];
 
@@ -117,22 +101,22 @@ describe("вход и сессии", () => {
       expect(rows.every((row) => row.tokenHash !== token)).toBe(true);
     });
 
-    it("неверный пароль, неизвестный адрес и выключенный аккаунт отвечают одинаково", async () => {
+    it("неверный пароль, неизвестный логин и выключенный аккаунт отвечают одинаково", async () => {
       const wrongPassword = await post("/auth/login", {
-        login: emailOf("student"),
+        login: loginOf("student"),
         password: "nepravilnyy-parol",
       });
-      const unknownEmail = await post("/auth/login", {
-        login: emailOf("takogo-net"),
+      const unknownLogin = await post("/auth/login", {
+        login: loginOf("takogo-net"),
         password,
       });
       const disabled = await post("/auth/login", {
-        login: emailOf("vyklyuchennyy"),
+        login: loginOf("vyklyuchennyy"),
         password,
       });
 
-      // Аудит 2.12: по ответу нельзя понять, заведён ли адрес
-      for (const res of [wrongPassword, unknownEmail, disabled]) {
+      // Аудит 2.12: по ответу нельзя понять, заведён ли логин
+      for (const res of [wrongPassword, unknownLogin, disabled]) {
         expect(res.status).toBe(401);
         expect(res.body.message).toBe("invalidCredentials");
       }
@@ -141,7 +125,7 @@ describe("вход и сессии", () => {
 
   describe("выход и обрыв сессий", () => {
     it("после выхода кука больше не пускает", async () => {
-      const login = await post("/auth/login", { login: emailOf("student"), password });
+      const login = await post("/auth/login", { login: loginOf("student"), password });
       const cookie = sessionCookieOf(login)!;
 
       expect((await http().get("/api/v2/auth/me").set("Cookie", cookie)).status).toBe(200);
@@ -152,54 +136,13 @@ describe("вход и сессии", () => {
       expect((await http().get("/api/v2/auth/me").set("Cookie", cookie)).status).toBe(401);
     });
 
-    it("смена пароля обрывает все сессии (аудит 2.1)", async () => {
-      const user = await testDb().user.create({
-        data: {
-          email: emailOf("sbros"),
-          passwordHash: await bcrypt.hash(password, 10),
-          firstName: "Сброс",
-          lastName: "Пароля",
-          role: "STUDENT",
-        },
-      });
-
-      const first = sessionCookieOf(
-        await post("/auth/login", { login: user.email!, password })
-      )!;
-      const second = sessionCookieOf(
-        await post("/auth/login", { login: user.email!, password })
-      )!;
-
-      // Код сброса кладём руками: письмо в тестах не уходит
-      const code = "123456";
-      await testDb().emailVerificationCode.create({
-        data: {
-          email: user.email!,
-          codeHash: hashVerificationCode(user.email!, code),
-          expiresAt: new Date(Date.now() + 60_000),
-        },
-      });
-
-      const reset = await post("/auth/password/reset", {
-        email: user.email,
-        code,
-        newPassword: "novyy-parol-12345",
-      });
-      expect(reset.status).toBe(201);
-
-      for (const cookie of [first, second]) {
-        expect((await http().get("/api/v2/auth/me").set("Cookie", cookie)).status).toBe(401);
-      }
-
-      // Новый пароль работает, старый — нет
-      expect((await post("/auth/login", { login: user.email, password })).status).toBe(401);
-      expect(
-        (await post("/auth/login", { login: user.email, password: "novyy-parol-12345" })).status
-      ).toBe(201);
-    });
+    // Смена пароля обрывает все сессии (аудит 2.1) — покрыто ниже для обоих
+    // путей смены: администратором (api/test/users.e2e-spec.ts, «PATCH с
+    // password…») и самим пользователем через Telegram («сброс пароля через
+    // Telegram» дальше в этом файле). Почтового пути с шага 2 больше нет.
 
     it("истёкшая сессия не пускает", async () => {
-      const login = await post("/auth/login", { login: emailOf("student"), password });
+      const login = await post("/auth/login", { login: loginOf("student"), password });
       const cookie = sessionCookieOf(login)!;
 
       const rows = await testDb().session.findMany({ orderBy: { createdAt: "desc" }, take: 1 });
@@ -216,14 +159,14 @@ describe("вход и сессии", () => {
     it("выключение аккаунта обрывает открытую сессию (аудит 2.1)", async () => {
       const user = await testDb().user.create({
         data: {
-          email: emailOf("otklyuchat"),
+          login: loginOf("otklyuchat"),
           passwordHash: await bcrypt.hash(password, 10),
           firstName: "Будет",
           lastName: "Выключен",
           role: "STUDENT",
         },
       });
-      const cookie = sessionCookieOf(await post("/auth/login", { login: user.email!, password }))!;
+      const cookie = sessionCookieOf(await post("/auth/login", { login: user.login!, password }))!;
       expect((await http().get("/api/v2/auth/me").set("Cookie", cookie)).status).toBe(200);
 
       const admin = await createUser({ role: "ADMIN" });
@@ -247,97 +190,11 @@ describe("вход и сессии", () => {
     });
   });
 
-  describe("регистрация", () => {
-    it("занятый адрес отвечает так же, как свободный (аудит 2.12)", async () => {
-      const free = await post("/auth/email/request-code", { email: emailOf("svobodnyy") });
-      const taken = await post("/auth/email/request-code", { email: emailOf("student") });
-
-      // Ответы неотличимы — по ним нельзя проверить, кто зарегистрирован
-      expect(free.status).toBe(taken.status);
-      expect(free.body).toEqual(taken.body);
-      expect(taken.body.ok).toBe(true);
-
-      // Письмо и код появляются только у свободного адреса
-      expect(email.sent.some((letter) => letter.to === emailOf("svobodnyy"))).toBe(true);
-      expect(email.sent.some((letter) => letter.to === emailOf("student"))).toBe(false);
-      expect(
-        await testDb().emailVerificationCode.findUnique({ where: { email: emailOf("student") } })
-      ).toBeNull();
-    });
-
-    it("регистрация проходит только с верным кодом", async () => {
-      const email = emailOf("novichok");
-      const code = "654321";
-      await testDb().emailVerificationCode.create({
-        data: {
-          email,
-          codeHash: hashVerificationCode(email, code),
-          expiresAt: new Date(Date.now() + 60_000),
-        },
-      });
-
-      const wrong = await post("/auth/register", {
-        firstName: "Новый",
-        lastName: "Ученик",
-        email,
-        password,
-        code: "000000",
-      });
-      expect(wrong.status).toBe(400);
-      expect(wrong.body.message).toBe("invalidCode");
-
-      const ok = await post("/auth/register", {
-        firstName: "Новый",
-        lastName: "Ученик",
-        email,
-        password,
-        code,
-      });
-      expect(ok.status).toBe(201);
-
-      const created = await testDb().user.findUnique({ where: { email } });
-      expect(created?.role).toBe("STUDENT");
-      // Код одноразовый
-      expect(await testDb().emailVerificationCode.findUnique({ where: { email } })).toBeNull();
-    });
-
-    it("на занятый адрес зарегистрироваться нельзя", async () => {
-      const res = await post("/auth/register", {
-        firstName: "Дубль",
-        lastName: "Дублей",
-        email: emailOf("student"),
-        password,
-        code: "111111",
-      });
-      expect(res.status).toBe(400);
-      expect(res.body.message).toBe("emailAlreadyExists");
-    });
-  });
-
-  describe("восстановление пароля", () => {
-    it("неизвестный адрес отвечает как известный, но письма не получает (аудит 2.12)", async () => {
-      const unknown = await post("/auth/password/request-reset", { email: emailOf("nikogo") });
-      const known = await post("/auth/password/request-reset", { email: emailOf("student") });
-
-      expect(unknown.status).toBe(known.status);
-      expect(unknown.body).toEqual(known.body);
-
-      expect(email.sent.some((letter) => letter.to === emailOf("nikogo"))).toBe(false);
-      expect(
-        email.sent.some((letter) => letter.to === emailOf("student") && letter.kind === "reset")
-      ).toBe(true);
-    });
-
-    it("письмо со сбросом приходит с рабочим кодом", async () => {
-      const letter = email.sent.filter((item) => item.kind === "reset").at(-1)!;
-      const res = await post("/auth/password/reset", {
-        email: letter.to,
-        code: letter.code,
-        newPassword: "eshche-odin-parol-123",
-      });
-      expect(res.status).toBe(201);
-    });
-  });
+  // Самостоятельная регистрация и почтовый сброс пароля убраны целиком на
+  // шаге 2 отказа от почты: маршрутов /auth/email/*, /auth/register и
+  // /auth/password/request-reset|reset в api больше нет, проверять нечего.
+  // Учеников заводит администратор (api/test/users.e2e-spec.ts), сброс без
+  // администратора — только через Telegram (см. ниже).
 
   describe("совместимость со старой сессией web", () => {
     it("кука NextAuth пока тоже пускает", async () => {
@@ -350,18 +207,8 @@ describe("вход и сессии", () => {
     });
   });
 
-  // Шаг 1 отказа от почты (PLAN-SALARY-PROFILE-BRANCH-2026-09-20.md, 4.1):
-  // вход принимает логин наравне с почтой.
+  // Формат и регистр логина (шаг 2 отказа от почты, PLAN-SALARY-PROFILE-BRANCH-2026-09-20.md, 4.1)
   describe("вход по логину", () => {
-    it("логин заводит сессию так же, как почта", async () => {
-      const user = await createUser({ role: "STUDENT", password });
-      await testDb().user.update({ where: { id: user.id }, data: { login: `login-${user.id}` } });
-
-      const res = await post("/auth/login", { login: `login-${user.id}`, password });
-      expect(res.status).toBe(201);
-      expect(res.body.user.id).toBe(user.id);
-    });
-
     it("регистр логина не влияет на вход", async () => {
       const user = await createUser({ role: "STUDENT", password });
       // В базе логин всегда в нижнем регистре (DTO приводит на входе) —
@@ -380,7 +227,7 @@ describe("вход и сессии", () => {
     });
   });
 
-  // Второй, независимый от почты путь сброса пароля (4.1, «Путь 2»)
+  // Единственный самостоятельный путь сброса пароля после ухода почты (4.1, «Путь 2»)
   describe("сброс пароля через Telegram", () => {
     it("неизвестный логин отвечает нейтрально и не шлёт сообщение", async () => {
       const before = telegram.sent.length;
@@ -391,7 +238,7 @@ describe("вход и сессии", () => {
     });
 
     it("логин без привязанного Telegram отвечает так же нейтрально", async () => {
-      const user = await createUser({ role: "STUDENT", password, login: null });
+      const user = await createUser({ role: "STUDENT", password });
       await testDb().user.update({ where: { id: user.id }, data: { login: `notg-${user.id}` } });
 
       const before = telegram.sent.length;

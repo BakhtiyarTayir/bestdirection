@@ -67,14 +67,13 @@ export async function createUser(data: {
   deletedAt?: Date | null;
   password?: string;
   telegramChatId?: string | null;
-  /** По умолчанию не задан — большинство тестов логин не проверяют */
+  /** login NOT NULL с шага 2 отказа от почты — по умолчанию генерируется, большинство тестов его не проверяют */
   login?: string | null;
 }) {
   const id = randomUUID().slice(0, 8);
   return testDb().user.create({
     data: {
-      email: `${data.role.toLowerCase()}-${id}@test.uz`,
-      login: data.login ?? null,
+      login: data.login ?? `${data.role.toLowerCase()}-${id}`,
       firstName: data.role,
       lastName: id,
       role: data.role,
@@ -105,7 +104,7 @@ export { SESSION_COOKIE } from "../src/common/auth/sessions.service";
  * параметр оставлен, чтобы не переписывать вызовы во всех тестах.
  */
 export async function sessionCookie(
-  user: { id: string; email?: string | null },
+  user: { id: string },
   _options: { roleInToken?: Role } = {}
 ) {
   const token = randomBytes(32).toString("hex");

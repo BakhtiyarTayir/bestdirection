@@ -43,7 +43,6 @@ describe("сессия в api (аудит 2.1)", () => {
       id: user.id,
       role: "TEACHER",
       login: user.login,
-      email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
     });
