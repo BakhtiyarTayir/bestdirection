@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 
 interface WithAuthOptions {
   roles?: string[];
@@ -14,7 +14,7 @@ export async function withAuth<T extends { success: true; [key: string]: any }>(
   options?: WithAuthOptions
 ): Promise<T | ActionError> {
   try {
-    const session = await auth();
+    const session = await getSession();
     if (!session?.user) {
       return { success: false, error: "unauthorized" };
     }

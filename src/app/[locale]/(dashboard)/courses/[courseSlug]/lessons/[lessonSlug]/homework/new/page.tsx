@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { HomeworkForm } from "@/components/homework/homework-form";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ interface NewHomeworkPageProps {
 }
 
 export default async function NewHomeworkPage({ params }: NewHomeworkPageProps) {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user) redirect("/login");
 
   if (session.user.role !== "ADMIN" && session.user.role !== "TEACHER") {

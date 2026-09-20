@@ -1,4 +1,4 @@
-import { auth } from "./auth";
+import { getSession } from "./session";
 import { redirect } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import { defaultLocale } from "@/i18n/config";
@@ -18,7 +18,7 @@ async function localizedPath(path: string) {
 }
 
 export async function requireAuth() {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user) redirect(await localizedPath("/login"));
   return session;
 }

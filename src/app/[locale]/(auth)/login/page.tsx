@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { loginWithPassword } from "@/lib/api/auth";
 import { useRouter } from "@/i18n/navigation";
 import { Link } from "@/i18n/navigation";
 import { useTranslations, useLocale } from "next-intl";
@@ -47,16 +47,13 @@ export default function LoginPage() {
         : "/dashboard";
     const safeCallbackUrl = normalizeForLocalizedRouter(safeCallbackUrlRaw);
 
-    const result = await signIn("credentials", {
-      email: data.email,
-      password: data.password,
-      redirect: false,
-      callbackUrl: safeCallbackUrl,
-    });
+    const result = await loginWithPassword(data.email, data.password);
 
-    if (result?.error) {
+    if (!result.success) {
+      // api отвечает одинаково на неверный пароль и неизвестный адрес —
+      // иначе форма превращается в проверку «кто зарегистрирован»
       setError(
-        result.code === "too_many_attempts"
+        result.error === "tooManyRequests"
           ? t("tooManyLoginAttempts")
           : t("invalidCredentials")
       );

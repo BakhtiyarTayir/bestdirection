@@ -83,6 +83,19 @@ export class AuthController {
     return this.auth.createTelegramLoginRequest();
   }
 
+  /**
+   * Имя бота для кнопки входа. Отдаём с сервера: в сборку web оно не
+   * попадает — образ собирается из git-архива без .env.
+   */
+  @Public()
+  @Get("telegram/bot")
+  telegramBot() {
+    return {
+      username:
+        process.env.TELEGRAM_BOT_USERNAME || process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || null,
+    };
+  }
+
   /** Страница входа опрашивает статус, пока идёт подтверждение в чате. */
   @Public()
   @Throttle({ default: { limit: 120, ttl: 60_000 } })

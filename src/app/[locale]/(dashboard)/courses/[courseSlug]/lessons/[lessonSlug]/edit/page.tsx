@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { getLessonHomeworks } from "@/lib/api/homework.server";
 import { getLessonById, getTestByLesson } from "@/lib/api/lessons.server";
@@ -14,7 +14,7 @@ interface EditLessonPageProps {
 
 export default async function EditLessonPage({ params }: EditLessonPageProps) {
   const tErrors = await getTranslations("errors");
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user) redirect("/login");
 
   if (session.user.role !== "ADMIN" && session.user.role !== "TEACHER") {

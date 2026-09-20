@@ -1,16 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { signIn } from "next-auth/react";
-import { useRouter } from "@/i18n/navigation";
-import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
-import { Send } from "lucide-react";
 import {
   createTelegramLoginRequest,
   getTelegramBotUsername,
   getTelegramLoginStatus,
-} from "@/actions/telegram-auth-actions";
+  loginWithTelegramCode,
+  loginWithTelegramWidget,
+} from "@/lib/api/auth";
+import { useRouter } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
+import { Send } from "lucide-react";
 
 const POLL_INTERVAL_MS = 2500;
 
@@ -26,7 +27,7 @@ export function TelegramAuth() {
   useEffect(() => {
     let isMounted = true;
     void getTelegramBotUsername().then((result) => {
-      if (isMounted && result.data.username) {
+      if (isMounted && result.success && result.data.username) {
         setBotUsername(result.data.username);
       }
     });
@@ -38,8 +39,11 @@ export function TelegramAuth() {
 
   const finishSignIn = useCallback(
     async (provider: string, params: Record<string, string>) => {
-      const result = await signIn(provider, { ...params, redirect: false });
-      if (result?.error) {
+      const result =
+        provider === "telegram-code"
+          ? await loginWithTelegramCode(params.code)
+          : await loginWithTelegramWidget(params);
+      if (!result.success) {
         setError(t("telegramLoginFailed"));
         setWaiting(false);
         setLoginUrl(null);

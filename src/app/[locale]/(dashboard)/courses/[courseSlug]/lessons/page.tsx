@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { getLessons } from "@/lib/api/lessons.server";
@@ -14,7 +14,7 @@ interface LessonsPageProps {
 
 export default async function LessonsPage({ params }: LessonsPageProps) {
   const t = await getTranslations("lessons");
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user) redirect("/login");
 
   const { courseSlug } = await params;

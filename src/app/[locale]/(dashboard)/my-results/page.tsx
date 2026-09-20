@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { getStudentAssessmentResults } from "@/lib/api/lessons.server";
 import { Link } from "@/i18n/navigation";
@@ -35,7 +35,7 @@ async function MyResultsPageAsync({
   tAssessments: ReturnType<typeof useTranslations<"assessments">>;
   tCommon: ReturnType<typeof useTranslations<"common">>;
 }) {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user) redirect("/login");
 
   if (session.user.role !== "STUDENT") {

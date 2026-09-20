@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import {
   getHomeworkForStudent,
@@ -33,7 +33,7 @@ type StudentSubmissionsData = Extract<GetHomeworkForStudentResult, { success: tr
 
 export default async function HomeworkPage({ params }: HomeworkPageProps) {
   const { courseSlug, lessonSlug, homeworkSlug } = await params;
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user) {
     const callbackPath = `/courses/${courseSlug}/lessons/${lessonSlug}/homework/${homeworkSlug}`;
     redirect(`/login?callbackUrl=${encodeURIComponent(callbackPath)}`);
