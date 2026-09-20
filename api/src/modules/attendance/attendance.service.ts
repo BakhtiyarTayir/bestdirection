@@ -51,7 +51,7 @@ export class AttendanceService {
         records: {
           where: isStaff ? undefined : { studentId: user.id },
           include: {
-            student: { select: { id: true, firstName: true, lastName: true, email: true } },
+            student: { select: { id: true, firstName: true, lastName: true } },
           },
         },
       },
@@ -189,7 +189,7 @@ export class AttendanceService {
       where: { courseId },
       include: {
         records: {
-          include: { student: { select: { id: true, firstName: true, lastName: true, email: true } } },
+          include: { student: { select: { id: true, firstName: true, lastName: true } } },
         },
       },
       orderBy: { date: "asc" },
@@ -197,7 +197,7 @@ export class AttendanceService {
 
     const enrollments = await this.prisma.enrollment.findMany({
       where: { courseId },
-      include: { student: { select: { id: true, firstName: true, lastName: true, email: true } } },
+      include: { student: { select: { id: true, firstName: true, lastName: true } } },
       orderBy: { student: { firstName: "asc" } },
     });
 

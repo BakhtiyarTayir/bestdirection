@@ -30,7 +30,7 @@ export class AuditLogController {
     const [logs, total] = await Promise.all([
       this.prismaService.prisma.auditLog.findMany({
         where,
-        include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } },
+        include: { user: { select: { id: true, firstName: true, lastName: true } } },
         orderBy: { createdAt: "desc" },
         take: PAGE_SIZE,
         skip: (query.page - 1) * PAGE_SIZE,
