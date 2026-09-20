@@ -7,6 +7,7 @@ import {
   AddStudentsDto,
   CourseIdQueryDto,
   CreateGroupDto,
+  GroupsQueryDto,
   MoveStudentDto,
   RemoveStudentQueryDto,
   UpdateGroupDto,
@@ -25,8 +26,8 @@ export class GroupsController {
 
   @CheckPolicies((ability) => ability.can("read", "UserDirectory"))
   @Get()
-  all(@CurrentUser() user: SessionUser) {
-    return this.groups.all(user);
+  all(@CurrentUser() user: SessionUser, @Query() query: GroupsQueryDto) {
+    return this.groups.all(user, query.branchId);
   }
 
   @CheckPolicies((ability) => ability.can("read", "UserDirectory"))
