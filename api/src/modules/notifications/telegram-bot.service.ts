@@ -6,6 +6,7 @@ import { extname, join } from "node:path";
 import { AuditService } from "../../common/audit/audit.service";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { botMessages, SUBMIT_ERROR_MESSAGES } from "../../common/telegram/messages";
+import { activeEnrollmentFilter } from "../billing/billing-ledger.service";
 import { uploadDir } from "../homework/uploads.service";
 import { SubmissionsService } from "../homework/submissions.service";
 
@@ -336,14 +337,18 @@ export class TelegramBotService implements OnModuleDestroy {
 
   // ─── Сдача работ ──────────────────────────────────────────────────────
 
-  /** Опубликованные задания курсов, на которые записан ученик. */
+  /**
+   * Опубликованные задания курсов, на которые записан ученик. Отчисленный
+   * (billingEndsAt без группы) курс из списка выпадает — доступ на сдачу всё
+   * равно закрыт в SubmissionsService, но показывать его в списке незачем.
+   */
   private async studentHomeworks(studentId: string) {
     const homeworks = await this.prisma.homework.findMany({
       where: {
         isPublished: true,
         lesson: {
           isPublished: true,
-          course: { enrollments: { some: { studentId } } },
+          course: { enrollments: { some: { studentId, ...activeEnrollmentFilter() } } },
         },
       },
       select: {

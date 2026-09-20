@@ -105,8 +105,14 @@ export function defineAbilityFor(user: Pick<SessionUser, "id" | "role">): AppAbi
 
     case "STUDENT":
       can("read", "User", { id: user.id });
-      // Опубликованный курс, на который записан
-      can("read", "Course", { isPublished: true, enrollments: { some: { studentId: user.id } } });
+      // Опубликованный курс, на который записан. Отчисленный (unenrolledAt)
+      // доступ теряет — запись жива только ради истории начислений;
+      // приостановленный (billingEndsAt есть, unenrolledAt нет) курс не
+      // теряет — пауза останавливает только начисления, не доступ.
+      can("read", "Course", {
+        isPublished: true,
+        enrollments: { some: { studentId: user.id, unenrolledAt: null } },
+      });
       // Каталог и заявка на курс — только ученику
       can("read", "Catalog");
       can("create", "EnrollmentRequest");

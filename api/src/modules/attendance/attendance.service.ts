@@ -3,6 +3,7 @@ import { Prisma } from "../../../generated/prisma";
 import { AuditService } from "../../common/audit/audit.service";
 import type { SessionUser } from "../../common/auth/session-user";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { activeEnrollmentFilter } from "../billing/billing-ledger.service";
 import { canManageCourseAttendance, canManageSession, responsibleTeacherId } from "./domain/attendance-access";
 import type { CreateSessionDto, UpdateRecordsDto } from "./dto/attendance.dto";
 
@@ -34,8 +35,10 @@ export class AttendanceService {
 
     if (!isStaff) {
       if (user.role !== "STUDENT") throw new ForbiddenException("forbidden");
-      const enrollment = await this.prisma.enrollment.findUnique({
-        where: { studentId_courseId: { studentId: user.id, courseId } },
+      // Отчисленный (billingEndsAt без группы) посещаемость курса не видит —
+      // запись жива только ради истории начислений
+      const enrollment = await this.prisma.enrollment.findFirst({
+        where: { studentId: user.id, courseId, ...activeEnrollmentFilter() },
         select: { id: true },
       });
       if (!enrollment) throw new ForbiddenException("forbidden");

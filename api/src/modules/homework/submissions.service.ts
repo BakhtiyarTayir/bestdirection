@@ -13,6 +13,7 @@ import { fileSubmissionPlaceholder } from "../../common/homework-file-placeholde
 import { accessibleWhere, type AppAbility } from "../../common/policies/abilities";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { submissionMimeType } from "../../common/submission-files";
+import { activeEnrollmentFilter } from "../billing/billing-ledger.service";
 
 /**
  * Перенесено из src/actions/homework-review-actions.ts, src/lib/homework-submission.ts
@@ -56,10 +57,10 @@ export class SubmissionsService {
     });
     if (!homework) throw new NotFoundException("homeworkNotFound");
 
-    const enrollment = await this.prisma.enrollment.findUnique({
-      where: {
-        studentId_courseId: { studentId: user.id, courseId: homework.lesson.courseId },
-      },
+    // Отчисленный (billingEndsAt без группы) сдавать домашку не может —
+    // запись жива только ради истории начислений
+    const enrollment = await this.prisma.enrollment.findFirst({
+      where: { studentId: user.id, courseId: homework.lesson.courseId, ...activeEnrollmentFilter() },
       select: { id: true },
     });
     if (!enrollment) throw new ForbiddenException("notEnrolled");
