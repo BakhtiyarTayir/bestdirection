@@ -23,7 +23,7 @@ export default function LoginPage() {
   const locale = useLocale();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [showLoginForm, setShowLoginForm] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -50,8 +50,8 @@ export default function LoginPage() {
     const result = await loginWithPassword(data.login, data.password);
 
     if (!result.success) {
-      // api отвечает одинаково на неверный пароль и неизвестный адрес —
-      // иначе форма превращается в проверку «кто зарегистрирован»
+      // api отвечает одинаково на неверный пароль и неизвестный логин —
+      // иначе форма превращается в перебор логинов
       setError(
         result.error === "tooManyRequests"
           ? t("tooManyLoginAttempts")
@@ -80,17 +80,17 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <TelegramAuth />
-          {!showEmailForm && (
+          {!showLoginForm && (
             <Button
               type="button"
               variant="ghost"
               className="w-full text-muted-foreground"
-              onClick={() => setShowEmailForm(true)}
+              onClick={() => setShowLoginForm(true)}
             >
-              {t("loginWithEmail")}
+              {t("loginWithPassword")}
             </Button>
           )}
-          {showEmailForm && (
+          {showLoginForm && (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {error && (
               <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
@@ -135,12 +135,6 @@ export default function LoginPage() {
             </Button>
           </form>
           )}
-          <p className="mt-4 text-center text-sm text-muted-foreground">
-            {t("noAccount")}{" "}
-            <Link href="/register" className="text-primary hover:underline">
-              {t("register")}
-            </Link>
-          </p>
         </CardContent>
       </Card>
     </div>
