@@ -51,6 +51,9 @@ const eslintConfig = defineConfig([
       // Этап 6: рассылки и бот
       "src/app/**/admin/sms/**",
       "src/components/sms/**",
+      // Этап 8: сводка на главной и разрешение адресов
+      "src/app/**/dashboard/**",
+      "src/lib/slug-resolvers.ts",
       // Этап 7: лендинг, заявки, настройки
       "src/app/**/admin/landing/**",
       "src/app/**/admin/leads/**",
