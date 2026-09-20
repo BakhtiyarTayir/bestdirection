@@ -125,6 +125,28 @@ enum PaymentMethod {
   TRANSFER
 }
 
+/// Филиал учебного центра: адрес, где идут занятия, и касса, куда несут деньги.
+/// Филиал — свойство группы, а не курса: одну программу ведут в нескольких
+/// филиалах. У ученика и преподавателя филиал справочный, настоящая привязка
+/// идёт через группу.
+model Branch {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  address   String?
+  phone     String?
+  // Выключенный филиал не предлагается в формах, но его история остаётся
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  groups   Group[]
+  users    User[]
+  payments Payment[]
+
+  @@index([isActive])
+}
+
 model User {
   id           String    @id @default(cuid())
   number       Int       @unique @default(autoincrement())
@@ -139,6 +161,13 @@ model User {
   deletedAt    DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+
+  // Приписка справочная: настоящая привязка ученика к филиалу идёт через
+  // группу (он может ходить на курсы в разных филиалах). В форме создания
+  // обязателен, в базе — нет: вход через Telegram (findOrCreateTelegramUser)
+  // заводит пользователя без филиала.
+  branchId String?
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
 
   courses                    Course[]
   enrollments                Enrollment[]
@@ -173,6 +202,7 @@ model User {
   @@index([isActive])
   @@index([lastSeenAt])
   @@index([deletedAt])
+  @@index([branchId])
 }
 
 // Связь родителя с учеником. Отдельная таблица, а не массив id: у связи
@@ -300,6 +330,12 @@ model Payment {
   groupId String?
   group   Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
 
+  // Снимок на момент приёма денег: группу могут перевести в другой филиал
+  // или удалить, а касса за закрытый месяц меняться не должна. Ставится из
+  // группы платежа, а если группы нет — из филиала ученика (payments.service.ts)
+  branchId String?
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
   // Кто принял оплату; запись остаётся при удалении сотрудника
   createdById String
   createdBy   User   @relation("RecordedPayments", fields: [createdById], references: [id])
@@ -311,6 +347,7 @@ model Payment {
   @@index([forMonth])
   @@index([deletedAt])
   @@index([createdById])
+  @@index([branchId])
 }
 
 model CourseLead {
@@ -426,6 +463,12 @@ model Group {
   courseId String
   course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
+  // Обязателен: группа всегда занимается в конкретном филиале. onDelete:
+  // Restrict — удаление филиала с группами почти всегда ошибка, и она должна
+  // прийти понятной (branchHasGroups), а не тихо обнулить привязку у групп.
+  branchId String
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
   // Преподаватель группы. Course.teacherId задаёт одного педагога на весь
   // курс — этого мало: две группы одного курса могут вести разные люди.
   // Необязательный: пока не заполнен, отчёты берут преподавателя курса.
@@ -437,10 +480,14 @@ model Group {
   payments           Payment[]
   smsBroadcasts      SmsBroadcast[]
 
-  @@unique([courseId, name])
+  // Имя уникально внутри филиала, а не на весь центр: «Python-1» есть в
+  // каждом филиале, и это нормально. Работает только потому, что branchId
+  // обязателен — с NULL в ключе Postgres пропустил бы дубликаты.
+  @@unique([courseId, branchId, name])
   @@index([teacherId])
   @@index([courseId])
   @@index([isActive])
+  @@index([branchId])
 }
 
 model Lesson {
