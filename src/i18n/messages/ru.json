@@ -1201,7 +1201,8 @@
     "loginInvalid": "Логин: латиница, цифры, точка, дефис или подчёркивание, 3–30 символов",
     "courseRequired": "Выберите курс",
     "amountPositive": "Сумма должна быть больше нуля",
-    "enrollmentOnlyForStudents": "Обучение можно указать только для роли «Ученик»"
+    "enrollmentOnlyForStudents": "Обучение можно указать только для роли «Ученик»",
+    "loginRequired": "Введите логин"
   },
   "language": {
     "title": "Язык",

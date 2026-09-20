@@ -1201,7 +1201,8 @@
     "loginInvalid": "Login: lotin harflari, raqamlar, nuqta, tire yoki pastki chiziq, 3–30 belgi",
     "courseRequired": "Kursni tanlang",
     "amountPositive": "Summa noldan katta bo'lishi kerak",
-    "enrollmentOnlyForStudents": "O'qishni faqat «O'quvchi» roli uchun ko'rsatish mumkin"
+    "enrollmentOnlyForStudents": "O'qishni faqat «O'quvchi» roli uchun ko'rsatish mumkin",
+    "loginRequired": "Loginni kiriting"
   },
   "language": {
     "title": "Til",
