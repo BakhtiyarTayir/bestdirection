@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { getMyBestSubmissions } from "@/lib/api/homework.server";
@@ -52,7 +52,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
   const tCommon = await getTranslations("common");
   const tErrors = await getTranslations("errors");
   const tAssessments = await getTranslations("assessments");
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user) redirect("/login");
 
   const { courseSlug, lessonSlug } = await params;

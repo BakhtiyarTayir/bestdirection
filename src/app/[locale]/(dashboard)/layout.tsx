@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { defaultLocale } from "@/i18n/config";
 import { Sidebar } from "@/components/sidebar";
@@ -17,7 +17,7 @@ export default async function DashboardLayout({
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const session = await auth();
+  const session = await getSession();
   // Префикс только для неосновной локали — как localePrefix: 'as-needed'.
   // С безусловным `/${locale}` адрес выходил неканоническим: /uz/login.
   if (!session?.user) {
@@ -31,7 +31,7 @@ export default async function DashboardLayout({
       <PresenceHeartbeat />
       <Sidebar
           role={session.user.role}
-          userName={session.user.name || ""}
+          userName={`${session.user.firstName} ${session.user.lastName}`.trim()}
           logoUrl={logoUrl}
         />
       <main className="flex-1 overflow-auto">

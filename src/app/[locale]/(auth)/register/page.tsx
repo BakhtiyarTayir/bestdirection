@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter } from "@/i18n/navigation";
 import { Link } from "@/i18n/navigation";
 import { useTranslations, useLocale } from "next-intl";
@@ -11,11 +10,13 @@ import {
   registerDetailsSchema,
   type RegisterDetailsInput,
 } from "@/validators/auth";
-import { registerUser } from "@/actions/auth-actions";
+
 import {
-  requestEmailVerification,
+  loginWithPassword,
+  registerUser,
+  requestEmailCode,
   verifyEmailCode,
-} from "@/actions/email-verification-actions";
+} from "@/lib/api/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -75,7 +76,7 @@ export default function RegisterPage() {
     setLoading(true);
     setError(null);
 
-    const result = await requestEmailVerification({ email, locale });
+    const result = await requestEmailCode(email, locale);
 
     // resendCooldown: недавно отправленный код ещё действует — идём к вводу
     if (!result.success && result.error !== "resendCooldown") {
@@ -93,7 +94,7 @@ export default function RegisterPage() {
   async function onResend() {
     if (resendTimer > 0) return;
     setError(null);
-    const result = await requestEmailVerification({ email, locale });
+    const result = await requestEmailCode(email, locale);
     if (!result.success && result.error !== "resendCooldown") {
       setError(verificationErrorText(result.error));
       return;
@@ -107,7 +108,7 @@ export default function RegisterPage() {
     setLoading(true);
     setError(null);
 
-    const result = await verifyEmailCode({ email, code: code.trim() });
+    const result = await verifyEmailCode(email, code.trim());
     if (!result.success) {
       setError(verificationErrorText(result.error));
       setLoading(false);
@@ -137,14 +138,9 @@ export default function RegisterPage() {
       return;
     }
 
-    const signInResult = await signIn("credentials", {
-      email,
-      password: data.password,
-      redirect: false,
-      callbackUrl: `/${locale}/dashboard`,
-    });
+    const signInResult = await loginWithPassword(email, data.password);
 
-    if (signInResult?.error) {
+    if (!signInResult.success) {
       setError(t("registerSuccessLoginFailed"));
       setLoading(false);
       return;

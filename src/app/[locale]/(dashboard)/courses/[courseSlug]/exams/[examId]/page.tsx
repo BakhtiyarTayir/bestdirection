@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { getCourseById } from "@/lib/api/courses.server";
 import { getAssessment, getMyAssessmentAttempts } from "@/lib/api/lessons.server";
@@ -52,7 +52,7 @@ async function ExamPageAsync({
   const { courseSlug, examId } = await params;
   const courseId = await resolveCourseSlug(courseSlug);
 
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user) redirect("/login");
 
   const role = session.user.role;

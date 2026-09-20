@@ -101,7 +101,10 @@ function getMarketingRewrite(request: NextRequest): NextResponse | null {
 }
 
 function getPublicHomeworkRewrite(request: NextRequest): NextResponse | null {
+  // Сессию держит api (кука bd_session); куки NextAuth ещё встречаются у тех,
+  // кто вошёл до переноса, — их тоже считаем входом
   const hasSession =
+    Boolean(request.cookies.get("bd_session")?.value) ||
     Boolean(request.cookies.get("authjs.session-token")?.value) ||
     Boolean(request.cookies.get("__Secure-authjs.session-token")?.value);
   if (hasSession) return null;

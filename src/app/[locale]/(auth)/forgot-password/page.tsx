@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter } from "@/i18n/navigation";
 import { Link } from "@/i18n/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import {
+  loginWithPassword,
   requestPasswordReset,
-  verifyEmailCode,
   resetPassword,
-} from "@/actions/email-verification-actions";
+  verifyEmailCode,
+} from "@/lib/api/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -64,7 +64,7 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     setError(null);
 
-    const result = await requestPasswordReset({ email, locale });
+    const result = await requestPasswordReset(email, locale);
     if (!result.success && result.error !== "resendCooldown") {
       setError(errorText(result.error));
       setLoading(false);
@@ -80,7 +80,7 @@ export default function ForgotPasswordPage() {
   async function onResend() {
     if (resendTimer > 0) return;
     setError(null);
-    const result = await requestPasswordReset({ email, locale });
+    const result = await requestPasswordReset(email, locale);
     if (!result.success && result.error !== "resendCooldown") {
       setError(errorText(result.error));
       return;
@@ -93,7 +93,7 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     setError(null);
 
-    const result = await verifyEmailCode({ email, code: code.trim() });
+    const result = await verifyEmailCode(email, code.trim());
     if (!result.success) {
       setError(errorText(result.error));
       setLoading(false);
@@ -130,13 +130,10 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    const signInResult = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    // Сброс пароля обрывает все сессии, поэтому входим заново
+    const signInResult = await loginWithPassword(email, password);
 
-    if (signInResult?.error) {
+    if (!signInResult.success) {
       router.push("/login");
       return;
     }

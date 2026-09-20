@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { getHomeworkForTeacher } from "@/lib/api/homework.server";
 import { HomeworkForm } from "@/components/homework/homework-form";
@@ -18,7 +18,7 @@ type GetHomeworkForTeacherResult = Awaited<ReturnType<typeof getHomeworkForTeach
 type TeacherHomework = Extract<GetHomeworkForTeacherResult, { success: true }>["data"];
 
 export default async function EditHomeworkPage({ params }: EditHomeworkPageProps) {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user) redirect("/login");
 
   if (session.user.role !== "ADMIN" && session.user.role !== "TEACHER") {

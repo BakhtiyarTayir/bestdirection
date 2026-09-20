@@ -1,7 +1,7 @@
 "use client";
 
-import { Link, usePathname } from "@/i18n/navigation";
-import { useTranslations, useLocale } from "next-intl";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import {
@@ -32,7 +32,7 @@ import {
   Wallet,
   TriangleAlert,
 } from "lucide-react";
-import { signOut } from "next-auth/react";
+import { logout } from "@/lib/api/auth";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { useState, useEffect } from "react";
@@ -157,7 +157,7 @@ export function Sidebar({ role, userName, logoUrl }: SidebarProps) {
   const t = useTranslations("nav");
   const tRoles = useTranslations("roles");
   const tAuth = useTranslations("auth");
-  const locale = useLocale();
+  const router = useRouter();
   const homeworkCount = useBadgeCount("/api/homework/count", true);
   const requestsCount = useBadgeCount(
     "/api/enrollment-requests/count",
@@ -320,7 +320,13 @@ export function Sidebar({ role, userName, logoUrl }: SidebarProps) {
                   "w-full text-muted-foreground",
                   collapsed ? "justify-center px-2" : "justify-start gap-3"
                 )}
-                onClick={() => signOut({ callbackUrl: `/${locale}/login` })}
+                onClick={async () => {
+                  await logout();
+                  // refresh обязателен: серверные страницы должны перерисоваться
+                  // уже без куки, иначе кабинет останется в кэше маршрутизатора
+                  router.push("/login");
+                  router.refresh();
+                }}
               >
                 <LogOut className="h-4 w-4 shrink-0" />
                 {!collapsed && tAuth("logout")}

@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { getCourseById, getEnrolledStudents } from "@/lib/api/courses.server";
 import { getAttendanceSessions } from "@/lib/api/attendance.server";
@@ -18,7 +18,7 @@ interface AttendancePageProps {
 
 export default async function AttendancePage({ params }: AttendancePageProps) {
   const t = await getTranslations("attendance");
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user) redirect("/login");
 
   const { courseSlug } = await params;

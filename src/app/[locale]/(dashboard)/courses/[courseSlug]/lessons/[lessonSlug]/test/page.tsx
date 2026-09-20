@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { getLessonById, getMyAssessmentAttempts, getTestByLesson } from "@/lib/api/lessons.server";
 import { Link } from "@/i18n/navigation";
@@ -50,7 +50,7 @@ async function TestPageAsync({
   const { courseSlug, lessonSlug } = await params;
   const { courseId, lessonId } = await resolveFullPath({ courseSlug, lessonSlug });
 
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user) redirect("/login");
 
   const role = session.user.role;

@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { getEnrolledStudents, getCourseById } from "@/lib/api/courses.server";
 import { getAttendanceSessions } from "@/lib/api/attendance.server";
@@ -21,7 +21,7 @@ interface SessionPageProps {
 export default async function SessionPage({ params }: SessionPageProps) {
   const t = await getTranslations("attendance");
   const locale = await getLocale();
-  const authSession = await auth();
+  const authSession = await getSession();
   if (!authSession?.user) redirect("/login");
 
   const { courseSlug, sessionId } = await params;
