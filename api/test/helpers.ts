@@ -83,6 +83,12 @@ export async function createUser(data: {
   });
 }
 
+/** Филиал для тестов, где Group.branchId обязателен. Имя уникально — суффикс от каждого вызова. */
+export function createBranch(name = "Филиал") {
+  const id = randomUUID().slice(0, 8);
+  return testDb().branch.create({ data: { name: `${name}-${id}` } });
+}
+
 // Кука сессии api: ту же ставит вход
 export { SESSION_COOKIE } from "../src/common/auth/sessions.service";
 

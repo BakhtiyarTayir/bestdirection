@@ -1,7 +1,7 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { addMonths, monthKey } from "../src/modules/billing/domain/billing";
-import { createTestApp, createUser, sessionCookie, TEST_APP_URL, testDb, type TestApp } from "./helpers";
+import { createBranch, createTestApp, createUser, sessionCookie, TEST_APP_URL, testDb, type TestApp } from "./helpers";
 
 describe("модуль billing", () => {
   let app: TestApp;
@@ -23,8 +23,10 @@ describe("модуль billing", () => {
       data: { slug: `billing-${run}`, title: "Курс", teacherId: ids.TEACHER, price: 600000 },
     });
     ids.course = course.id;
+    const branch = await createBranch();
+    ids.branch = branch.id;
     const group = await testDb().group.create({
-      data: { name: `G-${run}`, courseId: course.id, scheduleDays: [1, 3, 5] },
+      data: { name: `G-${run}`, courseId: course.id, scheduleDays: [1, 3, 5], branchId: branch.id },
     });
     ids.group = group.id;
     const enrollment = await testDb().enrollment.create({
@@ -143,6 +145,45 @@ describe("модуль billing", () => {
         (row: { enrollmentId: string }) => row.enrollmentId === ids.enrollment
       );
       expect(stillDebtor).toBe(false);
+    });
+
+    it("филиал платежа — снимок из группы, а не ссылка на неё", async () => {
+      const row = await testDb().payment.findUnique({ where: { id: ids.payment } });
+      expect(row?.branchId).toBe(ids.branch);
+    });
+
+    it("журнал оплат фильтруется по филиалу", async () => {
+      const inBranch = await get(`/billing/payments?branchId=${ids.branch}`, "ADMIN");
+      expect(inBranch.body.payments.map((p: { id: string }) => p.id)).toContain(ids.payment);
+
+      const otherBranch = await testDb().branch.create({ data: { name: `Платежи-${run}` } });
+      const outOfBranch = await get(`/billing/payments?branchId=${otherBranch.id}`, "ADMIN");
+      expect(outOfBranch.body.payments.map((p: { id: string }) => p.id)).not.toContain(ids.payment);
+    });
+
+    it("должники фильтруются по филиалу через группу", async () => {
+      // Новая запись с долгом в ids.branch: старая (ids.enrollment) уже
+      // полностью оплачена предыдущим тестом и в debtors больше не попадает
+      const debtor = await createUser({ role: "STUDENT" });
+      const enrollment = await testDb().enrollment.create({
+        data: {
+          studentId: debtor.id,
+          courseId: ids.course,
+          groupId: ids.group,
+          startsAt: new Date(`${addMonths(current, -3)}-01T12:00:00.000Z`),
+        },
+      });
+
+      const inBranch = await get(`/billing/debtors?branchId=${ids.branch}`, "ADMIN");
+      expect(
+        inBranch.body.debtors.some((row: { enrollmentId: string }) => row.enrollmentId === enrollment.id)
+      ).toBe(true);
+
+      const otherBranch = await testDb().branch.create({ data: { name: `Другой-${run}` } });
+      const outOfBranch = await get(`/billing/debtors?branchId=${otherBranch.id}`, "ADMIN");
+      expect(
+        outOfBranch.body.debtors.some((row: { enrollmentId: string }) => row.enrollmentId === enrollment.id)
+      ).toBe(false);
     });
 
     it("удаление оплаты мягкое: строка остаётся с deletedAt", async () => {

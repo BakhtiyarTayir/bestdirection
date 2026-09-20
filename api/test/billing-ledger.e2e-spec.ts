@@ -3,7 +3,7 @@ import { BillingLedgerService } from "../src/modules/billing/billing-ledger.serv
 import { addMonths, monthKey } from "../src/modules/billing/domain/billing";
 import { PrismaService } from "../src/common/prisma/prisma.service";
 import { TrashService } from "../src/modules/trash/trash.service";
-import { createTestApp, type TestApp } from "./helpers";
+import { createBranch, createTestApp, type TestApp } from "./helpers";
 
 // Проверки перенесены из scripts/check-billing-db.ts в web один в один: те же
 // названия, те же ожидания, тот же порядок. Это единственное покрытие денежной
@@ -47,12 +47,15 @@ it("реестр начислений и Корзина на настоящей 
     ((await scheduleOf(enrollmentId)) ?? []).map((item) => [item.month, item.charge.amount]);
 
   const teacher = await prisma.user.create({ data: { firstName: "T", lastName: run, role: "TEACHER" } });
+  const branch = await createBranch();
   const student = (name: string) =>
     prisma.user.create({ data: { firstName: name, lastName: run, role: "STUDENT" } });
   const course = (name: string, price: number | null) =>
     prisma.course.create({ data: { slug: `${name}-${run}`, title: name, teacherId: teacher.id, price } });
   const group = (name: string, courseId: string, price: number | null) =>
-    prisma.group.create({ data: { name: `${name}-${run}`, courseId, price, scheduleDays: [1, 3, 5] } });
+    prisma.group.create({
+      data: { name: `${name}-${run}`, courseId, price, scheduleDays: [1, 3, 5], branchId: branch.id },
+    });
   const enroll = async (
     courseId: string,
     extra: { groupId?: string; priceOverride?: number } = {}

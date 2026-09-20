@@ -1,6 +1,6 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createTestApp, createUser, sessionCookie, TEST_APP_URL, testDb, type TestApp } from "./helpers";
+import { createBranch, createTestApp, createUser, sessionCookie, TEST_APP_URL, testDb, type TestApp } from "./helpers";
 
 describe("модуль courses", () => {
   let app: TestApp;
@@ -158,8 +158,9 @@ describe("модуль courses", () => {
   describe("смена цены и начисления", () => {
     it("перед сменой цены закрытые месяцы фиксируются по старой", async () => {
       const student = await createUser({ role: "STUDENT" });
+      const branch = await createBranch();
       const group = await testDb().group.create({
-        data: { name: `pricing-${run}`, courseId: ids.own, scheduleDays: [1, 3, 5] },
+        data: { name: `pricing-${run}`, courseId: ids.own, scheduleDays: [1, 3, 5], branchId: branch.id },
       });
       const enrollment = await testDb().enrollment.create({
         data: {

@@ -1,6 +1,6 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createTestApp, createUser, sessionCookie, TEST_APP_URL, testDb, type TestApp } from "./helpers";
+import { createBranch, createTestApp, createUser, sessionCookie, TEST_APP_URL, testDb, type TestApp } from "./helpers";
 
 describe("посещаемость и родители", () => {
   let app: TestApp;
@@ -30,8 +30,9 @@ describe("посещаемость и родители", () => {
       data: { slug: `att-${run}`, title: "Курс", teacherId: ids.TEACHER },
     });
     ids.course = course.id;
+    const branch = await createBranch();
     const group = await testDb().group.create({
-      data: { name: `AG-${run}`, courseId: course.id, teacherId: ids.groupTeacher },
+      data: { name: `AG-${run}`, courseId: course.id, teacherId: ids.groupTeacher, branchId: branch.id },
     });
     ids.group = group.id;
 

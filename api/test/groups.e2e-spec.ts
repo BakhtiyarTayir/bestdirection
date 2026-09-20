@@ -1,7 +1,7 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { addMonths, monthKey } from "../src/modules/billing/domain/billing";
-import { createTestApp, createUser, sessionCookie, TEST_APP_URL, testDb, type TestApp } from "./helpers";
+import { createBranch, createTestApp, createUser, sessionCookie, TEST_APP_URL, testDb, type TestApp } from "./helpers";
 
 describe("модуль groups", () => {
   let app: TestApp;
@@ -30,8 +30,13 @@ describe("модуль groups", () => {
     });
     ids.foreign = foreign.id;
 
+    const branch = await createBranch();
+    ids.branch = branch.id;
+    const otherBranch = await createBranch();
+    ids.otherBranch = otherBranch.id;
+
     const foreignGroup = await testDb().group.create({
-      data: { name: `FG-${run}`, courseId: foreign.id },
+      data: { name: `FG-${run}`, courseId: foreign.id, branchId: branch.id },
     });
     ids.foreignGroup = foreignGroup.id;
   });
@@ -74,18 +79,53 @@ describe("модуль groups", () => {
     it("группа создаётся, преподаватель по умолчанию — педагог курса", async () => {
       const res = await send("post", "/groups", "TEACHER", {
         courseId: ids.own,
+        branchId: ids.branch,
         name: `A-${run}`,
         scheduleDays: [1, 3, 5],
       });
       expect(res.status).toBe(201);
       expect(res.body.teacherId).toBe(ids.TEACHER);
+      expect(res.body.branchId).toBe(ids.branch);
       ids.group = res.body.id;
     });
 
-    it("имя внутри курса уникально", async () => {
-      const res = await send("post", "/groups", "TEACHER", { courseId: ids.own, name: `A-${run}` });
+    it("имя внутри курса и филиала уникально", async () => {
+      const res = await send("post", "/groups", "TEACHER", {
+        courseId: ids.own,
+        branchId: ids.branch,
+        name: `A-${run}`,
+      });
       expect(res.status).toBe(409);
       expect(res.body.message).toBe("groupNameExists");
+    });
+
+    it("то же имя в другом филиале — не конфликт", async () => {
+      const res = await send("post", "/groups", "TEACHER", {
+        courseId: ids.own,
+        branchId: ids.otherBranch,
+        name: `A-${run}`,
+      });
+      expect(res.status).toBe(201);
+      ids.sameNameOtherBranch = res.body.id;
+    });
+
+    it("GET /groups?branchId= фильтрует по филиалу", async () => {
+      const inBranch = await get(`/groups?branchId=${ids.branch}`, "ADMIN");
+      expect(inBranch.body.map((g: { id: string }) => g.id)).toContain(ids.group);
+      expect(inBranch.body.map((g: { id: string }) => g.id)).not.toContain(ids.sameNameOtherBranch);
+
+      const inOtherBranch = await get(`/groups?branchId=${ids.otherBranch}`, "ADMIN");
+      expect(inOtherBranch.body.map((g: { id: string }) => g.id)).toContain(ids.sameNameOtherBranch);
+      expect(inOtherBranch.body.map((g: { id: string }) => g.id)).not.toContain(ids.group);
+    });
+
+    it("смена филиала на тот, где имя уже занято, — конфликт (GroupsService.update по составному ключу)", async () => {
+      const res = await send("patch", `/groups/${ids.group}`, "TEACHER", { branchId: ids.otherBranch });
+      expect(res.status).toBe(409);
+      expect(res.body.message).toBe("groupNameExists");
+      // Группа осталась в исходном филиале — конфликт не сломал запись
+      const unchanged = await testDb().group.findUnique({ where: { id: ids.group } });
+      expect(unchanged?.branchId).toBe(ids.branch);
     });
 
     it("нулевая цена не принимается: пустое поле не должно обнулять месяц", async () => {
@@ -102,7 +142,11 @@ describe("модуль groups", () => {
     });
 
     it("в чужом курсе группу не создать и не изменить", async () => {
-      const create = await send("post", "/groups", "TEACHER", { courseId: ids.foreign, name: "Взлом" });
+      const create = await send("post", "/groups", "TEACHER", {
+        courseId: ids.foreign,
+        branchId: ids.branch,
+        name: "Взлом",
+      });
       expect(create.status).toBe(404);
       expect((await send("patch", `/groups/${ids.foreignGroup}`, "TEACHER", { name: "Взлом" })).status).toBe(404);
       expect((await send("delete", `/groups/${ids.foreignGroup}`, "TEACHER")).status).toBe(404);
@@ -143,6 +187,7 @@ describe("модуль groups", () => {
       });
       const second = await send("post", "/groups", "TEACHER", {
         courseId: ids.own,
+        branchId: ids.branch,
         name: `B-${run}`,
         price: 900000,
         scheduleDays: [2, 4],
