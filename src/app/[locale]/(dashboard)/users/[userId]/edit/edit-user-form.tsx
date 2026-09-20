@@ -8,7 +8,8 @@ import type { Role } from "@/validators/user";
 interface EditUserFormProps {
   user: {
     id: string;
-    email: string;
+    login: string | null;
+    email: string | null;
     firstName: string;
     lastName: string;
     phone: string | null;

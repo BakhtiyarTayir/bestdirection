@@ -6,6 +6,7 @@ import type {
   ApiHomeworkStatistics,
   ApiTeacher,
   ApiUser,
+  ApiUsersFormOptions,
   HomeworkSubmissionState,
 } from "./users";
 
@@ -17,6 +18,9 @@ export const getUsers = (branchId?: string) => apiServerFetch<ApiUser[]>("/users
 export const getDeactivatedUsers = () => apiServerFetch<ApiDeactivatedUser[]>("/users/deactivated");
 export const getTeachers = () => apiServerFetch<ApiTeacher[]>("/users/teachers");
 export const getUserById = (id: string) => apiServerFetch<ApiUser>(`/users/${id}`);
+
+/** Курсы и группы для блока «Обучение» в форме создания ученика (4.4). */
+export const getUsersFormOptions = () => apiServerFetch<ApiUsersFormOptions>("/users/form-options");
 
 export const getUsersHomeworkStatistics = (query: {
   courseId?: string;

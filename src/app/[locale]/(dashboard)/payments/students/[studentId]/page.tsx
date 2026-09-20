@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { BillingSettingsButton } from "./billing-settings-button";
 import { RecalcMonthButton } from "./recalc-month-button";
+import { TelegramWriteButton } from "@/components/telegram-write-button";
 
 export const dynamic = "force-dynamic";
 
@@ -116,15 +117,18 @@ export default async function StudentBillingPage({ params }: StudentBillingPageP
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">
-          {student.lastName} {student.firstName}
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          {student.phone ?? tDebtors("noPhone")}
-          {student.telegramUsername && ` · @${student.telegramUsername}`}
-          {student.email && ` · ${student.email}`}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">
+            {student.lastName} {student.firstName}
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            {student.phone ?? tDebtors("noPhone")}
+            {student.telegramUsername && ` · @${student.telegramUsername}`}
+            {student.email && ` · ${student.email}`}
+          </p>
+        </div>
+        <TelegramWriteButton username={student.telegramUsername} />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">

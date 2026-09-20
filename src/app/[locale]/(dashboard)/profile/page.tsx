@@ -21,7 +21,14 @@ export default async function ProfilePage() {
 async function ProfilePageContent({
   user,
 }: {
-  user: { id: string; email: string | null; firstName: string; lastName: string; phone: string | null };
+  user: {
+    id: string;
+    login: string | null;
+    email: string | null;
+    firstName: string;
+    lastName: string;
+    phone: string | null;
+  };
 }) {
   const t = await getTranslations("profile");
 

@@ -6,13 +6,17 @@ import { apiFetch } from "./client";
 export interface AuthUser {
   id: string;
   role: string;
+  login: string | null;
   email: string | null;
   firstName: string;
   lastName: string;
 }
 
-export const loginWithPassword = (email: string, password: string) =>
-  apiFetch<{ user: AuthUser }>("/auth/login", { method: "POST", body: { email, password } });
+// Параметр называется login, но принимает и старую почту (шаг 1 отказа от
+// почты) — сервер сам решает по значению, что это. Имя параметра не меняем:
+// (auth)/register вызывает эту же функцию с адресом почты.
+export const loginWithPassword = (login: string, password: string) =>
+  apiFetch<{ user: AuthUser }>("/auth/login", { method: "POST", body: { login, password } });
 
 export const loginWithTelegramWidget = (payload: Record<string, string>) =>
   apiFetch<{ user: AuthUser }>("/auth/telegram/widget", { method: "POST", body: payload });
@@ -55,3 +59,12 @@ export const requestPasswordReset = (email: string, locale?: string) =>
 
 export const resetPassword = (body: { email: string; code: string; newPassword: string }) =>
   apiFetch<{ ok: true }>("/auth/password/reset", { method: "POST", body });
+
+// Второй, независимый от почты путь сброса пароля: код приходит в Telegram,
+// а не на почту (шаг 1 отказа от почты). Тот же нейтральный { ok: true } на
+// неизвестный логин и на логин без привязанного Telegram.
+export const requestTelegramPasswordReset = (login: string) =>
+  apiFetch<{ ok: true }>("/auth/password/telegram/request-code", { method: "POST", body: { login } });
+
+export const resetPasswordViaTelegram = (body: { login: string; code: string; newPassword: string }) =>
+  apiFetch<{ ok: true }>("/auth/password/telegram/reset", { method: "POST", body });

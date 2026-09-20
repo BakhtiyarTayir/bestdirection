@@ -3,12 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { Link } from "@/i18n/navigation";
-import { useTranslations, useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
 import {
   loginWithPassword,
-  requestPasswordReset,
-  resetPassword,
-  verifyEmailCode,
+  requestTelegramPasswordReset,
+  resetPasswordViaTelegram,
 } from "@/lib/api/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,17 +16,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import Image from "next/image";
 import { LanguageSwitcher } from "@/components/language-switcher";
 
-type Step = "email" | "code" | "password";
+type Step = "login" | "reset";
 
+// Сброс пароля идёт через Telegram, а не через почту (шаг 1 отказа от почты,
+// PLAN-SALARY-PROFILE-BRANCH-2026-09-20.md, 4.1): вводится ЛОГИН, код приходит
+// в чат с ботом. Сервер отвечает одинаково на существующий и несуществующий
+// логин (аудит 2.12) — поэтому шаг «код» неотличим от «мы точно его отправили»,
+// и это осознанно: иначе форма превращается в перебор логинов.
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const t = useTranslations("auth");
   const tValidation = useTranslations("validation");
-  const locale = useLocale();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<Step>("email");
-  const [email, setEmail] = useState("");
+  const [step, setStep] = useState<Step>("login");
+  const [login, setLogin] = useState("");
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -41,17 +44,12 @@ export default function ForgotPasswordPage() {
 
   function errorText(errorCode?: string): string {
     switch (errorCode) {
-      case "userNotFound":
-        return t("userNotFound");
       case "invalidCode":
         return t("invalidCode");
       case "codeExpired":
         return t("codeExpired");
       case "tooManyAttempts":
         return t("tooManyAttempts");
-      case "emailSendFailed":
-      case "emailNotConfigured":
-        return t("emailSendFailed");
       case "tooManyRequests":
         return t("tooManyRequests");
       default:
@@ -64,15 +62,12 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     setError(null);
 
-    const result = await requestPasswordReset(email, locale);
-    if (!result.success && result.error !== "resendCooldown") {
-      setError(errorText(result.error));
-      setLoading(false);
-      return;
-    }
+    // Ответ всегда { ok: true } — по нему нельзя понять, существует ли логин
+    // и привязан ли к нему Telegram (аудит 2.12)
+    await requestTelegramPasswordReset(login);
 
     setCode("");
-    setStep("code");
+    setStep("reset");
     setResendTimer(60);
     setLoading(false);
   }
@@ -80,28 +75,8 @@ export default function ForgotPasswordPage() {
   async function onResend() {
     if (resendTimer > 0) return;
     setError(null);
-    const result = await requestPasswordReset(email, locale);
-    if (!result.success && result.error !== "resendCooldown") {
-      setError(errorText(result.error));
-      return;
-    }
+    await requestTelegramPasswordReset(login);
     setResendTimer(60);
-  }
-
-  async function onVerifyCode(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    const result = await verifyEmailCode(email, code.trim());
-    if (!result.success) {
-      setError(errorText(result.error));
-      setLoading(false);
-      return;
-    }
-
-    setStep("password");
-    setLoading(false);
   }
 
   async function onResetPassword(e: React.FormEvent) {
@@ -119,8 +94,8 @@ export default function ForgotPasswordPage() {
 
     setLoading(true);
 
-    const result = await resetPassword({
-      email,
+    const result = await resetPasswordViaTelegram({
+      login,
       code: code.trim(),
       newPassword: password,
     });
@@ -131,7 +106,7 @@ export default function ForgotPasswordPage() {
     }
 
     // Сброс пароля обрывает все сессии, поэтому входим заново
-    const signInResult = await loginWithPassword(email, password);
+    const signInResult = await loginWithPassword(login, password);
 
     if (!signInResult.success) {
       router.push("/login");
@@ -159,35 +134,34 @@ export default function ForgotPasswordPage() {
             <Image src="/logo.png" alt="" width={490} height={492} className="h-8 w-auto" />
           </div>
           <CardTitle className="text-2xl">{t("resetPasswordTitle")}</CardTitle>
-          <CardDescription>{t("resetPasswordSubtitle")}</CardDescription>
+          <CardDescription>{t("resetPasswordSubtitleTelegram")}</CardDescription>
         </CardHeader>
         <CardContent>
-          {step === "email" && (
+          {step === "login" && (
             <form onSubmit={onSendCode} className="space-y-4">
               {errorBox}
               <div className="space-y-2">
-                <Label htmlFor="email">{t("email")}</Label>
+                <Label htmlFor="login">{t("loginFieldLabel")}</Label>
                 <Input
-                  id="email"
-                  type="email"
+                  id="login"
+                  type="text"
+                  autoComplete="username"
                   required
-                  placeholder="email@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="ivan.ivanov"
+                  value={login}
+                  onChange={(e) => setLogin(e.target.value)}
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading || !email}>
-                {loading ? t("sendingCode") : t("sendCode")}
+              <Button type="submit" className="w-full" disabled={loading || !login}>
+                {loading ? t("sendingCode") : t("sendCodeTelegram")}
               </Button>
             </form>
           )}
 
-          {step === "code" && (
-            <form onSubmit={onVerifyCode} className="space-y-4">
+          {step === "reset" && (
+            <form onSubmit={onResetPassword} className="space-y-4">
               {errorBox}
-              <p className="text-sm text-muted-foreground">
-                {t("codeSentTo", { email })}
-              </p>
+              <p className="text-sm text-muted-foreground">{t("codeSentToTelegramLogin", { login })}</p>
               <div className="space-y-2">
                 <Label htmlFor="verification-code">{t("verificationCode")}</Label>
                 <Input
@@ -201,41 +175,6 @@ export default function ForgotPasswordPage() {
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
                 />
               </div>
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={loading || code.length !== 6}
-              >
-                {loading ? t("verifyingCode") : t("verifyCode")}
-              </Button>
-              <div className="flex items-center justify-between text-sm">
-                <button
-                  type="button"
-                  className="text-muted-foreground hover:underline"
-                  onClick={() => {
-                    setStep("email");
-                    setError(null);
-                  }}
-                >
-                  {t("changeEmail")}
-                </button>
-                <button
-                  type="button"
-                  className="text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
-                  disabled={resendTimer > 0}
-                  onClick={onResend}
-                >
-                  {resendTimer > 0
-                    ? t("resendCodeIn", { seconds: resendTimer })
-                    : t("resendCode")}
-                </button>
-              </div>
-            </form>
-          )}
-
-          {step === "password" && (
-            <form onSubmit={onResetPassword} className="space-y-4">
-              {errorBox}
               <div className="space-y-2">
                 <Label htmlFor="new-password">{t("newPassword")}</Label>
                 <Input
@@ -256,9 +195,29 @@ export default function ForgotPasswordPage() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full" disabled={loading || code.length !== 6}>
                 {loading ? t("resettingPassword") : t("resetPasswordButton")}
               </Button>
+              <div className="flex items-center justify-between text-sm">
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:underline"
+                  onClick={() => {
+                    setStep("login");
+                    setError(null);
+                  }}
+                >
+                  {t("changeLogin")}
+                </button>
+                <button
+                  type="button"
+                  className="text-primary hover:underline disabled:text-muted-foreground disabled:no-underline"
+                  disabled={resendTimer > 0}
+                  onClick={onResend}
+                >
+                  {resendTimer > 0 ? t("resendCodeIn", { seconds: resendTimer }) : t("resendCode")}
+                </button>
+              </div>
             </form>
           )}
 

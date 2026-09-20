@@ -139,9 +139,12 @@ export function TelegramLink() {
         ) : (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                {t("telegramHint")}
-              </p>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">{t("telegramHint")}</p>
+                {/* После отказа от почты это единственный способ сбросить
+                    пароль самому, без администратора (4.2) */}
+                <p className="text-sm text-muted-foreground">{t("telegramResetHint")}</p>
+              </div>
               <Button
                 variant="outline"
                 size="sm"
