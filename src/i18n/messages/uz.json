@@ -57,7 +57,8 @@
     "importing": "Import qilinmoqda...",
     "moving": "Ko'chirilmoqda...",
     "adding": "Qo'shilmoqda...",
-    "publish": "Nashr qilish"
+    "publish": "Nashr qilish",
+    "login": "Login"
   },
   "auth": {
     "login": "Kirish",
@@ -500,7 +501,8 @@
     "examBlocked": "Imtihon bloklangan",
     "passAllTests": "Imtihonga kirish uchun barcha dars testlarini topshiring.",
     "questionsLabel": "Savollar",
-    "resultsPageTitle": "Natijalar: {title}"
+    "resultsPageTitle": "Natijalar: {title}",
+    "loginHeader": "Login"
   },
   "homework": {
     "title": "Uy vazifalari",

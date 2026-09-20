@@ -39,7 +39,7 @@ interface User {
   number: number;
   firstName: string;
   lastName: string;
-  email: string | null;
+  login: string | null;
   role: string;
   isActive: boolean;
   branch?: { id: string; name: string } | null;
@@ -112,7 +112,7 @@ export function UserList({ initialUsers, canManageUsers = true }: UserListProps)
             <TableRow>
               <TableHead className="w-16">{tCommon("number")}</TableHead>
               <TableHead>{tCommon("firstName")}</TableHead>
-              <TableHead>{tCommon("email")}</TableHead>
+              <TableHead>{tCommon("login")}</TableHead>
               <TableHead>{t("branch")}</TableHead>
               <TableHead>{tCommon("role")}</TableHead>
               <TableHead>{tCommon("status")}</TableHead>
@@ -135,7 +135,7 @@ export function UserList({ initialUsers, canManageUsers = true }: UserListProps)
                   <TableCell className="font-medium">
                     {user.firstName} {user.lastName}
                   </TableCell>
-                  <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.login}</TableCell>
                   <TableCell className="text-muted-foreground">{user.branch?.name ?? "—"}</TableCell>
                   <TableCell>
                     <Badge variant={roleBadgeVariant[user.role] ?? "secondary"}>

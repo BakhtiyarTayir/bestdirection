@@ -32,7 +32,7 @@ interface RequestRow {
   student: {
     firstName: string;
     lastName: string;
-    email: string | null;
+    login: string | null;
     phone: string | null;
     telegramUsername: string | null;
   };
@@ -129,8 +129,8 @@ export function RequestsList({ requests }: { requests: RequestRow[] }) {
               <TableCell>
                 <div className="text-sm">
                   {row.student.phone && <div>{row.student.phone}</div>}
-                  {row.student.email && (
-                    <div className="text-muted-foreground">{row.student.email}</div>
+                  {row.student.login && (
+                    <div className="text-muted-foreground">{row.student.login}</div>
                   )}
                   {row.student.telegramUsername && (
                     <div className="text-muted-foreground">

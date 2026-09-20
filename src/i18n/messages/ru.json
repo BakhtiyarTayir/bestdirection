@@ -57,7 +57,8 @@
     "importing": "Импортирование...",
     "moving": "Перемещение...",
     "adding": "Добавление...",
-    "publish": "Опубликовать"
+    "publish": "Опубликовать",
+    "login": "Логин"
   },
   "auth": {
     "login": "Войти",
@@ -500,7 +501,8 @@
     "examBlocked": "Экзамен заблокирован",
     "passAllTests": "Пройдите все тесты уроков, чтобы получить доступ к экзамену.",
     "questionsLabel": "Вопросов",
-    "resultsPageTitle": "Результаты: {title}"
+    "resultsPageTitle": "Результаты: {title}",
+    "loginHeader": "Логин"
   },
   "homework": {
     "title": "Домашние задания",

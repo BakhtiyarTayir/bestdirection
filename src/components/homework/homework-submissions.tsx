@@ -21,7 +21,7 @@ interface Submission {
     id: string;
     firstName: string;
     lastName: string;
-    email: string;
+    login: string | null;
   };
   testResults: {
     passed: boolean;

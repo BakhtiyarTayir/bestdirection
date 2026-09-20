@@ -94,7 +94,7 @@ export interface ApiSubmission {
   homeworkId: string;
   files?: ApiSubmissionFile[];
   testResults?: ApiTestResult[];
-  student?: { id: string; firstName: string; lastName: string; email?: string | null };
+  student?: { id: string; firstName: string; lastName: string; login?: string | null };
   reviewedBy?: { firstName: string; lastName: string } | null;
 }
 

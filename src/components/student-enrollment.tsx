@@ -28,7 +28,7 @@ interface Student {
   id: string;
   firstName: string;
   lastName: string;
-  email: string | null;
+  login: string | null;
   phone?: string | null;
   isActive?: boolean;
 }
@@ -81,7 +81,7 @@ export function StudentEnrollment({
   const matches = (student: Student, query: string) => {
     const needle = query.trim().toLowerCase();
     if (!needle) return true;
-    return [fullName(student), student.email ?? "", student.phone ?? ""].some(
+    return [fullName(student), student.login ?? "", student.phone ?? ""].some(
       (field) => field.toLowerCase().includes(needle)
     );
   };
@@ -211,7 +211,7 @@ export function StudentEnrollment({
                           {fullName(student)}
                         </p>
                         <p className="truncate text-xs text-muted-foreground">
-                          {student.email || student.phone || "—"}
+                          {student.login || student.phone || "—"}
                         </p>
                       </div>
                       {busy && (
@@ -260,7 +260,7 @@ export function StudentEnrollment({
                           {fullName(student)}
                         </p>
                         <p className="truncate text-xs text-muted-foreground">
-                          {student.email || student.phone || "—"}
+                          {student.login || student.phone || "—"}
                         </p>
                       </div>
                       <span

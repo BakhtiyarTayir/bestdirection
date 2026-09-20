@@ -125,7 +125,7 @@ export default async function StudentBillingPage({ params }: StudentBillingPageP
           <p className="mt-1 text-muted-foreground">
             {student.phone ?? tDebtors("noPhone")}
             {student.telegramUsername && ` · @${student.telegramUsername}`}
-            {student.email && ` · ${student.email}`}
+            {student.login && ` · ${student.login}`}
           </p>
         </div>
         <TelegramWriteButton username={student.telegramUsername} />

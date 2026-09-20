@@ -47,7 +47,7 @@ interface Student {
   id: string;
   firstName: string;
   lastName: string;
-  email: string | null;
+  login: string | null;
 }
 
 interface AttendanceGridProps {

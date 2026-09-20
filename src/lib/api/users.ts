@@ -34,7 +34,7 @@ export interface ApiUser {
 export interface ApiDeactivatedUser {
   id: string;
   number: number;
-  email: string | null;
+  login: string | null;
   firstName: string;
   lastName: string;
   role: Role;
@@ -46,7 +46,7 @@ export interface ApiTeacher {
   number: number;
   firstName: string;
   lastName: string;
-  email: string | null;
+  login: string | null;
   phone: string | null;
   isActive: boolean;
   telegramUsername: string | null;
@@ -88,7 +88,7 @@ export interface ApiHomeworkStatistics {
   rows: {
     studentId: string;
     fullName: string;
-    email: string | null;
+    login: string | null;
     isActive: boolean;
     isOnlineNow: boolean;
     groupId: string | null;

@@ -25,7 +25,7 @@ interface StudentRow {
   firstName: string;
   lastName: string;
   phone: string | null;
-  email: string | null;
+  login: string | null;
   isActive: boolean;
   courses: { enrollmentId: string; title: string; groupName: string | null }[];
   balance: number;
@@ -116,7 +116,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                   </TableCell>
                   <TableCell className="text-sm">
                     <div>{student.phone ?? tDebtors("noPhone")}</div>
-                    <div className="text-muted-foreground">{student.email ?? "—"}</div>
+                    <div className="text-muted-foreground">{student.login ?? "—"}</div>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {student.branch?.name ?? "—"}

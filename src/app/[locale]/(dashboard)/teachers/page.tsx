@@ -76,7 +76,7 @@ export default async function TeachersPage() {
                   <TableCell className="text-sm">
                     <div>{teacher.phone ?? t("noPhone")}</div>
                     <div className="text-muted-foreground">
-                      {teacher.email ??
+                      {teacher.login ??
                         (teacher.telegramUsername
                           ? `@${teacher.telegramUsername}`
                           : "—")}

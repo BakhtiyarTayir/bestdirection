@@ -38,7 +38,7 @@ interface DeactivatedUser {
   number: number;
   firstName: string;
   lastName: string;
-  email: string | null;
+  login: string | null;
   role: string;
   telegramChatId: string | null;
 }
@@ -146,7 +146,7 @@ export function DeactivatedUserList({ users }: DeactivatedUserListProps) {
             <TableRow>
               <TableHead className="w-16">{tCommon("number")}</TableHead>
               <TableHead>{tCommon("firstName")}</TableHead>
-              <TableHead>{tCommon("email")}</TableHead>
+              <TableHead>{tCommon("login")}</TableHead>
               <TableHead>{tCommon("role")}</TableHead>
               <TableHead className="text-right">{tCommon("actions")}</TableHead>
             </TableRow>
@@ -168,7 +168,7 @@ export function DeactivatedUserList({ users }: DeactivatedUserListProps) {
                     {user.firstName} {user.lastName}
                   </TableCell>
                   <TableCell>
-                    <div>{user.email}</div>
+                    <div>{user.login}</div>
                     {user.telegramChatId && (
                       <div className="text-xs text-muted-foreground">
                         {t("telegramLinked")}

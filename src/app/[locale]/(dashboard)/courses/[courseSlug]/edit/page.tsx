@@ -28,7 +28,7 @@ export default async function EditCoursePage({ params }: EditCoursePageProps) {
     notFound();
   }
 
-  let teachers: { id: string; firstName: string; lastName: string; email: string | null }[] = [];
+  let teachers: { id: string; firstName: string; lastName: string; login: string | null }[] = [];
 
   if (role === "ADMIN") {
     const usersResult = await getUsers();
@@ -39,7 +39,7 @@ export default async function EditCoursePage({ params }: EditCoursePageProps) {
           id: u.id,
           firstName: u.firstName,
           lastName: u.lastName,
-          email: u.email,
+          login: u.login,
         }));
     }
   }

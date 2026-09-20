@@ -30,7 +30,7 @@ interface UsersHomeworkStatisticsProps {
   rows: {
     studentId: string;
     fullName: string;
-    email: string | null;
+    login: string | null;
     isActive: boolean;
     isOnlineNow: boolean;
     groupId: string | null;
@@ -242,7 +242,7 @@ export function UsersHomeworkStatistics({
                 <TableRow key={row.studentId}>
                   <TableCell>
                     <div className="font-medium">{row.fullName}</div>
-                    <div className="text-xs text-muted-foreground">{row.email}</div>
+                    <div className="text-xs text-muted-foreground">{row.login}</div>
                     {row.isOnlineNow && (
                       <div className="text-xs text-emerald-600">{t("statsOnlineNow")}</div>
                     )}

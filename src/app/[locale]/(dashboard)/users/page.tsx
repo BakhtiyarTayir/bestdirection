@@ -17,7 +17,7 @@ interface ActiveUser {
   number: number;
   firstName: string;
   lastName: string;
-  email: string | null;
+  login: string | null;
   role: string;
   isActive: boolean;
   branch: { id: string; name: string } | null;
@@ -28,7 +28,7 @@ interface DeactivatedUser {
   number: number;
   firstName: string;
   lastName: string;
-  email: string | null;
+  login: string | null;
   role: string;
   telegramChatId: string | null;
 }
