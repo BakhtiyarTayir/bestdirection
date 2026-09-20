@@ -1856,7 +1856,7 @@
     "colAmount": "Summa",
     "colComment": "Izoh",
     "colActions": "Amallar",
-    "unratedGroups": "{count, plural, one {# guruhda stavka yo'q} other {# guruhda stavka yo'q}}",
+    "unratedGroups": "{count, plural, other {# guruhda stavka yo'q}}",
     "accruedToDate": "{month} gacha hisoblangan",
     "paidToDate": "{month} gacha to'langan",
     "debtToDate": "{month} holatiga markaz qarzi",

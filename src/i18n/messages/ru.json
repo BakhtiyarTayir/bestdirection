@@ -1856,7 +1856,7 @@
     "colAmount": "Сумма",
     "colComment": "Комментарий",
     "colActions": "Действия",
-    "unratedGroups": "{count, plural, one {# группа без ставки} other {# групп без ставки}}",
+    "unratedGroups": "{count, plural, one {# группа без ставки} few {# группы без ставки} many {# групп без ставки} other {# групп без ставки}}",
     "accruedToDate": "Начислено по {month} включительно",
     "paidToDate": "Выплачено по {month} включительно",
     "debtToDate": "Долг центра на {month}",
