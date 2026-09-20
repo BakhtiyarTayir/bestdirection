@@ -18,6 +18,17 @@ const price = z.union([
   z.literal(""),
 ]);
 
+// Ставка зарплаты группы в базисных пунктах (4000 = 40.00%). В форме процент
+// вводится с одним знаком после запятой, поэтому шаг — десятые доли процента,
+// то есть кратно 10 б.п.; пустая строка — ставки у группы нет, берётся ставка
+// преподавателя (план зарплат, 5.2).
+const salaryPercentBp = z.union([
+  // 10000 б.п. = 100%: доля преподавателя от начислений группы больше
+  // полной суммы не бывает
+  z.coerce.number().int().min(0, "percentPositive").max(10_000, "percentTooLarge"),
+  z.literal(""),
+]);
+
 const groupFields = {
   description: z.string().max(500, "maxChars500").optional(),
   schedule: z.string().max(200, "maxChars200").optional(),
@@ -29,6 +40,7 @@ const groupFields = {
   startDate: dateOnly.optional(),
   endDate: dateOnly.optional(),
   price: price.optional(),
+  salaryPercentBp: salaryPercentBp.optional(),
   isActive: z.boolean().optional(),
   sortOrder: z.number().int().min(0).max(10_000).optional(),
 };

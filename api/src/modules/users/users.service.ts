@@ -14,6 +14,7 @@ import type { SessionUser } from "../../common/auth/session-user";
 import { toNoonUtc } from "../../common/date-only";
 import { accessibleWhere, type AppAbility } from "../../common/policies/abilities";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { SalaryService } from "../salary/salary.service";
 import type { CreateUserDto, UpdateProfileDto, UpdateUserDto } from "./dto/user.dto";
 
 const USER_SELECT = {
@@ -31,6 +32,9 @@ const USER_SELECT = {
   branch: { select: { id: true, name: true } },
   // Для кнопки «Написать в Telegram» на карточках других людей (4.2)
   telegramUsername: true,
+  // Ставка преподавателя — нужна форме правки, чтобы показать текущее
+  // значение. Для STUDENT/PARENT/ADMIN поле просто пустое.
+  salaryPercentBp: true,
 } as const;
 
 @Injectable()
@@ -39,7 +43,8 @@ export class UsersService {
     private readonly prismaService: PrismaService,
     private readonly audit: AuditService,
     private readonly sessionUsers: SessionUserCache,
-    private readonly sessions: SessionsService
+    private readonly sessions: SessionsService,
+    private readonly salary: SalaryService
   ) {}
 
   private get prisma() {
@@ -213,6 +218,7 @@ export class UsersService {
         role: true,
         isActive: true,
         branchId: true,
+        salaryPercentBp: true,
       },
     });
     if (!existing) throw new NotFoundException("userNotFound");
@@ -236,6 +242,15 @@ export class UsersService {
     // разрыв всех текущих сессий, иначе чужой доступ пережил бы смену пароля
     const passwordHash = data.password ? await bcrypt.hash(data.password, 10) : undefined;
 
+    // Ставка преподавателя — вход расчёта зарплаты (как цена курса в
+    // биллинге). Меняем только вперёд: закрытые месяцы фиксируем ДО записи,
+    // иначе ещё не открытый месяц заморозился бы уже по новой ставке
+    // (план зарплат, 5.4). Затрагивает ВСЕ единицы этого преподавателя —
+    // все его группы без своей ставки и все его курсы без группы.
+    if (data.salaryPercentBp !== undefined && data.salaryPercentBp !== existing.salaryPercentBp) {
+      await this.salary.freezeClosedMonths({ teacherId: id });
+    }
+
     const user = await this.prisma.user.update({
       where: { id },
       data: {
@@ -247,6 +262,7 @@ export class UsersService {
         ...(data.role !== undefined && { role: data.role }),
         ...(data.isActive !== undefined && { isActive: data.isActive }),
         ...(branchId !== undefined && { branchId }),
+        ...(data.salaryPercentBp !== undefined && { salaryPercentBp: data.salaryPercentBp }),
       },
       select: USER_SELECT,
     });

@@ -61,6 +61,17 @@ export const createUserSchema = z
     }
   });
 
+// Ставка зарплаты преподавателя в базисных пунктах (4000 = 40.00%), как у
+// группы (groups/dto/group.dto.ts) — пусто снимает ставку, а не 0%
+// (план зарплат, 5.2). nullable: явный null из формы означает «очистить».
+const salaryPercentBpSchema = z
+  .number()
+  .int("percentPositive")
+  .min(0, "percentPositive")
+  .max(10_000, "percentTooLarge")
+  .nullable()
+  .optional();
+
 export const updateUserSchema = z.object({
   login: loginSchema.optional(),
   // Сброс пароля администратором (4.1, «Путь 1»): поле есть только здесь,
@@ -72,6 +83,7 @@ export const updateUserSchema = z.object({
   role: roleSchema.optional(),
   isActive: z.boolean().optional(),
   branchId: branchIdSchema,
+  salaryPercentBp: salaryPercentBpSchema,
 });
 
 export const usersQuerySchema = z.object({ branchId: z.string().max(40).optional() });

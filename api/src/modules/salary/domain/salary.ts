@@ -13,9 +13,9 @@
  * формуле), поэтому isClosedMonth и isValidMonth переиспользуются из
  * domain/billing.ts, а не заводится второй источник правды с тем же кодом.
  */
-import { isClosedMonth, isValidMonth, monthKey } from "../../billing/domain/billing";
+import { addMonths, isClosedMonth, isValidMonth, monthKey } from "../../billing/domain/billing";
 
-export { isClosedMonth, isValidMonth, monthKey };
+export { addMonths, isClosedMonth, isValidMonth, monthKey };
 
 // 1 базисный пункт = 0.01 %; 4000 = 40 %. См. User.salaryPercentBp в схеме.
 const BP_SCALE = 10_000;
