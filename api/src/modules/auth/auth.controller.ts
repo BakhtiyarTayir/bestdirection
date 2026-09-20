@@ -8,14 +8,10 @@ import type { SessionUser } from "../../common/auth/session-user";
 import { AuthService } from "./auth.service";
 import {
   LoginDto,
-  RegisterDto,
-  RequestEmailDto,
   RequestTelegramPasswordResetDto,
-  ResetPasswordDto,
   ResetPasswordViaTelegramDto,
   TelegramCodeDto,
   TelegramWidgetDto,
-  VerifyCodeDto,
 } from "./dto/auth.dto";
 import { SESSION_COOKIE, SessionsService } from "../../common/auth/sessions.service";
 
@@ -30,7 +26,9 @@ const LOGIN_LIMIT = Number(process.env.AUTH_RATE_LIMIT ?? 10);
 const CODE_LIMIT = Number(process.env.AUTH_CODE_RATE_LIMIT ?? 5);
 
 /**
- * Вход, регистрация и восстановление пароля.
+ * Вход и восстановление пароля. Самостоятельная регистрация и почтовый
+ * сброс убраны на шаге 2 отказа от почты: учеников заводит администратор,
+ * Telegram — единственный самостоятельный путь восстановления.
  *
  * Пределы частоты жёстче общих: это единственные маршруты, куда стучатся до
  * входа. Прежний лимитер опирался на Upstash, которого в проде нет, и не
@@ -120,45 +118,11 @@ export class AuthController {
     return user;
   }
 
-  @Public()
-  @Throttle({ default: { limit: CODE_LIMIT, ttl: 60_000 } })
-  @Post("email/request-code")
-  requestEmailCode(@Body() body: RequestEmailDto) {
-    return this.auth.requestEmailVerification(body);
-  }
-
-  @Public()
-  @Throttle({ default: { limit: LOGIN_LIMIT, ttl: 60_000 } })
-  @Post("email/verify-code")
-  verifyEmailCode(@Body() body: VerifyCodeDto) {
-    return this.auth.verifyEmailCode(body);
-  }
-
-  @Public()
-  @Throttle({ default: { limit: LOGIN_LIMIT, ttl: 60_000 } })
-  @Post("register")
-  register(@Body() body: RegisterDto) {
-    return this.auth.register(body);
-  }
-
-  @Public()
-  @Throttle({ default: { limit: CODE_LIMIT, ttl: 60_000 } })
-  @Post("password/request-reset")
-  requestReset(@Body() body: RequestEmailDto) {
-    return this.auth.requestPasswordReset(body);
-  }
-
-  @Public()
-  @Throttle({ default: { limit: LOGIN_LIMIT, ttl: 60_000 } })
-  @Post("password/reset")
-  resetPassword(@Body() body: ResetPasswordDto) {
-    return this.auth.resetPassword(body);
-  }
-
   /**
-   * Второй путь сброса пароля — без почты, кодом в Telegram (шаг 1 отказа от
-   * почты). Работает, только если у логина привязан Telegram — иначе такой
-   * же нейтральный { ok: true }, как у почтового пути.
+   * Сброс пароля кодом в Telegram — единственный самостоятельный путь после
+   * ухода почты (шаг 2 отказа от почты). Работает, только если у логина
+   * привязан Telegram — иначе нейтральный { ok: true }, чтобы форма не
+   * превращалась в перебор логинов.
    */
   @Public()
   @Throttle({ default: { limit: CODE_LIMIT, ttl: 60_000 } })

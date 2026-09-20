@@ -2,14 +2,6 @@ import { BadRequestException, ForbiddenException, Injectable, UnauthorizedExcept
 import bcrypt from "bcryptjs";
 import { createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
 import {
-  EMAIL_CODE_MAX_ATTEMPTS,
-  EMAIL_CODE_RESEND_COOLDOWN_MS,
-  EMAIL_CODE_TTL_MS,
-  hashVerificationCode,
-} from "../../common/email/codes";
-import { EmailService } from "../../common/email/email.service";
-import { generateUniqueLogin, loginBaseFromEmail, loginBaseFromName } from "../../common/auth/login-generator";
-import {
   hashResetCode,
   RESET_CODE_MAX_ATTEMPTS,
   RESET_CODE_RESEND_COOLDOWN_MS,
@@ -21,19 +13,18 @@ import { SessionsService } from "../../common/auth/sessions.service";
 import { TelegramNotifyService } from "../../common/telegram/telegram-notify.service";
 import type {
   LoginDto,
-  RegisterDto,
-  RequestEmailDto,
   RequestTelegramPasswordResetDto,
-  ResetPasswordDto,
   ResetPasswordViaTelegramDto,
   TelegramWidgetDto,
-  VerifyCodeDto,
 } from "./dto/auth.dto";
 
 /**
- * Вход, регистрация и восстановление пароля. Перенесено из src/lib/auth.ts,
- * src/actions/auth-actions.ts, email-verification-actions.ts,
- * telegram-auth-actions.ts и src/lib/telegram/login.ts в web.
+ * Вход и восстановление пароля. Перенесено из src/lib/auth.ts,
+ * src/actions/auth-actions.ts, telegram-auth-actions.ts и
+ * src/lib/telegram/login.ts в web. Почта убрана целиком (шаг 2 отказа от
+ * почты, PLAN-SALARY-PROFILE-BRANCH-2026-09-20.md, 4.1, чек-лист 4.8):
+ * логин — единственный опознавательный знак, Telegram — единственный
+ * самостоятельный путь восстановления.
  */
 
 const TELEGRAM_AUTH_MAX_AGE_SECONDS = 10 * 60;
@@ -50,7 +41,6 @@ export class AuthService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly sessions: SessionsService,
-    private readonly email: EmailService,
     private readonly cache: SessionUserCache,
     private readonly telegramNotify: TelegramNotifyService
   ) {}
@@ -66,14 +56,10 @@ export class AuthService {
 
   // ─── Вход ───────────────────────────────────────────────────────────────
 
-  /**
-   * Вход принимает и логин, и почту одним полем (шаг 1 отказа от почты,
-   * PLAN-SALARY-PROFILE-BRANCH-2026-09-20.md, 4.1) — старые привычки
-   * продолжают работать, пока не будет объявлено обратное.
-   */
+  /** Вход по логину — единственному опознавательному знаку после ухода почты. */
   async loginWithPassword(data: LoginDto, context: { userAgent?: string; ip?: string }) {
-    const identifier = data.login.trim().toLowerCase();
-    const user = await this.prisma.user.findFirst({ where: { OR: [{ login: identifier }, { email: identifier }] } });
+    const login = data.login.trim().toLowerCase();
+    const user = await this.prisma.user.findUnique({ where: { login } });
 
     const valid = await bcrypt.compare(data.password, user?.passwordHash ?? DUMMY_HASH);
 
@@ -147,108 +133,11 @@ export class AuthService {
     return { ok: true as const };
   }
 
-  // ─── Регистрация ────────────────────────────────────────────────────────
-
-  /**
-   * Код на почту. Ответ одинаковый и для свободного, и для занятого адреса:
-   * иначе форма превращается в проверку «кто зарегистрирован» (аудит 2.12).
-   * Занятому адресу код просто не отправляется.
-   */
-  async requestEmailVerification(data: RequestEmailDto) {
-    const email = data.email.trim().toLowerCase();
-    if (!this.email.isConfigured()) throw new BadRequestException("emailNotConfigured");
-
-    const existing = await this.prismaUnscoped.user.findUnique({
-      where: { email },
-      select: { id: true },
-    });
-    if (existing) return { ok: true as const };
-
-    return this.issueCode(email, data.locale, "register");
-  }
-
-  async verifyEmailCode(data: VerifyCodeDto) {
-    const email = data.email.trim().toLowerCase();
-    await this.checkCode(email, data.code, { consume: false });
-    return { ok: true as const };
-  }
-
-  async register(data: RegisterDto) {
-    const email = data.email.trim().toLowerCase();
-
-    const existing = await this.prismaUnscoped.user.findUnique({
-      where: { email },
-      select: { id: true },
-    });
-    if (existing) throw new BadRequestException("emailAlreadyExists");
-
-    await this.checkCode(email, data.code, { consume: true });
-
-    const firstName = data.firstName.trim();
-    const lastName = data.lastName.trim();
-    // Самозарегистрированный сразу получает логин — иначе он остался бы без
-    // него до ближайшего перезапуска api (UserLoginBackfillService), а вход
-    // по логину для него не работал бы всё это время
-    const login = await generateUniqueLogin(
-      this.prismaUnscoped,
-      loginBaseFromEmail(email) ?? loginBaseFromName(firstName, lastName)
-    );
-
-    const passwordHash = await bcrypt.hash(data.password, BCRYPT_ROUNDS);
-    const user = await this.prisma.user.create({
-      data: {
-        email,
-        login,
-        passwordHash,
-        firstName,
-        lastName,
-        role: "STUDENT",
-      },
-      select: { id: true },
-    });
-
-    return { id: user.id };
-  }
-
-  // ─── Восстановление пароля ──────────────────────────────────────────────
-
-  /** Тот же ответ и для существующего, и для неизвестного адреса (2.12). */
-  async requestPasswordReset(data: RequestEmailDto) {
-    const email = data.email.trim().toLowerCase();
-    if (!this.email.isConfigured()) throw new BadRequestException("emailNotConfigured");
-
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-      select: { id: true, isActive: true },
-    });
-    if (!user || !user.isActive) return { ok: true as const };
-
-    return this.issueCode(email, data.locale, "reset");
-  }
-
-  async resetPassword(data: ResetPasswordDto) {
-    const email = data.email.trim().toLowerCase();
-
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-      select: { id: true, isActive: true },
-    });
-    // Код привязан к адресу, поэтому неизвестный адрес отвечает как неверный код
-    if (!user || !user.isActive) throw new BadRequestException("invalidCode");
-
-    await this.checkCode(email, data.code, { consume: true });
-
-    const passwordHash = await bcrypt.hash(data.newPassword, BCRYPT_ROUNDS);
-    await this.prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
-
-    // Смена пароля обрывает все сессии: если доступ был у чужого, он потерян
-    await this.sessions.destroyAllFor(user.id);
-    this.cache.forget(user.id);
-
-    return { ok: true as const };
-  }
-
-  // ─── Сброс пароля через Telegram (второй путь, без почты) ──────────────
+  // ─── Восстановление пароля через Telegram ───────────────────────────────
+  //
+  // Самостоятельная регистрация и почтовый сброс пароля убраны целиком (шаг 2
+  // отказа от почты): учеников заводит администратор, а Telegram — теперь
+  // единственный самостоятельный путь восстановления доступа.
 
   /**
    * Тот же ответ и для неизвестного логина, и для того, у кого не привязан
@@ -256,8 +145,8 @@ export class AuthService {
    */
   async requestTelegramPasswordReset(data: RequestTelegramPasswordResetDto) {
     const login = data.login.trim().toLowerCase();
-    const user = await this.prisma.user.findFirst({
-      where: { OR: [{ login }, { email: login }] },
+    const user = await this.prisma.user.findUnique({
+      where: { login },
       select: { id: true, isActive: true, telegramChatId: true },
     });
     if (!user || !user.isActive || !user.telegramChatId) return { ok: true as const };
@@ -283,8 +172,8 @@ export class AuthService {
 
   async resetPasswordViaTelegram(data: ResetPasswordViaTelegramDto) {
     const login = data.login.trim().toLowerCase();
-    const user = await this.prisma.user.findFirst({
-      where: { OR: [{ login }, { email: login }] },
+    const user = await this.prisma.user.findUnique({
+      where: { login },
       select: { id: true, isActive: true },
     });
     // Код привязан к userId, поэтому неизвестный логин отвечает как неверный код
@@ -321,59 +210,9 @@ export class AuthService {
     const token = await this.sessions.create(userId, context);
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      select: { id: true, role: true, login: true, email: true, firstName: true, lastName: true },
+      select: { id: true, role: true, login: true, firstName: true, lastName: true },
     });
     return { token, user };
-  }
-
-  /** Заводит код, соблюдая паузу между отправками. */
-  private async issueCode(email: string, locale: string | undefined, kind: "register" | "reset") {
-    const existing = await this.prisma.emailVerificationCode.findUnique({ where: { email } });
-    if (existing && Date.now() - existing.sentAt.getTime() < EMAIL_CODE_RESEND_COOLDOWN_MS) {
-      throw new BadRequestException("resendCooldown");
-    }
-
-    const code = String(randomInt(100000, 1000000));
-    const codeHash = hashVerificationCode(email, code);
-    const expiresAt = new Date(Date.now() + EMAIL_CODE_TTL_MS);
-
-    await this.prisma.emailVerificationCode.upsert({
-      where: { email },
-      create: { email, codeHash, expiresAt },
-      update: { codeHash, attempts: 0, expiresAt, sentAt: new Date() },
-    });
-
-    const sent = await this.email.sendVerificationCode(email, code, locale ?? "ru", kind);
-    if (!sent) throw new BadRequestException("emailSendFailed");
-
-    return { ok: true as const };
-  }
-
-  /**
-   * Проверка кода. `consume` гасит его: при регистрации и сбросе пароля код
-   * одноразовый, а на промежуточном шаге проверки он ещё нужен.
-   */
-  private async checkCode(email: string, code: string, { consume }: { consume: boolean }) {
-    const verification = await this.prisma.emailVerificationCode.findUnique({ where: { email } });
-    if (!verification || verification.expiresAt < new Date()) {
-      throw new BadRequestException("codeExpired");
-    }
-    if (verification.attempts >= EMAIL_CODE_MAX_ATTEMPTS) {
-      throw new BadRequestException("tooManyAttempts");
-    }
-
-    const expected = hashVerificationCode(email, code);
-    if (!SessionsService.safeEqual(verification.codeHash, expected)) {
-      await this.prisma.emailVerificationCode.update({
-        where: { id: verification.id },
-        data: { attempts: { increment: 1 } },
-      });
-      throw new BadRequestException("invalidCode");
-    }
-
-    if (consume) {
-      await this.prisma.emailVerificationCode.delete({ where: { id: verification.id } });
-    }
   }
 
   /**
