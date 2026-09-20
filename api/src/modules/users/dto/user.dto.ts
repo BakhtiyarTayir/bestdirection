@@ -9,9 +9,6 @@ import { LOGIN_REGEX } from "../../../common/auth/login-generator";
 
 export const roleSchema = z.enum(["ADMIN", "TEACHER", "STUDENT", "PARENT"]);
 
-const emailSchema = z
-  .union([z.string().trim().email("emailInvalid").max(200), z.literal("")])
-  .optional();
 const nameSchema = z.string().trim().min(1).max(100);
 const phoneSchema = z.string().trim().max(30).optional();
 const passwordSchema = z.string().min(8, "passwordMinLength").max(200);
@@ -65,7 +62,6 @@ export const createUserSchema = z
   });
 
 export const updateUserSchema = z.object({
-  email: emailSchema,
   login: loginSchema.optional(),
   // Сброс пароля администратором (4.1, «Путь 1»): поле есть только здесь,
   // не в профиле — сменить чужой пароль может только ADMIN через PATCH.

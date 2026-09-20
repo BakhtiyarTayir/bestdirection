@@ -41,7 +41,7 @@ export const getParentChildren = (parentId?: string) =>
 export const getGroupRecipients = (groupId: string) =>
   apiServerFetch<{
     recipients: {
-      parent: { id: string; firstName: string; lastName: string; phone: string | null; email: string | null; isActive: boolean };
+      parent: { id: string; firstName: string; lastName: string; phone: string | null; isActive: boolean };
       relation: string;
       isPrimary: boolean;
       children: { id: string; firstName: string; lastName: string }[];

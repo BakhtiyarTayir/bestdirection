@@ -63,11 +63,12 @@ async function main() {
     orderBy: [{ role: "asc" }, { lastName: "asc" }, { firstName: "asc" }],
   });
 
+  // login — NOT NULL с шага 2 отказа от почты, но проверка остаётся: если
+  // она когда-нибудь сработает, лучше понятная ошибка, чем пустая строка
+  // в выгрузке с паролями
   const withoutLogin = users.filter((user) => !user.login);
   if (withoutLogin.length > 0) {
-    console.error(
-      `Остановлено: ${withoutLogin.length} пользователей без логина. Перезапустите api — логины проставляет UserLoginBackfillService при старте — и повторите.`
-    );
+    console.error(`Остановлено: ${withoutLogin.length} пользователей без логина — это не должно быть возможно.`);
     process.exit(1);
   }
 

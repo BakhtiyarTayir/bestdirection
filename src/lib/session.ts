@@ -10,7 +10,7 @@ import { apiServerFetch } from "@/lib/api/server";
 export interface SessionUser {
   id: string;
   role: "ADMIN" | "TEACHER" | "STUDENT" | "PARENT";
-  email: string | null;
+  login: string | null;
   firstName: string;
   lastName: string;
 }

@@ -24,7 +24,6 @@ async function ProfilePageContent({
   user: {
     id: string;
     login: string | null;
-    email: string | null;
     firstName: string;
     lastName: string;
     phone: string | null;

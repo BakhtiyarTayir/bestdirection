@@ -72,9 +72,6 @@ export type CreateUserInput = z.infer<typeof createUserSchema>;
 
 export const updateUserSchema = z.object({
   id: z.string().min(1, "userIdRequired"),
-  email: z
-    .union([z.string().email("emailInvalid"), z.literal("")])
-    .optional(),
   login: loginSchema.optional(),
   // Сброс пароля администратором (4.1, «Путь 1») — пусто = не менять
   password: z

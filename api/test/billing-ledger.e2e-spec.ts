@@ -46,10 +46,20 @@ it("реестр начислений и Корзина на настоящей 
   const amounts = async (enrollmentId: string) =>
     ((await scheduleOf(enrollmentId)) ?? []).map((item) => [item.month, item.charge.amount]);
 
-  const teacher = await prisma.user.create({ data: { firstName: "T", lastName: run, role: "TEACHER" } });
+  // login NOT NULL с шага 2 отказа от почты — тест обходит DTO и пишет прямо
+  // в базу, поэтому логин здесь только для уникальности, без проверки формата.
+  // Считаем отдельным счётчиком: один и тот же курс тут записывает несколько
+  // разных студентов с одинаковым `name` (`S-${courseId.slice(-4)}`), а login
+  // обязан быть уникальным на каждую строку.
+  let studentSeq = 0;
+  const teacher = await prisma.user.create({
+    data: { login: `teacher-${run}`, firstName: "T", lastName: run, role: "TEACHER" },
+  });
   const branch = await createBranch();
   const student = (name: string) =>
-    prisma.user.create({ data: { firstName: name, lastName: run, role: "STUDENT" } });
+    prisma.user.create({
+      data: { login: `student-${run}-${studentSeq++}`, firstName: name, lastName: run, role: "STUDENT" },
+    });
   const course = (name: string, price: number | null) =>
     prisma.course.create({ data: { slug: `${name}-${run}`, title: name, teacherId: teacher.id, price } });
   const group = (name: string, courseId: string, price: number | null) =>

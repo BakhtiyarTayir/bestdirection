@@ -183,6 +183,8 @@ describe("модуль users", () => {
       const login = uniqueLogin("novyy-polzovatel");
       const res = await send("post", "/users", "ADMIN", {
         login,
+        // Почты в схеме больше нет вовсе (шаг 2 отказа от почты) — лишнее
+        // поле должно молча отбрасываться, а не валить запрос
         email: "should-be-ignored@test.uz",
         password: "12345678",
         firstName: "Имя",
@@ -195,8 +197,7 @@ describe("модуль users", () => {
       expect(res.status).toBe(201);
       expect(res.body).toMatchObject({ login, role: "STUDENT", isActive: true });
       expect(res.body.number).not.toBe(99999);
-      // Почта не входит в createUserSchema (план, 4.5) — лишнее поле отброшено
-      expect(res.body.email).toBeNull();
+      expect(res.body.email).toBeUndefined();
     });
 
     it("занятый логин — 409 loginExists", async () => {

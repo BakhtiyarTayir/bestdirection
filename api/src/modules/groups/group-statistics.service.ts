@@ -22,7 +22,7 @@ const group = await this.prisma.group.findUnique({
         enrollments: {
           include: {
             student: {
-              select: { id: true, firstName: true, lastName: true, email: true },
+              select: { id: true, firstName: true, lastName: true },
             },
           },
         },
@@ -133,7 +133,6 @@ const group = await this.prisma.group.findUnique({
         id: student.id,
         firstName: student.firstName,
         lastName: student.lastName,
-        email: student.email,
         attendancePercent,
         attendancePresent,
         attendanceTotal: totalSessions,

@@ -52,7 +52,7 @@ export const getStudentHomeworks = () =>
 export const getHomeworkSubmissions = (homeworkId: string) =>
   apiServerFetch<ApiSubmission[]>(`/homework/${homeworkId}/submissions`);
 
-type WithStudent = { student: { id: string; firstName: string; lastName: string; email?: string | null } };
+type WithStudent = { student: { id: string; firstName: string; lastName: string } };
 
 /** Разбор работы: api отдаёт их всегда, поэтому здесь они обязательны. */
 type WithDetails = {

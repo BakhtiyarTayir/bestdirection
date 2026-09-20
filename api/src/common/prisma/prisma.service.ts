@@ -65,7 +65,7 @@ export class PrismaService implements OnModuleDestroy {
 
   /**
    * Без фильтра мягкого удаления. Нужен корзине, окончательному удалению и
-   * проверкам уникальности: индексы в БД про deletedAt не знают, и email или
+   * проверкам уникальности: индексы в БД про deletedAt не знают, и login или
    * slug удалённой записи остаются занятыми.
    */
   get prismaUnscoped(): PrismaClient {

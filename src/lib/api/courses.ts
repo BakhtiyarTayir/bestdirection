@@ -9,7 +9,6 @@ export interface ApiCourseTeacher {
   id: string;
   firstName: string;
   lastName: string;
-  email: string | null;
 }
 
 export interface ApiCourse {

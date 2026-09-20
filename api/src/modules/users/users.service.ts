@@ -20,7 +20,6 @@ const USER_SELECT = {
   id: true,
   number: true,
   login: true,
-  email: true,
   firstName: true,
   lastName: true,
   phone: true,
@@ -47,7 +46,7 @@ export class UsersService {
     return this.prismaService.prisma;
   }
 
-  /** Без фильтра мягкого удаления: почта удалённого пользователя остаётся занятой. */
+  /** Без фильтра мягкого удаления: логин удалённого пользователя остаётся занятым. */
   private get prismaUnscoped() {
     return this.prismaService.prismaUnscoped;
   }
@@ -208,7 +207,6 @@ export class UsersService {
       where: { id },
       select: {
         login: true,
-        email: true,
         firstName: true,
         lastName: true,
         phone: true,
@@ -218,13 +216,6 @@ export class UsersService {
       },
     });
     if (!existing) throw new NotFoundException("userNotFound");
-
-    // undefined — поле не меняем, пустая строка — стираем почту
-    const email = data.email !== undefined ? data.email.trim() || null : undefined;
-    if (email) {
-      const holderId = await this.emailTakenBy(email);
-      if (holderId && holderId !== id) throw new ConflictException("emailExists");
-    }
 
     if (data.login) {
       const holderId = await this.loginTakenBy(data.login);
@@ -248,7 +239,6 @@ export class UsersService {
     const user = await this.prisma.user.update({
       where: { id },
       data: {
-        ...(email !== undefined && { email }),
         ...(data.login && { login: data.login }),
         ...(passwordHash && { passwordHash }),
         ...(data.firstName !== undefined && { firstName: data.firstName }),
@@ -338,7 +328,7 @@ export class UsersService {
   }
 
   /**
-   * Полное удаление строки. Освобождает почту и telegramChatId и каскадом
+   * Полное удаление строки. Освобождает логин и telegramChatId и каскадом
    * уносит всё, что на пользователя завязано.
    */
   async purge(id: string, actor: SessionUser) {
@@ -346,7 +336,7 @@ export class UsersService {
 
     const target = await this.prismaUnscoped.user.findUnique({
       where: { id },
-      select: { id: true, isActive: true, deletedAt: true, email: true, role: true, firstName: true, lastName: true },
+      select: { id: true, isActive: true, deletedAt: true, login: true, role: true, firstName: true, lastName: true },
     });
     if (!target) throw new NotFoundException("userNotFound");
     // Стирать можно только с вкладки деактивированных
@@ -374,7 +364,7 @@ export class UsersService {
       action: "DELETE",
       metadata: {
         permanent: true,
-        email: target.email,
+        login: target.login,
         role: target.role,
         name: `${target.firstName} ${target.lastName}`,
       },
@@ -440,7 +430,7 @@ export class UsersService {
     return this.prisma.user.update({
       where: { id: userId },
       data: { firstName: data.firstName, lastName: data.lastName, phone: data.phone },
-      select: { id: true, login: true, email: true, firstName: true, lastName: true, phone: true, role: true },
+      select: { id: true, login: true, firstName: true, lastName: true, phone: true, role: true },
     });
   }
 
@@ -463,14 +453,7 @@ export class UsersService {
     });
   }
 
-  private async emailTakenBy(email: string): Promise<string | null> {
-    // Уникальный индекс про deletedAt не знает: почту держит занятой любая
-    // строка, в том числе невидимая обычному клиенту
-    const holder = await this.prismaUnscoped.user.findUnique({ where: { email }, select: { id: true } });
-    return holder?.id ?? null;
-  }
-
-  /** Та же причина, что у emailTakenBy: логин мягко удалённого пользователя тоже занят. */
+  /** Уникальный индекс про deletedAt не знает: логин держит занятым любая строка, в том числе невидимая обычному клиенту. */
   private async loginTakenBy(login: string): Promise<string | null> {
     const holder = await this.prismaUnscoped.user.findUnique({ where: { login }, select: { id: true } });
     return holder?.id ?? null;

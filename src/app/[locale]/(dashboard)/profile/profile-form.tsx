@@ -25,8 +25,6 @@ interface ProfileUser {
   // Логин виден всегда — человек должен знать, чем он входит. Менять его
   // может только администратор в карточке пользователя (4.2)
   login: string | null;
-  // У аккаунтов, созданных через Telegram, почты может не быть вовсе
-  email: string | null;
   firstName: string;
   lastName: string;
   phone: string | null;

@@ -10,7 +10,7 @@ import { BillingLedgerService } from "../billing/billing-ledger.service";
 import type { CreateCourseDto, UpdateCourseDto } from "./dto/course.dto";
 
 const COURSE_INCLUDE = {
-  teacher: { select: { id: true, firstName: true, lastName: true, email: true } },
+  teacher: { select: { id: true, firstName: true, lastName: true } },
 } as const;
 
 /** Перенесено из src/actions/course-actions.ts в web. */
@@ -249,7 +249,7 @@ export class CoursesService {
 
     const enrollment = await this.prisma.enrollment.create({
       data: { studentId, courseId },
-      include: { student: { select: { id: true, firstName: true, lastName: true, email: true } } },
+      include: { student: { select: { id: true, firstName: true, lastName: true } } },
     });
 
     await this.audit.record({

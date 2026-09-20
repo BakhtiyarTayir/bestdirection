@@ -12,10 +12,9 @@ import type { ApiResult } from "./result";
 export interface ApiUser {
   id: string;
   number: number;
-  // Логин заменяет почту как опознавательный знак при входе (шаг 1 отказа от
-  // почты); почта остаётся в шаге 1, только больше не показывается в UI
+  // Логин — единственный опознавательный знак при входе (почта убрана
+  // целиком на шаге 2 отказа от почты)
   login: string | null;
-  email: string | null;
   firstName: string;
   lastName: string;
   phone: string | null;
@@ -58,7 +57,6 @@ export interface ApiTeacher {
 export interface ApiProfile {
   id: string;
   login: string | null;
-  email: string | null;
   firstName: string;
   lastName: string;
   phone: string | null;
@@ -110,7 +108,7 @@ export interface ApiAuditLogPage {
     changes: Record<string, { old: unknown; new: unknown }> | null;
     metadata: Record<string, unknown> | null;
     createdAt: string;
-    user: { id: string; firstName: string; lastName: string; email: string | null };
+    user: { id: string; firstName: string; lastName: string };
   }[];
   total: number;
   page: number;
@@ -151,7 +149,6 @@ export const createUser = (body: {
 export const updateUser = (
   id: string,
   body: {
-    email?: string;
     login?: string;
     password?: string;
     firstName?: string;
