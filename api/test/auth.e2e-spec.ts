@@ -1,9 +1,11 @@
 import bcrypt from "bcryptjs";
+import { randomBytes } from "node:crypto";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createTestApp, createUser, sessionCookie, TEST_APP_URL, testDb, type TestApp } from "./helpers";
 import { hashVerificationCode } from "../src/common/email/codes";
 import { EmailService } from "../src/common/email/email.service";
+import { TelegramNotifyService } from "../src/common/telegram/telegram-notify.service";
 
 // Предел попыток входа в тестах поднят через vitest.config.mts: проверок
 // здесь больше, чем разрешено в проде.
@@ -22,6 +24,16 @@ class EmailStub {
   }
 }
 
+/** Сообщения в Telegram никуда не уходят: запоминаем, куда и что «отправили». */
+class TelegramNotifyStub {
+  readonly sent: { chatId: string; text: string }[] = [];
+
+  async send(chatId: string | null | undefined, text: string) {
+    if (!chatId) return;
+    this.sent.push({ chatId, text });
+  }
+}
+
 describe("вход и сессии", () => {
   let app: TestApp;
   const run = Date.now().toString(36);
@@ -29,9 +41,15 @@ describe("вход и сессии", () => {
   const emailOf = (name: string) => `${name}-${run}@test.local`;
 
   const email = new EmailStub();
+  const telegram = new TelegramNotifyStub();
 
   beforeAll(async () => {
-    app = await createTestApp({ overrides: [{ provide: EmailService, useValue: email }] });
+    app = await createTestApp({
+      overrides: [
+        { provide: EmailService, useValue: email },
+        { provide: TelegramNotifyService, useValue: telegram },
+      ],
+    });
 
     await testDb().user.create({
       data: {
@@ -71,7 +89,7 @@ describe("вход и сессии", () => {
 
   describe("вход по паролю", () => {
     it("верный пароль заводит сессию и ставит куку", async () => {
-      const res = await post("/auth/login", { email: emailOf("student"), password });
+      const res = await post("/auth/login", { login: emailOf("student"), password });
       expect(res.status).toBe(201);
       expect(res.body.user.email).toBe(emailOf("student"));
 
@@ -90,7 +108,7 @@ describe("вход и сессии", () => {
     });
 
     it("в базе лежит хэш токена, а не сам токен", async () => {
-      const res = await post("/auth/login", { email: emailOf("student"), password });
+      const res = await post("/auth/login", { login: emailOf("student"), password });
       const cookie = sessionCookieOf(res)!;
       const token = cookie.split("=")[1];
 
@@ -101,15 +119,15 @@ describe("вход и сессии", () => {
 
     it("неверный пароль, неизвестный адрес и выключенный аккаунт отвечают одинаково", async () => {
       const wrongPassword = await post("/auth/login", {
-        email: emailOf("student"),
+        login: emailOf("student"),
         password: "nepravilnyy-parol",
       });
       const unknownEmail = await post("/auth/login", {
-        email: emailOf("takogo-net"),
+        login: emailOf("takogo-net"),
         password,
       });
       const disabled = await post("/auth/login", {
-        email: emailOf("vyklyuchennyy"),
+        login: emailOf("vyklyuchennyy"),
         password,
       });
 
@@ -123,7 +141,7 @@ describe("вход и сессии", () => {
 
   describe("выход и обрыв сессий", () => {
     it("после выхода кука больше не пускает", async () => {
-      const login = await post("/auth/login", { email: emailOf("student"), password });
+      const login = await post("/auth/login", { login: emailOf("student"), password });
       const cookie = sessionCookieOf(login)!;
 
       expect((await http().get("/api/v2/auth/me").set("Cookie", cookie)).status).toBe(200);
@@ -146,10 +164,10 @@ describe("вход и сессии", () => {
       });
 
       const first = sessionCookieOf(
-        await post("/auth/login", { email: user.email!, password })
+        await post("/auth/login", { login: user.email!, password })
       )!;
       const second = sessionCookieOf(
-        await post("/auth/login", { email: user.email!, password })
+        await post("/auth/login", { login: user.email!, password })
       )!;
 
       // Код сброса кладём руками: письмо в тестах не уходит
@@ -174,14 +192,14 @@ describe("вход и сессии", () => {
       }
 
       // Новый пароль работает, старый — нет
-      expect((await post("/auth/login", { email: user.email, password })).status).toBe(401);
+      expect((await post("/auth/login", { login: user.email, password })).status).toBe(401);
       expect(
-        (await post("/auth/login", { email: user.email, password: "novyy-parol-12345" })).status
+        (await post("/auth/login", { login: user.email, password: "novyy-parol-12345" })).status
       ).toBe(201);
     });
 
     it("истёкшая сессия не пускает", async () => {
-      const login = await post("/auth/login", { email: emailOf("student"), password });
+      const login = await post("/auth/login", { login: emailOf("student"), password });
       const cookie = sessionCookieOf(login)!;
 
       const rows = await testDb().session.findMany({ orderBy: { createdAt: "desc" }, take: 1 });
@@ -205,7 +223,7 @@ describe("вход и сессии", () => {
           role: "STUDENT",
         },
       });
-      const cookie = sessionCookieOf(await post("/auth/login", { email: user.email!, password }))!;
+      const cookie = sessionCookieOf(await post("/auth/login", { login: user.email!, password }))!;
       expect((await http().get("/api/v2/auth/me").set("Cookie", cookie)).status).toBe(200);
 
       const admin = await createUser({ role: "ADMIN" });
@@ -329,6 +347,120 @@ describe("вход и сессии", () => {
       const res = await http().get("/api/v2/auth/me").set("Cookie", legacy);
       expect(res.status).toBe(200);
       expect(res.body.role).toBe("TEACHER");
+    });
+  });
+
+  // Шаг 1 отказа от почты (PLAN-SALARY-PROFILE-BRANCH-2026-09-20.md, 4.1):
+  // вход принимает логин наравне с почтой.
+  describe("вход по логину", () => {
+    it("логин заводит сессию так же, как почта", async () => {
+      const user = await createUser({ role: "STUDENT", password });
+      await testDb().user.update({ where: { id: user.id }, data: { login: `login-${user.id}` } });
+
+      const res = await post("/auth/login", { login: `login-${user.id}`, password });
+      expect(res.status).toBe(201);
+      expect(res.body.user.id).toBe(user.id);
+    });
+
+    it("регистр логина не влияет на вход", async () => {
+      const user = await createUser({ role: "STUDENT", password });
+      // В базе логин всегда в нижнем регистре (DTO приводит на входе) —
+      // проверяем, что ВХОДЯЩЕЕ значение приводится так же, до сравнения
+      await testDb().user.update({ where: { id: user.id }, data: { login: `mixedcase-${user.id}` } });
+
+      const res = await post("/auth/login", { login: `MixedCase-${user.id}`, password });
+      expect(res.status).toBe(201);
+      expect(res.body.user.id).toBe(user.id);
+    });
+
+    it("неизвестный логин отвечает так же, как неверный пароль (аудит 2.12)", async () => {
+      const res = await post("/auth/login", { login: "net-takogo-logina", password });
+      expect(res.status).toBe(401);
+      expect(res.body.message).toBe("invalidCredentials");
+    });
+  });
+
+  // Второй, независимый от почты путь сброса пароля (4.1, «Путь 2»)
+  describe("сброс пароля через Telegram", () => {
+    it("неизвестный логин отвечает нейтрально и не шлёт сообщение", async () => {
+      const before = telegram.sent.length;
+      const res = await post("/auth/password/telegram/request-code", { login: "prizrak-nikogda-ne-byl" });
+      expect(res.status).toBe(201);
+      expect(res.body).toEqual({ ok: true });
+      expect(telegram.sent.length).toBe(before);
+    });
+
+    it("логин без привязанного Telegram отвечает так же нейтрально", async () => {
+      const user = await createUser({ role: "STUDENT", password, login: null });
+      await testDb().user.update({ where: { id: user.id }, data: { login: `notg-${user.id}` } });
+
+      const before = telegram.sent.length;
+      const res = await post("/auth/password/telegram/request-code", { login: `notg-${user.id}` });
+      expect(res.status).toBe(201);
+      expect(res.body).toEqual({ ok: true });
+      expect(telegram.sent.length).toBe(before);
+    });
+
+    it("код уходит в привязанный чат, неверный код не меняет пароль, верный — меняет и рвёт все сессии", async () => {
+      const user = await createUser({ role: "STUDENT", password, telegramChatId: `tg-reset-${Date.now()}` });
+      const login = `sbros-tg-${user.id}`;
+      await testDb().user.update({ where: { id: user.id }, data: { login } });
+
+      const firstSession = sessionCookieOf(await post("/auth/login", { login, password }))!;
+
+      const before = telegram.sent.length;
+      const requested = await post("/auth/password/telegram/request-code", { login });
+      expect(requested.status).toBe(201);
+      expect(telegram.sent.length).toBe(before + 1);
+      expect(telegram.sent.at(-1)!.chatId).toBe(user.telegramChatId);
+
+      const code = telegram.sent.at(-1)!.text.match(/\d{6}/)?.[0];
+      expect(code).toBeTruthy();
+
+      const wrongCode = await post("/auth/password/telegram/reset", {
+        login,
+        code: "000000",
+        newPassword: "novyy-tg-parol-123",
+      });
+      expect(wrongCode.status).toBe(400);
+      expect(wrongCode.body.message).toBe("invalidCode");
+      // Сессия, открытая до сброса, ещё жива — неверный код ничего не сломал
+      expect((await http().get("/api/v2/auth/me").set("Cookie", firstSession)).status).toBe(200);
+
+      const ok = await post("/auth/password/telegram/reset", {
+        login,
+        code: code!,
+        newPassword: "novyy-tg-parol-123",
+      });
+      expect(ok.status).toBe(201);
+
+      // Смена пароля обрывает все сессии, включая ту, что была открыта до сброса
+      expect((await http().get("/api/v2/auth/me").set("Cookie", firstSession)).status).toBe(401);
+      expect((await post("/auth/login", { login, password: "novyy-tg-parol-123" })).status).toBe(201);
+    });
+  });
+
+  // findOrCreateTelegramUser → requireTelegramUser (4.1): незнакомцу больше
+  // не заводится учётная запись — учеников заводит администратор
+  describe("вход через Telegram не заводит незнакомцев", () => {
+    it("код от неизвестного chatId отвечает telegramUnknown и не создаёт строку", async () => {
+      const before = await testDb().user.count();
+
+      const request = await testDb().telegramAuthRequest.create({
+        data: {
+          code: randomBytes(16).toString("hex"),
+          status: "CONFIRMED",
+          telegramChatId: `unknown-chat-${Date.now()}`,
+          firstName: "Незнакомец",
+          expiresAt: new Date(Date.now() + 60_000),
+        },
+      });
+
+      const res = await post("/auth/telegram/code", { code: request.code });
+      expect(res.status).toBe(401);
+      expect(res.body.message).toBe("telegramUnknown");
+
+      expect(await testDb().user.count()).toBe(before);
     });
   });
 });

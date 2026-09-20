@@ -67,11 +67,14 @@ export async function createUser(data: {
   deletedAt?: Date | null;
   password?: string;
   telegramChatId?: string | null;
+  /** По умолчанию не задан — большинство тестов логин не проверяют */
+  login?: string | null;
 }) {
   const id = randomUUID().slice(0, 8);
   return testDb().user.create({
     data: {
       email: `${data.role.toLowerCase()}-${id}@test.uz`,
+      login: data.login ?? null,
       firstName: data.role,
       lastName: id,
       role: data.role,
