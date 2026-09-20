@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
@@ -39,6 +39,7 @@ interface UserData {
   role: Role;
   isActive: boolean;
   branchId?: string | null;
+  salaryPercentBp?: number | null;
 }
 
 interface UserFormProps {
@@ -95,6 +96,7 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
           phone: user.phone ?? "",
           role: user.role,
           branchId: user.branchId ?? "",
+          salaryPercentBp: user.salaryPercentBp ?? null,
         }
       : {
           login: "",
@@ -420,6 +422,47 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
               </p>
             )}
           </div>
+
+          {/* Ставка зарплаты — только при правке преподавателя. На создании
+              роль ещё можно передумать, и заводить ставку раньше, чем
+              появится карточка преподавателя, незачем. */}
+          {isEditing && role === "TEACHER" && (
+            <div className="space-y-2">
+              <Label htmlFor="salaryPercentBp">{t("salaryPercent")}</Label>
+              {/* Поле хранит базисные пункты (validators/user.ts), вводится
+                  процентом с одним знаком после запятой — как у группы
+                  (group-form.tsx), план зарплат 5.2 */}
+              <Controller
+                name="salaryPercentBp"
+                control={form.control}
+                render={({ field }) => (
+                  <Input
+                    id="salaryPercentBp"
+                    type="number"
+                    step={0.1}
+                    min={0}
+                    max={100}
+                    inputMode="decimal"
+                    value={
+                      field.value === null || field.value === undefined ? "" : String(Number(field.value) / 100)
+                    }
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      if (raw === "") {
+                        field.onChange(null);
+                        return;
+                      }
+                      const percent = Number(raw);
+                      if (Number.isNaN(percent)) return;
+                      field.onChange(Math.round(percent * 100));
+                    }}
+                    placeholder={t("salaryPercentPlaceholder")}
+                  />
+                )}
+              />
+              <p className="text-sm text-muted-foreground">{t("salaryPercentHint")}</p>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="branchId">

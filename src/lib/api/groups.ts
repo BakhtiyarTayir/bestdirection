@@ -12,6 +12,8 @@ export interface ApiGroup {
   startDate: string | null;
   endDate: string | null;
   price: number | null;
+  // Ставка зарплаты группы в базисных пунктах — см. GroupInput.salaryPercentBp
+  salaryPercentBp: number | null;
   isActive: boolean;
   sortOrder: number;
   courseId: string;
@@ -104,6 +106,9 @@ export interface GroupInput {
   startDate?: string;
   endDate?: string;
   price?: number | "";
+  // Ставка зарплаты группы в базисных пунктах (4000 = 40.00%); "" — своей
+  // ставки нет, берётся ставка преподавателя (план зарплат, 5.2)
+  salaryPercentBp?: number | "";
   isActive?: boolean;
   sortOrder?: number;
 }

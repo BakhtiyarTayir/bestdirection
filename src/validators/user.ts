@@ -92,6 +92,18 @@ export const updateUserSchema = z.object({
   branchId: z
     .string()
     .optional(),
+  // Ставка зарплаты преподавателя в базисных пунктах (4000 = 40.00%), как у
+  // группы (validators/group.ts) — null снимает ставку, а не 0% (план
+  // зарплат, 5.2). Сервер принимает только число или null (dto/user.dto.ts),
+  // поэтому в отличие от price/salaryPercentBp группы пустая строка здесь не
+  // проходит — форма конвертирует её в null сама (см. UserForm).
+  salaryPercentBp: z
+    .number()
+    .int("percentPositive")
+    .min(0, "percentPositive")
+    .max(10_000, "percentTooLarge")
+    .nullable()
+    .optional(),
 });
 
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;

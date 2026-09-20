@@ -17,6 +17,7 @@ interface EditUserFormProps {
     createdAt: Date;
     updatedAt: Date;
     branchId?: string | null;
+    salaryPercentBp?: number | null;
   };
   branches: { id: string; name: string }[];
 }

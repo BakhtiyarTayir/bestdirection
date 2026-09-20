@@ -28,6 +28,8 @@ export interface ApiUser {
   branch: { id: string; name: string } | null;
   // Для кнопки «Написать в Telegram» на карточках других людей (4.2)
   telegramUsername: string | null;
+  // Ставка зарплаты преподавателя в базисных пунктах — см. updateUser
+  salaryPercentBp: number | null;
 }
 
 export interface ApiDeactivatedUser {
@@ -157,6 +159,8 @@ export const updateUser = (
     role?: Role;
     isActive?: boolean;
     branchId?: string;
+    // Ставка зарплаты преподавателя в базисных пунктах; null — снять ставку
+    salaryPercentBp?: number | null;
   }
 ): Promise<ApiResult<ApiUser>> => apiFetch(`/users/${id}`, { method: "PATCH", body });
 
