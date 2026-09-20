@@ -14,6 +14,21 @@ import {
   type StoredCharge,
 } from "./domain/billing";
 
+/**
+ * Prisma-фильтр «запись НЕ отчислена» — им пользуются списки и проверки
+ * доступа, которым не всё равно, считается ли ученик ещё учащимся курса
+ * (состав группы, «ученики курса», доступ к материалам, самозапись).
+ *
+ * Источник истины — Enrollment.unenrolledAt, а не связка groupId+billingEndsAt:
+ * пауза (billingEndsAt проставлен через диалог должников) группу не снимает и
+ * отчислением не считается — она останавливает только начисления, это уже
+ * делает chargeForMonth сама по billingEndsAt, — а «без группы» само по себе
+ * означает лишь ученика, ожидающего новую группу (активное состояние).
+ */
+export function activeEnrollmentFilter(): Prisma.EnrollmentWhereInput {
+  return { unenrolledAt: null };
+}
+
 export interface LedgerFilters {
   enrollmentId?: string;
   courseId?: string;
@@ -79,6 +94,7 @@ export class BillingLedgerService {
         createdAt: true,
         startsAt: true,
         billingEndsAt: true,
+        unenrolledAt: true,
         priceOverride: true,
         firstMonthCharge: true,
         studentId: true,
