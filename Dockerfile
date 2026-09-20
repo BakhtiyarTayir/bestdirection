@@ -13,7 +13,6 @@ COPY . .
 # Raise V8 heap limit so the build survives on low-RAM hosts (swap-backed).
 ENV NODE_OPTIONS=--max-old-space-size=2048
 # Только клиент web: у api свой генератор и свой образ
-RUN npx prisma generate --generator client
 RUN npm run build
 
 # Stage 3: Production
@@ -30,22 +29,8 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
-# Схема и миграции: entrypoint накатывает migrate deploy при старте.
-COPY --from=builder /app/prisma ./prisma
-
-# Prisma CLI ставится в отдельный префикс, а не копированием из builder:
-# standalone-сборка содержит только @prisma/client, а у CLI свои зависимости
-# (effect и другие), без которых он падает с MODULE_NOT_FOUND. Отдельный
-# каталог — чтобы не перемешивать с node_modules приложения.
-COPY package.json /tmp/package.json
-RUN PRISMA_VER="$(node -p "const p=require('/tmp/package.json'); p.dependencies?.prisma || p.devDependencies?.prisma")" \
- && echo "Prisma CLI: ${PRISMA_VER}" \
- && npm install --no-save --no-audit --no-fund --prefix /opt/prisma-cli "prisma@${PRISMA_VER}" \
- && rm -f /tmp/package.json \
- && npm cache clean --force
-
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+# Ни схемы, ни Prisma CLI: с этапа 9 web с базой не разговаривает — всё
+# через api, он же накатывает миграции при старте.
 
 # Ensure uploads + Next.js image cache dirs exist and are writable by the app user.
 # /app/uploads — приватные файлы (сдачи ДЗ), НЕ раздаются статикой
@@ -56,5 +41,4 @@ USER nextjs
 
 EXPOSE 3000
 
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", "server.js"]

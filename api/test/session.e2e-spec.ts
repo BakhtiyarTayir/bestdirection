@@ -4,13 +4,18 @@ import { SessionUserCache } from "../src/common/auth/session-user.cache";
 import {
   createTestApp,
   createUser,
-  SECURE_SESSION_COOKIE,
+  orphanSessionCookie,
+  SESSION_COOKIE,
   sessionCookie,
   testDb,
   type TestApp,
 } from "./helpers";
 
-describe("сессия web в api (аудит 2.1)", () => {
+/**
+ * Кто пришёл. Сессию держит api: строка в таблице и кука с токеном.
+ * Проверки прежнего моста к куке NextAuth ушли вместе с ним (этап 9).
+ */
+describe("сессия в api (аудит 2.1)", () => {
   let app: TestApp;
   beforeAll(async () => {
     app = await createTestApp();
@@ -32,7 +37,7 @@ describe("сессия web в api (аудит 2.1)", () => {
 
   it("вошедший получает себя", async () => {
     const user = await createUser({ role: "TEACHER" });
-    const res = await me(await sessionCookie(user, { roleInToken: "TEACHER" }));
+    const res = await me(await sessionCookie(user));
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       id: user.id,
@@ -43,25 +48,15 @@ describe("сессия web в api (аудит 2.1)", () => {
     });
   });
 
-  it("роль берётся из БД, а не из токена", async () => {
+  it("роль берётся из БД, а не из куки", async () => {
     const user = await createUser({ role: "STUDENT" });
-    const res = await me(await sessionCookie(user, { roleInToken: "ADMIN" }));
-    expect(res.body.role).toBe("STUDENT");
-  });
+    const cookie = await sessionCookie(user);
 
-  it("кука по HTTPS (__Secure-) тоже читается", async () => {
-    const user = await createUser({ role: "PARENT" });
-    const res = await me(await sessionCookie(user, { cookieName: SECURE_SESSION_COOKIE }));
-    expect(res.status).toBe(200);
-    expect(res.body.role).toBe("PARENT");
-  });
+    await testDb().user.update({ where: { id: user.id }, data: { role: "ADMIN" } });
+    app.get(SessionUserCache).forget(user.id);
 
-  it("кука, разрезанная Auth.js на части, собирается", async () => {
-    const user = await createUser({ role: "STUDENT" });
-    const [name, token] = (await sessionCookie(user)).split("=");
-    const half = Math.ceil(token.length / 2);
-    const res = await me(`${name}.0=${token.slice(0, half)}; ${name}.1=${token.slice(half)}`);
-    expect(res.status).toBe(200);
+    // В куке только случайный токен: права меняются вместе со строкой в БД
+    expect((await me(cookie)).body.role).toBe("ADMIN");
   });
 
   it("деактивированный — 401", async () => {
@@ -74,18 +69,21 @@ describe("сессия web в api (аудит 2.1)", () => {
     expect((await me(await sessionCookie(user))).status).toBe(401);
   });
 
-  it("несуществующий пользователь — 401", async () => {
-    const res = await me(await sessionCookie({ id: "no-such-user", email: null }));
-    expect(res.status).toBe(401);
+  it("сессия на несуществующего пользователя — 401", async () => {
+    expect((await me(orphanSessionCookie())).status).toBe(401);
   });
 
-  it("чужой секрет, мусор и просроченный токен — 401", async () => {
-    const user = await createUser({ role: "ADMIN" });
-    const foreign = await sessionCookie(user, { secret: "another-secret-0123456789abcdef" });
-    const expired = await sessionCookie(user, { maxAge: -60 });
-    expect((await me(foreign)).status).toBe(401);
-    expect((await me("authjs.session-token=garbage")).status).toBe(401);
-    expect((await me(expired)).status).toBe(401);
+  it("мусор вместо токена — 401", async () => {
+    expect((await me(`${SESSION_COOKIE}=garbage`)).status).toBe(401);
+    expect((await me("authjs.session-token=starayakuka")).status).toBe(401);
+  });
+
+  it("кука прежнего входа через NextAuth больше не принимается", async () => {
+    // Мост к куке web убран вместе с NextAuth: старый вход недействителен,
+    // и у того, кто не перезаходил, страница просто попросит войти
+    const legacy =
+      "authjs.session-token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..fake.payload.value";
+    expect((await me(legacy)).status).toBe(401);
   });
 
   it("деактивация действует после сброса кэша, а до сброса — не дольше 30 секунд", async () => {
@@ -101,21 +99,16 @@ describe("сессия web в api (аудит 2.1)", () => {
     expect((await me(cookie)).status).toBe(401);
   });
 
-  it("смена роли действует после сброса кэша", async () => {
-    const user = await createUser({ role: "ADMIN" });
-    const cookie = await sessionCookie(user, { roleInToken: "ADMIN" });
-    expect((await me(cookie)).body.role).toBe("ADMIN");
+  it("истёкшая сессия — 401, строка убирается", async () => {
+    const user = await createUser({ role: "STUDENT" });
+    const cookie = await sessionCookie(user);
 
-    await testDb().user.update({ where: { id: user.id }, data: { role: "TEACHER" } });
-    app.get(SessionUserCache).forget(user.id);
-    expect((await me(cookie)).body.role).toBe("TEACHER");
-  });
+    await testDb().session.updateMany({
+      where: { userId: user.id },
+      data: { expiresAt: new Date(Date.now() - 1000) },
+    });
 
-  it("health открыт без входа", async () => {
-    const res = await request(app.getHttpServer()).get("/api/v2/health");
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: "ok" });
-    expect(res.headers["x-content-type-options"]).toBe("nosniff");
-    expect(res.headers["cache-control"]).toBe("no-store");
+    expect((await me(cookie)).status).toBe(401);
+    expect(await testDb().session.count({ where: { userId: user.id } })).toBe(0);
   });
 });

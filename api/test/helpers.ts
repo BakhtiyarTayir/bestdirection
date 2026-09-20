@@ -1,14 +1,14 @@
-import { encode } from "@auth/core/jwt";
 import bcrypt from "bcryptjs";
 import { type ModuleMetadata, type Type } from "@nestjs/common";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Test } from "@nestjs/testing";
-import { randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { inject } from "vitest";
 import { PrismaClient, type Role } from "../generated/prisma";
 import { AppModule } from "../src/app.module";
+import { SESSION_COOKIE } from "../src/common/auth/sessions.service";
 import { configureApp } from "../src/app.setup";
 
 export const TEST_SECRET = "test-auth-secret-0123456789abcdef";
@@ -83,25 +83,36 @@ export async function createUser(data: {
   });
 }
 
-export const SESSION_COOKIE = "authjs.session-token";
-export const SECURE_SESSION_COOKIE = "__Secure-authjs.session-token";
+// Кука сессии api: ту же ставит вход
+export { SESSION_COOKIE } from "../src/common/auth/sessions.service";
 
 /**
  * Кука сессии в том виде, как её выписывает web (NextAuth v5): JWE с солью =
  * имя куки. roleInToken — что было в токене при входе; api его игнорирует.
  */
+/**
+ * Кука настоящей сессии: строка в таблице Session, как после входа.
+ * `roleInToken` больше не влияет ни на что — роль всегда берётся из БД;
+ * параметр оставлен, чтобы не переписывать вызовы во всех тестах.
+ */
 export async function sessionCookie(
-  user: { id: string; email: string | null },
-  options: { roleInToken?: Role; cookieName?: string; maxAge?: number; secret?: string } = {}
+  user: { id: string; email?: string | null },
+  _options: { roleInToken?: Role } = {}
 ) {
-  const cookieName = options.cookieName ?? SESSION_COOKIE;
-  const token = await encode({
-    token: { id: user.id, sub: user.id, email: user.email, role: options.roleInToken ?? "STUDENT" },
-    secret: options.secret ?? TEST_SECRET,
-    salt: cookieName,
-    maxAge: options.maxAge ?? 3600,
+  const token = randomBytes(32).toString("hex");
+  await testDb().session.create({
+    data: {
+      tokenHash: createHash("sha256").update(token).digest("hex"),
+      userId: user.id,
+      expiresAt: new Date(Date.now() + 3600_000),
+    },
   });
-  return `${cookieName}=${token}`;
+  return `${SESSION_COOKIE}=${token}`;
+}
+
+/** Кука на пользователя, которого нет: строку сессии заводить не к чему. */
+export function orphanSessionCookie() {
+  return `${SESSION_COOKIE}=${randomBytes(32).toString("hex")}`;
 }
 
 export type TestApp = NestExpressApplication;

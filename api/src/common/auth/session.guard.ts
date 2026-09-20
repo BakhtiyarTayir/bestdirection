@@ -1,10 +1,8 @@
-import { CanActivate, ExecutionContext, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
+import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import { ENV, type Env } from "../../config/env";
 import { AbilityFactory } from "../policies/abilities";
 import type { ApiRequest } from "./api-request";
 import { IS_PUBLIC_KEY } from "./decorators";
-import { readSessionUserId } from "./session-cookie";
 import { SESSION_COOKIE, SessionsService } from "./sessions.service";
 import { SessionUserCache } from "./session-user.cache";
 
@@ -15,8 +13,7 @@ export class SessionGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly users: SessionUserCache,
     private readonly abilities: AbilityFactory,
-    private readonly sessions: SessionsService,
-    @Inject(ENV) private readonly env: Env
+    private readonly sessions: SessionsService
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -28,12 +25,8 @@ export class SessionGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<ApiRequest>();
 
-    // Своя сессия из базы; пока вход остаётся в web, годится и его кука —
-    // мост уйдёт вместе с NextAuth (этап 9, шаг 3)
-    const ownToken = request.cookies?.[SESSION_COOKIE];
-    const userId =
-      (ownToken ? await this.sessions.userIdFor(ownToken) : null) ??
-      (await readSessionUserId(request.cookies, this.env.AUTH_SECRET));
+    const token = request.cookies?.[SESSION_COOKIE];
+    const userId = token ? await this.sessions.userIdFor(token) : null;
     const user = userId ? await this.users.get(userId) : null;
     if (!user) throw new UnauthorizedException("unauthorized");
 
