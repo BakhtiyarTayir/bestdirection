@@ -103,3 +103,7 @@ IT School - Brend Kit/
 /api/dist
 /api/generated
 /api/coverage
+
+# Выгрузки учётных данных: пароли открытым текстом, в репозиторий не попадают
+credentials*.csv
+logins*.csv
