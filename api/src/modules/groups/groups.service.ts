@@ -59,7 +59,17 @@ export class GroupsService {
         enrollments: {
           include: {
             student: {
-              select: { id: true, firstName: true, lastName: true, email: true, phone: true, isActive: true },
+              // Логин вместо почты (шаг 1 отказа от почты), telegramUsername —
+              // для кнопки «Написать в Telegram» на составе группы (4.2)
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                login: true,
+                phone: true,
+                isActive: true,
+                telegramUsername: true,
+              },
             },
           },
         },
@@ -293,7 +303,15 @@ export class GroupsService {
       where: { courseId, groupId: null },
       include: {
         student: {
-          select: { id: true, firstName: true, lastName: true, email: true, phone: true, isActive: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            login: true,
+            phone: true,
+            isActive: true,
+            telegramUsername: true,
+          },
         },
       },
     });
@@ -317,8 +335,9 @@ export class GroupsService {
         id: true,
         firstName: true,
         lastName: true,
-        email: true,
+        login: true,
         phone: true,
+        telegramUsername: true,
         enrollments: {
           where: { courseId: group.courseId },
           select: { group: { select: { name: true } } },
@@ -333,8 +352,9 @@ export class GroupsService {
         id: student.id,
         firstName: student.firstName,
         lastName: student.lastName,
-        email: student.email,
+        login: student.login,
         phone: student.phone,
+        telegramUsername: student.telegramUsername,
         // Уже на курсе? В какой группе? Это меняет смысл добавления:
         // запись, перевод из другой группы или просто привязка к группе.
         enrolled: Boolean(enrollment),
