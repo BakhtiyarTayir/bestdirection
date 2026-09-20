@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import type { PrismaClient } from "../../../generated/prisma";
 import { slugify } from "../slugify";
 
@@ -44,6 +45,16 @@ export function loginBaseFromName(firstName: string, lastName: string): string {
  * ivan.ivanov3, …). Проверка идёт через prismaUnscoped: логин мягко
  * удалённого пользователя остаётся занятым — та же причина, по которой так
  * устроен UsersService.emailTakenBy.
+ *
+ * Суффикс приписывается НЕ к целой базе, а к укороченной под него: иначе
+ * `${base}${suffix}`.slice(0, 30) у базы длиной ровно 30 символов возвращает
+ * саму базу, кандидат никогда не меняется и цикл крутится вечно. То же
+ * случалось у базы в 29 символов, как только суффикс становился двузначным.
+ * Место вызова — backfill при старте api, так что зависание означало бы
+ * контейнер, который не поднимается.
+ *
+ * Перебор ограничен: при исчерпании номеров берётся случайный хвост, а если
+ * и он не помог — исключение. Явная ошибка лучше молчаливого зависания.
  */
 export async function generateUniqueLogin(
   prismaUnscoped: Pick<PrismaClient, "user">,
@@ -54,11 +65,17 @@ export async function generateUniqueLogin(
 
   if (!(await taken(base))) return base;
 
-  let suffix = 2;
-  let candidate = `${base}${suffix}`.slice(0, MAX_LOGIN_LENGTH);
-  while (await taken(candidate)) {
-    suffix++;
-    candidate = `${base}${suffix}`.slice(0, MAX_LOGIN_LENGTH);
+  const withTail = (tail: string) => `${base.slice(0, MAX_LOGIN_LENGTH - tail.length)}${tail}`;
+
+  for (let suffix = 2; suffix < 1000; suffix++) {
+    const candidate = withTail(String(suffix));
+    if (!(await taken(candidate))) return candidate;
   }
-  return candidate;
+
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const candidate = withTail(randomBytes(3).toString("hex"));
+    if (!(await taken(candidate))) return candidate;
+  }
+
+  throw new Error(`Не удалось подобрать свободный логин на основе "${base}"`);
 }
