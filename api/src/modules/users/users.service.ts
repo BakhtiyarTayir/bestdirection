@@ -7,9 +7,11 @@ import {
 import bcrypt from "bcryptjs";
 import { Prisma } from "../../../generated/prisma";
 import { AuditService, computeChanges } from "../../common/audit/audit.service";
+import { generateUniqueLogin, loginBaseFromName } from "../../common/auth/login-generator";
 import { SessionsService } from "../../common/auth/sessions.service";
 import { SessionUserCache } from "../../common/auth/session-user.cache";
 import type { SessionUser } from "../../common/auth/session-user";
+import { toNoonUtc } from "../../common/date-only";
 import { accessibleWhere, type AppAbility } from "../../common/policies/abilities";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import type { CreateUserDto, UpdateProfileDto, UpdateUserDto } from "./dto/user.dto";
@@ -17,6 +19,7 @@ import type { CreateUserDto, UpdateProfileDto, UpdateUserDto } from "./dto/user.
 const USER_SELECT = {
   id: true,
   number: true,
+  login: true,
   email: true,
   firstName: true,
   lastName: true,
@@ -27,6 +30,8 @@ const USER_SELECT = {
   updatedAt: true,
   branchId: true,
   branch: { select: { id: true, name: true } },
+  // Для кнопки «Написать в Telegram» на карточках других людей (4.2)
+  telegramUsername: true,
 } as const;
 
 @Injectable()
@@ -74,34 +79,62 @@ export class UsersService {
   }
 
   async create(data: CreateUserDto, actor: SessionUser) {
-    // Почта необязательна (офлайн-ученики без входа по почте). Пустая строка →
-    // null, иначе уникальный индекс словит коллизию по "".
-    const email = data.email?.trim() ? data.email.trim() : null;
-    if (email && (await this.emailTakenBy(email))) throw new ConflictException("emailExists");
+    if (await this.loginTakenBy(data.login)) throw new ConflictException("loginExists");
 
-    const branchId = data.branchId?.trim() ? data.branchId.trim() : null;
-    if (branchId && !(await this.branchExists(branchId))) throw new NotFoundException("branchNotFound");
+    const branchId = data.branchId.trim();
+    if (!(await this.branchExists(branchId))) throw new NotFoundException("branchNotFound");
+
+    // Блок «Обучение» (4.4–4.6): проверяем курс/группу/филиал ДО транзакции,
+    // чтобы не заводить пользователя, а потом откатывать его создание из-за
+    // ошибки в данных о курсе
+    if (data.enrollment) {
+      await this.assertEnrollable(data.enrollment, branchId);
+    }
 
     const passwordHash = await bcrypt.hash(data.password, 10);
 
-    let user;
+    let created;
     try {
-      user = await this.prisma.user.create({
-        data: {
-          email,
-          passwordHash,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          phone: data.phone,
-          role: data.role,
-          branchId,
-        },
-        select: USER_SELECT,
+      created = await this.prisma.$transaction(async (tx) => {
+        const user = await tx.user.create({
+          data: {
+            login: data.login,
+            passwordHash,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            phone: data.phone,
+            role: data.role,
+            branchId,
+          },
+          select: USER_SELECT,
+        });
+
+        // Пользователь и запись на курс создаются вместе или не создаются
+        // вовсе: без транзакции падение второго шага оставило бы ученика без
+        // обучения — ровно ту дыру в трёх разрозненных экранах, которую этот
+        // блок и закрывает (план, 4.4)
+        let enrollmentId: string | null = null;
+        if (data.enrollment && data.role === "STUDENT") {
+          const enrollment = await tx.enrollment.create({
+            data: {
+              studentId: user.id,
+              courseId: data.enrollment.courseId,
+              groupId: data.enrollment.groupId || null,
+              priceOverride: data.enrollment.priceOverride ?? null,
+              startsAt: data.enrollment.startsAt ? toNoonUtc(data.enrollment.startsAt) : null,
+              firstMonthCharge: data.enrollment.firstMonthCharge ?? null,
+            },
+            select: { id: true },
+          });
+          enrollmentId = enrollment.id;
+        }
+
+        return { ...user, enrollmentId };
       });
     } catch (error) {
-      // Гонка: между проверкой и вставкой почту мог занять другой администратор
+      // Гонка: между проверкой и вставкой логин мог занять другой администратор
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        throw new ConflictException("emailExists");
+        throw new ConflictException("loginExists");
       }
       throw error;
     }
@@ -109,17 +142,80 @@ export class UsersService {
     await this.audit.record({
       userId: actor.id,
       entityType: "User",
-      entityId: user.id,
+      entityId: created.id,
       action: "CREATE",
-      metadata: { email: user.email, role: user.role },
+      metadata: { login: created.login, role: created.role, enrollmentId: created.enrollmentId },
     });
-    return user;
+    return created;
+  }
+
+  /** Свободный логин из имени и фамилии — для кнопки «Сгенерировать» в форме. */
+  async suggestLogin(firstName: string, lastName: string): Promise<{ login: string }> {
+    const login = await generateUniqueLogin(this.prismaUnscoped, loginBaseFromName(firstName, lastName));
+    return { login };
+  }
+
+  async loginAvailable(login: string): Promise<{ available: boolean }> {
+    return { available: !(await this.loginTakenBy(login)) };
+  }
+
+  /** Курсы и их группы для блока «Обучение» в форме создания ученика (4.4). */
+  async formOptionsForCreate() {
+    const [courses, groups] = await Promise.all([
+      this.prisma.course.findMany({
+        where: { deletedAt: null },
+        select: { id: true, title: true, price: true },
+        orderBy: { title: "asc" },
+      }),
+      this.prisma.group.findMany({
+        where: { isActive: true, course: { deletedAt: null } },
+        select: { id: true, name: true, price: true, courseId: true, branchId: true },
+        orderBy: { name: "asc" },
+      }),
+    ]);
+    return { courses, groups };
+  }
+
+  /**
+   * Курс — не в Корзине, группа (если выбрана) принадлежит этому курсу и
+   * заведена в том же филиале, что и ученик — иначе он окажется в группе
+   * «Python-1» чужого филиала (ловушка 3.8.1 плана филиалов: имя группы
+   * уникально внутри филиала, поэтому groupId сам по себе не гарантирует
+   * совпадение).
+   */
+  private async assertEnrollable(
+    enrollment: NonNullable<CreateUserDto["enrollment"]>,
+    branchId: string
+  ): Promise<void> {
+    const course = await this.prisma.course.findFirst({
+      where: { id: enrollment.courseId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!course) throw new NotFoundException("courseNotFound");
+
+    if (enrollment.groupId) {
+      const group = await this.prisma.group.findFirst({
+        where: { id: enrollment.groupId, courseId: enrollment.courseId },
+        select: { id: true, branchId: true },
+      });
+      if (!group) throw new NotFoundException("groupNotFound");
+      if (group.branchId !== branchId) throw new BadRequestException("groupWrongBranch");
+    }
   }
 
   async update(id: string, data: UpdateUserDto, actor: SessionUser) {
     const existing = await this.prisma.user.findUnique({
       where: { id },
-      select: { email: true, firstName: true, lastName: true, phone: true, role: true, isActive: true, branchId: true },
+      select: {
+        login: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        role: true,
+        isActive: true,
+        branchId: true,
+      },
     });
     if (!existing) throw new NotFoundException("userNotFound");
 
@@ -128,6 +224,11 @@ export class UsersService {
     if (email) {
       const holderId = await this.emailTakenBy(email);
       if (holderId && holderId !== id) throw new ConflictException("emailExists");
+    }
+
+    if (data.login) {
+      const holderId = await this.loginTakenBy(data.login);
+      if (holderId && holderId !== id) throw new ConflictException("loginExists");
     }
 
     // undefined — не трогаем, пустая строка — очищаем приписку к филиалу
@@ -139,10 +240,17 @@ export class UsersService {
       ((data.role !== undefined && data.role !== "ADMIN") || data.isActive === false);
     if (losesAdmin) await this.assertNotLastAdmin(id);
 
+    // Сброс пароля администратором (4.1, «Путь 1»): выдаём новый хэш, тот же
+    // приём, что уже применяется для деактивации ниже — сброс кэша сессии и
+    // разрыв всех текущих сессий, иначе чужой доступ пережил бы смену пароля
+    const passwordHash = data.password ? await bcrypt.hash(data.password, 10) : undefined;
+
     const user = await this.prisma.user.update({
       where: { id },
       data: {
         ...(email !== undefined && { email }),
+        ...(data.login && { login: data.login }),
+        ...(passwordHash && { passwordHash }),
         ...(data.firstName !== undefined && { firstName: data.firstName }),
         ...(data.lastName !== undefined && { lastName: data.lastName }),
         ...(data.phone !== undefined && { phone: data.phone }),
@@ -156,9 +264,9 @@ export class UsersService {
     // Роль и активность guard берёт из БД, но у него кэш на 30 секунд —
     // сбрасываем, чтобы изменение подействовало сразу (аудит 2.1)
     this.sessionUsers.forget(id);
-    if (data.isActive === false) await this.sessions.destroyAllFor(id);
+    if (data.isActive === false || passwordHash) await this.sessions.destroyAllFor(id);
 
-    const changes = computeChanges(existing, { ...data });
+    const changes = computeChanges(existing, { ...data, password: data.password ? "***" : undefined });
     if (changes) {
       await this.audit.record({
         userId: actor.id,
@@ -332,7 +440,7 @@ export class UsersService {
     return this.prisma.user.update({
       where: { id: userId },
       data: { firstName: data.firstName, lastName: data.lastName, phone: data.phone },
-      select: { id: true, email: true, firstName: true, lastName: true, phone: true, role: true },
+      select: { id: true, login: true, email: true, firstName: true, lastName: true, phone: true, role: true },
     });
   }
 
@@ -359,6 +467,12 @@ export class UsersService {
     // Уникальный индекс про deletedAt не знает: почту держит занятой любая
     // строка, в том числе невидимая обычному клиенту
     const holder = await this.prismaUnscoped.user.findUnique({ where: { email }, select: { id: true } });
+    return holder?.id ?? null;
+  }
+
+  /** Та же причина, что у emailTakenBy: логин мягко удалённого пользователя тоже занят. */
+  private async loginTakenBy(login: string): Promise<string | null> {
+    const holder = await this.prismaUnscoped.user.findUnique({ where: { login }, select: { id: true } });
     return holder?.id ?? null;
   }
 

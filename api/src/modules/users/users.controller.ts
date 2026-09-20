@@ -3,7 +3,14 @@ import { CurrentAbility, CurrentUser } from "../../common/auth/decorators";
 import type { SessionUser } from "../../common/auth/session-user";
 import type { AppAbility } from "../../common/policies/abilities";
 import { CheckPolicies } from "../../common/policies/check-policies.decorator";
-import { CreateUserDto, HomeworkStatisticsQueryDto, UpdateUserDto, UsersQueryDto } from "./dto/user.dto";
+import {
+  CreateUserDto,
+  HomeworkStatisticsQueryDto,
+  LoginAvailableQueryDto,
+  LoginSuggestionDto,
+  UpdateUserDto,
+  UsersQueryDto,
+} from "./dto/user.dto";
 import { HomeworkStatisticsService } from "./homework-statistics.service";
 import { UsersService } from "./users.service";
 
@@ -30,6 +37,27 @@ export class UsersController {
   @Get("deactivated")
   deactivated() {
     return this.users.deactivated();
+  }
+
+  // Три следующих маршрута обслуживают форму создания пользователя (тот же
+  // доступ, что у самого создания) и ДОЛЖНЫ стоять до @Get(":id") — иначе
+  // Nest примет "login-available"/"form-options" за значение :id
+  @CheckPolicies((ability) => ability.can("create", "User"))
+  @Post("login-suggestion")
+  loginSuggestion(@Body() body: LoginSuggestionDto) {
+    return this.users.suggestLogin(body.firstName, body.lastName);
+  }
+
+  @CheckPolicies((ability) => ability.can("create", "User"))
+  @Get("login-available")
+  loginAvailable(@Query() query: LoginAvailableQueryDto) {
+    return this.users.loginAvailable(query.login);
+  }
+
+  @CheckPolicies((ability) => ability.can("create", "User"))
+  @Get("form-options")
+  formOptions() {
+    return this.users.formOptionsForCreate();
   }
 
   @CheckPolicies((ability) => ability.can("read", "HomeworkStatistics"))
