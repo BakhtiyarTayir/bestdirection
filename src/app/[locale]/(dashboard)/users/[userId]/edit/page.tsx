@@ -1,10 +1,14 @@
 import { requireRole } from "@/lib/auth-guard";
 import { getUserById } from "@/lib/api/users.server";
 import { getBranches } from "@/lib/api/branches.server";
+import { getStudentBilling } from "@/lib/api/billing.server";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
 import { EditUserForm } from "./edit-user-form";
 import { ParentsPanel } from "@/components/parents-panel";
+import { TelegramWriteButton } from "@/components/telegram-write-button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
 
@@ -36,10 +40,44 @@ export default async function EditUserPage({ params }: EditUserPageProps) {
 async function EditUserPageContent({ user, branches }: { user: any; branches: { id: string; name: string }[] }) {
   const t = await getTranslations("users");
 
+  // Курс/группа/цена уже полностью показаны на карточке биллинга — здесь
+  // достаточно короткой сводки со ссылкой (ловушка 4.7.5 плана: дублировать
+  // условия обучения в двух формах — верный способ развести две правды)
+  const billing = user.role === "STUDENT" ? await getStudentBilling(user.id) : null;
+  const enrollments = billing?.success && billing.data ? billing.data.courses : [];
+
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">{t("editUser")}</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">{t("editUser")}</h1>
+        <TelegramWriteButton username={user.telegramUsername} />
+      </div>
       <EditUserForm user={user} branches={branches} />
+      {user.role === "STUDENT" && enrollments.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t("enrollmentTitle")}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {enrollments.map((enrollment: (typeof enrollments)[number]) => (
+              <div key={enrollment.enrollmentId} className="flex items-center justify-between text-sm">
+                <span>
+                  {enrollment.course.title}
+                  {enrollment.group ? ` — ${enrollment.group.name}` : ` (${t("enrollmentNoGroup")})`}
+                  {" · "}
+                  {enrollment.monthlyPrice.toLocaleString("ru-RU")}
+                </span>
+                <Link
+                  href={`/payments/students/${user.id}`}
+                  className="text-primary hover:underline"
+                >
+                  {t("openBilling")}
+                </Link>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
       {/* Родители — только у учеников: у остальных ролей связь не имеет смысла */}
       {user.role === "STUDENT" && <ParentsPanel studentId={user.id} />}
     </div>

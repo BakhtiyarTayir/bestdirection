@@ -47,7 +47,7 @@ export interface ApiEnrolledStudent {
   id: string;
   firstName: string;
   lastName: string;
-  email: string | null;
+  login: string | null;
   phone: string | null;
   isActive: boolean;
   enrolledAt: string;
@@ -57,7 +57,7 @@ export interface ApiAvailableStudent {
   id: string;
   firstName: string;
   lastName: string;
-  email: string | null;
+  login: string | null;
   phone: string | null;
 }
 
@@ -89,7 +89,7 @@ export interface ApiEnrollmentRequest {
     id: string;
     firstName: string;
     lastName: string;
-    email: string | null;
+    login: string | null;
     phone: string | null;
     telegramUsername: string | null;
   };

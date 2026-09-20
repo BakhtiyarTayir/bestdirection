@@ -27,7 +27,7 @@ export default async function EnrollmentRequestsPage() {
           student: {
             firstName: r.student.firstName,
             lastName: r.student.lastName,
-            email: r.student.email,
+            login: r.student.login,
             phone: r.student.phone,
             telegramUsername: r.student.telegramUsername,
           },

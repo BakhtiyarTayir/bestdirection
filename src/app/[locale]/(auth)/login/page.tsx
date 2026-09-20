@@ -47,7 +47,7 @@ export default function LoginPage() {
         : "/dashboard";
     const safeCallbackUrl = normalizeForLocalizedRouter(safeCallbackUrlRaw);
 
-    const result = await loginWithPassword(data.email, data.password);
+    const result = await loginWithPassword(data.login, data.password);
 
     if (!result.success) {
       // api отвечает одинаково на неверный пароль и неизвестный адрес —
@@ -98,15 +98,16 @@ export default function LoginPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email">{t("email")}</Label>
+              <Label htmlFor="login">{t("loginFieldLabel")}</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="email@example.com"
-                {...register("email")}
+                id="login"
+                type="text"
+                autoComplete="username"
+                placeholder="ivan.ivanov"
+                {...register("login")}
               />
-              {errors.email && (
-                <p className="text-sm text-destructive">{tValidation(errors.email.message ?? "required")}</p>
+              {errors.login && (
+                <p className="text-sm text-destructive">{tValidation(errors.login.message ?? "required")}</p>
               )}
             </div>
             <div className="space-y-2">

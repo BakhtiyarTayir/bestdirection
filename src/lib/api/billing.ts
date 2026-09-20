@@ -58,7 +58,7 @@ export interface ApiStudentBilling {
     firstName: string;
     lastName: string;
     phone: string | null;
-    email: string | null;
+    login: string | null;
     telegramUsername: string | null;
   };
   upToMonth: string;
@@ -104,7 +104,7 @@ export interface ApiStudentsOverview {
   firstName: string;
   lastName: string;
   phone: string | null;
-  email: string | null;
+  login: string | null;
   isActive: boolean;
   courses: { enrollmentId: string; title: string; groupName: string | null }[];
   balance: number;

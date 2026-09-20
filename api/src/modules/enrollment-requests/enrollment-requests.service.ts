@@ -178,7 +178,7 @@ export class EnrollmentRequestsService {
             id: true,
             firstName: true,
             lastName: true,
-            email: true,
+            login: true,
             phone: true,
             telegramUsername: true,
           },

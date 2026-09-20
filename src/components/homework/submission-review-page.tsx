@@ -52,7 +52,7 @@ interface SubmissionData {
   manualStatus: string | null;
   manualScore: number | null;
   teacherComment: string | null;
-  student: { id: string; firstName: string; lastName: string; email?: string | null };
+  student: { id: string; firstName: string; lastName: string; login?: string | null };
   homework: {
     id: string;
     title: string;
@@ -239,7 +239,7 @@ export function SubmissionReviewPage({ submission }: { submission: SubmissionDat
             <p className="font-medium">
               {submission.student.firstName} {submission.student.lastName}
             </p>
-            <p className="text-muted-foreground">{submission.student.email}</p>
+            <p className="text-muted-foreground">{submission.student.login}</p>
             <div className="flex gap-2">
               <Badge variant="outline">{t("card.attempt")} #{submission.attemptNumber}</Badge>
               <Badge variant="outline">{formatDate(submission.createdAt)}</Badge>

@@ -57,7 +57,8 @@
     "importing": "Импортирование...",
     "moving": "Перемещение...",
     "adding": "Добавление...",
-    "publish": "Опубликовать"
+    "publish": "Опубликовать",
+    "login": "Логин"
   },
   "auth": {
     "login": "Войти",
@@ -117,7 +118,14 @@
     "resetFailed": "Не удалось сменить пароль. Попробуйте ещё раз",
     "backToLogin": "Вернуться ко входу",
     "tooManyRequests": "Слишком много запросов. Подождите минуту и попробуйте снова",
-    "tooManyLoginAttempts": "Слишком много попыток входа. Попробуйте через 15 минут или восстановите пароль"
+    "tooManyLoginAttempts": "Слишком много попыток входа. Попробуйте через 15 минут или восстановите пароль",
+    "loginFieldLabel": "Логин",
+    "resetPasswordSubtitleTelegram": "Код придёт в чат с ботом Telegram, если он привязан к этому логину",
+    "sendCodeTelegram": "Отправить код в Telegram",
+    "codeSentToTelegramLogin": "Если логин «{login}» существует и к нему привязан Telegram — код придёт в чат с ботом.",
+    "telegramUnknown": "Этот Telegram не привязан ни к одному аккаунту. Обратитесь к администратору учебного центра.",
+    "loginRequired": "Введите логин",
+    "changeLogin": "Изменить логин"
   },
   "nav": {
     "dashboard": "Дашборд",
@@ -493,7 +501,8 @@
     "examBlocked": "Экзамен заблокирован",
     "passAllTests": "Пройдите все тесты уроков, чтобы получить доступ к экзамену.",
     "questionsLabel": "Вопросов",
-    "resultsPageTitle": "Результаты: {title}"
+    "resultsPageTitle": "Результаты: {title}",
+    "loginHeader": "Логин"
   },
   "homework": {
     "title": "Домашние задания",
@@ -689,7 +698,7 @@
     "email": "Email",
     "password": "Пароль",
     "passwordPlaceholder": "Минимум 6 символов",
-    "phone": "Телефон",
+    "phone": "Свой номер",
     "phonePlaceholder": "+998 (XX) XXX-XX-XX",
     "role": "Роль",
     "selectRole": "Выберите роль",
@@ -756,7 +765,36 @@
     "branch": "Филиал",
     "selectBranchPlaceholder": "Не выбран",
     "filterBranch": "Филиал",
-    "allBranches": "Все филиалы"
+    "allBranches": "Все филиалы",
+    "login": "Логин",
+    "loginPlaceholder": "ivan.ivanov",
+    "generateLogin": "Сгенерировать",
+    "loginAvailable": "Логин свободен",
+    "loginTaken": "Логин уже занят",
+    "checkingLogin": "Проверка...",
+    "generatePassword": "Сгенерировать пароль",
+    "generatedPasswordTitle": "Пароль создан",
+    "generatedPasswordDescription": "Скопируйте и передайте пользователю — повторно он не показывается.",
+    "copyPassword": "Скопировать",
+    "copied": "Скопировано",
+    "newPasswordOptional": "Новый пароль",
+    "newPasswordOptionalNote": "Оставьте пустым, чтобы не менять пароль.",
+    "phoneNote": "Номер родителя указывается в карточке родителя.",
+    "branchRequiredHint": "Обязателен для новых пользователей.",
+    "enrollmentTitle": "Обучение",
+    "enrollmentHint": "Необязательно — можно завести ученика без записи на курс.",
+    "enrollmentCourse": "Курс",
+    "selectCoursePlaceholder": "Не выбран",
+    "enrollmentGroup": "Группа",
+    "enrollmentNoGroup": "Без группы",
+    "enrollmentPrice": "Цена в месяц",
+    "enrollmentPricePlaceholder": "Как у группы",
+    "enrollmentPriceNote": "Личная цена перебивает цену группы навсегда — оставьте пустым, если «как у всех».",
+    "enrollmentStartsAt": "Дата начала обучения",
+    "enrollmentFirstMonthCharge": "Начисление за первый месяц",
+    "enrollmentFirstMonthChargePlaceholder": "Посчитать автоматически",
+    "writeInTelegram": "Написать в Telegram",
+    "openBilling": "Открыть биллинг"
   },
   "groups": {
     "title": "Группы",
@@ -840,7 +878,7 @@
     "lastNamePlaceholder": "Введите фамилию",
     "email": "Email",
     "emailNote": "Email нельзя изменить.",
-    "phone": "Телефон",
+    "phone": "Свой номер",
     "phonePlaceholder": "+998 (XX) XXX-XX-XX",
     "saveChanges": "Сохранить изменения",
     "changePassword": "Изменение пароля",
@@ -867,7 +905,12 @@
     "telegramOpenTitle": "Откройте Telegram",
     "telegramOpenDescription": "Нажмите Start в боте, чтобы завершить привязку.",
     "telegramLinkedToast": "Telegram привязан!",
-    "telegramUnlinkedToast": "Telegram отвязан"
+    "telegramUnlinkedToast": "Telegram отвязан",
+    "phoneNote": "Номер родителя указывается в карточке родителя.",
+    "login": "Логин",
+    "loginNote": "Логин меняет администратор в карточке пользователя.",
+    "telegramResetHint": "Привяжите Telegram, чтобы самостоятельно сбрасывать пароль без администратора.",
+    "writeInTelegram": "Написать в Telegram"
   },
   "audit": {
     "title": "Журнал аудита",
@@ -1133,7 +1176,10 @@
     "alreadyEnrolled": "Студент уже записан на этот курс",
     "branchNotFound": "Филиал не найден",
     "branchNameExists": "Филиал с таким названием уже существует",
-    "branchHasGroups": "В филиале есть группы — сначала перенесите или удалите их"
+    "branchHasGroups": "В филиале есть группы — сначала перенесите или удалите их",
+    "loginExists": "Пользователь с таким логином уже существует",
+    "groupWrongBranch": "Группа принадлежит другому филиалу",
+    "telegramUnknown": "Этот Telegram не привязан ни к одному аккаунту"
   },
   "success": {
     "saved": "Сохранено",
@@ -1184,7 +1230,11 @@
     "homeworkTitleRequired": "Название обязательно",
     "homeworkDescriptionRequired": "Описание обязательно",
     "branchRequired": "Филиал обязателен",
-    "branchNameRequired": "Название филиала обязательно"
+    "branchNameRequired": "Название филиала обязательно",
+    "loginInvalid": "Логин: латиница, цифры, точка, дефис или подчёркивание, 3–30 символов",
+    "courseRequired": "Выберите курс",
+    "amountPositive": "Сумма должна быть больше нуля",
+    "enrollmentOnlyForStudents": "Обучение можно указать только для роли «Ученик»"
   },
   "language": {
     "title": "Язык",
@@ -1635,7 +1685,8 @@
     "effectiveStartsAt": "Фактически начисляется с {date} — группа начинается позже",
     "closedMonthsNote": "Прошедшие месяцы закрыты и не пересчитываются: эти правки действуют с текущего месяца. Закрытый месяц можно пересчитать в карточке студента.",
     "filterBranch": "Филиал",
-    "allBranches": "Все филиалы"
+    "allBranches": "Все филиалы",
+    "writeInTelegram": "Написать в Telegram"
   },
   "parents": {
     "title": "Родители",

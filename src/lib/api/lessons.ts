@@ -120,7 +120,7 @@ export interface ApiAttempt {
   attemptNumber: number;
   startedAt: string;
   completedAt: string | null;
-  student?: { id: string; firstName: string; lastName: string; email: string | null };
+  student?: { id: string; firstName: string; lastName: string; login: string | null };
   /** Приходит там, где ответы вправе видеть: свои попытки и разбор для преподавателя. */
   answers?: ApiAttemptAnswer[];
   assessment?: {

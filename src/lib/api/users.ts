@@ -12,6 +12,9 @@ import type { ApiResult } from "./result";
 export interface ApiUser {
   id: string;
   number: number;
+  // Логин заменяет почту как опознавательный знак при входе (шаг 1 отказа от
+  // почты); почта остаётся в шаге 1, только больше не показывается в UI
+  login: string | null;
   email: string | null;
   firstName: string;
   lastName: string;
@@ -24,12 +27,14 @@ export interface ApiUser {
   // группу (ловушка 3.8.5 плана филиалов)
   branchId: string | null;
   branch: { id: string; name: string } | null;
+  // Для кнопки «Написать в Telegram» на карточках других людей (4.2)
+  telegramUsername: string | null;
 }
 
 export interface ApiDeactivatedUser {
   id: string;
   number: number;
-  email: string | null;
+  login: string | null;
   firstName: string;
   lastName: string;
   role: Role;
@@ -41,7 +46,7 @@ export interface ApiTeacher {
   number: number;
   firstName: string;
   lastName: string;
-  email: string | null;
+  login: string | null;
   phone: string | null;
   isActive: boolean;
   telegramUsername: string | null;
@@ -52,6 +57,7 @@ export interface ApiTeacher {
 
 export interface ApiProfile {
   id: string;
+  login: string | null;
   email: string | null;
   firstName: string;
   lastName: string;
@@ -82,7 +88,7 @@ export interface ApiHomeworkStatistics {
   rows: {
     studentId: string;
     fullName: string;
-    email: string | null;
+    login: string | null;
     isActive: boolean;
     isOnlineNow: boolean;
     groupId: string | null;
@@ -117,22 +123,37 @@ export interface ApiTelegramStatus {
   username: string | null;
 }
 
+/** Курсы и группы для блока «Обучение» в форме создания ученика (4.4). */
+export interface ApiUsersFormOptions {
+  courses: { id: string; title: string; price: number | null }[];
+  groups: { id: string; name: string; price: number | null; courseId: string; branchId: string }[];
+}
+
 // ---------- браузер ----------
 
 export const createUser = (body: {
-  email?: string;
+  login: string;
   password: string;
   firstName: string;
   lastName: string;
   phone?: string;
   role: Role;
-  branchId?: string;
-}): Promise<ApiResult<ApiUser>> => apiFetch("/users", { method: "POST", body });
+  branchId: string;
+  enrollment?: {
+    courseId: string;
+    groupId?: string;
+    priceOverride?: number;
+    startsAt?: string;
+    firstMonthCharge?: number;
+  };
+}): Promise<ApiResult<ApiUser & { enrollmentId: string | null }>> => apiFetch("/users", { method: "POST", body });
 
 export const updateUser = (
   id: string,
   body: {
     email?: string;
+    login?: string;
+    password?: string;
     firstName?: string;
     lastName?: string;
     phone?: string;
@@ -141,6 +162,12 @@ export const updateUser = (
     branchId?: string;
   }
 ): Promise<ApiResult<ApiUser>> => apiFetch(`/users/${id}`, { method: "PATCH", body });
+
+export const suggestLogin = (body: { firstName: string; lastName: string }) =>
+  apiFetch<{ login: string }>("/users/login-suggestion", { method: "POST", body });
+
+export const checkLoginAvailable = (login: string) =>
+  apiFetch<{ available: boolean }>("/users/login-available", { query: { login } });
 
 export const deactivateUser = (id: string) => apiFetch<{ ok: true }>(`/users/${id}/deactivate`, { method: "POST" });
 export const restoreUser = (id: string) => apiFetch<{ ok: true }>(`/users/${id}/restore`, { method: "POST" });

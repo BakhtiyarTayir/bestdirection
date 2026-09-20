@@ -8,14 +8,24 @@ import {
   hashVerificationCode,
 } from "../../common/email/codes";
 import { EmailService } from "../../common/email/email.service";
+import { generateUniqueLogin, loginBaseFromEmail, loginBaseFromName } from "../../common/auth/login-generator";
+import {
+  hashResetCode,
+  RESET_CODE_MAX_ATTEMPTS,
+  RESET_CODE_RESEND_COOLDOWN_MS,
+  RESET_CODE_TTL_MS,
+} from "../../common/auth/password-reset";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { SessionUserCache } from "../../common/auth/session-user.cache";
 import { SessionsService } from "../../common/auth/sessions.service";
+import { TelegramNotifyService } from "../../common/telegram/telegram-notify.service";
 import type {
   LoginDto,
   RegisterDto,
   RequestEmailDto,
+  RequestTelegramPasswordResetDto,
   ResetPasswordDto,
+  ResetPasswordViaTelegramDto,
   TelegramWidgetDto,
   VerifyCodeDto,
 } from "./dto/auth.dto";
@@ -41,7 +51,8 @@ export class AuthService {
     private readonly prismaService: PrismaService,
     private readonly sessions: SessionsService,
     private readonly email: EmailService,
-    private readonly cache: SessionUserCache
+    private readonly cache: SessionUserCache,
+    private readonly telegramNotify: TelegramNotifyService
   ) {}
 
   private get prisma() {
@@ -55,14 +66,19 @@ export class AuthService {
 
   // ─── Вход ───────────────────────────────────────────────────────────────
 
+  /**
+   * Вход принимает и логин, и почту одним полем (шаг 1 отказа от почты,
+   * PLAN-SALARY-PROFILE-BRANCH-2026-09-20.md, 4.1) — старые привычки
+   * продолжают работать, пока не будет объявлено обратное.
+   */
   async loginWithPassword(data: LoginDto, context: { userAgent?: string; ip?: string }) {
-    const email = data.email.trim().toLowerCase();
-    const user = await this.prisma.user.findUnique({ where: { email } });
+    const identifier = data.login.trim().toLowerCase();
+    const user = await this.prisma.user.findFirst({ where: { OR: [{ login: identifier }, { email: identifier }] } });
 
     const valid = await bcrypt.compare(data.password, user?.passwordHash ?? DUMMY_HASH);
 
-    // Один ответ на «нет такого адреса», «не тот пароль» и «аккаунт выключен»:
-    // иначе по нему перебирают, кто зарегистрирован (аудит 2.12)
+    // Один ответ на «нет такого логина/адреса», «не тот пароль» и «аккаунт
+    // выключен»: иначе по нему перебирают, кто зарегистрирован (аудит 2.12)
     if (!user || !user.passwordHash || !valid || !user.isActive) {
       throw new UnauthorizedException("invalidCredentials");
     }
@@ -77,15 +93,7 @@ export class AuthService {
   async loginWithTelegramWidget(data: TelegramWidgetDto, context: { userAgent?: string; ip?: string }) {
     if (!this.verifyWidgetSignature(data)) throw new UnauthorizedException("invalidSignature");
 
-    const user = await this.findOrCreateTelegramUser({
-      telegramId: data.id,
-      firstName: data.first_name,
-      lastName: data.last_name,
-      username: data.username,
-    });
-    if (!user) throw new ForbiddenException("accountDisabled");
-
-    return this.startSession(user.id, context);
+    return this.startSession((await this.requireTelegramUser(data.id)).id, context);
   }
 
   /** Вход по коду из чата с ботом: код одноразовый. */
@@ -104,15 +112,7 @@ export class AuthService {
       throw new UnauthorizedException("loginCodeInvalid");
     }
 
-    const user = await this.findOrCreateTelegramUser({
-      telegramId: request.telegramChatId,
-      firstName: request.firstName,
-      lastName: request.lastName,
-      username: request.telegramUsername,
-    });
-    if (!user) throw new ForbiddenException("accountDisabled");
-
-    return this.startSession(user.id, context);
+    return this.startSession((await this.requireTelegramUser(request.telegramChatId)).id, context);
   }
 
   /** Заявка на вход через бота: код показывается на странице входа. */
@@ -184,13 +184,24 @@ export class AuthService {
 
     await this.checkCode(email, data.code, { consume: true });
 
+    const firstName = data.firstName.trim();
+    const lastName = data.lastName.trim();
+    // Самозарегистрированный сразу получает логин — иначе он остался бы без
+    // него до ближайшего перезапуска api (UserLoginBackfillService), а вход
+    // по логину для него не работал бы всё это время
+    const login = await generateUniqueLogin(
+      this.prismaUnscoped,
+      loginBaseFromEmail(email) ?? loginBaseFromName(firstName, lastName)
+    );
+
     const passwordHash = await bcrypt.hash(data.password, BCRYPT_ROUNDS);
     const user = await this.prisma.user.create({
       data: {
         email,
+        login,
         passwordHash,
-        firstName: data.firstName.trim(),
-        lastName: data.lastName.trim(),
+        firstName,
+        lastName,
         role: "STUDENT",
       },
       select: { id: true },
@@ -237,13 +248,80 @@ export class AuthService {
     return { ok: true as const };
   }
 
+  // ─── Сброс пароля через Telegram (второй путь, без почты) ──────────────
+
+  /**
+   * Тот же ответ и для неизвестного логина, и для того, у кого не привязан
+   * Telegram (аудит 2.12 — форма не должна превращаться в перебор логинов).
+   */
+  async requestTelegramPasswordReset(data: RequestTelegramPasswordResetDto) {
+    const login = data.login.trim().toLowerCase();
+    const user = await this.prisma.user.findFirst({
+      where: { OR: [{ login }, { email: login }] },
+      select: { id: true, isActive: true, telegramChatId: true },
+    });
+    if (!user || !user.isActive || !user.telegramChatId) return { ok: true as const };
+
+    const existing = await this.prisma.passwordResetRequest.findUnique({ where: { userId: user.id } });
+    if (existing && Date.now() - existing.sentAt.getTime() < RESET_CODE_RESEND_COOLDOWN_MS) {
+      return { ok: true as const };
+    }
+
+    const code = String(randomInt(100000, 1000000));
+    const codeHash = hashResetCode(user.id, code);
+    const expiresAt = new Date(Date.now() + RESET_CODE_TTL_MS);
+
+    await this.prisma.passwordResetRequest.upsert({
+      where: { userId: user.id },
+      create: { userId: user.id, codeHash, expiresAt },
+      update: { codeHash, attempts: 0, expiresAt, sentAt: new Date() },
+    });
+
+    await this.telegramNotify.send(user.telegramChatId, `Код для смены пароля: ${code}`);
+    return { ok: true as const };
+  }
+
+  async resetPasswordViaTelegram(data: ResetPasswordViaTelegramDto) {
+    const login = data.login.trim().toLowerCase();
+    const user = await this.prisma.user.findFirst({
+      where: { OR: [{ login }, { email: login }] },
+      select: { id: true, isActive: true },
+    });
+    // Код привязан к userId, поэтому неизвестный логин отвечает как неверный код
+    if (!user || !user.isActive) throw new BadRequestException("invalidCode");
+
+    const request = await this.prisma.passwordResetRequest.findUnique({ where: { userId: user.id } });
+    if (!request || request.expiresAt < new Date()) throw new BadRequestException("codeExpired");
+    if (request.attempts >= RESET_CODE_MAX_ATTEMPTS) throw new BadRequestException("tooManyAttempts");
+
+    const expected = hashResetCode(user.id, data.code);
+    if (!SessionsService.safeEqual(request.codeHash, expected)) {
+      await this.prisma.passwordResetRequest.update({
+        where: { id: request.id },
+        data: { attempts: { increment: 1 } },
+      });
+      throw new BadRequestException("invalidCode");
+    }
+
+    await this.prisma.passwordResetRequest.delete({ where: { id: request.id } });
+
+    const passwordHash = await bcrypt.hash(data.newPassword, BCRYPT_ROUNDS);
+    await this.prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+
+    // Смена пароля обрывает все сессии: если доступ был у чужого, он потерян
+    await this.sessions.destroyAllFor(user.id);
+    this.cache.forget(user.id);
+
+    return { ok: true as const };
+  }
+
   // ─── Общее ──────────────────────────────────────────────────────────────
 
   private async startSession(userId: string, context: { userAgent?: string; ip?: string }) {
     const token = await this.sessions.create(userId, context);
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      select: { id: true, role: true, email: true, firstName: true, lastName: true },
+      select: { id: true, role: true, login: true, email: true, firstName: true, lastName: true },
     });
     return { token, user };
   }
@@ -333,34 +411,18 @@ export class AuthService {
   }
 
   /**
-   * Пользователь по Telegram ID или новый ученик. Ищем без фильтра мягкого
-   * удаления: chatId остаётся занятым в уникальном индексе и у удалённого
-   * аккаунта, и обычный поиск его не видел — следующий create падал с P2002
-   * вместо отказа во входе.
+   * Пользователь по Telegram ID. Учётную запись больше НЕ заводит — только
+   * ищет (PLAN-SALARY-PROFILE-BRANCH-2026-09-20.md, 4.1): пока была открыта
+   * страница регистрации, автосоздание было лишь одной из дверей, а после её
+   * закрытия осталось бы единственной незащищённой — учеников заводит
+   * администратор. Ищем без фильтра мягкого удаления: chatId остаётся
+   * занятым в уникальном индексе и у удалённого аккаунта.
    */
-  private async findOrCreateTelegramUser(profile: {
-    telegramId: string;
-    firstName?: string | null;
-    lastName?: string | null;
-    username?: string | null;
-  }) {
-    const existing = await this.prismaUnscoped.user.findUnique({
-      where: { telegramChatId: profile.telegramId },
-    });
-
-    if (existing) {
-      if (!existing.isActive || existing.deletedAt) return null;
-      return existing;
-    }
-
-    return this.prisma.user.create({
-      data: {
-        firstName: profile.firstName?.trim() || profile.username || "Telegram",
-        lastName: profile.lastName?.trim() || "",
-        role: "STUDENT",
-        telegramChatId: profile.telegramId,
-        telegramUsername: profile.username || null,
-      },
-    });
+  private async requireTelegramUser(telegramId: string) {
+    const user = await this.prismaUnscoped.user.findUnique({ where: { telegramChatId: telegramId } });
+    // Незнакомец — понятный отказ, а не тихое создание записи
+    if (!user) throw new UnauthorizedException("telegramUnknown");
+    if (!user.isActive || user.deletedAt) throw new ForbiddenException("accountDisabled");
+    return user;
   }
 }

@@ -44,7 +44,9 @@ export function TelegramAuth() {
           ? await loginWithTelegramCode(params.code)
           : await loginWithTelegramWidget(params);
       if (!result.success) {
-        setError(t("telegramLoginFailed"));
+        // Незнакомый Telegram больше не заводит учётную запись сам (шаг 1
+        // отказа от почты) — отдельное сообщение вместо общего «не удалось»
+        setError(result.error === "telegramUnknown" ? t("telegramUnknown") : t("telegramLoginFailed"));
         setWaiting(false);
         setLoginUrl(null);
         return;

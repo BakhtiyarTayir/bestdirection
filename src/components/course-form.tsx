@@ -36,7 +36,7 @@ interface Teacher {
   id: string;
   firstName: string;
   lastName: string;
-  email: string | null;
+  login: string | null;
 }
 
 interface CourseData {
@@ -340,7 +340,7 @@ export function CourseForm({
                 <SelectContent>
                   {teachers.map((teacher) => (
                     <SelectItem key={teacher.id} value={teacher.id}>
-                      {teacher.firstName} {teacher.lastName} ({teacher.email})
+                      {teacher.firstName} {teacher.lastName} ({teacher.login})
                     </SelectItem>
                   ))}
                 </SelectContent>

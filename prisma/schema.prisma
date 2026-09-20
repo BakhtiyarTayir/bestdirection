@@ -151,6 +151,15 @@ model User {
   id           String    @id @default(cuid())
   number       Int       @unique @default(autoincrement())
   email        String?   @unique
+  // Шаг 1 отказа от почты (PLAN-SALARY-PROFILE-BRANCH-2026-09-20.md, 4.1):
+  // логин необязателен, вход принимает и его, и почту. Обязательным
+  // (NOT NULL) станет отдельной миграцией, когда все убедятся, что у них
+  // есть логин, — тогда же уйдёт email. Хранится в нижнем регистре: иначе
+  // «Ivanov» и «ivanov» — разные люди (регистр приводит DTO, не сервис).
+  // Заполнение пустых логинов у существующих строк — UserLoginBackfillService
+  // (api/src/modules/users/user-login-backfill.service.ts), не эта миграция:
+  // транслитерация кириллицы и разводка коллизий недоступны в чистом SQL.
+  login        String?   @unique
   passwordHash String?
   firstName    String
   lastName     String
@@ -188,6 +197,8 @@ model User {
   // родителей, у родителя — несколько детей в разных группах.
   telegramLinkRequests TelegramLinkRequest[]
   sessions             Session[]
+  // Код сброса пароля через Telegram — см. PasswordResetRequest ниже
+  passwordResetRequest PasswordResetRequest?
   childLinks           ParentStudent[]       @relation("ParentOf")
   parentLinks          ParentStudent[]       @relation("ChildOf")
 
@@ -540,6 +551,20 @@ model Session {
 model EmailVerificationCode {
   id        String   @id @default(cuid())
   email     String   @unique
+  codeHash  String
+  attempts  Int      @default(0)
+  expiresAt DateTime
+  sentAt    DateTime @default(now())
+}
+
+/// Код смены пароля, отправленный в Telegram. Второй, независимый от почты
+/// путь сброса (см. PLAN-SALARY-PROFILE-BRANCH-2026-09-20.md, 4.1): нужен тем,
+/// у кого почты нет вовсе, и родителям, заведённым со случайным паролем.
+/// В базе лежит хэш — утечка таблицы не даёт сменить чужой пароль.
+model PasswordResetRequest {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   codeHash  String
   attempts  Int      @default(0)
   expiresAt DateTime

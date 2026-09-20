@@ -5,7 +5,21 @@ const email = z.string().trim().email().max(200);
 const password = z.string().min(8, "passwordTooShort").max(200);
 const code = z.string().regex(/^\d{6}$/, "invalidCode");
 
-export const loginSchema = z.object({ email, password });
+// Одно поле принимает и логин, и почту (шаг 1 отказа от почты,
+// PLAN-SALARY-PROFILE-BRANCH-2026-09-20.md, 4.1) — формат логина здесь
+// НЕ проверяется регэкспом: значение может быть старой почтой. Кто из двух
+// это на самом деле, решает AuthService.loginWithPassword запросом OR.
+const loginIdentifier = z.string().trim().toLowerCase().min(1, "loginRequired").max(200);
+
+export const loginSchema = z.object({ login: loginIdentifier, password });
+
+export const requestTelegramPasswordResetSchema = z.object({ login: loginIdentifier });
+
+export const resetPasswordViaTelegramSchema = z.object({
+  login: loginIdentifier,
+  code,
+  newPassword: password,
+});
 
 export const registerSchema = z.object({
   firstName: z.string().trim().min(1).max(100),
@@ -44,3 +58,5 @@ export class VerifyCodeDto extends createZodDto(verifyCodeSchema) {}
 export class ResetPasswordDto extends createZodDto(resetPasswordSchema) {}
 export class TelegramWidgetDto extends createZodDto(telegramWidgetSchema) {}
 export class TelegramCodeDto extends createZodDto(telegramCodeSchema) {}
+export class RequestTelegramPasswordResetDto extends createZodDto(requestTelegramPasswordResetSchema) {}
+export class ResetPasswordViaTelegramDto extends createZodDto(resetPasswordViaTelegramSchema) {}

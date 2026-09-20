@@ -34,6 +34,14 @@ describe("модуль users", () => {
   const send = (method: "post" | "patch" | "delete", path: string, role: string, body?: object) =>
     http()[method](`/api/v2${path}`).set("Cookie", cookies[role]).set("Origin", TEST_APP_URL).send(body);
 
+  // Тесты делят одну базу (vitest.config.mts: fileParallelism: false) —
+  // логины и имена курсов/групп/филиалов должны быть уникальны между собой.
+  // Логин ограничен 30 символами (LOGIN_REGEX) — базу обрезаем, чтобы влезть
+  // вместе со счётчиком.
+  let uniqueCounter = 0;
+  const uniqueLogin = (base: string) => `${base.slice(0, 20)}${uniqueCounter++}`;
+  const uniqueName = (base: string) => `${base}-${Date.now().toString(36)}-${uniqueCounter++}`;
+
   describe("матрица ролей", () => {
     const matrix: Array<[string, string, string, number]> = [
       ["GET", "/users", "ADMIN", 200],
@@ -116,64 +124,120 @@ describe("модуль users", () => {
 
   describe("создание и изменение (аудит 1.3 — схемы выполняются на сервере)", () => {
     it("короткий пароль не проходит", async () => {
+      const branch = await testDb().branch.create({ data: { name: uniqueName("Branch") } });
       const res = await send("post", "/users", "ADMIN", {
+        login: uniqueLogin("short-pass"),
         password: "short",
+        firstName: "A",
+        lastName: "B",
+        role: "STUDENT",
+        branchId: branch.id,
+      });
+      expect(res.status).toBe(400);
+      expect(res.body.message).toBe("validationFailed");
+      expect(res.body.details.map((d: { path: string[] }) => d.path)).toContainEqual(["password"]);
+    });
+
+    it("роль вне списка не проходит", async () => {
+      const branch = await testDb().branch.create({ data: { name: uniqueName("Branch") } });
+      const res = await send("post", "/users", "ADMIN", {
+        login: uniqueLogin("bad-role"),
+        password: "12345678",
+        firstName: "A",
+        lastName: "B",
+        role: "SUPERUSER",
+        branchId: branch.id,
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it("без филиала — 400: обязателен при создании (4.3)", async () => {
+      const res = await send("post", "/users", "ADMIN", {
+        login: uniqueLogin("no-branch"),
+        password: "12345678",
         firstName: "A",
         lastName: "B",
         role: "STUDENT",
       });
       expect(res.status).toBe(400);
       expect(res.body.message).toBe("validationFailed");
-      expect(res.body.details[0].path).toEqual(["password"]);
+      expect(res.body.details.map((d: { path: string[] }) => d.path)).toContainEqual(["branchId"]);
     });
 
-    it("роль вне списка не проходит", async () => {
+    it("логин без формата (заглавные, пробелы, короче 3 символов) не проходит", async () => {
+      const branch = await testDb().branch.create({ data: { name: uniqueName("Branch") } });
       const res = await send("post", "/users", "ADMIN", {
+        login: "AB",
         password: "12345678",
         firstName: "A",
         lastName: "B",
-        role: "SUPERUSER",
+        role: "STUDENT",
+        branchId: branch.id,
       });
       expect(res.status).toBe(400);
+      expect(res.body.details.map((d: { path: string[] }) => d.path)).toContainEqual(["login"]);
     });
 
     it("лишние поля отбрасываются, пользователь создаётся", async () => {
+      const branch = await testDb().branch.create({ data: { name: uniqueName("Branch") } });
+      const login = uniqueLogin("novyy-polzovatel");
       const res = await send("post", "/users", "ADMIN", {
-        email: "new-user@test.uz",
+        login,
+        email: "should-be-ignored@test.uz",
         password: "12345678",
         firstName: "Имя",
         lastName: "Фамилия",
         role: "STUDENT",
+        branchId: branch.id,
         isActive: false,
         number: 99999,
       });
       expect(res.status).toBe(201);
-      expect(res.body).toMatchObject({ email: "new-user@test.uz", role: "STUDENT", isActive: true });
+      expect(res.body).toMatchObject({ login, role: "STUDENT", isActive: true });
       expect(res.body.number).not.toBe(99999);
+      // Почта не входит в createUserSchema (план, 4.5) — лишнее поле отброшено
+      expect(res.body.email).toBeNull();
     });
 
-    it("занятая почта — 409 emailExists", async () => {
-      const res = await send("post", "/users", "ADMIN", {
-        email: "new-user@test.uz",
+    it("занятый логин — 409 loginExists", async () => {
+      const branch = await testDb().branch.create({ data: { name: uniqueName("Branch") } });
+      const login = uniqueLogin("dubl");
+      const first = await send("post", "/users", "ADMIN", {
+        login,
         password: "12345678",
         firstName: "A",
         lastName: "B",
         role: "STUDENT",
+        branchId: branch.id,
+      });
+      expect(first.status).toBe(201);
+
+      const res = await send("post", "/users", "ADMIN", {
+        login,
+        password: "12345678",
+        firstName: "C",
+        lastName: "D",
+        role: "STUDENT",
+        branchId: branch.id,
       });
       expect(res.status).toBe(409);
-      expect(res.body.message).toBe("emailExists");
+      expect(res.body.message).toBe("loginExists");
     });
 
-    it("почта удалённого пользователя остаётся занятой", async () => {
-      const deleted = await createUser({ role: "STUDENT", deletedAt: new Date() });
+    it("логин мягко удалённого пользователя остаётся занятым", async () => {
+      const login = uniqueLogin("byvshiy");
+      await createUser({ role: "STUDENT", deletedAt: new Date(), login });
+      const branch = await testDb().branch.create({ data: { name: uniqueName("Branch") } });
       const res = await send("post", "/users", "ADMIN", {
-        email: deleted.email!,
+        login,
         password: "12345678",
         firstName: "A",
         lastName: "B",
         role: "STUDENT",
+        branchId: branch.id,
       });
-      expect(res.body.message).toBe("emailExists");
+      expect(res.status).toBe(409);
+      expect(res.body.message).toBe("loginExists");
     });
 
     it("изменение пишется в журнал аудита", async () => {
@@ -189,9 +253,64 @@ describe("модуль users", () => {
     });
   });
 
+  describe("сброс пароля администратором (4.1, «Путь 1»)", () => {
+    it("PATCH с password меняет хэш, сбрасывает кэш и рвёт сессии", async () => {
+      const target = await createUser({ role: "STUDENT", password: "staryy-parol-123" });
+      const cookie = await sessionCookie(target);
+      expect((await http().get("/api/v2/me").set("Cookie", cookie)).status).toBe(200);
+
+      const res = await send("patch", `/users/${target.id}`, "ADMIN", { password: "novyy-parol-ot-admina" });
+      expect(res.status).toBe(200);
+
+      // Прежняя сессия оборвана — как при деактивации (аудит 2.1)
+      expect((await http().get("/api/v2/me").set("Cookie", cookie)).status).toBe(401);
+
+      const row = await testDb().user.findUnique({ where: { id: target.id }, select: { passwordHash: true } });
+      expect(row?.passwordHash).not.toBeNull();
+
+      // В аудит пароль попадает замаскированным, а не текстом
+      const log = await testDb().auditLog.findFirst({
+        where: { entityType: "User", entityId: target.id, action: "UPDATE" },
+        orderBy: { createdAt: "desc" },
+      });
+      expect(log?.changes).toMatchObject({ password: { new: "***" } });
+    });
+  });
+
+  describe("подсказка и проверка занятости логина", () => {
+    it("login-suggestion предлагает свободный логин из имени и фамилии", async () => {
+      const res = await send("post", "/users/login-suggestion", "ADMIN", {
+        firstName: "Иван",
+        lastName: "Иванов",
+      });
+      expect(res.status).toBe(201);
+      expect(res.body.login).toMatch(/^[a-z0-9][a-z0-9._-]{2,29}$/);
+    });
+
+    it("login-available отвечает false на занятый и true на свободный", async () => {
+      const login = uniqueLogin("zanyat");
+      await createUser({ role: "STUDENT", login });
+
+      const taken = await get(`/users/login-available?login=${login}`, "ADMIN");
+      expect(taken.body).toEqual({ available: false });
+
+      const free = await get(`/users/login-available?login=${uniqueLogin("svoboden")}`, "ADMIN");
+      expect(free.body).toEqual({ available: true });
+    });
+
+    it("STUDENT не может дёргать подсказку логина — не своя привилегия создания", async () => {
+      const res = await send("post", "/users/login-suggestion", "STUDENT", {
+        firstName: "X",
+        lastName: "Y",
+      });
+      expect(res.status).toBe(403);
+    });
+  });
+
   describe("филиал пользователя — справочная приписка (этап 1 плана филиалов)", () => {
     it("несуществующий филиал — 404, а не 500 от внешнего ключа", async () => {
       const res = await send("post", "/users", "ADMIN", {
+        login: uniqueLogin("no-branch-404"),
         password: "12345678",
         firstName: "A",
         lastName: "B",
@@ -205,6 +324,7 @@ describe("модуль users", () => {
     it("создание и фильтр списка по филиалу", async () => {
       const branch = await testDb().branch.create({ data: { name: `Users-${Date.now().toString(36)}` } });
       const res = await send("post", "/users", "ADMIN", {
+        login: uniqueLogin("filialnyy"),
         password: "12345678",
         firstName: "Филиальный",
         lastName: "Ученик",
@@ -227,6 +347,128 @@ describe("модуль users", () => {
       const res = await send("patch", `/users/${target.id}`, "ADMIN", { branchId: "" });
       expect(res.status).toBe(200);
       expect(res.body.branchId).toBeNull();
+    });
+  });
+
+  describe("запись на курс при создании ученика (4.4–4.6)", () => {
+    async function branchCourseGroup() {
+      const branch = await testDb().branch.create({ data: { name: uniqueName("Branch") } });
+      const teacher = await createUser({ role: "TEACHER" });
+      const course = await testDb().course.create({
+        data: { title: uniqueName("Курс"), slug: uniqueName("kurs"), teacherId: teacher.id, price: 300000 },
+      });
+      const group = await testDb().group.create({
+        data: { name: uniqueName("Группа"), courseId: course.id, branchId: branch.id, price: 350000 },
+      });
+      return { branch, course, group };
+    }
+
+    it("создаёт пользователя и Enrollment одной операцией", async () => {
+      const { branch, course, group } = await branchCourseGroup();
+
+      const res = await send("post", "/users", "ADMIN", {
+        login: uniqueLogin("s-obucheniem"),
+        password: "12345678",
+        firstName: "Со",
+        lastName: "Обучением",
+        role: "STUDENT",
+        branchId: branch.id,
+        enrollment: { courseId: course.id, groupId: group.id, priceOverride: 250000, startsAt: "2026-10-01" },
+      });
+      expect(res.status).toBe(201);
+      expect(res.body.enrollmentId).toBeTruthy();
+
+      const enrollment = await testDb().enrollment.findUnique({ where: { id: res.body.enrollmentId } });
+      expect(enrollment).toMatchObject({
+        studentId: res.body.id,
+        courseId: course.id,
+        groupId: group.id,
+        priceOverride: 250000,
+      });
+    });
+
+    it("блок необязателен: ученика можно завести без записи на курс", async () => {
+      const branch = await testDb().branch.create({ data: { name: uniqueName("Branch") } });
+      const res = await send("post", "/users", "ADMIN", {
+        login: uniqueLogin("bez-obucheniya"),
+        password: "12345678",
+        firstName: "Без",
+        lastName: "Обучения",
+        role: "STUDENT",
+        branchId: branch.id,
+      });
+      expect(res.status).toBe(201);
+      expect(res.body.enrollmentId ?? null).toBeNull();
+    });
+
+    it("enrollment у роли, отличной от STUDENT, — 400", async () => {
+      const { branch, course } = await branchCourseGroup();
+      const res = await send("post", "/users", "ADMIN", {
+        login: uniqueLogin("prepod-s-obucheniem"),
+        password: "12345678",
+        firstName: "Не",
+        lastName: "Ученик",
+        role: "TEACHER",
+        branchId: branch.id,
+        enrollment: { courseId: course.id },
+      });
+      expect(res.status).toBe(400);
+      expect(res.body.details.map((d: { path: string[] }) => d.path)).toContainEqual(["enrollment"]);
+    });
+
+    it("несуществующий курс — 404, а не 500", async () => {
+      const branch = await testDb().branch.create({ data: { name: uniqueName("Branch") } });
+      const login = uniqueLogin("chuzhoy-kurs");
+      const res = await send("post", "/users", "ADMIN", {
+        login,
+        password: "12345678",
+        firstName: "A",
+        lastName: "B",
+        role: "STUDENT",
+        branchId: branch.id,
+        enrollment: { courseId: "no-such-course" },
+      });
+      expect(res.status).toBe(404);
+      expect(res.body.message).toBe("courseNotFound");
+
+      // Транзакция откатилась целиком — пользователь тоже не создан
+      const created = await testDb().user.findFirst({ where: { login } });
+      expect(created).toBeNull();
+    });
+
+    it("группа не принадлежит указанному курсу — 404 groupNotFound", async () => {
+      const { branch, course } = await branchCourseGroup();
+      // Группа существует, но у ДРУГОГО курса — courseId и groupId не согласованы
+      const { group: foreignGroup } = await branchCourseGroup();
+
+      const res = await send("post", "/users", "ADMIN", {
+        login: uniqueLogin("nesoglasovannaya-gruppa"),
+        password: "12345678",
+        firstName: "A",
+        lastName: "B",
+        role: "STUDENT",
+        branchId: branch.id,
+        enrollment: { courseId: course.id, groupId: foreignGroup.id },
+      });
+      expect(res.status).toBe(404);
+      expect(res.body.message).toBe("groupNotFound");
+    });
+
+    it("группа другого филиала — 400 groupWrongBranch", async () => {
+      const { course, group } = await branchCourseGroup();
+      const otherBranch = await testDb().branch.create({ data: { name: uniqueName("OtherBranch") } });
+
+      const res = await send("post", "/users", "ADMIN", {
+        login: uniqueLogin("ne-tot-filial"),
+        password: "12345678",
+        firstName: "A",
+        lastName: "B",
+        role: "STUDENT",
+        branchId: otherBranch.id,
+        enrollment: { courseId: course.id, groupId: group.id },
+      });
+      expect(res.status).toBe(400);
+      expect(res.body.message).toBe("groupWrongBranch");
     });
   });
 

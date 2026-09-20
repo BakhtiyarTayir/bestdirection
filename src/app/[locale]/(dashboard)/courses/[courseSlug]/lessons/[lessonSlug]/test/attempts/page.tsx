@@ -130,7 +130,7 @@ async function AttemptsPageAsync({
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t("studentHeader")}</TableHead>
-                    <TableHead>{t("emailHeader")}</TableHead>
+                    <TableHead>{t("loginHeader")}</TableHead>
                     <TableHead className="text-center">{t("scoreHeader")}</TableHead>
                     <TableHead className="text-center">{t("percentHeader")}</TableHead>
                     <TableHead className="text-center">{t("statusHeader")}</TableHead>
@@ -150,7 +150,7 @@ async function AttemptsPageAsync({
                         isPassed: attempt.isPassed,
                         startedAt: formatDateTime(attempt.startedAt),
                         studentName: `${attempt.student?.lastName ?? ""} ${attempt.student?.firstName ?? ""}`.trim(),
-                        studentEmail: attempt.student?.email ?? null,
+                        studentLogin: attempt.student?.login ?? null,
                         answers: (attempt.answers ?? []).map((a) => ({
                           id: a.id,
                           selectedOptionIds: a.selectedOptionIds,

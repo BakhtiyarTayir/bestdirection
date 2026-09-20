@@ -57,7 +57,8 @@
     "importing": "Import qilinmoqda...",
     "moving": "Ko'chirilmoqda...",
     "adding": "Qo'shilmoqda...",
-    "publish": "Nashr qilish"
+    "publish": "Nashr qilish",
+    "login": "Login"
   },
   "auth": {
     "login": "Kirish",
@@ -117,7 +118,14 @@
     "resetFailed": "Parolni o'zgartirib bo'lmadi. Qayta urinib ko'ring",
     "backToLogin": "Kirishga qaytish",
     "tooManyRequests": "So'rovlar juda ko'p. Bir daqiqa kutib, qayta urinib ko'ring",
-    "tooManyLoginAttempts": "Kirish urinishlari juda ko'p. 15 daqiqadan keyin urinib ko'ring yoki parolni tiklang"
+    "tooManyLoginAttempts": "Kirish urinishlari juda ko'p. 15 daqiqadan keyin urinib ko'ring yoki parolni tiklang",
+    "loginFieldLabel": "Login",
+    "resetPasswordSubtitleTelegram": "Agar bu loginga Telegram ulangan bo'lsa, kod bot chatiga keladi",
+    "sendCodeTelegram": "Telegramga kod yuborish",
+    "codeSentToTelegramLogin": "Agar «{login}» login mavjud bo'lsa va unga Telegram ulangan bo'lsa — kod bot chatiga keladi.",
+    "telegramUnknown": "Bu Telegram hech qanday akkauntga ulanmagan. O'quv markazi administratoriga murojaat qiling.",
+    "loginRequired": "Loginni kiriting",
+    "changeLogin": "Loginni o'zgartirish"
   },
   "nav": {
     "dashboard": "Boshqaruv paneli",
@@ -493,7 +501,8 @@
     "examBlocked": "Imtihon bloklangan",
     "passAllTests": "Imtihonga kirish uchun barcha dars testlarini topshiring.",
     "questionsLabel": "Savollar",
-    "resultsPageTitle": "Natijalar: {title}"
+    "resultsPageTitle": "Natijalar: {title}",
+    "loginHeader": "Login"
   },
   "homework": {
     "title": "Uy vazifalari",
@@ -689,7 +698,7 @@
     "email": "Email",
     "password": "Parol",
     "passwordPlaceholder": "Kamida 6 belgi",
-    "phone": "Telefon",
+    "phone": "O'z raqami",
     "phonePlaceholder": "+998 (XX) XXX-XX-XX",
     "role": "Rol",
     "selectRole": "Rolni tanlang",
@@ -756,7 +765,36 @@
     "branch": "Filial",
     "selectBranchPlaceholder": "Tanlanmagan",
     "filterBranch": "Filial",
-    "allBranches": "Barcha filiallar"
+    "allBranches": "Barcha filiallar",
+    "login": "Login",
+    "loginPlaceholder": "ivan.ivanov",
+    "generateLogin": "Yaratish",
+    "loginAvailable": "Login bo'sh",
+    "loginTaken": "Login band",
+    "checkingLogin": "Tekshirilmoqda...",
+    "generatePassword": "Parol yaratish",
+    "generatedPasswordTitle": "Parol yaratildi",
+    "generatedPasswordDescription": "Nusxa oling va foydalanuvchiga bering — qayta ko'rsatilmaydi.",
+    "copyPassword": "Nusxalash",
+    "copied": "Nusxalandi",
+    "newPasswordOptional": "Yangi parol",
+    "newPasswordOptionalNote": "Parolni o'zgartirmaslik uchun bo'sh qoldiring.",
+    "phoneNote": "Ota-onaning raqami ota-ona kartasida ko'rsatiladi.",
+    "branchRequiredHint": "Yangi foydalanuvchilar uchun majburiy.",
+    "enrollmentTitle": "O'qish",
+    "enrollmentHint": "Majburiy emas — o'quvchini kursga yozmasdan ham qo'shish mumkin.",
+    "enrollmentCourse": "Kurs",
+    "selectCoursePlaceholder": "Tanlanmagan",
+    "enrollmentGroup": "Guruh",
+    "enrollmentNoGroup": "Guruhsiz",
+    "enrollmentPrice": "Oylik narx",
+    "enrollmentPricePlaceholder": "Guruhdagidek",
+    "enrollmentPriceNote": "Shaxsiy narx guruh narxini butunlay almashtiradi — agar «hammadek» bo'lsa, bo'sh qoldiring.",
+    "enrollmentStartsAt": "O'qish boshlanish sanasi",
+    "enrollmentFirstMonthCharge": "Birinchi oy uchun hisoblash",
+    "enrollmentFirstMonthChargePlaceholder": "Avtomatik hisoblash",
+    "writeInTelegram": "Telegramga yozish",
+    "openBilling": "Billingni ochish"
   },
   "groups": {
     "title": "Guruhlar",
@@ -840,7 +878,7 @@
     "lastNamePlaceholder": "Familiyani kiriting",
     "email": "Email",
     "emailNote": "Emailni o'zgartirish mumkin emas.",
-    "phone": "Telefon",
+    "phone": "O'z raqami",
     "phonePlaceholder": "+998 (XX) XXX-XX-XX",
     "saveChanges": "O'zgarishlarni saqlash",
     "changePassword": "Parolni o'zgartirish",
@@ -867,7 +905,12 @@
     "telegramOpenTitle": "Telegramni oching",
     "telegramOpenDescription": "Bog'lashni yakunlash uchun botda Start tugmasini bosing.",
     "telegramLinkedToast": "Telegram bog'landi!",
-    "telegramUnlinkedToast": "Telegram uzildi"
+    "telegramUnlinkedToast": "Telegram uzildi",
+    "phoneNote": "Ota-onaning raqami ota-ona kartasida ko'rsatiladi.",
+    "login": "Login",
+    "loginNote": "Loginni administrator foydalanuvchi kartasida o'zgartiradi.",
+    "telegramResetHint": "Administratorsiz o'zingiz parolni tiklash uchun Telegramni ulang.",
+    "writeInTelegram": "Telegramga yozish"
   },
   "audit": {
     "title": "Audit jurnali",
@@ -1133,7 +1176,10 @@
     "alreadyEnrolled": "Talaba bu kursga allaqachon yozilgan",
     "branchNotFound": "Filial topilmadi",
     "branchNameExists": "Bunday nomdagi filial allaqachon mavjud",
-    "branchHasGroups": "Filialda guruhlar bor — avval ularni ko'chiring yoki o'chiring"
+    "branchHasGroups": "Filialda guruhlar bor — avval ularni ko'chiring yoki o'chiring",
+    "loginExists": "Bunday loginli foydalanuvchi allaqachon mavjud",
+    "groupWrongBranch": "Guruh boshqa filialga tegishli",
+    "telegramUnknown": "Bu Telegram hech qanday akkauntga ulanmagan"
   },
   "success": {
     "saved": "Saqlandi",
@@ -1184,7 +1230,11 @@
     "homeworkTitleRequired": "Nom majburiy",
     "homeworkDescriptionRequired": "Tavsif majburiy",
     "branchRequired": "Filial majburiy",
-    "branchNameRequired": "Filial nomi majburiy"
+    "branchNameRequired": "Filial nomi majburiy",
+    "loginInvalid": "Login: lotin harflari, raqamlar, nuqta, tire yoki pastki chiziq, 3–30 belgi",
+    "courseRequired": "Kursni tanlang",
+    "amountPositive": "Summa noldan katta bo'lishi kerak",
+    "enrollmentOnlyForStudents": "O'qishni faqat «O'quvchi» roli uchun ko'rsatish mumkin"
   },
   "language": {
     "title": "Til",
@@ -1635,7 +1685,8 @@
     "effectiveStartsAt": "Aslida {date} dan hisoblanadi — guruh keyinroq boshlanadi",
     "closedMonthsNote": "O'tgan oylar yopilgan va qayta hisoblanmaydi: bu o'zgarishlar joriy oydan boshlab amal qiladi. Yopilgan oyni talaba kartochkasida qayta hisoblash mumkin.",
     "filterBranch": "Filial",
-    "allBranches": "Barcha filiallar"
+    "allBranches": "Barcha filiallar",
+    "writeInTelegram": "Telegramga yozish"
   },
   "parents": {
     "title": "Ota-onalar",

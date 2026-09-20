@@ -22,7 +22,10 @@ import { Loader2 } from "lucide-react";
 
 interface ProfileUser {
   id: string;
-  // У аккаунтов, созданных через Telegram, почты нет
+  // Логин виден всегда — человек должен знать, чем он входит. Менять его
+  // может только администратор в карточке пользователя (4.2)
+  login: string | null;
+  // У аккаунтов, созданных через Telegram, почты может не быть вовсе
   email: string | null;
   firstName: string;
   lastName: string;
@@ -160,16 +163,15 @@ export function ProfileForm({ user }: ProfileFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">{t("email")}</Label>
+              <Label htmlFor="login">{t("login")}</Label>
               <Input
-                id="email"
-                type="email"
-                value={user.email ?? ""}
+                id="login"
+                value={user.login ?? ""}
                 disabled
                 className="bg-muted"
               />
               <p className="text-sm text-muted-foreground">
-                {t("emailNote")}
+                {t("loginNote")}
               </p>
             </div>
 
@@ -185,6 +187,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
                   {profileForm.formState.errors.phone.message}
                 </p>
               )}
+              <p className="text-sm text-muted-foreground">{t("phoneNote")}</p>
             </div>
 
             <Button type="submit" disabled={isProfileLoading}>

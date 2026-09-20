@@ -28,10 +28,17 @@ export class SessionUserCache {
     // Обычный клиент не видит удалённых (deletedAt) — для них вернётся null
     const found = await this.prismaService.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, role: true, email: true, firstName: true, lastName: true, isActive: true },
+      select: { id: true, role: true, login: true, email: true, firstName: true, lastName: true, isActive: true },
     });
     const user = found?.isActive
-      ? { id: found.id, role: found.role, email: found.email, firstName: found.firstName, lastName: found.lastName }
+      ? {
+          id: found.id,
+          role: found.role,
+          login: found.login,
+          email: found.email,
+          firstName: found.firstName,
+          lastName: found.lastName,
+        }
       : null;
 
     if (this.entries.size >= MAX_ENTRIES) this.evictExpired(now);

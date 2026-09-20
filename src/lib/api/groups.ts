@@ -29,9 +29,12 @@ export interface ApiGroupStudent {
   id: string;
   firstName: string;
   lastName: string;
-  email: string | null;
+  // Логин вместо почты (шаг 1 отказа от почты, PLAN-SALARY-PROFILE-BRANCH-2026-09-20.md, 4.1)
+  login: string | null;
   phone: string | null;
   isActive: boolean;
+  // Для кнопки «Написать в Telegram» в составе группы (4.2)
+  telegramUsername: string | null;
 }
 
 /** Общий список групп: курс приходит всегда. */
@@ -50,10 +53,11 @@ export interface ApiGroupCandidate {
   id: string;
   firstName: string;
   lastName: string;
-  email: string | null;
+  login: string | null;
   phone: string | null;
   enrolled: boolean;
   currentGroup: string | null;
+  telegramUsername: string | null;
 }
 
 export interface ApiTeacherOption {

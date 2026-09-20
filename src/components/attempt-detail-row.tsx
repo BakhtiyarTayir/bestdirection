@@ -42,7 +42,7 @@ interface AttemptDetailRowProps {
     isPassed: boolean;
     startedAt: string;
     studentName: string;
-    studentEmail: string | null;
+    studentLogin: string | null;
     answers: AttemptAnswer[];
   };
   colSpan: number;
@@ -62,7 +62,7 @@ export function AttemptDetailRow({ attempt, colSpan }: AttemptDetailRowProps) {
           {attempt.studentName}
         </TableCell>
         <TableCell className="text-muted-foreground">
-          {attempt.studentEmail}
+          {attempt.studentLogin}
         </TableCell>
         <TableCell className="text-center">
           {attempt.score} / {attempt.maxScore}

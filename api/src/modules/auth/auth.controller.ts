@@ -10,7 +10,9 @@ import {
   LoginDto,
   RegisterDto,
   RequestEmailDto,
+  RequestTelegramPasswordResetDto,
   ResetPasswordDto,
+  ResetPasswordViaTelegramDto,
   TelegramCodeDto,
   TelegramWidgetDto,
   VerifyCodeDto,
@@ -151,6 +153,25 @@ export class AuthController {
   @Post("password/reset")
   resetPassword(@Body() body: ResetPasswordDto) {
     return this.auth.resetPassword(body);
+  }
+
+  /**
+   * Второй путь сброса пароля — без почты, кодом в Telegram (шаг 1 отказа от
+   * почты). Работает, только если у логина привязан Telegram — иначе такой
+   * же нейтральный { ok: true }, как у почтового пути.
+   */
+  @Public()
+  @Throttle({ default: { limit: CODE_LIMIT, ttl: 60_000 } })
+  @Post("password/telegram/request-code")
+  requestTelegramReset(@Body() body: RequestTelegramPasswordResetDto) {
+    return this.auth.requestTelegramPasswordReset(body);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: LOGIN_LIMIT, ttl: 60_000 } })
+  @Post("password/telegram/reset")
+  resetPasswordViaTelegram(@Body() body: ResetPasswordViaTelegramDto) {
+    return this.auth.resetPasswordViaTelegram(body);
   }
 
   private contextOf(request: Request) {

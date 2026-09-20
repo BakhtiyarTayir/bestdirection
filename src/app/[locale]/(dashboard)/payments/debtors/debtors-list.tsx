@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronDown, ChevronRight, SlidersHorizontal, TriangleAlert, Wallet } from "lucide-react";
+import { ChevronDown, ChevronRight, Send, SlidersHorizontal, TriangleAlert, Wallet } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { BillingDialog } from "./billing-dialog";
 import { CreatePaymentDialog } from "../create-payment-dialog";
@@ -291,6 +291,25 @@ export function DebtorsList({
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
+                          {/* Скрыта, а не показана неработающей: у Telegram
+                              необязательное имя пользователя (ловушка 4.2) */}
+                          {row.student.telegramUsername && (
+                            <Button
+                              asChild
+                              variant="ghost"
+                              size="icon"
+                              aria-label={t("writeInTelegram")}
+                              title={t("writeInTelegram")}
+                            >
+                              <a
+                                href={`https://t.me/${row.student.telegramUsername}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <Send className="h-4 w-4" />
+                              </a>
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"

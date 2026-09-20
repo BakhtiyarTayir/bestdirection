@@ -185,7 +185,7 @@ export class SubmissionsService {
     return this.prisma.submission.findMany({
       where: { homeworkId },
       include: {
-        student: { select: { id: true, firstName: true, lastName: true, email: true } },
+        student: { select: { id: true, firstName: true, lastName: true, login: true } },
         files: { select: { id: true, filename: true, size: true } },
         testResults: {
           include: {
@@ -265,7 +265,7 @@ export class SubmissionsService {
     const submission = await this.prisma.submission.findUnique({
       where: { id: submissionId },
       include: {
-        student: { select: { id: true, firstName: true, lastName: true, email: true } },
+        student: { select: { id: true, firstName: true, lastName: true, login: true } },
         homework: {
           include: {
             lesson: {

@@ -28,14 +28,18 @@ import {
   moveStudentToGroup,
 } from "@/lib/api/groups";
 import { useTranslations } from "next-intl";
+import { TelegramWriteButton } from "@/components/telegram-write-button";
 
 interface Student {
   id: string;
   firstName: string;
   lastName: string;
-  email: string | null;
+  // Логин вместо почты (шаг 1 отказа от почты) — опознавательный знак
+  // при входе, а не электронный адрес
+  login: string | null;
   phone?: string | null;
   isActive?: boolean;
+  telegramUsername?: string | null;
 }
 
 interface AvailableStudent extends Student {
@@ -174,7 +178,7 @@ export function GroupStudentsManager({
                         {student.firstName} {student.lastName}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {student.email || student.phone || "—"}
+                        {student.login || student.phone || "—"}
                       </p>
                     </div>
                     {/* Что произойдёт при добавлении: перевод из другой группы,
@@ -215,9 +219,10 @@ export function GroupStudentsManager({
                   <p className="font-medium text-sm">
                     {student.firstName} {student.lastName}
                   </p>
-                  <p className="text-xs text-muted-foreground">{student.email}</p>
+                  <p className="text-xs text-muted-foreground">{student.login}</p>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex items-center gap-1">
+                  <TelegramWriteButton username={student.telegramUsername} variant="ghost" />
                   {otherGroups.length > 0 && (
                     <Button
                       variant="ghost"
