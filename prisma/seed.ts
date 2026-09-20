@@ -8,11 +8,15 @@ async function main() {
   const teacherPassword = await bcrypt.hash("teacher123", 10);
   const studentPassword = await bcrypt.hash("student123", 10);
 
+  // Логины добавлены рядом с почтой (шаг 1 отказа от почты, PLAN-SALARY-PROFILE-BRANCH-2026-09-20.md,
+  // 4.1): вход принимает и то, и другое, но локальная разработка и тесты
+  // должны сразу показывать логин, а не только почту
   const admin = await prisma.user.upsert({
     where: { email: "admin@lms.com" },
     update: {},
     create: {
       email: "admin@lms.com",
+      login: "admin",
       passwordHash: adminPassword,
       firstName: "Админ",
       lastName: "Системный",
@@ -25,6 +29,7 @@ async function main() {
     update: {},
     create: {
       email: "teacher@lms.com",
+      login: "teacher",
       passwordHash: teacherPassword,
       firstName: "Иван",
       lastName: "Преподаватель",
@@ -37,6 +42,7 @@ async function main() {
     update: {},
     create: {
       email: "student@lms.com",
+      login: "student",
       passwordHash: studentPassword,
       firstName: "Мария",
       lastName: "Студент",
@@ -44,7 +50,7 @@ async function main() {
     },
   });
 
-  console.log("Seed completed:", { admin: admin.email, teacher: teacher.email, student: student.email });
+  console.log("Seed completed:", { admin: admin.login, teacher: teacher.login, student: student.login });
 }
 
 main()
