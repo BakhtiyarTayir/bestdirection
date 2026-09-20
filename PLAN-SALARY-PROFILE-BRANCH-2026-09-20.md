@@ -572,7 +572,7 @@ export const createUserSchema = z.object({
 **Логин:**
 - [ ] Шаг 1: колонка `login` (необязательная) + заполнение из почты и из имени; вход принимает логин и почту; списки и формы показывают логин
 - [ ] Выгрузка «кто под каким логином» передана владельцу; вход администратора проверен
-- [ ] Шаг 2: `login NOT NULL @unique`; удалены колонка `email`, модель `EmailVerificationCode`, `api/src/common/email/`, SMTP-переменные, страницы `(auth)/register` и `(auth)/forgot-password`, вход по почте
+- [ ] Шаг 2: `login NOT NULL @unique`; удалены колонка `email`, модель `EmailVerificationCode`, `api/src/common/email/`, SMTP-переменные, страница `(auth)/register`, вход по почте. **Страница `(auth)/forgot-password` НЕ удаляется** — она переделывается под сброс по логину через Telegram (шаг 1)
 - [ ] `POST /users/login-suggestion` и `GET /users/login-available`; генерация через `slugify` + `generateUniqueSlug` с проверкой по `prismaUnscoped`
 - [ ] Поле логина в форме: автоподстановка, кнопка «Сгенерировать», отключение автоподстановки после ручной правки
 - [ ] Страница входа: `Email` → `Login`, ссылка «забыли пароль» ведёт на сброс через Telegram, ссылка на регистрацию убрана
