@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -18,10 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "@/i18n/navigation";
-import { UserPlus, UserMinus, ArrowRightLeft } from "lucide-react";
+import { Loader2, Search, UserMinus, ArrowRightLeft } from "lucide-react";
 import {
   addStudentsToGroup,
   removeStudentFromGroup,
@@ -61,6 +62,16 @@ interface GroupStudentsManagerProps {
   otherGroups: GroupInfo[];
 }
 
+const fullName = (student: Student) => `${student.firstName} ${student.lastName}`.trim();
+
+const matches = (student: Student, query: string) => {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+  return [fullName(student), student.login ?? "", student.phone ?? ""].some((field) =>
+    field.toLowerCase().includes(needle)
+  );
+};
+
 export function GroupStudentsManager({
   groupId,
   courseId,
@@ -74,24 +85,36 @@ export function GroupStudentsManager({
   const { toast } = useToast();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+  const [availableQuery, setAvailableQuery] = useState("");
+  const [groupQuery, setGroupQuery] = useState("");
+  const [addingId, setAddingId] = useState<string | null>(null);
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [moveStudentId, setMoveStudentId] = useState<string | null>(null);
   const [removeTarget, setRemoveTarget] = useState<Student | null>(null);
   const [targetGroupId, setTargetGroupId] = useState<string>("");
 
-  const handleAddStudents = () => {
-    if (selectedStudents.length === 0) return;
+  // Сначала те, кто ни в одной группе — именно их и нужно распределять
+  // (план, этап 5-бис, п.3). currentGroup === null покрывает и совсем новых,
+  // и уже записанных на курс без группы; API отдаёт список уже
+  // отсортированным по имени, порядок внутри каждой части сохраняем стабильно.
+  const sortedAvailable = useMemo(() => {
+    const ungrouped = availableStudents.filter((s) => s.currentGroup === null);
+    const grouped = availableStudents.filter((s) => s.currentGroup !== null);
+    return [...ungrouped, ...grouped];
+  }, [availableStudents]);
 
+  const visibleAvailable = sortedAvailable.filter((s) => matches(s, availableQuery));
+  const visibleStudents = students.filter((s) => matches(s, groupQuery));
+
+  const handleAddStudent = (student: AvailableStudent) => {
+    setAddingId(student.id);
     startTransition(async () => {
-      const result = await addStudentsToGroup(groupId, selectedStudents);
+      const result = await addStudentsToGroup(groupId, [student.id]);
+      setAddingId(null);
       if (!result.success) {
         toast({ title: tErrors("error"), description: result.error, variant: "destructive" });
       } else {
-        toast({ title: t("addCount", { count: selectedStudents.length }) });
-        setSelectedStudents([]);
-        setAddDialogOpen(false);
+        toast({ title: t("addCount", { count: 1 }) });
         router.refresh();
       }
     });
@@ -134,126 +157,129 @@ export function GroupStudentsManager({
     });
   };
 
-  const toggleStudent = (id: string) => {
-    setSelectedStudents((prev) =>
-      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
-    );
-  };
+  const searchBox = (value: string, onChange: (v: string) => void) => (
+    <div className="relative">
+      <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={t("searchPlaceholder")}
+        className="pl-8"
+      />
+    </div>
+  );
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">
-          {t("students", { count: students.length })}
-        </h2>
-        <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <UserPlus className="mr-2 h-4 w-4" />
-              {t("addStudents")}
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{t("addStudentsTitle")}</DialogTitle>
-            </DialogHeader>
-            <p className="text-sm text-muted-foreground">{t("addStudentsHint")}</p>
-            {availableStudents.length === 0 ? (
-              <p className="text-muted-foreground py-4">
-                {t("allStudentsInGroup")}
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {availableStudents.map((student) => (
-                  <label
-                    key={student.id}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted cursor-pointer"
-                  >
-                    <Checkbox
-                      checked={selectedStudents.includes(student.id)}
-                      onCheckedChange={() => toggleStudent(student.id)}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">
-                        {student.firstName} {student.lastName}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {student.login || student.phone || "—"}
-                      </p>
-                    </div>
-                    {/* Что произойдёт при добавлении: перевод из другой группы,
-                        привязка уже записанного или запись на курс с нуля */}
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      {student.currentGroup
-                        ? t("willMoveFrom", { group: student.currentGroup })
-                        : student.enrolled
-                          ? t("onCourseNoGroup")
-                          : t("willEnroll")}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            )}
-            <DialogFooter>
-              <Button
-                onClick={handleAddStudents}
-                disabled={selectedStudents.length === 0 || isPending}
-              >
-                {isPending ? tCommon("adding") : t("addCount", { count: selectedStudents.length })}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+      {/* Две колонки по образцу курсового экрана записи: слева — кого можно
+          добавить, справа — состав группы. Добавление — один клик, без
+          модального окна: это неудобно при наборе целой группы (план,
+          этап 5-бис, п.2) */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">
+              {t("availableStudentsTitle", { count: sortedAvailable.length })}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {searchBox(availableQuery, setAvailableQuery)}
+            <ScrollArea className="h-[420px] rounded-md border">
+              {sortedAvailable.length === 0 ? (
+                <p className="p-4 text-sm text-muted-foreground">{t("noAvailableToAdd")}</p>
+              ) : visibleAvailable.length === 0 ? (
+                <p className="p-4 text-sm text-muted-foreground">{t("nothingFound")}</p>
+              ) : (
+                visibleAvailable.map((student) => {
+                  const busy = isPending && addingId === student.id;
+                  return (
+                    <button
+                      type="button"
+                      key={student.id}
+                      disabled={isPending}
+                      onClick={() => handleAddStudent(student)}
+                      className="flex w-full items-center gap-3 border-b p-3 text-left last:border-b-0 hover:bg-muted/50 disabled:opacity-60"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{fullName(student)}</p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {student.login || student.phone || "—"}
+                        </p>
+                      </div>
+                      {/* Чтобы перевод из другой группы не происходил вслепую
+                          (план, п.4) */}
+                      {student.currentGroup ? (
+                        <Badge variant="outline" className="shrink-0">
+                          {t("badgeInGroup", { group: student.currentGroup })}
+                        </Badge>
+                      ) : student.enrolled ? (
+                        <Badge variant="secondary" className="shrink-0">
+                          {t("badgeOnCourseNoGroup")}
+                        </Badge>
+                      ) : (
+                        <Badge className="shrink-0">{t("badgeNew")}</Badge>
+                      )}
+                      {busy && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />}
+                    </button>
+                  );
+                })
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
 
-      {students.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-          <p>{t("noStudentsInGroup")}</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {students.map((student) => (
-            <Card key={student.id}>
-              <CardContent className="flex items-center justify-between py-3 px-4">
-                <div>
-                  <p className="font-medium text-sm">
-                    {student.firstName} {student.lastName}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{student.login}</p>
-                </div>
-                <div className="flex items-center gap-1">
-                  <TelegramWriteButton username={student.telegramUsername} variant="ghost" />
-                  {otherGroups.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">{t("students", { count: students.length })}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {searchBox(groupQuery, setGroupQuery)}
+            <ScrollArea className="h-[420px] rounded-md border">
+              {students.length === 0 ? (
+                <p className="p-4 text-sm text-muted-foreground">{t("noStudentsInGroup")}</p>
+              ) : visibleStudents.length === 0 ? (
+                <p className="p-4 text-sm text-muted-foreground">{t("nothingFound")}</p>
+              ) : (
+                visibleStudents.map((student) => (
+                  <div
+                    key={student.id}
+                    className="flex items-center gap-2 border-b p-3 last:border-b-0 hover:bg-muted/50"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{fullName(student)}</p>
+                      <p className="truncate text-xs text-muted-foreground">{student.login || "—"}</p>
+                    </div>
+                    <TelegramWriteButton username={student.telegramUsername} variant="ghost" />
+                    {otherGroups.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0"
+                        disabled={isPending}
+                        onClick={() => {
+                          setMoveStudentId(student.id);
+                          setMoveDialogOpen(true);
+                        }}
+                      >
+                        <ArrowRightLeft className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
+                      className="h-8 w-8 shrink-0 text-destructive"
                       disabled={isPending}
-                      onClick={() => {
-                        setMoveStudentId(student.id);
-                        setMoveDialogOpen(true);
-                      }}
+                      onClick={() => setRemoveTarget(student)}
                     >
-                      <ArrowRightLeft className="h-4 w-4" />
+                      <UserMinus className="h-4 w-4" />
                     </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive"
-                    disabled={isPending}
-                    onClick={() =>
-                      setRemoveTarget(student)
-                    }
-                  >
-                    <UserMinus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                  </div>
+                ))
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Move student dialog */}
       <Dialog open={moveDialogOpen} onOpenChange={setMoveDialogOpen}>
@@ -282,10 +308,7 @@ export function GroupStudentsManager({
             <Button variant="outline" onClick={() => setMoveDialogOpen(false)}>
               {tCommon("cancel")}
             </Button>
-            <Button
-              onClick={handleMoveStudent}
-              disabled={!targetGroupId || isPending}
-            >
+            <Button onClick={handleMoveStudent} disabled={!targetGroupId || isPending}>
               {isPending ? tCommon("moving") : t("move")}
             </Button>
           </DialogFooter>
@@ -294,36 +317,23 @@ export function GroupStudentsManager({
 
       {/* Убрать из группы или отчислить — исходы разные, поэтому две кнопки,
           а не подтверждение одного действия. */}
-      <Dialog
-        open={removeTarget !== null}
-        onOpenChange={(open) => !open && setRemoveTarget(null)}
-      >
+      <Dialog open={removeTarget !== null} onOpenChange={(open) => !open && setRemoveTarget(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("removeTitle")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 text-sm">
             <p className="font-medium">
-              {removeTarget
-                ? `${removeTarget.firstName} ${removeTarget.lastName}`
-                : ""}
+              {removeTarget ? `${removeTarget.firstName} ${removeTarget.lastName}` : ""}
             </p>
             <p className="text-muted-foreground">{t("removeOnlyGroupHint")}</p>
             <p className="text-muted-foreground">{t("removeUnenrollHint")}</p>
           </div>
           <DialogFooter className="flex-col gap-2 sm:flex-row">
-            <Button
-              variant="outline"
-              onClick={() => setRemoveTarget(null)}
-              disabled={isPending}
-            >
+            <Button variant="outline" onClick={() => setRemoveTarget(null)} disabled={isPending}>
               {tCommon("cancel")}
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleRemoveStudent(false)}
-              disabled={isPending}
-            >
+            <Button variant="outline" onClick={() => handleRemoveStudent(false)} disabled={isPending}>
               {t("removeOnlyGroup")}
             </Button>
             <Button
