@@ -181,6 +181,63 @@ describe("модуль courses", () => {
       // Прошлое осталось по старой цене курса, а не по новой
       expect(frozen.every((row) => row.priceUsed === 500000)).toBe(true);
     });
+
+    // Правка «смена цены курса не замораживает зарплату»: цена курса — вход
+    // расчёта зарплаты ровно так же, как цена группы (база для групп без
+    // своей цены), поэтому CoursesService.update() обязан звать
+    // SalaryService.freezeClosedMonths СТРОГО ПОСЛЕ биллинговой заморозки —
+    // иначе правка цены задним числом увела бы зарплату за закрытый, но ещё
+    // не замороженный месяц (тот самый риск, от которого защищает реестр).
+    it("перед сменой цены закрытый месяц зарплаты по группам курса тоже фиксируется, по старой базе биллинга", async () => {
+      const teacher = await createUser({ role: "TEACHER" });
+      const student = await createUser({ role: "STUDENT" });
+      const branch = await createBranch();
+      const course = await testDb().course.create({
+        data: { slug: `salary-freeze-${run}`, title: "Курс — заморозка зарплаты", teacherId: teacher.id, price: 400000 },
+      });
+      const group = await testDb().group.create({
+        data: {
+          name: `salary-freeze-${run}`,
+          courseId: course.id,
+          branchId: branch.id,
+          scheduleDays: [1, 3, 5],
+          teacherId: teacher.id,
+          salaryPercentBp: 5000,
+        },
+      });
+      const enrollment = await testDb().enrollment.create({
+        data: {
+          studentId: student.id,
+          courseId: course.id,
+          groupId: group.id,
+          startsAt: new Date(Date.now() - 90 * 24 * 3600 * 1000),
+        },
+      });
+
+      // До смены цены зарплатных начислений по курсу ещё нет — заморозка ленивая
+      expect(await testDb().teacherSalaryAccrual.count({ where: { courseId: course.id } })).toBe(0);
+
+      const res = await send("patch", `/courses/${course.id}`, "ADMIN", { price: 900000 });
+      expect(res.status).toBe(200);
+
+      const frozenSalary = await testDb().teacherSalaryAccrual.findMany({
+        where: { courseId: course.id, groupId: group.id },
+      });
+      expect(frozenSalary.length).toBeGreaterThan(0);
+      expect(frozenSalary.every((row) => row.lockedAt !== null)).toBe(true);
+
+      // Заморозка зарплаты идёт СТРОГО ПОСЛЕ биллинговой и берёт базу из уже
+      // зафиксированных начислений — база зарплаты за каждый месяц должна
+      // совпасть с тем, что биллинг зафиксировал по СТАРОЙ цене (400000)
+      const charges = await testDb().monthlyCharge.findMany({ where: { enrollmentId: enrollment.id } });
+      expect(charges.length).toBeGreaterThan(0);
+      expect(charges.every((c) => c.priceUsed === 400000)).toBe(true);
+      for (const row of frozenSalary) {
+        const charge = charges.find((c) => c.month === row.month);
+        expect(charge).toBeDefined();
+        expect(row.base).toBe(charge!.amount);
+      }
+    });
   });
 
   describe("записи на курс", () => {

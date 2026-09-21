@@ -7,6 +7,7 @@ import type { Prisma } from "../../../generated/prisma";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { generateUniqueSlug, slugify } from "../../common/slugify";
 import { activeEnrollmentFilter, BillingLedgerService } from "../billing/billing-ledger.service";
+import { SalaryService } from "../salary/salary.service";
 import type { CreateCourseDto, UpdateCourseDto } from "./dto/course.dto";
 
 const COURSE_INCLUDE = {
@@ -19,11 +20,10 @@ export class CoursesService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly audit: AuditService,
-    // SalaryService раньше нужен был только unenrollStudent (заморозка перед
-    // отчислением через маршрут курса) — тот путь убран (план «Учеников
-    // добавляют только в группу», этап 5-бис), в группе своя заморозка
-    // (GroupsService)
-    private readonly ledger: BillingLedgerService
+    private readonly ledger: BillingLedgerService,
+    // Цена курса — вход расчёта зарплаты (база для групп без своей цены),
+    // её смену тоже нужно замораживать перед записью новой цены — update()
+    private readonly salary: SalaryService
   ) {}
 
   private get prisma() {
@@ -148,6 +148,12 @@ export class CoursesService {
     // ещё не открывал после его конца, заморозился бы уже по новой
     if (data.price !== undefined && data.price !== existing.price) {
       await this.ledger.freezeClosedMonths({ courseId: id });
+      // Зарплата опирается на начисления — её заморозка идёт СТРОГО ПОСЛЕ
+      // биллинговой и ДО записи новой цены (план зарплат, 5.4): цена курса —
+      // база для групп этого курса без своей цены (priceFor), как цена
+      // группы. Без этого правка цены задним числом уводила бы зарплату за
+      // закрытый, но ещё не замороженный месяц
+      await this.salary.freezeClosedMonths({ courseId: id });
     }
 
     const course = await this.prisma.course.update({
