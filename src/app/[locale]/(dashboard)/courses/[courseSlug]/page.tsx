@@ -233,19 +233,6 @@ async function CourseDetailPageAsync({
               </CardHeader>
             </Card>
           </Link>
-          <Link href={`/courses/${courseSlug}/students`}>
-            <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
-              <CardHeader className="flex flex-row items-center gap-3">
-                <Users className="h-5 w-5 text-primary" />
-                <div>
-                  <CardTitle className="text-base">{t("studentsCount")}</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    {t("manageStudents")}
-                  </p>
-                </div>
-              </CardHeader>
-            </Card>
-          </Link>
           <Link href={`/courses/${courseSlug}/groups`}>
             <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
               <CardHeader className="flex flex-row items-center gap-3">

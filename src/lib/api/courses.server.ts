@@ -1,6 +1,5 @@
 import "server-only";
 import type {
-  ApiAvailableStudent,
   ApiCatalogCourse,
   ApiCourse,
   ApiCourseForCopy,
@@ -20,11 +19,12 @@ export const getCourseById = (id: string) => apiServerFetch<ApiCourse>(`/courses
 export const getCourseIdBySlug = (slug: string) =>
   apiServerFetch<{ id: string }>(`/courses/slug/${slug}`);
 
+// groupId сужает состав до одной группы — нужно журналу посещаемости.
+// getAvailableStudents (кого добавить на курс) отсюда убран: добавление
+// учеников теперь идёт только через группу (план «Учеников добавляют только
+// в группу», этап 5-бис) — см. getAvailableStudentsForGroup в groups.server.
 export const getEnrolledStudents = (courseId: string, groupId?: string) =>
   apiServerFetch<ApiEnrolledStudent[]>(`/courses/${courseId}/students`, { query: { groupId } });
-
-export const getAvailableStudents = (courseId: string) =>
-  apiServerFetch<ApiAvailableStudent[]>(`/courses/${courseId}/available-students`);
 
 export const getCoursesForCopy = () => apiServerFetch<ApiCourseForCopy[]>("/courses/for-copy");
 

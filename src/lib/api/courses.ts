@@ -52,14 +52,6 @@ export interface ApiEnrolledStudent {
   enrolledAt: string;
 }
 
-export interface ApiAvailableStudent {
-  id: string;
-  firstName: string;
-  lastName: string;
-  login: string | null;
-  phone: string | null;
-}
-
 export interface ApiCatalogCourse {
   id: string;
   slug: string;
@@ -149,12 +141,6 @@ export const updateCourse = (id: string, body: CourseInput) =>
   apiFetch<ApiCourse>(`/courses/${id}`, { method: "PATCH", body });
 
 export const deleteCourse = (id: string) => apiFetch<{ ok: true }>(`/courses/${id}`, { method: "DELETE" });
-
-export const enrollStudent = (courseId: string, studentId: string) =>
-  apiFetch<{ id: string }>(`/courses/${courseId}/students`, { method: "POST", body: { studentId } });
-
-export const unenrollStudent = (courseId: string, studentId: string) =>
-  apiFetch<{ ok: true }>(`/courses/${courseId}/students/${studentId}`, { method: "DELETE" });
 
 export const copyCourse = (sourceCourseId: string, options: { newTitle?: string } = {}) =>
   apiFetch<{ id: string; title: string; slug: string }>("/courses/copy", {
