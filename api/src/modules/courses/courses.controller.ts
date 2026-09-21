@@ -11,7 +11,6 @@ import {
   CopyCourseDto,
   CreateCourseDto,
   EnrolledStudentsQueryDto,
-  EnrollStudentDto,
   UpdateCourseDto,
 } from "./dto/course.dto";
 
@@ -109,39 +108,13 @@ export class CoursesController {
     return { ok: true };
   }
 
-  // Контакты учеников — только персоналу (аудит 2.3)
+  // Контакты учеников — только персоналу (аудит 2.3). Запись и отчисление
+  // теперь идут только через группу (GroupsService.addStudents/removeStudent,
+  // план «Учеников добавляют только в группу», этап 5-бис) — здесь остаётся
+  // только чтение состава: его читает и журнал посещаемости.
   @CheckPolicies((ability) => ability.can("read", "UserDirectory"))
   @Get(":id/students")
   enrolledStudents(@Param("id") id: string, @Query() query: EnrolledStudentsQueryDto) {
     return this.courses.enrolledStudents(id, query.groupId);
-  }
-
-  @CheckPolicies((ability) => ability.can("read", "UserDirectory"))
-  @Get(":id/available-students")
-  availableStudents(@Param("id") id: string) {
-    return this.courses.availableStudents(id);
-  }
-
-  @CheckPolicies((ability) => ability.can("update", "Course"))
-  @Post(":id/students")
-  enroll(
-    @Param("id") id: string,
-    @Body() body: EnrollStudentDto,
-    @CurrentAbility() ability: AppAbility,
-    @CurrentUser() actor: SessionUser
-  ) {
-    return this.courses.enrollStudent(id, body.studentId, ability, actor);
-  }
-
-  @CheckPolicies((ability) => ability.can("update", "Course"))
-  @Delete(":id/students/:studentId")
-  async unenroll(
-    @Param("id") id: string,
-    @Param("studentId") studentId: string,
-    @CurrentAbility() ability: AppAbility,
-    @CurrentUser() actor: SessionUser
-  ) {
-    await this.courses.unenrollStudent(id, studentId, ability, actor);
-    return { ok: true };
   }
 }

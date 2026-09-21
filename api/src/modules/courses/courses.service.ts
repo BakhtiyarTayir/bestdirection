@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { AuditService, computeChanges } from "../../common/audit/audit.service";
 import type { SessionUser } from "../../common/auth/session-user";
 import { toNoonUtc } from "../../common/date-only";
@@ -7,7 +7,6 @@ import type { Prisma } from "../../../generated/prisma";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { generateUniqueSlug, slugify } from "../../common/slugify";
 import { activeEnrollmentFilter, BillingLedgerService } from "../billing/billing-ledger.service";
-import { SalaryService } from "../salary/salary.service";
 import type { CreateCourseDto, UpdateCourseDto } from "./dto/course.dto";
 
 const COURSE_INCLUDE = {
@@ -20,8 +19,11 @@ export class CoursesService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly audit: AuditService,
-    private readonly ledger: BillingLedgerService,
-    private readonly salary: SalaryService
+    // SalaryService раньше нужен был только unenrollStudent (заморозка перед
+    // отчислением через маршрут курса) — тот путь убран (план «Учеников
+    // добавляют только в группу», этап 5-бис), в группе своя заморозка
+    // (GroupsService)
+    private readonly ledger: BillingLedgerService
   ) {}
 
   private get prisma() {
@@ -234,118 +236,13 @@ export class CoursesService {
     return enrollments.map((enrollment) => ({ ...enrollment.student, enrolledAt: enrollment.createdAt }));
   }
 
-  /** Кого можно записать на курс. Отчисленный ранее (история есть, но не активен) — снова доступен. */
-  availableStudents(courseId: string) {
-    return this.prisma.user.findMany({
-      where: {
-        role: "STUDENT",
-        isActive: true,
-        NOT: { enrollments: { some: { courseId, ...activeEnrollmentFilter() } } },
-      },
-      select: { id: true, firstName: true, lastName: true, login: true, phone: true },
-      orderBy: { firstName: "asc" },
-    });
-  }
-
-  async enrollStudent(courseId: string, studentId: string, ability: AppAbility, actor: SessionUser) {
-    await this.manageable(ability, courseId);
-
-    const student = await this.prisma.user.findUnique({ where: { id: studentId }, select: { role: true } });
-    if (!student || student.role !== "STUDENT") throw new NotFoundException("studentNotFound");
-
-    const existing = await this.prisma.enrollment.findUnique({
-      where: { studentId_courseId: { studentId, courseId } },
-      select: { id: true, unenrolledAt: true },
-    });
-
-    // Отчисленная запись (unenrolledAt) — не «уже записан»: уникальность
-    // (studentId, courseId) не даст завести вторую строку, поэтому
-    // возвращаем ту же самую студенту, а не блокируем.
-    const finished = existing && existing.unenrolledAt !== null;
-    if (existing && !finished) throw new ConflictException("alreadyEnrolled");
-
-    if (existing) {
-      // Разрыв между отчислением и сегодня уже закрыт (заморожен на момент
-      // отчисления) — тут только снимаем дату и статус, начисления и доступ
-      // продолжаются с неё
-      const enrollment = await this.prisma.enrollment.update({
-        where: { id: existing.id },
-        data: { billingEndsAt: null, unenrolledAt: null },
-        include: { student: { select: { id: true, firstName: true, lastName: true } } },
-      });
-      await this.audit.record({
-        userId: actor.id,
-        entityType: "Enrollment",
-        entityId: enrollment.id,
-        action: "UPDATE",
-        metadata: { courseId, studentId, revived: true },
-      });
-      return enrollment;
-    }
-
-    const enrollment = await this.prisma.enrollment.create({
-      data: { studentId, courseId },
-      include: { student: { select: { id: true, firstName: true, lastName: true } } },
-    });
-
-    await this.audit.record({
-      userId: actor.id,
-      entityType: "Enrollment",
-      entityId: enrollment.id,
-      action: "CREATE",
-      metadata: { courseId, studentId },
-    });
-    return enrollment;
-  }
-
-  async unenrollStudent(courseId: string, studentId: string, ability: AppAbility, actor: SessionUser) {
-    await this.manageable(ability, courseId);
-
-    const enrollment = await this.prisma.enrollment.findUnique({
-      where: { studentId_courseId: { studentId, courseId } },
-      select: { id: true, groupId: true },
-    });
-    if (!enrollment) throw new NotFoundException("enrollmentNotFound");
-
-    // Закрытые месяцы фиксируем ДО отчисления — ленивая заморозка иначе
-    // посчитала бы ещё не зафиксированный месяц уже с billingEndsAt ниже.
-    // Зарплата опирается на уже зафиксированные начисления — строго после
-    // биллинговой (план зарплат, 5.4).
-    await this.ledger.freezeClosedMonths({ enrollmentId: enrollment.id });
-    await this.salary.freezeClosedMonths({ groupId: enrollment.groupId, courseId });
-
-    // Ни начислений, ни оплат — заведена по ошибке, можно стереть, как
-    // раньше. Иначе запись хранит платёжную историю: физическое удаление
-    // унесло бы её каскадом вместе с MonthlyCharge — ровно тот баг, который
-    // мы здесь чиним.
-    const [chargesCount, paymentsCount] = await Promise.all([
-      this.prisma.monthlyCharge.count({ where: { enrollmentId: enrollment.id } }),
-      this.prisma.payment.count({ where: { studentId, courseId, deletedAt: null } }),
-    ]);
-    const hasHistory = chargesCount > 0 || paymentsCount > 0;
-
-    if (hasHistory) {
-      // Снимаем группу (если была), ставим дату отчисления — начисления
-      // дальше не идут — и unenrolledAt: доступ к курсу закрывает именно им,
-      // а не связкой groupId+billingEndsAt (см. комментарий у поля в
-      // schema.prisma). Оплаты и MonthlyCharge остаются на месте.
-      const now = toNoonUtc(new Date().toISOString().slice(0, 10));
-      await this.prisma.enrollment.update({
-        where: { id: enrollment.id },
-        data: { groupId: null, billingEndsAt: now, unenrolledAt: now },
-      });
-    } else {
-      await this.prisma.enrollment.delete({ where: { id: enrollment.id } });
-    }
-
-    await this.audit.record({
-      userId: actor.id,
-      entityType: "Enrollment",
-      entityId: `${studentId}:${courseId}`,
-      action: hasHistory ? "UPDATE" : "DELETE",
-      metadata: { courseId, studentId, finished: hasHistory },
-    });
-  }
+  // enrollStudent/unenrollStudent/availableStudents отсюда убраны (план
+  // «Учеников добавляют только в группу», этап 5-бис): запись и отчисление
+  // теперь идут только через GroupsService.addStudents/removeStudent — та же
+  // логика (повтор после отчисления, сохранение истории, заморозка закрытых
+  // месяцев) там уже реализована и покрыта test/groups.e2e-spec.ts. Своими
+  // путями остаются enrollment-requests (заявки/самозапись) и создание
+  // ученика в users.service — их эта правка не касается.
 
   /**
    * Курс, которым вызывающий вправе управлять. Недоступный — 404, а не 403:
