@@ -3,6 +3,12 @@ import { apiFetch } from "./client";
 // Модуль groups в api. Серверные компоненты берут те же маршруты из
 // ./groups.server.
 
+export interface ApiGroupTeacher {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
+
 export interface ApiGroup {
   id: string;
   name: string;
@@ -25,6 +31,16 @@ export interface ApiGroup {
   // В общем списке групп курс приходит всегда, в списке по курсу — нет
   course?: { id: string; slug: string; title: string };
   branch?: { id: string; name: string } | null;
+  // Карточка группы (план, этап 4): своего преподавателя может не быть —
+  // тогда показывается педагог курса с пометкой, что он унаследован, именно
+  // по этой лестнице считаются и отчёты, и зарплата
+  teacher: ApiGroupTeacher | null;
+  // Запасной вариант для преподавателя и цены — данные курса. Отдают их
+  // только byCourse/all (список групп, где нужна карточка); details() для
+  // формы редактирования их не считает — там нужен именно СВОЙ teacherId,
+  // а не унаследованный, поэтому здесь они необязательны, а не всегда есть
+  courseTeacher?: ApiGroupTeacher;
+  coursePrice?: number | null;
 }
 
 export interface ApiGroupStudent {

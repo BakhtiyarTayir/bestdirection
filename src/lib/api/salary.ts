@@ -10,6 +10,9 @@ export interface ApiSalaryOverviewRow {
   teacherName: string;
   groupsCount: number;
   unratedGroupsCount: number;
+  // Групп, где сумма месяца посчитана запасным путём — нет расписания или
+  // ни одной отметки в журнале за месяц (этап 2 плана «Уроки и карточка группы»)
+  fallbackGroupsCount: number;
   studentsCount: number;
   base: number;
   accrued: number;
@@ -24,6 +27,12 @@ export interface ApiSalaryOverview {
   totals: { base: number; accrued: number; paid: number; debt: number };
 }
 
+export interface ApiSalaryMonthSession {
+  date: string;
+  /** Занятие сверх плана месяца — отработка (план, 4.4) */
+  isMakeup: boolean;
+}
+
 export interface ApiSalaryMonth {
   id: string | null;
   month: string;
@@ -33,6 +42,18 @@ export interface ApiSalaryMonth {
   amount: number;
   isFormula: boolean;
   locked: boolean;
+  // Раскладка по занятиям (этап 3). null — раскладки не было (запасной путь
+  // или курс без группы)
+  lessonsPlanned: number | null;
+  lessonsTaught: number | null;
+  // Сколько занятий вообще отмечено в журнале группы за месяц, независимо
+  // от того, кто их вёл. null — раскладка неприменима (курс без группы)
+  sessionsMarked: number | null;
+  // Раскладка недоступна: нет расписания или ни одной отметки за месяц —
+  // вся сумма целиком педагогу группы (этап 2, «прямая пометка почему»)
+  fallback: boolean;
+  // Занятия этого преподавателя за месяц с датами — отработки помечены
+  sessions: ApiSalaryMonthSession[];
 }
 
 export interface ApiSalaryGroup {

@@ -95,6 +95,7 @@ describe("модуль groups", () => {
         courseId: ids.own,
         branchId: ids.branch,
         name: `A-${run}`,
+        scheduleDays: [1, 3, 5],
       });
       expect(res.status).toBe(409);
       expect(res.body.message).toBe("groupNameExists");
@@ -105,6 +106,7 @@ describe("модуль groups", () => {
         courseId: ids.own,
         branchId: ids.otherBranch,
         name: `A-${run}`,
+        scheduleDays: [1, 3, 5],
       });
       expect(res.status).toBe(201);
       ids.sameNameOtherBranch = res.body.id;
@@ -147,6 +149,7 @@ describe("модуль groups", () => {
         courseId: ids.foreign,
         branchId: ids.branch,
         name: "Взлом",
+        scheduleDays: [1, 3, 5],
       });
       expect(create.status).toBe(404);
       expect((await send("patch", `/groups/${ids.foreignGroup}`, "TEACHER", { name: "Взлом" })).status).toBe(404);

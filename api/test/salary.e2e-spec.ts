@@ -284,4 +284,160 @@ describe("модуль salary", () => {
       expect(reverted?.manualAmount).toBeNull();
     });
   });
+
+  // Этап 3 плана «Уроки и карточка группы»: раскладка суммы группы между
+  // несколькими преподавателями по числу проведённых занятий — то, чего
+  // раздел 5.8 прошлого плана прямо не учитывал («замены не влияют на
+  // зарплату»). Свои курс/группа/студент — не переиспользуют ids.groupA:
+  // там уже накопилась история с других describe-блоков этого файла.
+  describe("зарплата по проведённым занятиям: замена (этап 3)", () => {
+    let courseId: string;
+    let groupId: string;
+    let lessonDates: string[];
+
+    /** Даты месяца, попадающие на дни расписания группы — как в AttendanceService.createSession */
+    function lessonDatesInMonth(month: string, scheduleDays: number[]): string[] {
+      const [year, monthNum] = month.split("-").map(Number);
+      const lastDay = new Date(Date.UTC(year, monthNum, 0)).getUTCDate();
+      const dates: string[] = [];
+      for (let day = 1; day <= lastDay; day++) {
+        const date = new Date(Date.UTC(year, monthNum - 1, day));
+        const iso = date.getUTCDay() === 0 ? 7 : date.getUTCDay();
+        if (scheduleDays.includes(iso)) dates.push(`${month}-${String(day).padStart(2, "0")}`);
+      }
+      return dates;
+    }
+
+    beforeAll(async () => {
+      const course = await testDb().course.create({
+        data: { slug: `salary-lessons-${run}`, title: "Курс с занятиями", teacherId: ids.TEACHER, price: 300_000 },
+      });
+      courseId = course.id;
+      const group = await testDb().group.create({
+        data: {
+          name: `L-${run}`,
+          courseId,
+          branchId: ids.branch,
+          scheduleDays: [1, 3, 5], // пн/ср/пт
+          teacherId: ids.TEACHER,
+          salaryPercentBp: 4000,
+          startDate: new Date(`${startMonth}-01T12:00:00.000Z`),
+        },
+      });
+      groupId = group.id;
+      await testDb().enrollment.create({
+        data: { studentId: ids.STUDENT, courseId, groupId, startsAt: new Date(`${startMonth}-01T12:00:00.000Z`) },
+      });
+
+      lessonDates = lessonDatesInMonth(prevMonth, [1, 3, 5]);
+      expect(lessonDates.length).toBeGreaterThan(1);
+
+      // Все занятия месяца, кроме последнего, провёл основной педагог
+      // (ведущий не записан явно — числится за педагогом группы)
+      for (const date of lessonDates.slice(0, -1)) {
+        await testDb().attendanceSession.create({
+          data: { courseId, groupId, date: new Date(`${date}T00:00:00.000Z`), teacherStatus: "PRESENT" },
+        });
+      }
+      // Последнее занятие месяца провёл другой педагог — замена
+      await testDb().attendanceSession.create({
+        data: {
+          courseId,
+          groupId,
+          date: new Date(`${lessonDates.at(-1)}T00:00:00.000Z`),
+          teacherId: ids.otherTeacher,
+          teacherStatus: "PRESENT",
+        },
+      });
+    });
+
+    it("замена в журнале порождает вторую строку начисления — на заменяющего, по ставке группы", async () => {
+      // GET /salary без фильтра по преподавателю — иначе loadUnits({teacherId})
+      // не нашёл бы единицу заменяющего, у него нет своей группы
+      const overview = await get(`/salary?month=${prevMonth}`, "ADMIN");
+      expect(overview.status).toBe(200);
+
+      const rows = await testDb().teacherSalaryAccrual.findMany({
+        where: { groupId, month: prevMonth },
+        orderBy: { teacherId: "asc" },
+      });
+      expect(rows).toHaveLength(2);
+
+      const mainRow = rows.find((r) => r.teacherId === ids.TEACHER)!;
+      const subRow = rows.find((r) => r.teacherId === ids.otherTeacher)!;
+      expect(mainRow).toBeDefined();
+      expect(subRow).toBeDefined();
+
+      expect(mainRow.lessonsPlanned).toBe(lessonDates.length);
+      expect(mainRow.lessonsTaught).toBe(lessonDates.length - 1);
+      expect(subRow.lessonsPlanned).toBe(lessonDates.length);
+      expect(subRow.lessonsTaught).toBe(1);
+
+      // Замена платится по ставке ГРУППЫ (40%), а не по своей — у
+      // otherTeacher персональной ставки вообще нет
+      expect(subRow.percentUsed).toBe(4000);
+
+      // Сумма провели ровно по расписанию — округление сходится в точности
+      // к месячной сумме группы (план, 4.7)
+      const potAmount = Math.round(mainRow.base * 4000 / 10_000);
+      expect(mainRow.amount + subRow.amount).toBe(potAmount);
+      expect(subRow.amount).toBeGreaterThan(0);
+    });
+
+    it("заменяющий видит свою строку в /salary/:teacherId", async () => {
+      const res = await get(`/salary/${ids.otherTeacher}?month=${prevMonth}`, "ADMIN");
+      expect(res.status).toBe(200);
+      const group = res.body.groups.find((g: { groupId: string }) => g.groupId === groupId);
+      expect(group).toBeDefined();
+      const month = group.months.find((m: { month: string }) => m.month === prevMonth);
+      expect(month.lessonsTaught).toBe(1);
+      expect(month.amount).toBeGreaterThan(0);
+    });
+
+    it("закрытый месяц не меняется от поздней правки журнала — нужен явный пересчёт", async () => {
+      const before = await testDb().teacherSalaryAccrual.findMany({ where: { groupId, month: prevMonth } });
+      const subBefore = before.find((r) => r.teacherId === ids.otherTeacher)!;
+      const mainBefore = before.find((r) => r.teacherId === ids.TEACHER)!;
+
+      // Поздняя правка: выясняется, что замены на самом деле не было
+      await testDb().attendanceSession.updateMany({
+        where: { groupId, date: new Date(`${lessonDates.at(-1)}T00:00:00.000Z`) },
+        data: { teacherStatus: "ABSENT" },
+      });
+
+      const unchanged = await testDb().teacherSalaryAccrual.findMany({ where: { groupId, month: prevMonth } });
+      const subUnchanged = unchanged.find((r) => r.teacherId === ids.otherTeacher)!;
+      const mainUnchanged = unchanged.find((r) => r.teacherId === ids.TEACHER)!;
+      expect(subUnchanged.amount).toBe(subBefore.amount);
+      expect(mainUnchanged.amount).toBe(mainBefore.amount);
+
+      // Пересчёт применяет правку: замены (ABSENT) как будто не было вовсе —
+      // ни у кого не засчитана, знаменатель (lessonsPlanned) не изменился
+      const recalcSub = await send(
+        "post",
+        `/salary/${ids.otherTeacher}/recalc?month=${prevMonth}&groupId=${groupId}`,
+        "ADMIN"
+      );
+      expect(recalcSub.status).toBe(201);
+      expect(recalcSub.body.amount).toBe(0);
+
+      const recalcMain = await send(
+        "post",
+        `/salary/${ids.TEACHER}/recalc?month=${prevMonth}&groupId=${groupId}`,
+        "ADMIN"
+      );
+      expect(recalcMain.status).toBe(201);
+
+      const after = await testDb().teacherSalaryAccrual.findMany({ where: { groupId, month: prevMonth } });
+      const subAfter = after.find((r) => r.teacherId === ids.otherTeacher)!;
+      const mainAfter = after.find((r) => r.teacherId === ids.TEACHER)!;
+      expect(subAfter.amount).toBe(0);
+      expect(subAfter.lessonsTaught).toBe(0);
+      // Пропуск без отработки: провели на одно занятие меньше плана —
+      // сумма меньше пота ровно на цену занятия (план, 4.9, сценарий 3)
+      const potAmount = Math.round(mainAfter.base * 4000 / 10_000);
+      const pricePerLesson = Math.round(potAmount / mainAfter.lessonsPlanned!);
+      expect(potAmount - mainAfter.amount).toBe(pricePerLesson);
+    });
+  });
 });

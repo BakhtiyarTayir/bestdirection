@@ -137,6 +137,12 @@ export function SalariesList({ month, rows, totals, branchId, branches }: Salari
                         {t("unratedGroups", { count: row.unratedGroupsCount })}
                       </div>
                     )}
+                    {row.fallbackGroupsCount > 0 && (
+                      <div className="mt-1 flex items-center gap-1 text-xs text-amber-600">
+                        <TriangleAlert className="h-3 w-3" />
+                        {t("fallbackGroups", { count: row.fallbackGroupsCount })}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-right">{row.groupsCount}</TableCell>
                   <TableCell className="whitespace-nowrap text-right">{row.studentsCount}</TableCell>

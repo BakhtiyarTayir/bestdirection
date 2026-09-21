@@ -208,6 +208,9 @@ export function GroupForm({ courseId, courseSlug, group, teachers = [], branches
           }}
         />
         <p className="text-sm text-muted-foreground">{t("scheduleDaysHint")}</p>
+        {errors.scheduleDays && (
+          <p className="text-sm text-destructive">{t("scheduleDaysRequired")}</p>
+        )}
       </div>
 
       <div className="space-y-2">

@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { formatDate } from "@/lib/format-date";
-import { Pencil, RefreshCw, Trash2 } from "lucide-react";
+import { Pencil, RefreshCw, TriangleAlert, Trash2 } from "lucide-react";
 import type { ApiSalaryGroup, ApiSalaryPayout } from "@/lib/api/salary";
 import { deletePayout, recalculateSalaryMonth, setManualSalaryAmount } from "@/lib/api/salary";
 import { CreatePayoutDialog } from "./create-payout-dialog";
@@ -145,6 +145,9 @@ export function TeacherSalaryView({
                       <TableHead className="text-right">{t("colStudents")}</TableHead>
                       <TableHead className="text-right">{t("colBase")}</TableHead>
                       <TableHead className="text-right">{t("colRate")}</TableHead>
+                      {/* Раскладка по занятиям — этап 3 плана. У группы без раскладки
+                          (курс без группы) колонка пуста для всех строк курса */}
+                      {group.groupId !== null && <TableHead>{t("colLessons")}</TableHead>}
                       <TableHead className="text-right">{t("colAccrued")}</TableHead>
                       <TableHead className="text-right">{t("colActions")}</TableHead>
                     </TableRow>
@@ -152,7 +155,7 @@ export function TeacherSalaryView({
                   <TableBody>
                     {group.months.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
+                        <TableCell colSpan={group.groupId !== null ? 7 : 6} className="text-center text-sm text-muted-foreground">
                           {t("noMonths")}
                         </TableCell>
                       </TableRow>
@@ -176,6 +179,36 @@ export function TeacherSalaryView({
                               `${percentText(row.percentUsed)}%`
                             )}
                           </TableCell>
+                          {group.groupId !== null && (
+                            <TableCell className="min-w-[160px]">
+                              {row.fallback ? (
+                                <div className="flex items-start gap-1 text-xs text-amber-600">
+                                  <TriangleAlert className="mt-0.5 h-3 w-3 shrink-0" />
+                                  <span>{t("lessonsNotMarked")}</span>
+                                </div>
+                              ) : (
+                                <div className="space-y-1">
+                                  <span className="text-sm">
+                                    {t("lessonsMarkedOf", { taught: row.lessonsTaught ?? 0, planned: row.lessonsPlanned ?? 0 })}
+                                  </span>
+                                  {row.sessions.length > 0 && (
+                                    <div className="flex flex-wrap gap-1">
+                                      {row.sessions.map((session) => (
+                                        <Badge
+                                          key={session.date}
+                                          variant={session.isMakeup ? "default" : "outline"}
+                                          className="text-[10px] font-normal"
+                                        >
+                                          {formatDate(new Date(session.date))}
+                                          {session.isMakeup ? ` · ${t("makeup")}` : ""}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </TableCell>
+                          )}
                           <TableCell className="whitespace-nowrap text-right font-medium">
                             {money.format(row.amount)}
                             {!row.isFormula && (
