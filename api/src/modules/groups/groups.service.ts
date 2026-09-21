@@ -24,31 +24,64 @@ export class GroupsService {
   }
 
   /** Группы курса: порядок задаёт sortOrder. */
-  byCourse(courseId: string) {
-    return this.prisma.group.findMany({
+  async byCourse(courseId: string) {
+    const groups = await this.prisma.group.findMany({
       where: { courseId },
-      include: { branch: { select: { id: true, name: true } }, _count: { select: { enrollments: true } } },
+      include: {
+        branch: { select: { id: true, name: true } },
+        _count: { select: { enrollments: true } },
+        // Преподаватель и цена группы — прямо в карточке (план, этап 4,
+        // раздел 5.4). Педагог и цена КУРСА — запасной вариант: своих нет,
+        // показываем курсовые с пометкой в интерфейсе, что они унаследованы
+        teacher: { select: { id: true, firstName: true, lastName: true } },
+        course: {
+          select: { price: true, teacher: { select: { id: true, firstName: true, lastName: true } } },
+        },
+      },
       orderBy: { sortOrder: "asc" },
     });
+    // Разворачиваем вложенный course в плоские courseTeacher/coursePrice —
+    // тот же приём, что и в all() ниже, чтобы карточка группы на веб не
+    // гадала, в каком из двух маршрутов какая форма ответа
+    return groups.map(({ course, ...group }) => ({
+      ...group,
+      courseTeacher: course.teacher,
+      coursePrice: course.price,
+    }));
   }
 
   /**
    * Все группы. Преподавателю — только по его курсам: это раскладка раздела
    * «Группы», как было до переноса. branchId — необязательный фильтр списка.
    */
-  all(user: SessionUser, branchId?: string) {
-    return this.prisma.group.findMany({
+  async all(user: SessionUser, branchId?: string) {
+    const groups = await this.prisma.group.findMany({
       where: {
         ...(user.role === "TEACHER" ? { course: { teacherId: user.id } } : {}),
         ...(branchId ? { branchId } : {}),
       },
       include: {
-        course: { select: { id: true, slug: true, title: true } },
+        course: {
+          select: {
+            id: true,
+            slug: true,
+            title: true,
+            price: true,
+            teacher: { select: { id: true, firstName: true, lastName: true } },
+          },
+        },
         branch: { select: { id: true, name: true } },
+        teacher: { select: { id: true, firstName: true, lastName: true } },
         _count: { select: { enrollments: true } },
       },
       orderBy: [{ course: { title: "asc" } }, { sortOrder: "asc" }],
     });
+    return groups.map(({ course, ...group }) => ({
+      ...group,
+      course: { id: course.id, slug: course.slug, title: course.title },
+      courseTeacher: course.teacher,
+      coursePrice: course.price,
+    }));
   }
 
   async details(groupId: string) {
