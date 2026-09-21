@@ -4,6 +4,7 @@ import type { SessionUser } from "../../common/auth/session-user";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { botMessages } from "../../common/telegram/messages";
 import { TelegramNotifyService } from "../../common/telegram/telegram-notify.service";
+import { activeEnrollmentFilter, BillingLedgerService } from "../billing/billing-ledger.service";
 
 /**
  * Каталог курсов для ученика, самозапись и заявки на платные курсы.
@@ -14,7 +15,8 @@ export class EnrollmentRequestsService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly audit: AuditService,
-    private readonly telegram: TelegramNotifyService
+    private readonly telegram: TelegramNotifyService,
+    private readonly ledger: BillingLedgerService
   ) {}
 
   private get prisma() {
@@ -44,7 +46,12 @@ export class EnrollmentRequestsService {
     });
 
     const [enrollments, requests] = await Promise.all([
-      this.prisma.enrollment.findMany({ where: { studentId: student.id }, select: { courseId: true } }),
+      // Отчисленный (unenrolledAt) — не «уже записан»: каталог должен снова
+      // предложить самозапись/заявку на этот курс
+      this.prisma.enrollment.findMany({
+        where: { studentId: student.id, ...activeEnrollmentFilter() },
+        select: { courseId: true },
+      }),
       this.prisma.enrollmentRequest.findMany({
         where: { studentId: student.id },
         select: { courseId: true, status: true },
@@ -75,9 +82,18 @@ export class EnrollmentRequestsService {
 
     const existing = await this.prisma.enrollment.findUnique({
       where: { studentId_courseId: { studentId: student.id, courseId } },
-      select: { id: true },
+      select: { id: true, unenrolledAt: true },
     });
-    if (existing) throw new ConflictException("alreadyEnrolled");
+    // Отчисленная запись (unenrolledAt) — не «уже записан»: уникальность
+    // (studentId, courseId) не даст завести вторую строку, поэтому
+    // возобновляем её id, а не блокируем самозапись
+    const finishedId = existing && existing.unenrolledAt !== null ? existing.id : null;
+    if (existing && finishedId === null) throw new ConflictException("alreadyEnrolled");
+    if (finishedId) {
+      // Разрыв между отчислением и сегодня уже закрыт (заморожен на момент
+      // отчисления) — фиксируем на всякий случай ДО снятия даты
+      await this.ledger.freezeClosedMonths({ enrollmentId: finishedId });
+    }
 
     try {
       await this.prisma.$transaction(async (tx) => {
@@ -85,7 +101,14 @@ export class EnrollmentRequestsService {
           const taken = await tx.enrollment.count({ where: { courseId } });
           if (taken >= course.intakeSeats) throw new Error("NO_SEATS_LEFT");
         }
-        await tx.enrollment.create({ data: { studentId: student.id, courseId } });
+        if (finishedId) {
+          await tx.enrollment.update({
+            where: { id: finishedId },
+            data: { billingEndsAt: null, unenrolledAt: null },
+          });
+        } else {
+          await tx.enrollment.create({ data: { studentId: student.id, courseId } });
+        }
       });
     } catch (error) {
       if (error instanceof Error && error.message === "NO_SEATS_LEFT") {
@@ -102,8 +125,8 @@ export class EnrollmentRequestsService {
       userId: student.id,
       entityType: "Enrollment",
       entityId: `${student.id}:${courseId}`,
-      action: "CREATE",
-      metadata: { courseId, studentId: student.id, selfEnrolled: true },
+      action: finishedId ? "UPDATE" : "CREATE",
+      metadata: { courseId, studentId: student.id, selfEnrolled: true, revived: Boolean(finishedId) },
     });
 
     return { courseSlug: course.slug };
@@ -127,15 +150,20 @@ export class EnrollmentRequestsService {
 
     const enrolled = await this.prisma.enrollment.findUnique({
       where: { studentId_courseId: { studentId: student.id, courseId } },
-      select: { id: true },
+      select: { id: true, unenrolledAt: true },
     });
-    if (enrolled) throw new ConflictException("alreadyEnrolled");
+    // Отчисленная запись (unenrolledAt) не блокирует новую заявку —
+    // approve() её возобновит, а не заведёт вторую строку
+    const activelyEnrolled = enrolled && enrolled.unenrolledAt === null;
+    if (activelyEnrolled) throw new ConflictException("alreadyEnrolled");
 
     const existing = await this.prisma.enrollmentRequest.findUnique({
       where: { courseId_studentId: { courseId, studentId: student.id } },
     });
     if (existing?.status === "PENDING") throw new ConflictException("alreadyRequested");
-    if (existing?.status === "APPROVED") throw new ConflictException("alreadyEnrolled");
+    // Старая заявка могла остаться APPROVED от предыдущего, уже завершённого
+    // обучения — источник истины про активность сейчас Enrollment (проверка
+    // выше), а не статус заявки, поэтому здесь его не смотрим
 
     const request = await this.prisma.enrollmentRequest.upsert({
       where: { courseId_studentId: { courseId, studentId: student.id } },
@@ -207,15 +235,37 @@ export class EnrollmentRequestsService {
   async approve(requestId: string, actor: SessionUser) {
     const request = await this.findForReview(requestId, actor);
 
+    // Отчисленная запись (unenrolledAt) с прошлого обучения на этом курсе —
+    // возобновляем её вместо второй строки: уникальность (studentId,
+    // courseId) create() не пропустит
+    const existingEnrollment = await this.prisma.enrollment.findUnique({
+      where: { studentId_courseId: { studentId: request.studentId, courseId: request.courseId } },
+      select: { id: true, unenrolledAt: true },
+    });
+    const finishedId =
+      existingEnrollment && existingEnrollment.unenrolledAt !== null ? existingEnrollment.id : null;
+    if (finishedId) {
+      // Разрыв уже закрыт на момент отчисления — фиксируем на всякий случай
+      // ДО снятия даты
+      await this.ledger.freezeClosedMonths({ enrollmentId: finishedId });
+    }
+
     try {
       await this.prisma.$transaction(async (tx) => {
         if (request.course.intakeSeats !== null) {
           const taken = await tx.enrollment.count({ where: { courseId: request.courseId } });
           if (taken >= request.course.intakeSeats) throw new Error("NO_SEATS_LEFT");
         }
-        await tx.enrollment.create({
-          data: { studentId: request.studentId, courseId: request.courseId },
-        });
+        if (finishedId) {
+          await tx.enrollment.update({
+            where: { id: finishedId },
+            data: { billingEndsAt: null, unenrolledAt: null },
+          });
+        } else {
+          await tx.enrollment.create({
+            data: { studentId: request.studentId, courseId: request.courseId },
+          });
+        }
         await tx.enrollmentRequest.update({
           where: { id: request.id },
           data: { status: "APPROVED", reviewedById: actor.id, reviewedAt: new Date() },

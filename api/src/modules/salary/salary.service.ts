@@ -118,7 +118,15 @@ export class SalaryService {
         : await this.prisma.course.findMany({
             where: {
               deletedAt: null,
-              enrollments: { some: { groupId: null } },
+              // Отчисленная (unenrolledAt) запись сюда не считается: её
+              // вклад в базу уже заморожен под тем юнитом, где она реально
+              // была (freezeClosedMonths вызывается ДО отчисления), а
+              // дальше начисление всё равно ноль. Без этого условия
+              // отчисление порождало бы «призрачный» безгрупповой юнит с
+              // нулевой суммой, который потом сталкивается с настоящим
+              // безгрупповым юнитом на уникальном индексе при удалении
+              // группы (SetNull каскадит groupId у TeacherSalaryAccrual).
+              enrollments: { some: { groupId: null, unenrolledAt: null } },
               ...(filters.courseId ? { id: filters.courseId } : {}),
             },
             select: { id: true, title: true, teacherId: true },
@@ -162,7 +170,10 @@ export class SalaryService {
       return this.ledger.loadBillableEnrollments({ groupId: unit.groupId });
     }
     const enrollments = await this.ledger.loadBillableEnrollments({ courseId: unit.courseId });
-    return enrollments.filter((enrollment) => enrollment.group === null);
+    // Отчисленная (unenrolledAt) сюда тоже не входит — см. комментарий у
+    // ungroupedCourses выше: её база уже зафиксирована под прежним юнитом,
+    // а дальше она всё равно не растёт.
+    return enrollments.filter((enrollment) => enrollment.group === null && enrollment.unenrolledAt === null);
   }
 
   /**
@@ -170,7 +181,7 @@ export class SalaryService {
    * TeacherSalaryAccrual — прямой аналог BillingLedgerService.resolveSchedules,
    * только база агрегируется по всем ученикам единицы, а не по одной записи.
    *
-   * Закрытый месяц без строки фиксируется тут же (лазурная заморозка, как у
+   * Закрытый месяц без строки фиксируется тут же (ленивая заморозка, как у
    * начислений учеников): повторные и параллельные вызовы безопасны —
    * уникальный индекс (teacherId, courseId, groupId, month) плюс частичный
    * индекс для groupId IS NULL, оба плюс skipDuplicates.

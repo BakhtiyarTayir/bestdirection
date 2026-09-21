@@ -4,6 +4,7 @@ import { AuditService, computeChanges } from "../../common/audit/audit.service";
 import type { SessionUser } from "../../common/auth/session-user";
 import { accessibleWhere, type AppAbility } from "../../common/policies/abilities";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { activeEnrollmentFilter } from "../billing/billing-ledger.service";
 import { scoreAssessment } from "./domain/assessment-scoring";
 import type {
   CreateAssessmentDto,
@@ -298,8 +299,10 @@ export class AssessmentsService {
     });
     if (!assessment) throw new NotFoundException("assessmentNotFound");
 
-    const enrollment = await this.prisma.enrollment.findUnique({
-      where: { studentId_courseId: { studentId: user.id, courseId: assessment.courseId } },
+    // Отчисленный (billingEndsAt без группы) доступа к тесту не имеет —
+    // запись жива только ради истории начислений (activeEnrollmentFilter)
+    const enrollment = await this.prisma.enrollment.findFirst({
+      where: { studentId: user.id, courseId: assessment.courseId, ...activeEnrollmentFilter() },
       select: { id: true },
     });
     if (!enrollment) throw new ForbiddenException("notEnrolled");

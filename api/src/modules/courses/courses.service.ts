@@ -6,7 +6,8 @@ import { accessibleWhere, type AppAbility } from "../../common/policies/abilitie
 import type { Prisma } from "../../../generated/prisma";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { generateUniqueSlug, slugify } from "../../common/slugify";
-import { BillingLedgerService } from "../billing/billing-ledger.service";
+import { activeEnrollmentFilter, BillingLedgerService } from "../billing/billing-ledger.service";
+import { SalaryService } from "../salary/salary.service";
 import type { CreateCourseDto, UpdateCourseDto } from "./dto/course.dto";
 
 const COURSE_INCLUDE = {
@@ -19,7 +20,8 @@ export class CoursesService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly audit: AuditService,
-    private readonly ledger: BillingLedgerService
+    private readonly ledger: BillingLedgerService,
+    private readonly salary: SalaryService
   ) {}
 
   private get prisma() {
@@ -213,10 +215,15 @@ export class CoursesService {
    * Записанные на курс. groupId сужает список до учеников одной группы: занятие
    * посещаемости заводится на группу, и отмечать в нём учеников других групп
    * нельзя.
+   *
+   * Отчисленные (unenrolledAt) в список не попадают — они больше не учащиеся
+   * курса, хоть запись и осталась ради истории начислений. Приостановленный
+   * (billingEndsAt есть, unenrolledAt нет) — не отчисление, остаётся видимым:
+   * activeEnrollmentFilter().
    */
   async enrolledStudents(courseId: string, groupId?: string) {
     const enrollments = await this.prisma.enrollment.findMany({
-      where: { courseId, ...(groupId ? { groupId } : {}) },
+      where: { courseId, ...(groupId ? { groupId } : {}), ...activeEnrollmentFilter() },
       include: {
         student: {
           select: { id: true, firstName: true, lastName: true, login: true, phone: true, isActive: true },
@@ -227,9 +234,14 @@ export class CoursesService {
     return enrollments.map((enrollment) => ({ ...enrollment.student, enrolledAt: enrollment.createdAt }));
   }
 
+  /** Кого можно записать на курс. Отчисленный ранее (история есть, но не активен) — снова доступен. */
   availableStudents(courseId: string) {
     return this.prisma.user.findMany({
-      where: { role: "STUDENT", isActive: true, enrollments: { none: { courseId } } },
+      where: {
+        role: "STUDENT",
+        isActive: true,
+        NOT: { enrollments: { some: { courseId, ...activeEnrollmentFilter() } } },
+      },
       select: { id: true, firstName: true, lastName: true, login: true, phone: true },
       orderBy: { firstName: "asc" },
     });
@@ -243,9 +255,33 @@ export class CoursesService {
 
     const existing = await this.prisma.enrollment.findUnique({
       where: { studentId_courseId: { studentId, courseId } },
-      select: { id: true },
+      select: { id: true, unenrolledAt: true },
     });
-    if (existing) throw new ConflictException("alreadyEnrolled");
+
+    // Отчисленная запись (unenrolledAt) — не «уже записан»: уникальность
+    // (studentId, courseId) не даст завести вторую строку, поэтому
+    // возвращаем ту же самую студенту, а не блокируем.
+    const finished = existing && existing.unenrolledAt !== null;
+    if (existing && !finished) throw new ConflictException("alreadyEnrolled");
+
+    if (existing) {
+      // Разрыв между отчислением и сегодня уже закрыт (заморожен на момент
+      // отчисления) — тут только снимаем дату и статус, начисления и доступ
+      // продолжаются с неё
+      const enrollment = await this.prisma.enrollment.update({
+        where: { id: existing.id },
+        data: { billingEndsAt: null, unenrolledAt: null },
+        include: { student: { select: { id: true, firstName: true, lastName: true } } },
+      });
+      await this.audit.record({
+        userId: actor.id,
+        entityType: "Enrollment",
+        entityId: enrollment.id,
+        action: "UPDATE",
+        metadata: { courseId, studentId, revived: true },
+      });
+      return enrollment;
+    }
 
     const enrollment = await this.prisma.enrollment.create({
       data: { studentId, courseId },
@@ -267,18 +303,47 @@ export class CoursesService {
 
     const enrollment = await this.prisma.enrollment.findUnique({
       where: { studentId_courseId: { studentId, courseId } },
-      select: { id: true },
+      select: { id: true, groupId: true },
     });
     if (!enrollment) throw new NotFoundException("enrollmentNotFound");
 
-    await this.prisma.enrollment.delete({ where: { studentId_courseId: { studentId, courseId } } });
+    // Закрытые месяцы фиксируем ДО отчисления — ленивая заморозка иначе
+    // посчитала бы ещё не зафиксированный месяц уже с billingEndsAt ниже.
+    // Зарплата опирается на уже зафиксированные начисления — строго после
+    // биллинговой (план зарплат, 5.4).
+    await this.ledger.freezeClosedMonths({ enrollmentId: enrollment.id });
+    await this.salary.freezeClosedMonths({ groupId: enrollment.groupId, courseId });
+
+    // Ни начислений, ни оплат — заведена по ошибке, можно стереть, как
+    // раньше. Иначе запись хранит платёжную историю: физическое удаление
+    // унесло бы её каскадом вместе с MonthlyCharge — ровно тот баг, который
+    // мы здесь чиним.
+    const [chargesCount, paymentsCount] = await Promise.all([
+      this.prisma.monthlyCharge.count({ where: { enrollmentId: enrollment.id } }),
+      this.prisma.payment.count({ where: { studentId, courseId, deletedAt: null } }),
+    ]);
+    const hasHistory = chargesCount > 0 || paymentsCount > 0;
+
+    if (hasHistory) {
+      // Снимаем группу (если была), ставим дату отчисления — начисления
+      // дальше не идут — и unenrolledAt: доступ к курсу закрывает именно им,
+      // а не связкой groupId+billingEndsAt (см. комментарий у поля в
+      // schema.prisma). Оплаты и MonthlyCharge остаются на месте.
+      const now = toNoonUtc(new Date().toISOString().slice(0, 10));
+      await this.prisma.enrollment.update({
+        where: { id: enrollment.id },
+        data: { groupId: null, billingEndsAt: now, unenrolledAt: now },
+      });
+    } else {
+      await this.prisma.enrollment.delete({ where: { id: enrollment.id } });
+    }
 
     await this.audit.record({
       userId: actor.id,
       entityType: "Enrollment",
       entityId: `${studentId}:${courseId}`,
-      action: "DELETE",
-      metadata: { courseId, studentId },
+      action: hasHistory ? "UPDATE" : "DELETE",
+      metadata: { courseId, studentId, finished: hasHistory },
     });
   }
 

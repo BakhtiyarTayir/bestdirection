@@ -40,7 +40,7 @@ describe("выборка по правам (accessibleWhere)", () => {
   it("правила роли переносятся в условие как есть", () => {
     const student = defineAbilityFor({ id: "s1", role: "STUDENT" });
     expect(accessibleWhere(student, "Course")).toEqual({
-      OR: [{ isPublished: true, enrollments: { some: { studentId: "s1" } } }],
+      OR: [{ isPublished: true, enrollments: { some: { studentId: "s1", unenrolledAt: null } } }],
     });
   });
 

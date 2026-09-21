@@ -1,5 +1,7 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { BillingLedgerService } from "../src/modules/billing/billing-ledger.service";
+import { addMonths, monthKey } from "../src/modules/billing/domain/billing";
 import { createBranch, createTestApp, createUser, sessionCookie, TEST_APP_URL, testDb, type TestApp } from "./helpers";
 
 describe("модуль courses", () => {
@@ -7,6 +9,7 @@ describe("модуль courses", () => {
   const cookies: Record<string, string> = {};
   const ids: Record<string, string> = {};
   const run = Date.now().toString(36);
+  const current = monthKey(new Date());
 
   beforeAll(async () => {
     app = await createTestApp();
@@ -205,6 +208,132 @@ describe("модуль courses", () => {
       expect(
         await testDb().enrollment.count({ where: { studentId: student.id, courseId: ids.own } })
       ).toBe(0);
+    });
+
+    it("отчисление с историей сохраняет запись, а не стирает начисления", async () => {
+      const student = await createUser({ role: "STUDENT" });
+      await send("post", `/courses/${ids.own}/students`, "TEACHER", { studentId: student.id });
+      // Учёба началась три месяца назад — есть что заморозить в MonthlyCharge
+      await testDb().enrollment.update({
+        where: { studentId_courseId: { studentId: student.id, courseId: ids.own } },
+        data: { startsAt: new Date(`${addMonths(current, -3)}-01T12:00:00.000Z`) },
+      });
+
+      const res = await send("delete", `/courses/${ids.own}/students/${student.id}`, "TEACHER");
+      expect(res.status).toBe(200);
+
+      const enrollment = await testDb().enrollment.findUnique({
+        where: { studentId_courseId: { studentId: student.id, courseId: ids.own } },
+      });
+      // Запись жива (не унесло Cascade), дата отчисления и unenrolledAt проставлены
+      expect(enrollment).not.toBeNull();
+      expect(enrollment?.billingEndsAt).not.toBeNull();
+      expect(enrollment?.unenrolledAt).not.toBeNull();
+
+      const charges = await testDb().monthlyCharge.findMany({
+        where: { enrollmentId: enrollment!.id },
+      });
+      expect(charges.length).toBeGreaterThan(0);
+
+      // Должник: долг за прошлое остался
+      const debtors = await get("/billing/debtors", "ADMIN");
+      const row = debtors.body.debtors.find(
+        (r: { enrollmentId: string }) => r.enrollmentId === enrollment!.id
+      );
+      expect(row).toBeDefined();
+      const chargedSum = charges.reduce((sum: number, c: { amount: number }) => sum + c.amount, 0);
+      expect(row.charged).toBeGreaterThanOrEqual(chargedSum);
+      expect(row.debt).toBe(row.charged);
+
+      // Начисления дальше не растут: месяц ПОСЛЕ отчисления — ноль
+      const ledger = app.get(BillingLedgerService);
+      const nextMonth = addMonths(current, 1);
+      const loaded = await ledger.loadBillableEnrollments({ enrollmentId: enrollment!.id });
+      const schedule = (await ledger.resolveSchedules(loaded, nextMonth)).get(enrollment!.id) ?? [];
+      const afterEnd = schedule.find((item) => item.month === nextMonth);
+      expect(afterEnd?.charge.amount ?? 0).toBe(0);
+    });
+
+    it("повторная запись после отчисления возобновляет ту же строку", async () => {
+      const student = await createUser({ role: "STUDENT" });
+      await send("post", `/courses/${ids.own}/students`, "TEACHER", { studentId: student.id });
+
+      const removed = await send("delete", `/courses/${ids.own}/students/${student.id}`, "TEACHER");
+      expect(removed.status).toBe(200);
+      // Без истории — запись физически удалена (как и раньше)
+      expect(
+        await testDb().enrollment.count({ where: { studentId: student.id, courseId: ids.own } })
+      ).toBe(0);
+
+      // Теперь с историей: платёж есть, отчисление должно её сохранить
+      const enrolledAgain = await send("post", `/courses/${ids.own}/students`, "TEACHER", {
+        studentId: student.id,
+      });
+      expect(enrolledAgain.status).toBe(201);
+      await send("post", "/billing/payments", "ADMIN", {
+        studentId: student.id,
+        courseId: ids.own,
+        amount: 100000,
+        method: "CASH",
+        paidAt: `${current}-05`,
+      });
+
+      const finishedAgain = await send("delete", `/courses/${ids.own}/students/${student.id}`, "TEACHER");
+      expect(finishedAgain.status).toBe(200);
+      const finished = await testDb().enrollment.findUnique({
+        where: { studentId_courseId: { studentId: student.id, courseId: ids.own } },
+      });
+      expect(finished).not.toBeNull();
+      expect(finished?.billingEndsAt).not.toBeNull();
+      expect(finished?.unenrolledAt).not.toBeNull();
+
+      // Повторная запись не бьётся об уникальность (studentId, courseId) —
+      // возобновляет ту же строку и снимает дату отчисления
+      const revived = await send("post", `/courses/${ids.own}/students`, "TEACHER", {
+        studentId: student.id,
+      });
+      expect(revived.status).toBe(201);
+      expect(revived.body.id).toBe(finished!.id);
+
+      const row = await testDb().enrollment.findUnique({ where: { id: finished!.id } });
+      expect(row?.billingEndsAt).toBeNull();
+      expect(row?.unenrolledAt).toBeNull();
+    });
+
+    it("пауза (billingEndsAt без отчисления) не отбирает доступ и не выкидывает из списка учеников", async () => {
+      // ids.STUDENT записан на ids.own без группы с самого beforeAll —
+      // обычное активное состояние «ученик без группы», не отчисление
+      const enrollment = await testDb().enrollment.findUniqueOrThrow({
+        where: { studentId_courseId: { studentId: ids.STUDENT, courseId: ids.own } },
+      });
+      expect(enrollment.groupId).toBeNull();
+      expect(enrollment.unenrolledAt).toBeNull();
+
+      // Админ ставит дату отчисления только как паузу в начислениях —
+      // без намерения отчислять (тот самый диалог должников, а не кнопка
+      // «Отчислить»): unenrolledAt при этом не трогается
+      const paused = await send("patch", `/billing/enrollments/${enrollment.id}`, "ADMIN", {
+        billingEndsAt: `${current}-01`,
+      });
+      expect(paused.status).toBe(200);
+
+      const row = await testDb().enrollment.findUnique({ where: { id: enrollment.id } });
+      expect(row?.billingEndsAt).not.toBeNull();
+      expect(row?.unenrolledAt).toBeNull();
+
+      // Доступ к курсу не пропал — пауза не отчисление
+      expect((await get(`/courses/${ids.own}`, "STUDENT")).status).toBe(200);
+
+      // И в списке учеников курса студент остаётся
+      const roster = await get(`/courses/${ids.own}/students`, "ADMIN");
+      expect(roster.status).toBe(200);
+      expect(roster.body.map((s: { id: string }) => s.id)).toContain(ids.STUDENT);
+
+      // Убираем паузу, чтобы не мешать остальным тестам файла. Пустое значение —
+      // это отсутствие ключа (DTO: "optional, а не nullable"), а не "": сервис
+      // безусловно перезаписывает и startsAt/billingEndsAt на null, когда их
+      // нет в теле — у ids.STUDENT они и так не выставлены, поэтому это безопасно
+      await send("patch", `/billing/enrollments/${enrollment.id}`, "ADMIN", {});
     });
 
     it("нельзя записать не-ученика", async () => {
