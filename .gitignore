@@ -46,7 +46,11 @@ next-env.d.ts
 # documentation
 SYSTEM_OVERVIEW.md
 .agents/
-.claude/
+# Содержимое, а не сам каталог: в игнорируемый каталог git не заходит,
+# и исключение для agents/ внутри него не сработало бы
+.claude/*
+# Описания агентов — часть проекта. Рабочие копии (.claude/worktrees) — нет.
+!.claude/agents/
 
 1-modul_kirish.md
 COURSE_COPY_AND_COMPARE.md
