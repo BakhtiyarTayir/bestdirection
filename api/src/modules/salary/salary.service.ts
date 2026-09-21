@@ -6,20 +6,41 @@ import { BillingLedgerService, type LoadedEnrollment } from "../billing/billing-
 import {
   addMonths,
   computeFormulaAmount,
+  computeMonthLessonMarks,
   isClosedMonth,
   isValidMonth,
+  markMakeupSessions,
   mergeAccrualMonths,
+  monthEnd,
   monthKey,
+  monthStart,
   payoutMonth,
+  resolveSalaryPercentBp,
+  splitAccrualByTeacher,
   totalAccrued,
+  type MarkedSession,
   type MonthAccrual,
+  type MonthLessonMarks,
 } from "./domain/salary";
 import type { RecalcQueryDto, SalaryOverviewQueryDto, TeacherSalaryQueryDto } from "./dto/salary.dto";
 
-/** Единица начисления: преподаватель + группа, либо преподаватель + курс без группы (groupId пуст). */
+/**
+ * Единица начисления: преподаватель + группа, либо преподаватель + курс без
+ * группы (groupId пуст). У группы с раскладкой по занятиям (этап 3) единиц
+ * может быть НЕСКОЛЬКО на одну группу: владелец (group.teacherId ?? course.
+ * teacherId) и любой, кто хоть раз явно записан ведущим занятия этой группы
+ * (замена) — loadUnits() находит их по AttendanceSession.teacherId.
+ */
 interface Unit {
+  /** Получатель строки начисления: обычно владелец, для найденных замен — фактический ведущий */
   teacherId: string;
   teacherName: string;
+  /**
+   * Ставка, по которой считается ВСЯ сумма группы за месяц (решение
+   * владельца 2026-09-21, раздел 0: заменяющему платят по ставке группы, а
+   * не по своей). Поэтому здесь всегда личный процент ВЛАДЕЛЬЦА группы —
+   * для строки владельца и для строки замены он один и тот же.
+   */
   teacherPercentBp: number | null;
   courseId: string;
   courseTitle: string;
@@ -27,6 +48,10 @@ interface Unit {
   groupName: string | null;
   branchId: string | null;
   groupPercentBp: number | null;
+  /** Владелец группы (group.teacherId ?? course.teacherId) — для сравнения teacherId === ownerTeacherId */
+  ownerTeacherId: string;
+  /** Дни занятий группы. [] у курса без группы — раскладка по занятиям для него невозможна */
+  scheduleDays: number[];
 }
 
 /**
@@ -94,24 +119,58 @@ export class SalaryService {
             branchId: true,
             salaryPercentBp: true,
             teacherId: true,
+            scheduleDays: true,
             course: { select: { id: true, title: true, teacherId: true } },
           },
         });
 
-    const groupUnits = groups.map((group) => ({
-      teacherId: group.teacherId ?? group.course.teacherId,
-      courseId: group.course.id,
-      courseTitle: group.course.title,
-      groupId: group.id,
-      groupName: group.name,
-      branchId: group.branchId,
-      groupPercentBp: group.salaryPercentBp,
-    }));
+    // Замены: кто ещё явно записан ведущим занятия этой группы, кроме
+    // владельца (этап 3, план 4.3–4.6). Один запрос на все группы разом —
+    // групп мало (14 активных на момент планирования), а без него
+    // unitSchedule ниже не узнал бы, кому ещё положена своя строка.
+    const groupIds = groups.map((group) => group.id);
+    const substituteRows =
+      groupIds.length > 0
+        ? await this.prisma.attendanceSession.groupBy({
+            by: ["groupId", "teacherId"],
+            where: { groupId: { in: groupIds }, teacherId: { not: null } },
+          })
+        : [];
+    const substitutesByGroup = new Map<string, Set<string>>();
+    for (const row of substituteRows) {
+      if (!row.groupId || !row.teacherId) continue;
+      const group = groups.find((g) => g.id === row.groupId);
+      const ownerTeacherId = group?.teacherId ?? group?.course.teacherId;
+      if (!group || row.teacherId === ownerTeacherId) continue; // тот же человек — не замена
+      const set = substitutesByGroup.get(row.groupId) ?? new Set<string>();
+      set.add(row.teacherId);
+      substitutesByGroup.set(row.groupId, set);
+    }
+
+    const groupUnits: Omit<Unit, "teacherName" | "teacherPercentBp">[] = [];
+    for (const group of groups) {
+      const ownerTeacherId = group.teacherId ?? group.course.teacherId;
+      const shared = {
+        courseId: group.course.id,
+        courseTitle: group.course.title,
+        groupId: group.id,
+        groupName: group.name,
+        branchId: group.branchId,
+        groupPercentBp: group.salaryPercentBp,
+        ownerTeacherId,
+        scheduleDays: group.scheduleDays,
+      };
+      groupUnits.push({ teacherId: ownerTeacherId, ...shared });
+      for (const substituteId of substitutesByGroup.get(group.id) ?? []) {
+        groupUnits.push({ teacherId: substituteId, ...shared });
+      }
+    }
 
     // Курсы с записями без группы. Снимка филиала у них нет (ловушка
     // withoutGroup — см. LedgerFilters в billing-ledger.service.ts): при
     // заданном фильтре по филиалу такие записи не попадают в список, сузить
-    // их по филиалу нечем.
+    // их по филиалу нечем. У курса нет расписания — раскладка по занятиям
+    // для таких записей невозможна в принципе (scheduleDays: [])
     const ungroupedCourses =
       filters.branchId || wantsSpecificGroup
         ? []
@@ -140,6 +199,8 @@ export class SalaryService {
       groupName: null as string | null,
       branchId: null as string | null,
       groupPercentBp: null as number | null,
+      ownerTeacherId: course.teacherId,
+      scheduleDays: [] as number[],
     }));
 
     const raw = [...groupUnits, ...courseUnits].filter(
@@ -147,7 +208,9 @@ export class SalaryService {
     );
     if (raw.length === 0) return [];
 
-    const teacherIds = [...new Set(raw.map((unit) => unit.teacherId))];
+    // Личный процент нужен и получателю строки, и (для замен) владельцу —
+    // ставка группы считается по владельцу, даже если строка не его
+    const teacherIds = [...new Set(raw.flatMap((unit) => [unit.teacherId, unit.ownerTeacherId]))];
     const teachers = await this.prismaService.prismaUnscoped.user.findMany({
       where: { id: { in: teacherIds } },
       select: { id: true, firstName: true, lastName: true, salaryPercentBp: true },
@@ -156,10 +219,13 @@ export class SalaryService {
 
     return raw.map((unit) => {
       const teacher = teacherById.get(unit.teacherId);
+      const owner = teacherById.get(unit.ownerTeacherId);
       return {
         ...unit,
         teacherName: teacher ? `${teacher.lastName} ${teacher.firstName}` : "",
-        teacherPercentBp: teacher?.salaryPercentBp ?? null,
+        // Ставка группы = ставка группы ?? ЛИЧНАЯ ставка ВЛАДЕЛЬЦА — даже
+        // для строки замены (план, раздел 0)
+        teacherPercentBp: owner?.salaryPercentBp ?? null,
       };
     });
   }
@@ -186,7 +252,76 @@ export class SalaryService {
    * уникальный индекс (teacherId, courseId, groupId, month) плюс частичный
    * индекс для groupId IS NULL, оба плюс skipDuplicates.
    */
-  private async unitSchedule(unit: Unit, upToMonth: string): Promise<MonthAccrual[]> {
+  /**
+   * Записи журнала посещаемости группы за перечисленные месяцы, превращённые
+   * в отметки для раскладки (этап 3 плана, 4.3). Один запрос на все месяцы
+   * сразу — за весь диапазон дат, потом раскладывается по месяцам локально.
+   */
+  private async loadLessonMarks(
+    groupId: string,
+    scheduleDays: number[],
+    ownerTeacherId: string,
+    months: string[]
+  ): Promise<Map<string, MonthLessonMarks>> {
+    const result = new Map<string, MonthLessonMarks>();
+    if (months.length === 0) return result;
+
+    const sortedMonths = [...months].sort();
+    const sessions = await this.prisma.attendanceSession.findMany({
+      where: { groupId, date: { gte: monthStart(sortedMonths[0]), lte: monthEnd(sortedMonths[sortedMonths.length - 1]) } },
+      select: { date: true, teacherId: true, teacherStatus: true },
+    });
+
+    const byMonth = new Map<string, typeof sessions>();
+    for (const session of sessions) {
+      const month = monthKey(session.date);
+      const list = byMonth.get(month) ?? [];
+      list.push(session);
+      byMonth.set(month, list);
+    }
+
+    for (const month of months) {
+      const monthSessions = byMonth.get(month) ?? [];
+      result.set(
+        month,
+        computeMonthLessonMarks(
+          scheduleDays,
+          monthStart(month),
+          monthEnd(month),
+          monthSessions.map((session) => ({
+            date: session.date,
+            teacherStatus: session.teacherStatus,
+            // Ведущий не записан явно — числится за владельцем группы (та
+            // же лестница, что в attendance-access.ts, упрощённая: у группы
+            // ведущий уже известен на уровне unit.ownerTeacherId)
+            responsibleTeacherId: session.teacherId ?? ownerTeacherId,
+          }))
+        )
+      );
+    }
+
+    return result;
+  }
+
+  /**
+   * Расписание начислений одной единицы по месяцам с учётом реестра
+   * TeacherSalaryAccrual — прямой аналог BillingLedgerService.resolveSchedules,
+   * только база агрегируется по всем ученикам единицы, а не по одной записи.
+   *
+   * С этапа 3 сумма месяца может делиться между несколькими единицами одной
+   * группы (владелец + замены, см. loadUnits) по числу проведённых занятий —
+   * marksByMonth в возврате несёт «отмечено N из M» для интерфейса (этап 2),
+   * отдельно от самих сумм.
+   *
+   * Закрытый месяц без строки фиксируется тут же (ленивая заморозка, как у
+   * начислений учеников): повторные и параллельные вызовы безопасны —
+   * уникальный индекс (teacherId, courseId, groupId, month) плюс частичный
+   * индекс для groupId IS NULL, оба плюс skipDuplicates.
+   */
+  private async unitSchedule(
+    unit: Unit,
+    upToMonth: string
+  ): Promise<{ months: MonthAccrual[]; marksByMonth: Map<string, MonthLessonMarks> }> {
     const enrollments = await this.loadUnitEnrollments(unit);
     const schedules = await this.ledger.resolveSchedules(enrollments, upToMonth);
 
@@ -202,20 +337,69 @@ export class SalaryService {
       }
     }
 
-    const computed = [...monthTotals.entries()].map(([month, totals]) => ({
-      month,
-      input: {
-        base: totals.base,
-        studentsCount: totals.studentsCount,
-        groupPercentBp: unit.groupPercentBp,
-        teacherPercentBp: unit.teacherPercentBp,
-        manualAmount: null,
-      },
-    }));
+    // Раскладка по занятиям возможна только у группы с расписанием — у курса
+    // без группы (scheduleDays: []) плана занятий нет, считать не на чем:
+    // там всегда старая логика — вся сумма целиком владельцу (запасной путь)
+    const allMonths = [...monthTotals.keys()];
+    const marksByMonth =
+      unit.groupId && unit.scheduleDays.length > 0
+        ? await this.loadLessonMarks(unit.groupId, unit.scheduleDays, unit.ownerTeacherId, allMonths)
+        : new Map<string, MonthLessonMarks>();
+
+    const computed = allMonths
+      .map((month) => {
+        const totals = monthTotals.get(month)!;
+        const baseInput = {
+          base: totals.base,
+          studentsCount: totals.studentsCount,
+          groupPercentBp: unit.groupPercentBp,
+          teacherPercentBp: unit.teacherPercentBp,
+          manualAmount: null,
+        };
+
+        const marks = marksByMonth.get(month);
+        if (!marks || marks.fallback) {
+          // Запасной путь (4.5): нет расписания или ни одной отметки за
+          // месяц — вся сумма достаётся владельцу, замены не выделяются.
+          // Единица-замена в этот месяц ничего не получает: обнаружить, кто
+          // подменял, можно только по отметкам, а их и нет.
+          return unit.teacherId === unit.ownerTeacherId ? { month, input: baseInput } : null;
+        }
+
+        const potPercentUsed = resolveSalaryPercentBp(baseInput);
+        const potAmount = computeFormulaAmount(totals.base, potPercentUsed);
+        const share = splitAccrualByTeacher(potAmount, marks.lessonsPlanned, marks.taughtByTeacher).find(
+          (item) => item.teacherId === unit.teacherId
+        );
+
+        // Замена, ни разу не проводившая занятие в этом конкретном месяце
+        // (обнаружена по другому месяцу той же группы) — строки за этот
+        // месяц у неё нет вовсе, а не строка с нулём: иначе список месяцев
+        // замены раздулся бы пустыми записями на каждый месяц группы
+        if (!share && unit.teacherId !== unit.ownerTeacherId) return null;
+
+        return {
+          month,
+          input: {
+            ...baseInput,
+            lessons: { planned: marks.lessonsPlanned, taught: share?.lessonsTaught ?? 0, amountOverride: share?.amount ?? 0 },
+          },
+        };
+      })
+      .filter((item): item is { month: string; input: NonNullable<typeof item>["input"] } => item !== null);
 
     const storedRows = await this.prisma.teacherSalaryAccrual.findMany({
       where: { teacherId: unit.teacherId, courseId: unit.courseId, groupId: unit.groupId, month: { lte: upToMonth } },
-      select: { month: true, base: true, studentsCount: true, percentUsed: true, amount: true, manualAmount: true },
+      select: {
+        month: true,
+        base: true,
+        studentsCount: true,
+        percentUsed: true,
+        amount: true,
+        manualAmount: true,
+        lessonsPlanned: true,
+        lessonsTaught: true,
+      },
     });
 
     const now = new Date();
@@ -233,6 +417,8 @@ export class SalaryService {
         percentUsed: item.accrual.percentUsed,
         amount: item.accrual.amount,
         studentsCount: item.accrual.studentsCount,
+        lessonsPlanned: item.accrual.lessonsPlanned,
+        lessonsTaught: item.accrual.lessonsTaught,
         lockedAt: now,
       }));
 
@@ -240,7 +426,7 @@ export class SalaryService {
       await this.prisma.teacherSalaryAccrual.createMany({ data: toFreeze, skipDuplicates: true });
     }
 
-    return months;
+    return { months, marksByMonth };
   }
 
   /**
@@ -274,7 +460,10 @@ export class SalaryService {
     const units = await this.loadUnits({ branchId: query.branchId, teacherId: teacherFilter });
 
     const schedules = await Promise.all(
-      units.map(async (unit) => ({ unit, months: await this.unitSchedule(unit, month) }))
+      units.map(async (unit) => {
+        const { months, marksByMonth } = await this.unitSchedule(unit, month);
+        return { unit, months, marks: marksByMonth.get(month) };
+      })
     );
 
     const teacherIds = [...new Set(units.map((unit) => unit.teacherId))];
@@ -296,6 +485,8 @@ export class SalaryService {
       teacherName: string;
       groupsCount: number;
       unratedGroupsCount: number;
+      /** Групп, где сумма за месяц посчитана запасным путём — нет расписания или ни одной отметки в журнале (этап 2) */
+      fallbackGroupsCount: number;
       studentsCount: number;
       base: number;
       accrued: number;
@@ -305,12 +496,13 @@ export class SalaryService {
     }
     const rows = new Map<string, Row>();
 
-    for (const { unit, months } of schedules) {
+    for (const { unit, months, marks } of schedules) {
       const row = rows.get(unit.teacherId) ?? {
         teacherId: unit.teacherId,
         teacherName: unit.teacherName,
         groupsCount: 0,
         unratedGroupsCount: 0,
+        fallbackGroupsCount: 0,
         studentsCount: 0,
         base: 0,
         accrued: 0,
@@ -326,6 +518,9 @@ export class SalaryService {
         row.base += current.accrual.base;
         row.accrued += current.accrual.amount;
         if (current.accrual.percentUsed === null) row.unratedGroupsCount += 1;
+        // Запасной путь — только у настоящей группы (у курса без группы
+        // lessonsPlanned пустое всегда, это не повод для пометки)
+        if (unit.groupId && (!marks || marks.fallback)) row.fallbackGroupsCount += 1;
       }
       row.accruedTotal += totalAccrued(months);
       rows.set(unit.teacherId, row);
@@ -370,7 +565,7 @@ export class SalaryService {
 
     const groups = await Promise.all(
       units.map(async (unit) => {
-        const monthAccruals = await this.unitSchedule(unit, month);
+        const { months: monthAccruals, marksByMonth } = await this.unitSchedule(unit, month);
         const idByMonth = await this.accrualIds(unit);
         return {
           groupId: unit.groupId,
@@ -379,16 +574,41 @@ export class SalaryService {
           courseTitle: unit.courseTitle,
           branchId: unit.branchId,
           groupPercentBp: unit.groupPercentBp,
-          months: monthAccruals.map((item) => ({
-            id: idByMonth.get(item.month) ?? null,
-            month: item.month,
-            base: item.accrual.base,
-            studentsCount: item.accrual.studentsCount,
-            percentUsed: item.accrual.percentUsed,
-            amount: item.accrual.amount,
-            isFormula: item.accrual.isFormula,
-            locked: item.locked,
-          })),
+          months: monthAccruals.map((item) => {
+            const marks = marksByMonth.get(item.month);
+            // Отработки — понятие уровня группы (план, 4.4): считаем по ВСЕМ
+            // засчитанным занятиям группы за месяц, а не только по своим, и
+            // уже потом оставляем только свою часть списка
+            const sessions = marks
+              ? markMakeupSessions(marks.countedSessions, marks.lessonsPlanned).filter(
+                  (session) => session.teacherId === unit.teacherId
+                )
+              : ([] as MarkedSession[]);
+
+            return {
+              id: idByMonth.get(item.month) ?? null,
+              month: item.month,
+              base: item.accrual.base,
+              studentsCount: item.accrual.studentsCount,
+              percentUsed: item.accrual.percentUsed,
+              amount: item.accrual.amount,
+              isFormula: item.accrual.isFormula,
+              locked: item.locked,
+              lessonsPlanned: item.accrual.lessonsPlanned,
+              lessonsTaught: item.accrual.lessonsTaught,
+              // «Отмечено N из M» (этап 2) — сколько занятий вообще есть в
+              // журнале группы за месяц, независимо от того, кто их вёл.
+              // null — раскладка неприменима (курс без группы)
+              sessionsMarked: marks?.sessionsMarked ?? null,
+              // Раскладка недоступна — нет расписания или ни одной отметки
+              // за месяц (4.5); у курса без группы это неприменимо, не пометка
+              fallback: unit.groupId ? !marks || marks.fallback : false,
+              sessions: sessions.map((session) => ({
+                date: session.date.toISOString().slice(0, 10),
+                isMakeup: session.isMakeup,
+              })),
+            };
+          }),
         };
       })
     );
@@ -500,8 +720,40 @@ export class SalaryService {
       if (charge.amount > 0) studentsCount += 1;
     }
 
-    const nextAmount = computeFormulaAmount(base, stored.percentUsed);
-    const changed = stored.base !== base || stored.studentsCount !== studentsCount || stored.amount !== nextAmount;
+    // Сумма группы целиком по формуле — ставка (percentUsed) осталась
+    // зафиксированной, но сама раскладка по занятиям пересчитывается по
+    // СВЕЖИМ данным журнала: замена, отмеченная задним числом после
+    // закрытия месяца, сама зарплату не двигает — для этого и есть кнопка
+    // пересчёта (план, 4.8.2)
+    const potAmount = computeFormulaAmount(base, stored.percentUsed);
+    let nextAmount = potAmount;
+    let lessonsPlanned: number | null = null;
+    let lessonsTaught: number | null = null;
+
+    if (unit.groupId && unit.scheduleDays.length > 0) {
+      const marksByMonth = await this.loadLessonMarks(unit.groupId, unit.scheduleDays, unit.ownerTeacherId, [month]);
+      const marks = marksByMonth.get(month);
+      if (marks && !marks.fallback) {
+        const share = splitAccrualByTeacher(potAmount, marks.lessonsPlanned, marks.taughtByTeacher).find(
+          (item) => item.teacherId === unit.teacherId
+        );
+        lessonsPlanned = marks.lessonsPlanned;
+        lessonsTaught = share?.lessonsTaught ?? 0;
+        nextAmount = share?.amount ?? 0;
+      } else if (unit.teacherId !== unit.ownerTeacherId) {
+        // Запасной путь пересчитан для строки замены — оснований для неё
+        // больше нет (отметки исчезли или расписание сняли): строка
+        // обнуляется, чужая сумма ей не переходит
+        nextAmount = 0;
+      }
+    }
+
+    const changed =
+      stored.base !== base ||
+      stored.studentsCount !== studentsCount ||
+      stored.amount !== nextAmount ||
+      stored.lessonsPlanned !== lessonsPlanned ||
+      stored.lessonsTaught !== lessonsTaught;
 
     if (!changed) return { amount: stored.manualAmount ?? stored.amount, changed: false };
 
@@ -516,6 +768,8 @@ export class SalaryService {
             base: { old: stored.base, new: base },
             studentsCount: { old: stored.studentsCount, new: studentsCount },
             amount: { old: stored.amount, new: nextAmount },
+            lessonsPlanned: { old: stored.lessonsPlanned, new: lessonsPlanned },
+            lessonsTaught: { old: stored.lessonsTaught, new: lessonsTaught },
           },
           metadata: { recalculated: true, teacherId, month, groupId: unit.groupId, percentUsed: stored.percentUsed },
         },
@@ -524,7 +778,7 @@ export class SalaryService {
 
       await tx.teacherSalaryAccrual.update({
         where: { id: stored.id },
-        data: { base, studentsCount, amount: nextAmount, lockedAt: new Date() },
+        data: { base, studentsCount, amount: nextAmount, lessonsPlanned, lessonsTaught, lockedAt: new Date() },
       });
     });
 

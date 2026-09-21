@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { AuditService } from "../../common/audit/audit.service";
 import type { SessionUser } from "../../common/auth/session-user";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { SalaryService } from "../salary/salary.service";
 import { canManageSession, responsibleTeacherId } from "./domain/attendance-access";
 import type { TeacherAttendanceDto, TeacherReportQueryDto } from "./dto/attendance.dto";
 
@@ -19,7 +20,8 @@ const LOCALE_TAGS: Record<string, string> = { uz: "uz-UZ", ru: "ru-RU" };
 export class TeacherAttendanceService {
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly audit: AuditService
+    private readonly audit: AuditService,
+    private readonly salary: SalaryService
   ) {}
 
   private get prisma() {
@@ -188,6 +190,10 @@ export class TeacherAttendanceService {
     });
     if (!session) throw new NotFoundException("sessionNotFound");
     if (!canManageSession(actor, session)) throw new NotFoundException("sessionNotFound");
+
+    // Отметка (статус ABSENT/PRESENT, ведущий) — прямой вход раскладки по
+    // занятиям (план, 4.8.1): фиксируем закрытые месяцы до изменения
+    await this.salary.freezeClosedMonths({ groupId: session.groupId, courseId: session.course.id });
 
     // У занятий, заведённых до появления отметки, ведущий пуст, и они числятся
     // за педагогом группы или курса. Отметка должна кому-то принадлежать,

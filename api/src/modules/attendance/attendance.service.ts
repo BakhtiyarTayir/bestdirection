@@ -4,6 +4,7 @@ import { AuditService } from "../../common/audit/audit.service";
 import type { SessionUser } from "../../common/auth/session-user";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { activeEnrollmentFilter } from "../billing/billing-ledger.service";
+import { SalaryService } from "../salary/salary.service";
 import { canManageCourseAttendance, canManageSession, responsibleTeacherId } from "./domain/attendance-access";
 import type { CreateSessionDto, UpdateRecordsDto } from "./dto/attendance.dto";
 
@@ -14,7 +15,8 @@ type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
 export class AttendanceService {
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly audit: AuditService
+    private readonly audit: AuditService,
+    private readonly salary: SalaryService
   ) {}
 
   private get prisma() {
@@ -78,6 +80,12 @@ export class AttendanceService {
     // Администратор при желании поменяет — например, при замене.
     const defaultTeacherId = await this.resolveDefaultTeacherId(data.courseId, data.groupId ?? null);
 
+    // Новое занятие меняет раскладку зарплаты за месяц (этап 3 плана «Уроки
+    // и карточка группы») — фиксируем закрытые месяцы ДО создания, иначе
+    // ещё не замороженный закрытый месяц задним числом пересчитался бы уже
+    // с этим занятием (план, 4.8.1)
+    await this.salary.freezeClosedMonths({ groupId: data.groupId ?? null, courseId: data.courseId });
+
     try {
       const session = await this.prisma.attendanceSession.create({
         data: {
@@ -110,6 +118,12 @@ export class AttendanceService {
 
   async updateRecords(sessionId: string, data: UpdateRecordsDto, actor: SessionUser) {
     const session = await this.findManageableSession(sessionId, actor);
+
+    // Смена ведущего или его отметки — вход раскладки по занятиям (план,
+    // 4.8.1). Студенческие отметки (data.records) на зарплату не влияют, но
+    // замораживаем всегда: teacherData может быть пустым в этом вызове, а
+    // проверять заранее — держать два места истины вместо одного
+    await this.salary.freezeClosedMonths({ groupId: session.groupId, courseId: session.course.id });
 
     // Отличаем «не менять» от «очистить»: отсутствие поля оставляет значение,
     // а null его стирает.
@@ -174,6 +188,10 @@ export class AttendanceService {
 
   async deleteSession(sessionId: string, actor: SessionUser) {
     const session = await this.findManageableSession(sessionId, actor);
+
+    // Занятие исчезает из раскладки зарплаты — фиксируем закрытые месяцы до
+    // удаления (план, 4.8.1), тот же приём, что при создании занятия
+    await this.salary.freezeClosedMonths({ groupId: session.groupId, courseId: session.course.id });
 
     await this.prisma.attendanceSession.delete({ where: { id: sessionId } });
 
