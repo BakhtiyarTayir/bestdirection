@@ -134,7 +134,11 @@ export function GroupList({ groups, courseSlug }: GroupListProps) {
                   )}
                 </CardTitle>
                 {group.branch && (
-                  <p className="text-xs text-muted-foreground">{group.branch.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {/* С подписью: без неё название филиала читается как часть
+                        названия группы — просьба владельца от 2026-09-21 */}
+                    {t("branch")}: {group.branch.name}
+                  </p>
                 )}
                 {group.description && (
                   <p className="text-sm text-muted-foreground line-clamp-2">
