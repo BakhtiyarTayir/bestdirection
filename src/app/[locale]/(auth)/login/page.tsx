@@ -23,7 +23,6 @@ export default function LoginPage() {
   const locale = useLocale();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showLoginForm, setShowLoginForm] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -72,25 +71,22 @@ export default function LoginPage() {
       </div>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border bg-white">
-            <Image src="/logo.png" alt="" width={490} height={492} className="h-8 w-auto" />
-          </div>
+          {/* Логотип центра, как на публичном сайте: широкий, поэтому без
+              круглой рамки — в ней он сжимался до нечитаемого значка */}
+          <Image
+            src="/marketing/logo.png"
+            alt=""
+            width={877}
+            height={490}
+            priority
+            className="mx-auto mb-4 h-20 w-auto"
+          />
           <CardTitle className="text-2xl">{t("loginTitle")}</CardTitle>
           <CardDescription>{t("loginSubtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <TelegramAuth />
-          {!showLoginForm && (
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full text-muted-foreground"
-              onClick={() => setShowLoginForm(true)}
-            >
-              {t("loginWithPassword")}
-            </Button>
-          )}
-          {showLoginForm && (
+          {/* Логин с паролем — основной способ: им заходят все ученики.
+              Telegram остаётся запасным и стоит под формой */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {error && (
               <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
@@ -134,7 +130,7 @@ export default function LoginPage() {
               {loading ? t("loggingIn") : t("login")}
             </Button>
           </form>
-          )}
+          <TelegramAuth compact />
         </CardContent>
       </Card>
     </div>

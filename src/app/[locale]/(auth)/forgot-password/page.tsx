@@ -130,9 +130,13 @@ export default function ForgotPasswordPage() {
       </div>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border bg-white">
-            <Image src="/logo.png" alt="" width={490} height={492} className="h-8 w-auto" />
-          </div>
+          <Image
+            src="/marketing/logo.png"
+            alt=""
+            width={877}
+            height={490}
+            className="mx-auto mb-4 h-20 w-auto"
+          />
           <CardTitle className="text-2xl">{t("resetPasswordTitle")}</CardTitle>
           <CardDescription>{t("resetPasswordSubtitleTelegram")}</CardDescription>
         </CardHeader>

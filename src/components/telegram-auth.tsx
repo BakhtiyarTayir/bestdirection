@@ -15,7 +15,15 @@ import { Send } from "lucide-react";
 
 const POLL_INTERVAL_MS = 2500;
 
-export function TelegramAuth() {
+interface TelegramAuthProps {
+  /**
+   * Telegram — запасной способ входа под формой логина, а не главный:
+   * кнопка меньше, разделитель «или» встаёт над ней.
+   */
+  compact?: boolean;
+}
+
+export function TelegramAuth({ compact = false }: TelegramAuthProps) {
   const t = useTranslations("auth");
   const router = useRouter();
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -106,16 +114,30 @@ export function TelegramAuth() {
 
   if (!botUsername) return null;
 
+  // Разделитель идёт перед кнопкой, когда Telegram стоит запасным способом
+  // под формой, и после неё, когда он главный, — иначе надпись «или» окажется
+  // не между способами входа, а под последним из них.
+  const divider = (
+    <div className="flex items-center gap-3">
+      <div className="h-px flex-1 bg-border" />
+      <span className="text-xs uppercase text-muted-foreground">{t("orContinueWith")}</span>
+      <div className="h-px flex-1 bg-border" />
+    </div>
+  );
+
   return (
-    <div className="mb-4 space-y-3">
+    <div className={compact ? "mt-6 space-y-3" : "mb-4 space-y-3"}>
       {error && (
         <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
           {error}
         </div>
       )}
 
+      {compact && divider}
+
       <Button
         type="button"
+        size={compact ? "sm" : "default"}
         className="w-full bg-[#2AABEE] text-white hover:bg-[#229ED9]"
         onClick={loginViaBot}
         disabled={waiting}
@@ -135,13 +157,7 @@ export function TelegramAuth() {
         </a>
       )}
 
-      <div className="flex items-center gap-3">
-        <div className="h-px flex-1 bg-border" />
-        <span className="text-xs uppercase text-muted-foreground">
-          {t("orContinueWith")}
-        </span>
-        <div className="h-px flex-1 bg-border" />
-      </div>
+      {!compact && divider}
     </div>
   );
 }
