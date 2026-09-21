@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
-import { DEFAULT_MARKETING_LOGO_URL } from "@/lib/site-settings";
 import { LanguageSwitcher } from "@/components/language-switcher";
 
 type Step = "login" | "reset";
@@ -24,7 +23,7 @@ type Step = "login" | "reset";
 // в чат с ботом. Сервер отвечает одинаково на существующий и несуществующий
 // логин (аудит 2.12) — поэтому шаг «код» неотличим от «мы точно его отправили»,
 // и это осознанно: иначе форма превращается в перебор логинов.
-export function ResetForm({ logoUrl }: { logoUrl: string | null }) {
+export function ResetForm({ logoUrl }: { logoUrl: string }) {
   const router = useRouter();
   const t = useTranslations("auth");
   const tValidation = useTranslations("validation");
@@ -132,7 +131,7 @@ export function ResetForm({ logoUrl }: { logoUrl: string | null }) {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <Image
-            src={logoUrl || DEFAULT_MARKETING_LOGO_URL}
+            src={logoUrl}
             alt=""
             width={877}
             height={490}

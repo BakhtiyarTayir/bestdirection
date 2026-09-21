@@ -13,11 +13,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
-import { DEFAULT_MARKETING_LOGO_URL } from "@/lib/site-settings";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { TelegramAuth } from "@/components/telegram-auth";
 
-export function LoginForm({ logoUrl }: { logoUrl: string | null }) {
+export function LoginForm({ logoUrl }: { logoUrl: string }) {
   const router = useRouter();
   const t = useTranslations("auth");
   const tValidation = useTranslations("validation");
@@ -75,7 +74,7 @@ export function LoginForm({ logoUrl }: { logoUrl: string | null }) {
           {/* Логотип центра, как на публичном сайте: широкий, поэтому без
               круглой рамки — в ней он сжимался до нечитаемого значка */}
           <Image
-            src={logoUrl || DEFAULT_MARKETING_LOGO_URL}
+            src={logoUrl}
             alt=""
             width={877}
             height={490}
