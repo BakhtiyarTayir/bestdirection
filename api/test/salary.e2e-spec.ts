@@ -440,4 +440,103 @@ describe("модуль salary", () => {
       expect(potAmount - mainAfter.amount).toBe(pricePerLesson);
     });
   });
+
+  // Правка «сводка зарплат задваивает базу при замене»: у группы с заменой
+  // за месяц две единицы начисления (владелец и заменяющий, см. loadUnits),
+  // и accrual.base/studentsCount у КАЖДОЙ — это ПОЛНАЯ база и полное число
+  // учеников группы (делится по splitAccrualByTeacher только amount).
+  // Наивная сумма по всем строкам сводки удваивала base/studentsCount/
+  // groupsCount группы, у которой была замена. Свой филиал — иначе в
+  // totals попадут groupA/groupB из describe выше.
+  describe("сводка зарплат: замена не задваивает базу (правка)", () => {
+    /** Даты месяца, попадающие на дни расписания группы — как в AttendanceService.createSession */
+    function lessonDatesInMonth(month: string, scheduleDays: number[]): string[] {
+      const [year, monthNum] = month.split("-").map(Number);
+      const lastDay = new Date(Date.UTC(year, monthNum, 0)).getUTCDate();
+      const dates: string[] = [];
+      for (let day = 1; day <= lastDay; day++) {
+        const date = new Date(Date.UTC(year, monthNum - 1, day));
+        const iso = date.getUTCDay() === 0 ? 7 : date.getUTCDay();
+        if (scheduleDays.includes(iso)) dates.push(`${month}-${String(day).padStart(2, "0")}`);
+      }
+      return dates;
+    }
+
+    it("итог по базе, ученикам и группам не задваивается, начислено по-прежнему сходится", async () => {
+      const branch = await createBranch("Дедуп");
+      const course = await testDb().course.create({
+        data: { slug: `salary-dedup-${run}`, title: "Курс дедуп", teacherId: ids.TEACHER, price: 300_000 },
+      });
+      const group = await testDb().group.create({
+        data: {
+          name: `D-${run}`,
+          courseId: course.id,
+          branchId: branch.id,
+          scheduleDays: [1, 3, 5],
+          teacherId: ids.TEACHER,
+          salaryPercentBp: 4000,
+          startDate: new Date(`${startMonth}-01T12:00:00.000Z`),
+        },
+      });
+      await testDb().enrollment.create({
+        data: {
+          studentId: ids.STUDENT,
+          courseId: course.id,
+          groupId: group.id,
+          startsAt: new Date(`${startMonth}-01T12:00:00.000Z`),
+        },
+      });
+
+      const lessonDates = lessonDatesInMonth(prevMonth, [1, 3, 5]);
+      expect(lessonDates.length).toBeGreaterThan(1);
+
+      // Все занятия месяца, кроме последнего, провёл основной педагог
+      for (const date of lessonDates.slice(0, -1)) {
+        await testDb().attendanceSession.create({
+          data: { courseId: course.id, groupId: group.id, date: new Date(`${date}T00:00:00.000Z`), teacherStatus: "PRESENT" },
+        });
+      }
+      // Последнее занятие — замена
+      await testDb().attendanceSession.create({
+        data: {
+          courseId: course.id,
+          groupId: group.id,
+          date: new Date(`${lessonDates.at(-1)}T00:00:00.000Z`),
+          teacherId: ids.otherTeacher,
+          teacherStatus: "PRESENT",
+        },
+      });
+
+      const overview = await get(`/salary?month=${prevMonth}&branchId=${branch.id}`, "ADMIN");
+      expect(overview.status).toBe(200);
+
+      const stored = await testDb().teacherSalaryAccrual.findMany({ where: { groupId: group.id, month: prevMonth } });
+      expect(stored).toHaveLength(2);
+      const mainRow = stored.find((r) => r.teacherId === ids.TEACHER)!;
+      const subRow = stored.find((r) => r.teacherId === ids.otherTeacher)!;
+      // Обе строки несут ПОЛНУЮ базу группы — так и задумано (справочный
+      // контекст «с какой суммы считали»), делится только amount
+      expect(mainRow.base).toBe(subRow.base);
+      expect(mainRow.base).toBeGreaterThan(0);
+
+      // Итог по базе/ученикам — база группы ОДИН раз, а не по разу на
+      // строку начисления (владелец + заменяющий)
+      expect(overview.body.totals.base).toBe(mainRow.base);
+      expect(overview.body.totals.studentsCount).toBe(mainRow.studentsCount);
+      expect(overview.body.totals.groupsCount).toBe(1);
+
+      // Начисленное по-прежнему верно — эту правку сумма не затрагивает:
+      // amount уже поделён между владельцем и заменяющим (splitAccrualByTeacher)
+      expect(overview.body.totals.accrued).toBe(mainRow.amount + subRow.amount);
+
+      // В строке отдельного преподавателя база осталась осмысленной — это
+      // база группы, с которой считалась его доля, а не задвоенная сумма
+      const mainRowInOverview = overview.body.rows.find((r: { teacherId: string }) => r.teacherId === ids.TEACHER);
+      const subRowInOverview = overview.body.rows.find(
+        (r: { teacherId: string }) => r.teacherId === ids.otherTeacher
+      );
+      expect(mainRowInOverview.base).toBe(mainRow.base);
+      expect(subRowInOverview.base).toBe(mainRow.base);
+    });
+  });
 });
