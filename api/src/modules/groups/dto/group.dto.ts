@@ -66,7 +66,9 @@ export const updateGroupSchema = z.object({
   // Необязателен при частичном обновлении: иначе любой PATCH группы, не
   // трогающий расписание (смена цены, преподавателя, включение/выключение…),
   // сломался бы, потребовав прислать дни заново (ловушка из плана, раздел 2).
-  scheduleDays: scheduleDaysField.optional(),
+  // Но если поле всё же передано — пустым оно быть не должно: иначе PATCH
+  // мог бы тем же движением, что и create, снять уже заданное расписание.
+  scheduleDays: scheduleDaysField.min(1, "scheduleDaysRequired").optional(),
   ...groupFields,
 });
 
