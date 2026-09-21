@@ -24,7 +24,10 @@ export interface ApiSalaryOverviewRow {
 export interface ApiSalaryOverview {
   month: string;
   rows: ApiSalaryOverviewRow[];
-  totals: { base: number; accrued: number; paid: number; debt: number };
+  // base/studentsCount/groupsCount считаются без повторов по группе за
+  // месяц: у группы с заменой несколько строк в rows (владелец и
+  // заменяющие), но это одна и та же группа — в totals она учтена один раз
+  totals: { base: number; studentsCount: number; groupsCount: number; accrued: number; paid: number; debt: number };
 }
 
 export interface ApiSalaryMonthSession {

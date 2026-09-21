@@ -496,6 +496,19 @@ export class SalaryService {
     }
     const rows = new Map<string, Row>();
 
+    // Итоги по базе/ученикам/группам считаются НЕ суммой по rows — у группы
+    // с заменой в месяце несколько единиц (владелец + заменяющие, см.
+    // loadUnits), и base/studentsCount в accrual каждой единицы — это
+    // ПОЛНАЯ база и полное число учеников группы, а не доля заменяющего
+    // (доля есть только в amount, её единицы уже делит splitAccrualByTeacher
+    // между собой корректно). Наивная сумма row.base по всем строкам сложила
+    // бы базу группы дважды — по разу на каждого, кто в этом месяце вёл в
+    // ней хоть одно занятие. Поэтому база/ученики/группы для итога
+    // считаются отдельно, по разу на пару «группа (или курс без группы) +
+    // месяц» — ключ ниже не включает месяц явно, потому что вся сводка уже
+    // строится для одного month.
+    const groupMonthTotals = new Map<string, { base: number; studentsCount: number; isGroup: boolean }>();
+
     for (const { unit, months, marks } of schedules) {
       const row = rows.get(unit.teacherId) ?? {
         teacherId: unit.teacherId,
@@ -514,6 +527,9 @@ export class SalaryService {
       if (unit.groupId) row.groupsCount += 1;
       const current = months.find((item) => item.month === month);
       if (current) {
+        // Строка преподавателя — его собственный контекст: база группы, с
+        // которой считалась его доля. Здесь копится намеренно по разу за
+        // единицу (владелец и заменяющий — разные строки), это не повтор.
         row.studentsCount += current.accrual.studentsCount;
         row.base += current.accrual.base;
         row.accrued += current.accrual.amount;
@@ -521,6 +537,15 @@ export class SalaryService {
         // Запасной путь — только у настоящей группы (у курса без группы
         // lessonsPlanned пустое всегда, это не повод для пометки)
         if (unit.groupId && (!marks || marks.fallback)) row.fallbackGroupsCount += 1;
+
+        const dedupKey = unit.groupId ?? `course:${unit.courseId}`;
+        if (!groupMonthTotals.has(dedupKey)) {
+          groupMonthTotals.set(dedupKey, {
+            base: current.accrual.base,
+            studentsCount: current.accrual.studentsCount,
+            isGroup: unit.groupId !== null,
+          });
+        }
       }
       row.accruedTotal += totalAccrued(months);
       rows.set(unit.teacherId, row);
@@ -532,11 +557,17 @@ export class SalaryService {
     }
 
     const result = [...rows.values()].sort((a, b) => b.debt - a.debt);
+    const groupMonthEntries = [...groupMonthTotals.values()];
     return {
       month,
       rows: result,
       totals: {
-        base: result.reduce((sum, row) => sum + row.base, 0),
+        base: groupMonthEntries.reduce((sum, entry) => sum + entry.base, 0),
+        studentsCount: groupMonthEntries.reduce((sum, entry) => sum + entry.studentsCount, 0),
+        groupsCount: groupMonthEntries.filter((entry) => entry.isGroup).length,
+        // Начисленное/выплаченное/долг — суммой по amount, который уже
+        // поделён между владельцем и заменяющими (splitAccrualByTeacher),
+        // повтора там нет, дедупликация не нужна
         accrued: result.reduce((sum, row) => sum + row.accrued, 0),
         paid: result.reduce((sum, row) => sum + row.paidTotal, 0),
         debt: result.reduce((sum, row) => sum + row.debt, 0),
