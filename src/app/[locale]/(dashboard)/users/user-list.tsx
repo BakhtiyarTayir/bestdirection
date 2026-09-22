@@ -36,7 +36,6 @@ const roleBadgeVariant: Record<string, "destructive" | "default" | "secondary"> 
 
 interface User {
   id: string;
-  number: number;
   firstName: string;
   lastName: string;
   login: string | null;
@@ -127,10 +126,10 @@ export function UserList({ initialUsers, canManageUsers = true }: UserListProps)
                 </TableCell>
               </TableRow>
             ) : (
-              optimisticUsers.map((user) => (
+              optimisticUsers.map((user, index) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-mono text-muted-foreground tabular-nums">
-                    {user.number}
+                    {index + 1}
                   </TableCell>
                   <TableCell className="font-medium">
                     {user.firstName} {user.lastName}

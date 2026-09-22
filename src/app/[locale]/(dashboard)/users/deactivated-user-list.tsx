@@ -35,7 +35,6 @@ const roleBadgeVariant: Record<string, "destructive" | "default" | "secondary"> 
 
 interface DeactivatedUser {
   id: string;
-  number: number;
   firstName: string;
   lastName: string;
   login: string | null;
@@ -159,10 +158,10 @@ export function DeactivatedUserList({ users }: DeactivatedUserListProps) {
                 </TableCell>
               </TableRow>
             ) : (
-              users.map((user) => (
+              users.map((user, index) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-mono text-muted-foreground tabular-nums">
-                    {user.number}
+                    {index + 1}
                   </TableCell>
                   <TableCell className="font-medium">
                     {user.firstName} {user.lastName}

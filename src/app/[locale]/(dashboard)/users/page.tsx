@@ -14,7 +14,6 @@ export const dynamic = "force-dynamic";
 
 interface ActiveUser {
   id: string;
-  number: number;
   firstName: string;
   lastName: string;
   login: string | null;
@@ -25,7 +24,6 @@ interface ActiveUser {
 
 interface DeactivatedUser {
   id: string;
-  number: number;
   firstName: string;
   lastName: string;
   login: string | null;
