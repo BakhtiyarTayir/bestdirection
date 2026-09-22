@@ -1,36 +1,17 @@
 import { requireRole } from "@/lib/auth-guard";
-import { getTranslations, getLocale } from "next-intl/server";
-import { intlLocale } from "@/i18n/config";
+import { getTranslations } from "next-intl/server";
 import { getStudentsOverview } from "@/lib/api/billing.server";
 import { getBranches } from "@/lib/api/branches.server";
-import { Link } from "@/i18n/navigation";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
-  TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Wallet } from "lucide-react";
 import { BranchFilter } from "@/components/branch-filter";
+import { StudentList, type StudentListRow } from "./student-list";
 
 export const dynamic = "force-dynamic";
-
-interface StudentRow {
-  id: string;
-  number: number;
-  firstName: string;
-  lastName: string;
-  phone: string | null;
-  login: string | null;
-  isActive: boolean;
-  courses: { enrollmentId: string; title: string; groupName: string | null }[];
-  balance: number;
-  branch: { id: string; name: string } | null;
-}
 
 interface StudentsPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -40,31 +21,14 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
   await requireRole(["ADMIN"]);
   const t = await getTranslations("students");
   const tCommon = await getTranslations("common");
-  const tDebtors = await getTranslations("debtors");
   const tBilling = await getTranslations("studentBilling");
-  const locale = await getLocale();
-  const money = new Intl.NumberFormat(intlLocale(locale));
 
   const params = await searchParams;
   const branchId = typeof params.branchId === "string" && params.branchId ? params.branchId : undefined;
 
   const [result, branchesResult] = await Promise.all([getStudentsOverview(branchId), getBranches()]);
-  const students = (result.success && result.data ? result.data : []) as StudentRow[];
+  const students = (result.success && result.data ? result.data : []) as StudentListRow[];
   const branches = branchesResult.success && branchesResult.data ? branchesResult.data : [];
-
-  const balanceText = (value: number) =>
-    value === 0
-      ? tBilling("settled")
-      : value > 0
-        ? tBilling("advance", { amount: money.format(value) })
-        : tBilling("debt", { amount: money.format(-value) });
-
-  const balanceClass = (value: number) =>
-    value === 0
-      ? "text-muted-foreground"
-      : value > 0
-        ? "text-emerald-600"
-        : "text-destructive";
 
   return (
     <div>
@@ -95,65 +59,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
                 <TableHead className="text-right">{tCommon("actions")}</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
-              {students.map((student) => (
-                <TableRow key={student.id}>
-                  <TableCell className="font-mono text-muted-foreground tabular-nums">
-                    {student.number}
-                  </TableCell>
-                  <TableCell>
-                    <Link
-                      href={`/payments/students/${student.id}`}
-                      className="font-medium hover:underline"
-                    >
-                      {student.lastName} {student.firstName}
-                    </Link>
-                    {!student.isActive && (
-                      <Badge variant="outline" className="ml-2">
-                        {tCommon("inactive")}
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    <div>{student.phone ?? tDebtors("noPhone")}</div>
-                    <div className="text-muted-foreground">{student.login ?? "—"}</div>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {student.branch?.name ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {student.courses.length === 0 ? (
-                      <span className="text-muted-foreground">{t("noCourses")}</span>
-                    ) : (
-                      <div className="space-y-0.5">
-                        {student.courses.map((course) => (
-                          <div key={course.enrollmentId}>
-                            {course.title}
-                            <span className="text-muted-foreground">
-                              {" · "}
-                              {course.groupName ?? tDebtors("noGroup")}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell
-                    className={`whitespace-nowrap text-right font-medium ${balanceClass(student.balance)}`}
-                  >
-                    {balanceText(student.balance)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Link href={`/payments/students/${student.id}`}>
-                      <Button variant="outline" size="sm">
-                        <Wallet className="mr-2 h-4 w-4" />
-                        {t("openCard")}
-                      </Button>
-                    </Link>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
+            <StudentList students={students} />
           </Table>
         </div>
       )}

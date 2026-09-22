@@ -1,6 +1,6 @@
 "use client";
 
-import { useOptimistic, useState } from "react";
+import { useMemo, useOptimistic, useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { Link } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
@@ -25,6 +25,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
+import { Input } from "@/components/ui/input";
+import { ListPagination } from "@/components/ui/list-pagination";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { deactivateUser } from "@/lib/api/users";
 import { Pencil, UserX, Loader2 } from "lucide-react";
 
@@ -33,6 +36,8 @@ const roleBadgeVariant: Record<string, "destructive" | "default" | "secondary"> 
   TEACHER: "default",
   STUDENT: "secondary",
 };
+
+const PAGE_SIZE = 20;
 
 interface User {
   id: string;
@@ -64,6 +69,19 @@ export function UserList({ initialUsers, canManageUsers = true }: UserListProps)
   const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [roleFilter, setRoleFilter] = useState("ALL");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const visibleUsers = useMemo(() => {
+    const term = search.trim().toLocaleLowerCase();
+    return optimisticUsers.filter((user) =>
+      (roleFilter === "ALL" || user.role === roleFilter) &&
+      (!term || `${user.firstName} ${user.lastName}`.toLocaleLowerCase().includes(term))
+    );
+  }, [optimisticUsers, roleFilter, search]);
+  const totalPages = Math.max(1, Math.ceil(visibleUsers.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedUsers = visibleUsers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const handleDeactivate = async () => {
     if (!selectedUser) return;
@@ -105,6 +123,23 @@ export function UserList({ initialUsers, canManageUsers = true }: UserListProps)
 
   return (
     <>
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+        <Input
+          value={search}
+          onChange={(event) => { setSearch(event.target.value); setPage(1); }}
+          placeholder={t("searchByName")}
+          className="sm:max-w-sm"
+        />
+        <Select value={roleFilter} onValueChange={(value) => { setRoleFilter(value); setPage(1); }}>
+          <SelectTrigger className="sm:w-48"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">{t("allRoles")}</SelectItem>
+            {(["ADMIN", "TEACHER", "STUDENT"] as const).map((role) => (
+              <SelectItem key={role} value={role}>{tRoles(role)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -119,17 +154,17 @@ export function UserList({ initialUsers, canManageUsers = true }: UserListProps)
             </TableRow>
           </TableHeader>
           <TableBody>
-            {optimisticUsers.length === 0 ? (
+            {pagedUsers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={canManageUsers ? 7 : 6} className="text-center text-muted-foreground">
                   {t("noUsersFound")}
                 </TableCell>
               </TableRow>
             ) : (
-              optimisticUsers.map((user, index) => (
+              pagedUsers.map((user, index) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-mono text-muted-foreground tabular-nums">
-                    {index + 1}
+                    {(currentPage - 1) * PAGE_SIZE + index + 1}
                   </TableCell>
                   <TableCell className="font-medium">
                     {user.firstName} {user.lastName}
@@ -178,6 +213,7 @@ export function UserList({ initialUsers, canManageUsers = true }: UserListProps)
           </TableBody>
         </Table>
       </div>
+      <ListPagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
 
       <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <AlertDialogContent>

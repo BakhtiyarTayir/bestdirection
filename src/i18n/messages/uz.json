@@ -681,6 +681,8 @@
     "salaryPercentPlaceholder": "Stavka belgilanmagan",
     "salaryPercentHint": "Standart stavka — agar aniq guruhda o'z stavkasi bo'lmasa, shu ishlatiladi. Bo'sh bo'lsa — stavka umuman yo'q, bunday guruhlar uchun ish haqi hisoblanmaydi.",
     "noUsersFound": "Foydalanuvchilar topilmadi",
+    "searchByName": "Ism yoki familiya bo'yicha qidirish",
+    "allRoles": "Barcha rollar",
     "userUpdated": "Foydalanuvchi yangilandi",
     "userUpdatedDescription": "Foydalanuvchi ma'lumotlari muvaffaqiyatli yangilandi.",
     "userCreated": "Foydalanuvchi yaratildi",

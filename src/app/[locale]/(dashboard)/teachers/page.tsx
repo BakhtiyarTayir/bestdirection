@@ -3,16 +3,14 @@ import { getTeachers } from "@/lib/api/users.server";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
-  TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CalendarCheck, Pencil } from "lucide-react";
+import { CalendarCheck } from "lucide-react";
+import { TeacherList } from "./teacher-list";
 
 export const dynamic = "force-dynamic";
 
@@ -57,79 +55,7 @@ export default async function TeachersPage() {
                 <TableHead className="text-right">{tCommon("actions")}</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
-              {teachers.map((teacher) => (
-                <TableRow key={teacher.id}>
-                  <TableCell className="font-mono text-muted-foreground tabular-nums">
-                    {teacher.number}
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-medium">
-                      {teacher.lastName} {teacher.firstName}
-                    </div>
-                    {!teacher.isActive && (
-                      <Badge variant="outline" className="mt-1">
-                        {tCommon("inactive")}
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    <div>{teacher.phone ?? t("noPhone")}</div>
-                    <div className="text-muted-foreground">
-                      {teacher.login ??
-                        (teacher.telegramUsername
-                          ? `@${teacher.telegramUsername}`
-                          : "—")}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {teacher.groups.length === 0 ? (
-                      <span className="text-muted-foreground">{t("noGroups")}</span>
-                    ) : (
-                      <div className="space-y-0.5">
-                        {teacher.groups.map((group) => (
-                          <div key={group.id}>
-                            {group.name}
-                            <span className="text-muted-foreground">
-                              {" · "}
-                              {group.courseTitle}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {teacher.courses.length === 0 ? (
-                      <span className="text-muted-foreground">{t("noCourses")}</span>
-                    ) : (
-                      <div className="space-y-0.5">
-                        {teacher.courses.map((course) => (
-                          <div key={course.id}>
-                            <Link
-                              href={`/courses/${course.slug}`}
-                              className="hover:underline"
-                            >
-                              {course.title}
-                            </Link>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {teacher.studentCount}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Link href={`/users/${teacher.id}/edit`}>
-                      <Button variant="outline" size="sm">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
+            <TeacherList teachers={teachers} />
           </Table>
         </div>
       )}
