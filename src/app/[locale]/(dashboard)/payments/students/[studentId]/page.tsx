@@ -49,6 +49,8 @@ interface CourseBilling {
   totalCharged: number;
   totalPaid: number;
   balance: number;
+  /** Оплата за месяц позже upToMonth — не входит в balance */
+  prepaidFuture: number;
   months: MonthRow[];
 }
 
@@ -166,6 +168,11 @@ export default async function StudentBillingPage({ params }: StudentBillingPageP
             <div className={`text-2xl font-bold ${balanceClass(totals.balance)}`}>
               {balanceText(totals.balance)}
             </div>
+            {totals.prepaidFuture > 0 && (
+              <div className="mt-1 text-sm text-emerald-600">
+                {t("prepaidFuture", { amount: money.format(totals.prepaidFuture) })}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -201,6 +208,13 @@ export default async function StudentBillingPage({ params }: StudentBillingPageP
                   <div className={`font-semibold ${balanceClass(course.balance)}`}>
                     {balanceText(course.balance)}
                   </div>
+                  {/* Аванс за месяцы позже upToMonth — отдельно от баланса,
+                      иначе оплаченный вперёд декабрь выглядел бы долгом */}
+                  {course.prepaidFuture > 0 && (
+                    <div className="text-sm text-emerald-600">
+                      {t("prepaidFuture", { amount: money.format(course.prepaidFuture) })}
+                    </div>
+                  )}
                   {/* Правка начислений доступна независимо от того, есть ли долг */}
                   <BillingSettingsButton enrollmentId={course.enrollmentId} />
                 </div>

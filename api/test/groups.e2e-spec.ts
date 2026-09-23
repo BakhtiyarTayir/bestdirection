@@ -1,7 +1,7 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { BillingLedgerService } from "../src/modules/billing/billing-ledger.service";
-import { addMonths, monthKey } from "../src/modules/billing/domain/billing";
+import { addMonths, chargeForMonth, monthKey } from "../src/modules/billing/domain/billing";
 import { createBranch, createTestApp, createUser, sessionCookie, TEST_APP_URL, testDb, type TestApp } from "./helpers";
 
 describe("модуль groups", () => {
@@ -356,6 +356,81 @@ describe("модуль groups", () => {
       expect(revived.groupId).toBe(groupId);
       expect(revived.billingEndsAt).toBeNull();
       expect(revived.unenrolledAt).toBeNull();
+    });
+
+    // Правка «возвращённого ученика списывают за весь текущий месяц»: снятие
+    // только billingEndsAt/unenrolledAt возвращало старую startsAt (от
+    // прошлого обучения), и текущий месяц насчитывался ПОЛНОСТЬЮ (basis
+    // "full"), хотя ученик вернулся не 1-го числа. Теперь addStudents
+    // переносит startsAt на сегодня и сбрасывает firstMonthCharge.
+    it("возврат в группу переносит startsAt на сегодня: старые заморозки целы, текущий месяц не насчитан полностью", async () => {
+      const student = await createUser({ role: "STUDENT" });
+      await send("post", `/groups/${groupId}/students`, "TEACHER", { studentIds: [student.id] });
+      await testDb().enrollment.update({
+        where: { studentId_courseId: { studentId: student.id, courseId } },
+        data: { startsAt: new Date(`${addMonths(current, -3)}-01T12:00:00.000Z`) },
+      });
+
+      // Отчислен в ПРОШЛОМ (уже закрытом) месяце — не сегодня, как обычный
+      // removeStudent: иначе нечего было бы замораживать до возврата
+      const prevMonthEnd = new Date(`${addMonths(current, -1)}-15T12:00:00.000Z`);
+      await testDb().enrollment.update({
+        where: { studentId_courseId: { studentId: student.id, courseId } },
+        data: { groupId: null, billingEndsAt: prevMonthEnd, unenrolledAt: prevMonthEnd },
+      });
+
+      const ledger = app.get(BillingLedgerService);
+      await ledger.freezeClosedMonths({ studentId: student.id, courseId });
+
+      const before = await enrollmentOf(student.id, courseId);
+      const chargesBefore = await testDb().monthlyCharge.findMany({
+        where: { enrollmentId: before.id },
+        orderBy: { month: "asc" },
+      });
+      expect(chargesBefore.length).toBeGreaterThan(0);
+      expect(chargesBefore.every((row) => row.lockedAt !== null)).toBe(true);
+
+      const res = await send("post", `/groups/${groupId}/students`, "TEACHER", {
+        studentIds: [student.id],
+      });
+      expect(res.status).toBe(201);
+      expect(res.body.added).toBe(1);
+
+      const after = await enrollmentOf(student.id, courseId);
+      expect(after.groupId).toBe(groupId);
+      expect(after.billingEndsAt).toBeNull();
+      expect(after.unenrolledAt).toBeNull();
+      // Ручная сумма первого месяца относилась к прошлому обучению
+      expect(after.firstMonthCharge).toBeNull();
+      // startsAt — сегодня (сравниваем календарную дату, не время)
+      expect(new Date(after.startsAt as Date).toISOString().slice(0, 10)).toBe(
+        new Date().toISOString().slice(0, 10)
+      );
+
+      // Замороженные месяцы прошлого обучения не пострадали от того, что
+      // startsAt теперь позже них — mergeSchedule берёт их из реестра как есть
+      const chargesAfter = await testDb().monthlyCharge.findMany({
+        where: { enrollmentId: after.id },
+        orderBy: { month: "asc" },
+      });
+      expect(chargesAfter).toEqual(chargesBefore);
+
+      // Текущий месяц — сравниваем с chargeForMonth по той же (уже
+      // обновлённой) записи, а не с зашитым числом: тест переживёт любой
+      // день месяца, в который его прогонят.
+      const loaded = await ledger.loadBillableEnrollments({ enrollmentId: after.id });
+      const billing = ledger.toBillingEnrollment(loaded[0]);
+      const expectedCurrent = chargeForMonth(billing, current);
+      const schedule = (await ledger.resolveSchedules(loaded, current)).get(after.id) ?? [];
+      const currentRow = schedule.find((item) => item.month === current);
+      expect(currentRow?.charge.amount ?? 0).toBe(expectedCurrent.amount);
+
+      // Не первое число — значит, startsAt строго позже начала месяца, и
+      // формула не может дать basis "full" (целиком за месяц независимо от
+      // расписания); она обязана перейти на расчёт по занятиям/дням
+      if (new Date().getUTCDate() > 1) {
+        expect(expectedCurrent.basis).not.toBe("full");
+      }
     });
 
     it("снятие с группы без отчисления + отдельная пауза billingEndsAt не отбирают доступ", async () => {

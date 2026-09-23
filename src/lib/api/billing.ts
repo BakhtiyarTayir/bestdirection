@@ -73,6 +73,9 @@ export interface ApiStudentBilling {
     totalCharged: number;
     totalPaid: number;
     balance: number;
+    // Оплата за месяц позже upToMonth — аванс, в balance курса не входит
+    // (правка «карточка ученика показывает будущие месяцы как долг»)
+    prepaidFuture: number;
     months: {
       month: string;
       charged: number;
@@ -95,7 +98,7 @@ export interface ApiStudentBilling {
     groupName: string | null;
     createdBy: string;
   }[];
-  totals: { charged: number; paid: number; balance: number };
+  totals: { charged: number; paid: number; balance: number; prepaidFuture: number };
 }
 
 export interface ApiStudentsOverview {

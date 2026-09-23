@@ -1,6 +1,9 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { BillingLedgerService } from "../src/modules/billing/billing-ledger.service";
+import { addMonths, monthKey } from "../src/modules/billing/domain/billing";
 import {
+  createBranch,
   createTestApp,
   createUser,
   sessionCookie,
@@ -495,6 +498,97 @@ describe("модуль users", () => {
       expect((await send("post", `/users/${target.id}/restore`, "ADMIN")).status).toBe(201);
       const row = await testDb().user.findUnique({ where: { id: target.id } });
       expect(row).toMatchObject({ isActive: true, deletedAt: null });
+    });
+  });
+
+  // Правка «деактивация ученика не останавливает начисления»: billing-ledger
+  // отсеивает только deletedAt, а деактивация раньше ставила лишь isActive:
+  // false — долг деактивированного продолжал расти, и с него преподаватель
+  // получал бы процент. Свой курс/группа/студент — не задеть чужой долг.
+  describe("деактивация ученика останавливает начисления (правка)", () => {
+    it("billingEndsAt ставится на сегодня, следующий месяц не начисляется", async () => {
+      const run = Date.now().toString(36);
+      const teacher = await createUser({ role: "TEACHER" });
+      const branch = await createBranch(`Деактивация-${run}`);
+      const course = await testDb().course.create({
+        data: { slug: `deactivate-${run}`, title: "Курс деактивации", teacherId: teacher.id, price: 400000 },
+      });
+      const group = await testDb().group.create({
+        data: { name: `D-${run}`, courseId: course.id, branchId: branch.id, scheduleDays: [1, 3, 5] },
+      });
+      const student = await createUser({ role: "STUDENT" });
+      const current = monthKey(new Date());
+      const startsAt = new Date(`${addMonths(current, -3)}-01T12:00:00.000Z`);
+      const enrollment = await testDb().enrollment.create({
+        data: { studentId: student.id, courseId: course.id, groupId: group.id, startsAt },
+      });
+
+      // Есть что замораживать и с чего набежать долгу — иначе тест не отличил
+      // бы «начисления остановлены» от «начислений и так не было»
+      const chargesBefore = await testDb().monthlyCharge.findMany({ where: { enrollmentId: enrollment.id } });
+      expect(chargesBefore.length).toBe(0); // ещё не замораживалось до деактивации — таков сетап
+
+      const res = await send("post", `/users/${student.id}/deactivate`, "ADMIN");
+      expect(res.status).toBe(201);
+
+      const row = await testDb().enrollment.findUnique({ where: { id: enrollment.id } });
+      expect(row?.billingEndsAt).not.toBeNull();
+      // Дата окончания — сегодня, а не дата отчисления/паузы вручную
+      expect(row!.billingEndsAt!.toISOString().slice(0, 10)).toBe(
+        new Date().toISOString().slice(0, 10)
+      );
+      // unenrolledAt деактивация не трогает — это не отчисление, а пауза
+      expect(row?.unenrolledAt).toBeNull();
+
+      // Закрытые месяцы прошлого обучения заморожены заодно (freezeClosedMonths
+      // до простановки billingEndsAt — иначе они посчитались бы уже без права
+      // на начисление, что тоже неверно: прошлое не должно обнулиться)
+      const chargesAfter = await testDb().monthlyCharge.findMany({ where: { enrollmentId: enrollment.id } });
+      expect(chargesAfter.length).toBeGreaterThan(0);
+      expect(chargesAfter.some((c) => c.amount > 0)).toBe(true);
+
+      // Начисления дальше не растут: следующий месяц — ноль
+      const ledger = app.get(BillingLedgerService);
+      const nextMonth = addMonths(current, 1);
+      const loaded = await ledger.loadBillableEnrollments({ enrollmentId: enrollment.id });
+      const schedule = (await ledger.resolveSchedules(loaded, nextMonth)).get(enrollment.id) ?? [];
+      const nextRow = schedule.find((item) => item.month === nextMonth);
+      expect(nextRow?.charge.amount ?? 0).toBe(0);
+
+      // Аудит: запись про Enrollment есть, со старым/новым billingEndsAt
+      const log = await testDb().auditLog.findFirst({
+        where: { entityType: "Enrollment", entityId: enrollment.id, action: "UPDATE" },
+        orderBy: { createdAt: "desc" },
+      });
+      expect(log).not.toBeNull();
+      expect((log?.metadata as { deactivated?: boolean } | null)?.deactivated).toBe(true);
+    });
+
+    it("восстановление не возобновляет начисления само по себе", async () => {
+      const run = Date.now().toString(36);
+      const teacher = await createUser({ role: "TEACHER" });
+      const branch = await createBranch(`Восстановление-${run}`);
+      const course = await testDb().course.create({
+        data: { slug: `restore-${run}`, title: "Курс восстановления", teacherId: teacher.id, price: 400000 },
+      });
+      const group = await testDb().group.create({
+        data: { name: `R-${run}`, courseId: course.id, branchId: branch.id, scheduleDays: [1, 3, 5] },
+      });
+      const student = await createUser({ role: "STUDENT" });
+      const enrollment = await testDb().enrollment.create({
+        data: { studentId: student.id, courseId: course.id, groupId: group.id },
+      });
+
+      await send("post", `/users/${student.id}/deactivate`, "ADMIN");
+      const paused = await testDb().enrollment.findUnique({ where: { id: enrollment.id } });
+      expect(paused?.billingEndsAt).not.toBeNull();
+
+      expect((await send("post", `/users/${student.id}/restore`, "ADMIN")).status).toBe(201);
+
+      // restore трогает только User — Enrollment.billingEndsAt остаётся
+      // выставленным, пока администратор не снимет его сам в диалоге начислений
+      const afterRestore = await testDb().enrollment.findUnique({ where: { id: enrollment.id } });
+      expect(afterRestore?.billingEndsAt?.toISOString()).toBe(paused?.billingEndsAt?.toISOString());
     });
   });
 

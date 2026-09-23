@@ -260,15 +260,16 @@ export class BillingService {
       }),
     ]);
 
-    // История доводится до текущего месяца или до месяца последней оплаты —
-    // иначе аванс за будущий месяц не попал бы в таблицу вовсе.
+    // Начисления считаем СТРОГО по текущий месяц — как в studentsOverview
+    // (список должников на текущий месяц). Раньше расписание доводилось до
+    // месяца последней оплаты по ВСЕМ курсам студента: аванс за декабрь по
+    // курсу A дописывал курсу B начисления за октябрь-декабрь, которых там
+    // ещё нет, — баланс карточки расходился со списком. Оплаты за будущие
+    // месяцы всё равно попадают в таблицу строками (месяцы берутся из
+    // объединения schedule и paidByMonth ниже), просто без начисления.
     const currentMonth = monthKey(new Date());
-    const lastPaymentMonth = payments.reduce((latest, payment) => {
-      const month = paymentMonth(payment);
-      return month > latest ? month : latest;
-    }, currentMonth);
 
-    const schedules = await this.ledger.resolveSchedules(enrollments, lastPaymentMonth);
+    const schedules = await this.ledger.resolveSchedules(enrollments, currentMonth);
 
     const courses = enrollments.map((enrollment) => {
       const schedule = schedules.get(enrollment.id) ?? [];
@@ -306,8 +307,19 @@ export class BillingService {
         };
       });
 
-      const totalCharged = rows.reduce((sum, row) => sum + row.charged, 0);
-      const totalPaid = rows.reduce((sum, row) => sum + row.paid, 0);
+      // Начисление за месяцы позже текущего всегда 0 (schedule до currentMonth
+      // не доходит), а вот paid там может быть ненулевым — это аванс, и в
+      // totalCharged/totalPaid/balance курса он не участвует, иначе баланс
+      // карточки снова разошёлся бы со списком студентов
+      const totalCharged = rows
+        .filter((row) => row.month <= currentMonth)
+        .reduce((sum, row) => sum + row.charged, 0);
+      const totalPaid = rows
+        .filter((row) => row.month <= currentMonth)
+        .reduce((sum, row) => sum + row.paid, 0);
+      const prepaidFuture = rows
+        .filter((row) => row.month > currentMonth)
+        .reduce((sum, row) => sum + row.paid, 0);
       const billing = this.ledger.toBillingEnrollment(enrollment);
 
       return {
@@ -321,13 +333,16 @@ export class BillingService {
         totalCharged,
         totalPaid,
         balance: totalPaid - totalCharged,
+        // Аванс за месяцы позже текущего — отдельно от баланса (тот же приём,
+        // что prepaidTotal в debtors(), только на уровне одного курса)
+        prepaidFuture,
         months: rows,
       };
     });
 
     return {
       student,
-      upToMonth: lastPaymentMonth,
+      upToMonth: currentMonth,
       courses,
       payments: payments.map((payment) => ({
         id: payment.id,
@@ -344,6 +359,7 @@ export class BillingService {
         charged: courses.reduce((sum, c) => sum + c.totalCharged, 0),
         paid: courses.reduce((sum, c) => sum + c.totalPaid, 0),
         balance: courses.reduce((sum, c) => sum + c.balance, 0),
+        prepaidFuture: courses.reduce((sum, c) => sum + c.prepaidFuture, 0),
       },
     };
   }

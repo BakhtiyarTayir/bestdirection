@@ -295,8 +295,20 @@ export class GroupsService {
           data: {
             groupId,
             // Возвращаем в группу отчисленного — начисления и доступ
-            // возобновляются с сегодня; разрыв уже заморожен строкой выше
-            ...(existing.unenrolledAt !== null && { unenrolledAt: null, billingEndsAt: null }),
+            // возобновляются с сегодня; разрыв уже заморожен строкой выше.
+            // startsAt тоже переносим на сегодня: иначе старая дата начала
+            // (от прошлого обучения) насчитала бы текущий месяц целиком, а
+            // не пропорционально с сегодняшнего дня — mergeSchedule сохранит
+            // уже замороженные месяцы прошлого обучения независимо от того,
+            // что startsAt теперь позже них. firstMonthCharge обнуляем —
+            // ручная сумма относилась к прошлому первому месяцу, а не к
+            // новому.
+            ...(existing.unenrolledAt !== null && {
+              unenrolledAt: null,
+              billingEndsAt: null,
+              startsAt: toNoonUtc(new Date().toISOString().slice(0, 10)),
+              firstMonthCharge: null,
+            }),
           },
         });
       } else {

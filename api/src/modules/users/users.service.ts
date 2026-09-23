@@ -14,6 +14,7 @@ import type { SessionUser } from "../../common/auth/session-user";
 import { toNoonUtc } from "../../common/date-only";
 import { accessibleWhere, type AppAbility } from "../../common/policies/abilities";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { BillingLedgerService } from "../billing/billing-ledger.service";
 import { SalaryService } from "../salary/salary.service";
 import type { CreateUserDto, UpdateProfileDto, UpdateUserDto } from "./dto/user.dto";
 
@@ -44,7 +45,8 @@ export class UsersService {
     private readonly audit: AuditService,
     private readonly sessionUsers: SessionUserCache,
     private readonly sessions: SessionsService,
-    private readonly salary: SalaryService
+    private readonly salary: SalaryService,
+    private readonly ledger: BillingLedgerService
   ) {}
 
   private get prisma() {
@@ -317,6 +319,13 @@ export class UsersService {
     // Выключенный аккаунт не должен доживать смену на открытой вкладке
     await this.sessions.destroyAllFor(id);
 
+    // Ученик деактивирован — долг больше не должен расти: billing-ledger
+    // отсеивает только deletedAt, isActive: false его не останавливает (иначе
+    // не выключить бы ученика на время паузы и вернуть начисления назад).
+    // Останавливаем начисления явно — той же датой, что «Убрать из группы»
+    // без отчисления (groups.service.ts removeStudent).
+    if (target.role === "STUDENT") await this.stopBillingForStudent(id, actor);
+
     await this.audit.record({
       userId: actor.id,
       entityType: "User",
@@ -324,6 +333,52 @@ export class UsersService {
       action: "UPDATE",
       metadata: { deactivated: true },
     });
+  }
+
+  /**
+   * Ставит billingEndsAt на сегодня всем ещё не завершённым записям ученика.
+   * unenrolledAt НЕ трогаем: деактивация — это не отчисление, а пауза; при
+   * восстановлении (restore) начисления сами не возобновятся — администратор
+   * снимет дату окончания в диалоге начислений, как и после обычной паузы.
+   */
+  private async stopBillingForStudent(studentId: string, actor: SessionUser) {
+    const today = toNoonUtc(new Date().toISOString().slice(0, 10));
+
+    const enrollments = await this.prisma.enrollment.findMany({
+      where: { studentId, OR: [{ billingEndsAt: null }, { billingEndsAt: { gt: today } }] },
+      select: { id: true, groupId: true, courseId: true, billingEndsAt: true },
+    });
+    if (enrollments.length === 0) return;
+
+    // Реестр начислений — ПЕРЕД зарплатой (правило проекта): сначала
+    // фиксируем закрытые месяцы учеников, потом — зарплату преподавателей,
+    // которая на них опирается. Один вызов на всего студента — дешевле, чем
+    // по одному на запись, и ledger сам разберётся по своим записям.
+    await this.ledger.freezeClosedMonths({ studentId });
+    for (const enrollment of enrollments) {
+      // groupId различает «по конкретной группе» и «без группы» (undefined
+      // тут не подходит — он значит «без фильтра по группе» для SalaryService)
+      await this.salary.freezeClosedMonths(
+        enrollment.groupId
+          ? { groupId: enrollment.groupId }
+          : { groupId: null, courseId: enrollment.courseId }
+      );
+    }
+
+    for (const enrollment of enrollments) {
+      await this.prisma.enrollment.update({
+        where: { id: enrollment.id },
+        data: { billingEndsAt: today },
+      });
+      await this.audit.record({
+        userId: actor.id,
+        entityType: "Enrollment",
+        entityId: enrollment.id,
+        action: "UPDATE",
+        metadata: { deactivated: true },
+        changes: { billingEndsAt: { old: enrollment.billingEndsAt, new: today } },
+      });
+    }
   }
 
   /** deletedAt снимаем заодно: у записей, удалённых старой логикой, он остался. */

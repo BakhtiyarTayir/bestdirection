@@ -467,10 +467,21 @@ export class SalaryService {
     );
 
     const teacherIds = [...new Set(units.map((unit) => unit.teacherId))];
+    // С фильтром по филиалу начисленное считается ТОЛЬКО по единицам этого
+    // филиала (units выше уже отфильтрованы) — значит, и выплаченное нужно
+    // брать только по выплатам с тем же снимком branchId, иначе долг = начислено
+    // (филиал) − выплачено (все филиалы) окажется завышен. branchId выплаты —
+    // это филиал преподавателя НА МОМЕНТ выдачи, а не филиал группы, поэтому
+    // разбивка по филиалам приблизительная; точный долг преподавателя — сводка
+    // без фильтра по филиалу, там выплаты берутся все.
     const payouts =
       teacherIds.length > 0
         ? await this.prisma.teacherPayout.findMany({
-            where: { teacherId: { in: teacherIds }, deletedAt: null },
+            where: {
+              teacherId: { in: teacherIds },
+              deletedAt: null,
+              ...(query.branchId ? { branchId: query.branchId } : {}),
+            },
             select: { teacherId: true, amount: true, forMonth: true, paidAt: true },
           })
         : [];
