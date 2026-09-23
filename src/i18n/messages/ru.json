@@ -1933,5 +1933,24 @@
       "m11": "Ноябрь",
       "m12": "Декабрь"
     }
+  },
+  "dashboardStudent": {
+    "title": "Мой дашборд",
+    "parentTitle": "Дашборд родителя",
+    "noChildren": "Администратор ещё не привязал ваших детей",
+    "balanceTitle": "Баланс",
+    "balanceDebt": "долг {amount}",
+    "balanceAdvance": "аванс {amount}",
+    "balanceZero": "Нет долга",
+    "prepaidFuture": "Аванс за будущие месяцы: {amount}",
+    "perMonth": "в месяц",
+    "noCourses": "Платных курсов пока нет",
+    "nextLessonsTitle": "Ближайшее занятие",
+    "noNextLessons": "Ближайших занятий по расписанию не найдено",
+    "homeworksTitle": "Задания со сроком",
+    "noHomeworks": "Несданных заданий со сроком нет",
+    "dueDate": "срок до {date}",
+    "myCourses": "Моих курсов",
+    "testsPassed": "Пройдено тестов"
   }
 }

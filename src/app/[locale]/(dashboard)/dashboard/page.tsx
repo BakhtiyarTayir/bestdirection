@@ -2,9 +2,10 @@ import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Users, ClipboardCheck, FileText, GraduationCap } from "lucide-react";
+import { BookOpen, Users, ClipboardCheck, GraduationCap } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { getDashboardSummary } from "@/lib/api/dashboard.server";
+import { StudentDashboard } from "./student-dashboard";
 
 export const dynamic = "force-dynamic";
 
@@ -53,15 +54,9 @@ export default async function DashboardPage() {
     );
   }
 
-  return (
-    <div>
-      <h1 className="text-3xl font-bold mb-6">{t("studentTitle")}</h1>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <StatCard title={t("myCourses")} value={summary.courses} icon={BookOpen} />
-        <StatCard title={t("testsPassed")} value={summary.tests} icon={FileText} />
-      </div>
-    </div>
-  );
+  // Ученик и родитель: баланс, ближайшее занятие и задания со сроком — своя
+  // ветка дашборда (раздел 3 плана главной панели), эту роль тут не трогаем
+  return <StudentDashboard summary={summary} />;
 }
 
 /** api недоступен — показываем заголовок без чисел, а не пустой экран. */
