@@ -8,6 +8,7 @@ import {
   addMonths,
   computeFormulaAmount,
   computeMonthLessonMarks,
+  currentMonthKey,
   isClosedMonth,
   isValidMonth,
   markMakeupSessions,
@@ -395,7 +396,7 @@ export class SalaryService {
    * отсечёт уникальный индекс со skipDuplicates.
    */
   private async freezeGroupClosedMonths(unit: Unit, upToMonth: string, now: Date): Promise<void> {
-    const lastClosedMonth = addMonths(monthKey(now), -1);
+    const lastClosedMonth = addMonths(currentMonthKey(now), -1);
     const limit = upToMonth < lastClosedMonth ? upToMonth : lastClosedMonth;
 
     const totals = await this.snapshotBase(unit, { lte: limit });
@@ -602,7 +603,7 @@ export class SalaryService {
     if (units.length === 0) return;
 
     // Последний закрытый месяц — предыдущий: текущий ещё открыт
-    const lastClosedMonth = addMonths(monthKey(new Date()), -1);
+    const lastClosedMonth = addMonths(currentMonthKey(), -1);
     for (const unit of units) {
       await this.unitSchedule(unit, lastClosedMonth);
     }
@@ -613,7 +614,7 @@ export class SalaryService {
    * только себя (сужение по id, как в TeacherAttendanceService.report).
    */
   async overview(query: SalaryOverviewQueryDto, actor: SessionUser) {
-    const month = query.month && isValidMonth(query.month) ? query.month : monthKey(new Date());
+    const month = query.month && isValidMonth(query.month) ? query.month : currentMonthKey();
     const teacherFilter = actor.role === "TEACHER" ? actor.id : undefined;
 
     const units = await this.loadUnits({ branchId: query.branchId, teacherId: teacherFilter });
@@ -750,7 +751,7 @@ export class SalaryService {
     });
     if (!teacher) throw new NotFoundException("teacherNotFound");
 
-    const month = query.month && isValidMonth(query.month) ? query.month : monthKey(new Date());
+    const month = query.month && isValidMonth(query.month) ? query.month : currentMonthKey();
     const units = await this.loadUnits({ teacherId });
 
     const groups = await Promise.all(

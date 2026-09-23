@@ -6,7 +6,7 @@ import {
   chargeSchedule,
   isClosedMonth,
   mergeSchedule,
-  monthKey,
+  currentMonthKey,
   priceFor,
   type BillingEnrollment,
   type ChargeBasis,
@@ -225,7 +225,7 @@ export class BillingLedgerService {
     if (enrollments.length === 0) return;
 
     // Последний закрытый месяц — предыдущий: текущий ещё открыт
-    const lastClosedMonth = addMonths(monthKey(new Date()), -1);
+    const lastClosedMonth = addMonths(currentMonthKey(), -1);
     await this.resolveSchedules(enrollments, lastClosedMonth);
   }
 }
