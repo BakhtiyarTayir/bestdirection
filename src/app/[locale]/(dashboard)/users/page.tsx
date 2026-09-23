@@ -104,10 +104,6 @@ async function UsersPageContent({
         </div>
       </div>
 
-      <div className="mb-4">
-        <BranchFilter branchId={branchId} branches={branches} namespace="users" />
-      </div>
-
       {canManageUsers ? (
         <Tabs defaultValue="active">
           <TabsList className="mb-4">
@@ -119,7 +115,11 @@ async function UsersPageContent({
             </TabsTrigger>
           </TabsList>
           <TabsContent value="active">
-            <UserList initialUsers={users} canManageUsers />
+            <UserList
+              initialUsers={users}
+              canManageUsers
+              filterPrefix={<BranchFilter branchId={branchId} branches={branches} namespace="users" />}
+            />
           </TabsContent>
           <TabsContent value="deactivated">
             <p className="mb-4 text-sm text-muted-foreground">
@@ -129,7 +129,11 @@ async function UsersPageContent({
           </TabsContent>
         </Tabs>
       ) : (
-        <UserList initialUsers={users} canManageUsers={false} />
+        <UserList
+          initialUsers={users}
+          canManageUsers={false}
+          filterPrefix={<BranchFilter branchId={branchId} branches={branches} namespace="users" />}
+        />
       )}
     </div>
   );

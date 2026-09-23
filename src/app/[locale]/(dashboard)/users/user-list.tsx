@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useOptimistic, useState } from "react";
+import { useMemo, useOptimistic, useState, type ReactNode } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { Link } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
@@ -52,9 +52,10 @@ interface User {
 interface UserListProps {
   initialUsers: User[];
   canManageUsers?: boolean;
+  filterPrefix?: ReactNode;
 }
 
-export function UserList({ initialUsers, canManageUsers = true }: UserListProps) {
+export function UserList({ initialUsers, canManageUsers = true, filterPrefix }: UserListProps) {
   const t = useTranslations("users");
   const tRoles = useTranslations("roles");
   const tCommon = useTranslations("common");
@@ -123,7 +124,8 @@ export function UserList({ initialUsers, canManageUsers = true }: UserListProps)
 
   return (
     <>
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+        {filterPrefix}
         <Input
           value={search}
           onChange={(event) => { setSearch(event.target.value); setPage(1); }}
