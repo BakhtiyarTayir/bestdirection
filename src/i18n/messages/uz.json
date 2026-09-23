@@ -927,6 +927,7 @@
     "restoreError": "Tiklashda xatolik",
     "deletedPermanently": "Butunlay o'chirildi",
     "deleteError": "O'chirishda xatolik",
+    "deleteBlockedByMoneyHistory": "O'chirib bo'lmaydi: kursda to'lovlar yoki maosh hisoblanmalari bor",
     "noDeletedItems": "O'chirilgan yozuvlar yo'q",
     "deletePermanently": "Butunlay o'chirish",
     "deletePermanentlyConfirm": "Butunlay o'chirasizmi?",

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { BillingLedgerService } from "../src/modules/billing/billing-ledger.service";
-import { addMonths, monthKey } from "../src/modules/billing/domain/billing";
+import { addMonths, currentMonthKey } from "../src/modules/billing/domain/billing";
 import { PrismaService } from "../src/common/prisma/prisma.service";
 import { TrashService } from "../src/modules/trash/trash.service";
 import { createBranch, createTestApp, type TestApp } from "./helpers";
@@ -32,7 +32,9 @@ async function check(name: string, actual: unknown, expected: unknown) {
 }
 
 it("реестр начислений и Корзина на настоящей базе", async () => {
-  const current = monthKey(new Date());
+  // Месяц по времени школы (Ташкент), а не UTC — иначе тест мог бы поехать
+  // в окне 19:00–24:00 UTC, когда в Ташкенте уже следующий месяц
+  const current = currentMonthKey();
   const month = (delta: number) => addMonths(current, delta);
   const firstDay = (delta: number) => new Date(`${month(delta)}-01T12:00:00.000Z`);
   // Уникальный суффикс: повторный запуск на той же базе не упрётся в slug

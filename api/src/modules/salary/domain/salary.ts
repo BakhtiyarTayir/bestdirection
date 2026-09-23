@@ -16,6 +16,7 @@
 import {
   addMonths,
   countLessons,
+  currentMonthKey,
   isClosedMonth,
   isValidMonth,
   monthEnd,
@@ -23,7 +24,7 @@ import {
   monthStart,
 } from "../../billing/domain/billing";
 
-export { addMonths, countLessons, isClosedMonth, isValidMonth, monthEnd, monthKey, monthStart };
+export { addMonths, countLessons, currentMonthKey, isClosedMonth, isValidMonth, monthEnd, monthKey, monthStart };
 
 // 1 базисный пункт = 0.01 %; 4000 = 40 %. См. User.salaryPercentBp в схеме.
 const BP_SCALE = 10_000;

@@ -496,6 +496,37 @@ describe("модуль users", () => {
       const row = await testDb().user.findUnique({ where: { id: target.id } });
       expect(row).toMatchObject({ isActive: true, deletedAt: null });
     });
+
+    // Регрессия: Payment/TeacherPayout были на ON DELETE CASCADE — удаление
+    // ученика или преподавателя стирало кассу и выплаты вместе с ним
+    it("ученика с оплатой стереть нельзя — оплата остаётся на месте", async () => {
+      const teacher = await createUser({ role: "TEACHER" });
+      const target = await createUser({ role: "STUDENT", isActive: false, deletedAt: new Date() });
+      const course = await testDb().course.create({
+        data: { slug: uniqueLogin("money-course"), title: "Курс с оплатой", teacherId: teacher.id },
+      });
+      const payment = await testDb().payment.create({
+        data: { amount: 100000, paidAt: new Date(), studentId: target.id, courseId: course.id, createdById: ids.ADMIN },
+      });
+
+      const res = await send("delete", `/users/${target.id}`, "ADMIN");
+      expect(res.status).toBe(409);
+      expect(res.body.message).toBe("userHasProtectedRecords");
+      expect(await testDb().payment.findUnique({ where: { id: payment.id } })).not.toBeNull();
+      expect(await testDb().user.findUnique({ where: { id: target.id } })).not.toBeNull();
+    });
+
+    it("преподавателя с выплатой стереть нельзя — выплата остаётся на месте", async () => {
+      const teacher = await createUser({ role: "TEACHER", isActive: false, deletedAt: new Date() });
+      const payout = await testDb().teacherPayout.create({
+        data: { amount: 50000, paidAt: new Date(), teacherId: teacher.id, createdById: ids.ADMIN },
+      });
+
+      const res = await send("delete", `/users/${teacher.id}`, "ADMIN");
+      expect(res.status).toBe(409);
+      expect(res.body.message).toBe("userHasProtectedRecords");
+      expect(await testDb().teacherPayout.findUnique({ where: { id: payout.id } })).not.toBeNull();
+    });
   });
 
   describe("регрессия аудита 2.1: деактивация действует сразу", () => {

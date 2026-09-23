@@ -239,6 +239,27 @@ describe("заявки на курсы, копирование и Корзина
       expect((log?.metadata as { hardDelete?: boolean })?.hardDelete).toBe(true);
     });
 
+    // Регрессия: Payment/TeacherSalaryAccrual были на ON DELETE CASCADE —
+    // окончательное удаление курса стирало историю оплат и начислений зарплаты
+    it("курс с оплатой насовсем не стирается — оплата остаётся на месте", async () => {
+      const course = await testDb().course.create({
+        data: { slug: `money-${run}`, title: "С оплатой", teacherId: ids.TEACHER, deletedAt: new Date() },
+      });
+      const student = await createUser({ role: "STUDENT" });
+      const payment = await testDb().payment.create({
+        data: { amount: 100000, paidAt: new Date(), studentId: student.id, courseId: course.id, createdById: ids.ADMIN },
+      });
+
+      const res = await http()
+        .delete(`/api/v2/trash/courses/${course.id}`)
+        .set("Cookie", cookies.ADMIN)
+        .set("Origin", TEST_APP_URL);
+      expect(res.status).toBe(409);
+      expect(res.body.message).toBe("courseHasMoneyHistory");
+      expect(await testDb().course.findUnique({ where: { id: course.id } })).not.toBeNull();
+      expect(await testDb().payment.findUnique({ where: { id: payment.id } })).not.toBeNull();
+    });
+
     it("урок удалённого курса восстановить нельзя — сначала курс", async () => {
       const course = await testDb().course.create({
         data: { slug: `lc-${run}`, title: "Курс в корзине", teacherId: ids.TEACHER, deletedAt: new Date() },

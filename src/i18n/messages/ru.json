@@ -927,6 +927,7 @@
     "restoreError": "Ошибка восстановления",
     "deletedPermanently": "Удалено навсегда",
     "deleteError": "Ошибка удаления",
+    "deleteBlockedByMoneyHistory": "Нельзя удалить: по курсу есть оплаты или начисления зарплаты",
     "noDeletedItems": "Нет удалённых записей",
     "deletePermanently": "Удалить навсегда",
     "deletePermanentlyConfirm": "Удалить навсегда?",

@@ -78,6 +78,18 @@ export function TrashTable({ items, type }: TrashTableProps) {
     });
   };
 
+  // Причина отказа приходит кодом от api — переводим здесь, как в
+  // deactivated-user-list.tsx для purge, иначе пользователь увидит
+  // непереведённый код вместо сообщения
+  const hardDeleteErrorMessage = (code?: string) => {
+    switch (code) {
+      case "courseHasMoneyHistory":
+        return t("deleteBlockedByMoneyHistory");
+      default:
+        return t("deleteError");
+    }
+  };
+
   const handleHardDelete = (id: string) => {
     startTransition(async () => {
       const result = await onHardDelete(id);
@@ -85,7 +97,7 @@ export function TrashTable({ items, type }: TrashTableProps) {
         setLocalItems((prev) => prev.filter((item) => item.id !== id));
         toast({ title: t("deletedPermanently") });
       } else {
-        toast({ title: result.error ?? t("deleteError"), variant: "destructive" });
+        toast({ title: hardDeleteErrorMessage(result.error), variant: "destructive" });
       }
     });
   };
