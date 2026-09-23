@@ -1933,5 +1933,33 @@
       "m11": "Noyabr",
       "m12": "Dekabr"
     }
+  },
+  "dashboardTeacher": {
+    "scheduleTitle": "Dars jadvali",
+    "tabToday": "Bugun",
+    "tabWeek": "Hafta",
+    "tabMonth": "Oy",
+    "markedOf": "{total} tadan {marked} tasi belgilandi",
+    "noLessonsToday": "Bugun darslar yo'q",
+    "noLessonsWeek": "Bu hafta darslar yo'q",
+    "noLessonsMonth": "Bu oyda darslar yo'q",
+    "marked": "Belgilandi",
+    "notMarked": "Belgilanmagan",
+    "makeup": "O'rniga o'tilgan dars",
+    "openJournal": "Jurnalni ochish",
+    "unmarkedTitle": "Oy davomida belgilanmagan darslar",
+    "unmarkedHint": "Oylik jurnal to'liq belgilanmaguncha, almashtirishlar ish haqiga hisobga olinmaydi",
+    "mySalary": "Bu oy uchun mening ish haqim",
+    "paidToDate": "To'langan",
+    "debtToDate": "Markaz qarzi",
+    "weekdays": {
+      "d1": "Dushanba",
+      "d2": "Seshanba",
+      "d3": "Chorshanba",
+      "d4": "Payshanba",
+      "d5": "Juma",
+      "d6": "Shanba",
+      "d7": "Yakshanba"
+    }
   }
 }

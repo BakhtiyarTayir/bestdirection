@@ -88,6 +88,19 @@ export function currentMonthKey(now: Date = new Date()): string {
   return monthKey(new Date(now.getTime() + SCHOOL_UTC_OFFSET_HOURS * 3_600_000));
 }
 
+/**
+ * Сегодняшняя дата по местному времени школы, в виде "YYYY-MM-DD" — тот же
+ * сдвиг, что в currentMonthKey, и по той же причине: «сегодня» дашборда
+ * считается по Ташкенту, а не по UTC, который до 05:00 ещё показывает вчера.
+ */
+export function currentDateKey(now: Date = new Date()): string {
+  const shifted = new Date(now.getTime() + SCHOOL_UTC_OFFSET_HOURS * 3_600_000);
+  const year = shifted.getUTCFullYear();
+  const month = String(shifted.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(shifted.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 /** Первый день месяца, полдень UTC */
 export function monthStart(month: string): Date {
   const [year, monthNumber] = month.split("-").map(Number);
