@@ -30,6 +30,7 @@ import {
   Inbox,
   Megaphone,
   Wallet,
+  PiggyBank,
   TriangleAlert,
   Building2,
 } from "lucide-react";
@@ -102,6 +103,7 @@ const navItems: NavItem[] = [
   { href: "/payments", labelKey: "payments", icon: Wallet, roles: ["ADMIN"], exact: true },
   { href: "/payments/debtors", labelKey: "debtors", icon: TriangleAlert, roles: ["ADMIN"], badge: "debtors" },
   { href: "/salaries", labelKey: "salaries", icon: Wallet, roles: ["ADMIN"] },
+  { href: "/finance", labelKey: "finance", icon: PiggyBank, roles: ["ADMIN"] },
   { href: "/admin/compare", labelKey: "compare", icon: GitCompare, roles: ["ADMIN"] },
   { href: "/admin/branches", labelKey: "branches", icon: Building2, roles: ["ADMIN"] },
   { href: "/admin/leads", labelKey: "leads", icon: Inbox, roles: ["ADMIN"] },

@@ -133,7 +133,8 @@
     "students": "Talabalar",
     "branches": "Filiallar",
     "salaries": "Ish haqi",
-    "mySalary": "Mening ish haqim"
+    "mySalary": "Mening ish haqim",
+    "finance": "Moliya"
   },
   "weekdays": {
     "mon": "Du",
@@ -1889,5 +1890,32 @@
     "recalcDescription": "Baza va o'quvchilar soni o'quvchilarning joriy hisoblariga qarab qayta hisoblanadi. Stavka oy yopilganda qanday qotgan bo'lsa, shunday qoladi — qayta hisoblash uni o'zgartirmaydi.",
     "recalcDone": "Oy qayta hisoblandi",
     "recalcNoChange": "Qayta hisoblash hech narsani o'zgartirmadi"
+  },
+  "finance": {
+    "title": "Moliya",
+    "subtitle": "O'qituvchilar ish haqidan keyin o'quv markaz qancha ishlab topdi",
+    "loadError": "Hisobotni yuklab bo'lmadi",
+    "filterMonth": "Oy",
+    "filterBranch": "Filial",
+    "allBranches": "Barcha filiallar",
+    "cashTitle": "Kassa bo'yicha",
+    "cashHint": "Haqiqiy pul: shu oyda qabul qilingan to'lovlar minus shu oyda berilgan ish haqi",
+    "accrualTitle": "Hisoblangan bo'yicha",
+    "accrualHint": "Hamma o'z vaqtida to'laganda: oy uchun talabalarga hisoblangan summa minus shu oy ish haqi",
+    "received": "Qabul qilingan to'lovlar",
+    "paidOut": "O'qituvchilarga berilgan",
+    "charged": "Talabalarga hisoblangan",
+    "salaryAccrued": "Hisoblangan ish haqi",
+    "profit": "Foyda",
+    "branchNote": "Filial bo'yicha: to'lov berilgan paytdagi o'qituvchi filialiga yoziladi, shuning uchun filiallar bo'yicha taqsimot taxminiy. Aniq jami — filtrsiz.",
+    "teachersTitle": "O'qituvchilar: {month}",
+    "teachersEmpty": "Bu oyda o'qituvchilarga hisoblangan yoki berilgan ish haqi yo'q",
+    "colTeacher": "O'qituvchi",
+    "colAccrued": "Oy uchun hisoblangan",
+    "colPaidOut": "Oyda berilgan",
+    "historyTitle": "Oylar bo'yicha",
+    "colMonth": "Oy",
+    "colCashProfit": "Kassa bo'yicha foyda",
+    "colAccrualProfit": "Hisoblangan bo'yicha foyda"
   }
 }

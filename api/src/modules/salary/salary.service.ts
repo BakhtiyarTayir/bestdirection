@@ -612,6 +612,25 @@ export class SalaryService {
   }
 
   /**
+   * Начисленная зарплата по месяцам и преподавателям — для отчёта «Финансы».
+   * Тот же расчёт, что в сводке (unitSchedule: закрытые месяцы из реестра,
+   * открытый — по формуле), только без выплат и без свёртки в одну строку
+   * на преподавателя: отчёту нужны суммы за каждый месяц.
+   */
+  async accrualsByMonth(filters: { branchId?: string }, upToMonth: string) {
+    const units = await this.loadUnits({ branchId: filters.branchId });
+    const schedules = await Promise.all(units.map((unit) => this.unitSchedule(unit, upToMonth)));
+
+    const rows: { teacherId: string; teacherName: string; month: string; amount: number }[] = [];
+    units.forEach((unit, index) => {
+      for (const item of schedules[index].months) {
+        rows.push({ teacherId: unit.teacherId, teacherName: unit.teacherName, month: item.month, amount: item.accrual.amount });
+      }
+    });
+    return rows;
+  }
+
+  /**
    * Сводка по всем преподавателям за месяц — GET /salary. TEACHER видит
    * только себя (сужение по id, как в TeacherAttendanceService.report).
    */
