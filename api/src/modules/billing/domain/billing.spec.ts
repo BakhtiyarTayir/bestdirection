@@ -283,6 +283,18 @@ check(
   true
 );
 
+// ── сегодняшняя дата по Ташкенту (для дашборда ученика/родителя) ──
+check(
+  "после 19:00 UTC в Ташкенте уже следующий день",
+  currentDateKey(new Date("2026-09-30T19:30:00Z")),
+  "2026-10-01"
+);
+check(
+  "до 19:00 UTC в Ташкенте ещё тот же день",
+  currentDateKey(new Date("2026-09-30T18:59:00Z")),
+  "2026-09-30"
+);
+
 const computed: MonthCharge[] = [
   { month: "2026-09", charge: { amount: 650000, basis: "full", unitsTotal: 1, unitsBilled: 1 } },
   { month: "2026-10", charge: { amount: 650000, basis: "full", unitsTotal: 1, unitsBilled: 1 } },

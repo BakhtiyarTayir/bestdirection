@@ -1992,5 +1992,24 @@
       "d6": "Shanba",
       "d7": "Yakshanba"
     }
+  },
+  "dashboardStudent": {
+    "title": "Mening panelim",
+    "parentTitle": "Ota-ona paneli",
+    "noChildren": "Administrator hali farzandlaringizni biriktirmagan",
+    "balanceTitle": "Balans",
+    "balanceDebt": "qarz {amount}",
+    "balanceAdvance": "avans {amount}",
+    "balanceZero": "Qarz yo‘q",
+    "prepaidFuture": "Kelgusi oylar uchun avans: {amount}",
+    "perMonth": "oyiga",
+    "noCourses": "Hozircha pullik kurslar yo‘q",
+    "nextLessonsTitle": "Yaqin dars",
+    "noNextLessons": "Jadval bo‘yicha yaqin darslar topilmadi",
+    "homeworksTitle": "Muddatli topshiriqlar",
+    "noHomeworks": "Muddati o‘tmagan topshirilmagan vazifalar yo‘q",
+    "dueDate": "muddati {date} gacha",
+    "myCourses": "Mening kurslarim",
+    "testsPassed": "O‘tilgan testlar"
   }
 }
