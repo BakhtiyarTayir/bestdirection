@@ -2,6 +2,7 @@ import { requireRole } from "@/lib/auth-guard";
 import { getTranslations } from "next-intl/server";
 import { getStudentsOverview } from "@/lib/api/billing.server";
 import { getBranches } from "@/lib/api/branches.server";
+import { getTeacherOptions } from "@/lib/api/groups.server";
 import {
   Table,
   TableHead,
@@ -9,6 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { BranchFilter } from "@/components/branch-filter";
+import { TeacherFilter } from "@/components/teacher-filter";
 import { StudentList, type StudentListRow } from "./student-list";
 
 export const dynamic = "force-dynamic";
@@ -25,10 +27,16 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
 
   const params = await searchParams;
   const branchId = typeof params.branchId === "string" && params.branchId ? params.branchId : undefined;
+  const teacherId = typeof params.teacherId === "string" && params.teacherId ? params.teacherId : undefined;
 
-  const [result, branchesResult] = await Promise.all([getStudentsOverview(branchId), getBranches()]);
+  const [result, branchesResult, teachersResult] = await Promise.all([
+    getStudentsOverview(branchId, teacherId),
+    getBranches(),
+    getTeacherOptions(),
+  ]);
   const students = (result.success && result.data ? result.data : []) as StudentListRow[];
   const branches = branchesResult.success && branchesResult.data ? branchesResult.data : [];
+  const teachers = teachersResult.success && teachersResult.data ? teachersResult.data : [];
 
   return (
     <div>
@@ -37,8 +45,9 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
         <p className="mt-1 text-muted-foreground">{t("subtitle")}</p>
       </div>
 
-      <div className="mb-4">
+      <div className="mb-4 flex flex-wrap items-end gap-3">
         <BranchFilter branchId={branchId} branches={branches} namespace="students" />
+        <TeacherFilter teacherId={teacherId} teachers={teachers} namespace="students" />
       </div>
 
       {students.length === 0 ? (

@@ -3,7 +3,13 @@ import { AuditService } from "../../common/audit/audit.service";
 import type { SessionUser } from "../../common/auth/session-user";
 import { toNoonUtc } from "../../common/date-only";
 import { PrismaService } from "../../common/prisma/prisma.service";
-import { BillingLedgerService, type LedgerFilters } from "./billing-ledger.service";
+import type { Prisma } from "../../../generated/prisma";
+import {
+  activeEnrollmentFilter,
+  BillingLedgerService,
+  enrollmentTeacherFilter,
+  type LedgerFilters,
+} from "./billing-ledger.service";
 import {
   billingStart,
   chargeForMonth,
@@ -374,16 +380,25 @@ export class BillingService {
    * Список всех студентов с балансом на текущий месяц. Нужен как вход в
    * карточку: список должников показывает только должников.
    */
-  async studentsOverview(branchId?: string) {
+  async studentsOverview(branchId?: string, teacherId?: string) {
+    // Ученик может ходить на курсы в разных филиалах — фильтр смотрит на его
+    // группы, а не на «основной» branchId (ловушка 3.8.5 плана филиалов).
+    // Баланс ниже при этом считаем по ВСЕМ его курсам: фильтр решает, кто
+    // попал в список, а не что показать про него. Оба фильтра — к ОДНОЙ
+    // записи: «учится у этого педагога в этом филиале», а не «где-то в
+    // филиале и где-то у педагога».
+    const enrollmentConditions: Prisma.EnrollmentWhereInput[] = [
+      ...(branchId ? [{ group: { is: { branchId } } }] : []),
+      // Педагог — та же лестница, что у должников и оплат (группа → курс).
+      // Только нынешние ученики: отчисленный у педагога уже не учится
+      ...(teacherId ? [enrollmentTeacherFilter(teacherId), activeEnrollmentFilter()] : []),
+    ];
+
     const [students, rows] = await Promise.all([
       this.prisma.user.findMany({
         where: {
           role: "STUDENT",
-          // Ученик может ходить на курсы в разных филиалах — фильтр смотрит
-          // на его группы, а не на «основной» branchId (ловушка 3.8.5 плана
-          // филиалов). Баланс ниже при этом считаем по ВСЕМ его курсам:
-          // фильтр решает, кто попал в список, а не что показать про него.
-          ...(branchId ? { enrollments: { some: { group: { is: { branchId } } } } } : {}),
+          ...(enrollmentConditions.length > 0 ? { enrollments: { some: { AND: enrollmentConditions } } } : {}),
         },
         orderBy: [{ isActive: "desc" }, { lastName: "asc" }, { firstName: "asc" }],
         select: {

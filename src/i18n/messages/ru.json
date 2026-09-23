@@ -1809,7 +1809,9 @@
     "openCard": "Карточка",
     "branch": "Филиал",
     "filterBranch": "Филиал",
-    "allBranches": "Все филиалы"
+    "allBranches": "Все филиалы",
+    "filterTeacher": "Преподаватель",
+    "allTeachers": "Все преподаватели"
   },
   "branches": {
     "title": "Филиалы",

@@ -40,7 +40,7 @@ export class BillingController {
   @CheckPolicies(adminOnly)
   @Get("students")
   studentsOverview(@Query() query: StudentsQueryDto) {
-    return this.billing.studentsOverview(query.branchId);
+    return this.billing.studentsOverview(query.branchId, query.teacherId);
   }
 
   @CheckPolicies(adminOnly)

@@ -1809,7 +1809,9 @@
     "openCard": "Karta",
     "branch": "Filial",
     "filterBranch": "Filial",
-    "allBranches": "Barcha filiallar"
+    "allBranches": "Barcha filiallar",
+    "filterTeacher": "O'qituvchi",
+    "allTeachers": "Barcha o'qituvchilar"
   },
   "branches": {
     "title": "Filiallar",

@@ -524,6 +524,26 @@ describe("модуль billing", () => {
       expect(enrollmentIds).not.toContain(ownIds.enrollmentG1);
     });
 
+    it("ученики: teacherId=B — только ученик G1, teacherId=A — только G2", async () => {
+      const byB = await get(`/billing/students?teacherId=${ownIds.teacherB}`, "ADMIN");
+      expect(byB.status).toBe(200);
+      const idsB = byB.body.map((s: { id: string }) => s.id);
+      expect(idsB).toContain(ownIds.studentG1);
+      expect(idsB).not.toContain(ownIds.studentG2);
+
+      const byA = await get(`/billing/students?teacherId=${ownIds.teacherA}`, "ADMIN");
+      const idsA = byA.body.map((s: { id: string }) => s.id);
+      expect(idsA).toContain(ownIds.studentG2);
+      expect(idsA).not.toContain(ownIds.studentG1);
+
+      // Педагог и филиал — к одной записи: у B в филиале G2 учеников нет
+      const bothFilters = await get(
+        `/billing/students?teacherId=${ownIds.teacherB}&branchId=${ownIds.branch2}`,
+        "ADMIN"
+      );
+      expect(bothFilters.body.map((s: { id: string }) => s.id)).not.toContain(ownIds.studentG1);
+    });
+
     it("должники: teacherId=B вместе с branchId другого филиала — пусто (оба фильтра применились)", async () => {
       const res = await get(
         `/billing/debtors?teacherId=${ownIds.teacherB}&branchId=${ownIds.branch2}`,
