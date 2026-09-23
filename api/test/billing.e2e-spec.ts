@@ -422,4 +422,135 @@ describe("модуль billing", () => {
       await send("delete", `/billing/payments/${res.body.id}`, "ADMIN");
     });
   });
+
+  // Фильтр «Преподаватель» в должниках и оплатах — та же лестница, что
+  // в attendance-access.ts и salary.service.ts: педагог группы, а если у
+  // группы педагог не задан или группы нет — педагог курса.
+  describe("фильтр по преподавателю", () => {
+    const ownIds: Record<string, string> = {};
+
+    beforeAll(async () => {
+      const teacherA = await createUser({ role: "TEACHER" });
+      const teacherB = await createUser({ role: "TEACHER" });
+      ownIds.teacherA = teacherA.id;
+      ownIds.teacherB = teacherB.id;
+
+      // Курс ведёт A — эта запись работает лестницей для G2, у которой
+      // своего педагога нет
+      const course = await testDb().course.create({
+        data: { slug: `billing-teacher-filter-${run}`, title: "Курс с фильтром по педагогу", teacherId: teacherA.id },
+      });
+      ownIds.course = course.id;
+
+      const branch1 = await createBranch(`Педагог-1-${run}`);
+      const branch2 = await createBranch(`Педагог-2-${run}`);
+      ownIds.branch1 = branch1.id;
+      ownIds.branch2 = branch2.id;
+
+      // G1 ведёт B — её долг должен находиться по teacherId=B, а не A
+      const group1 = await testDb().group.create({
+        data: {
+          name: `TF-G1-${run}`,
+          courseId: course.id,
+          branchId: branch1.id,
+          teacherId: teacherB.id,
+          scheduleDays: [1, 3, 5],
+          price: 500000,
+        },
+      });
+      // G2 без своего педагога — ученик находится по лестнице через teacherId=A
+      const group2 = await testDb().group.create({
+        data: {
+          name: `TF-G2-${run}`,
+          courseId: course.id,
+          branchId: branch2.id,
+          teacherId: null,
+          scheduleDays: [1, 3, 5],
+          price: 500000,
+        },
+      });
+      ownIds.group1 = group1.id;
+      ownIds.group2 = group2.id;
+
+      const studentG1 = await createUser({ role: "STUDENT" });
+      const studentG2 = await createUser({ role: "STUDENT" });
+      ownIds.studentG1 = studentG1.id;
+      ownIds.studentG2 = studentG2.id;
+
+      const startsAt = new Date(`${addMonths(current, -3)}-01T12:00:00.000Z`);
+      const enrollmentG1 = await testDb().enrollment.create({
+        data: { studentId: studentG1.id, courseId: course.id, groupId: group1.id, startsAt },
+      });
+      const enrollmentG2 = await testDb().enrollment.create({
+        data: { studentId: studentG2.id, courseId: course.id, groupId: group2.id, startsAt },
+      });
+      ownIds.enrollmentG1 = enrollmentG1.id;
+      ownIds.enrollmentG2 = enrollmentG2.id;
+
+      // Оплата — со снимком группы её группы (не текущей группы ученика)
+      const paymentG1 = await send("post", "/billing/payments", "ADMIN", {
+        studentId: studentG1.id,
+        courseId: course.id,
+        groupId: group1.id,
+        amount: 300000,
+        method: "CASH",
+        paidAt: `${current}-05`,
+      });
+      const paymentG2 = await send("post", "/billing/payments", "ADMIN", {
+        studentId: studentG2.id,
+        courseId: course.id,
+        groupId: group2.id,
+        amount: 400000,
+        method: "CASH",
+        paidAt: `${current}-05`,
+      });
+      ownIds.paymentG1 = paymentG1.body.id;
+      ownIds.paymentG2 = paymentG2.body.id;
+    });
+
+    it("должники: teacherId=B — только ученик G1 (педагог группы)", async () => {
+      const res = await get(`/billing/debtors?teacherId=${ownIds.teacherB}`, "ADMIN");
+      expect(res.status).toBe(200);
+      const enrollmentIds = res.body.debtors.map((row: { enrollmentId: string }) => row.enrollmentId);
+      expect(enrollmentIds).toContain(ownIds.enrollmentG1);
+      expect(enrollmentIds).not.toContain(ownIds.enrollmentG2);
+    });
+
+    it("должники: teacherId=A — только ученик G2 (педагог курса по лестнице)", async () => {
+      const res = await get(`/billing/debtors?teacherId=${ownIds.teacherA}`, "ADMIN");
+      expect(res.status).toBe(200);
+      const enrollmentIds = res.body.debtors.map((row: { enrollmentId: string }) => row.enrollmentId);
+      expect(enrollmentIds).toContain(ownIds.enrollmentG2);
+      expect(enrollmentIds).not.toContain(ownIds.enrollmentG1);
+    });
+
+    it("должники: teacherId=B вместе с branchId другого филиала — пусто (оба фильтра применились)", async () => {
+      const res = await get(
+        `/billing/debtors?teacherId=${ownIds.teacherB}&branchId=${ownIds.branch2}`,
+        "ADMIN"
+      );
+      expect(res.status).toBe(200);
+      const enrollmentIds = res.body.debtors.map((row: { enrollmentId: string }) => row.enrollmentId);
+      expect(enrollmentIds).not.toContain(ownIds.enrollmentG1);
+      expect(enrollmentIds).not.toContain(ownIds.enrollmentG2);
+    });
+
+    it("оплаты: teacherId=B — только оплата G1, total равен её сумме", async () => {
+      const res = await get(`/billing/payments?teacherId=${ownIds.teacherB}`, "ADMIN");
+      expect(res.status).toBe(200);
+      const paymentIds = res.body.payments.map((p: { id: string }) => p.id);
+      expect(paymentIds).toContain(ownIds.paymentG1);
+      expect(paymentIds).not.toContain(ownIds.paymentG2);
+      expect(res.body.total).toBe(300000);
+    });
+
+    it("оплаты: teacherId=A — только оплата G2 (педагог курса по лестнице)", async () => {
+      const res = await get(`/billing/payments?teacherId=${ownIds.teacherA}`, "ADMIN");
+      expect(res.status).toBe(200);
+      const paymentIds = res.body.payments.map((p: { id: string }) => p.id);
+      expect(paymentIds).toContain(ownIds.paymentG2);
+      expect(paymentIds).not.toContain(ownIds.paymentG1);
+      expect(res.body.total).toBe(400000);
+    });
+  });
 });

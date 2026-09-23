@@ -1601,7 +1601,9 @@
       "TRANSFER": "O'tkazma"
     },
     "filterBranch": "Filial",
-    "allBranches": "Barcha filiallar"
+    "allBranches": "Barcha filiallar",
+    "filterTeacher": "O'qituvchi",
+    "allTeachers": "Barcha o'qituvchilar"
   },
   "debtors": {
     "title": "Qarzdorlar",
@@ -1654,6 +1656,8 @@
     "closedMonthsNote": "O'tgan oylar yopilgan va qayta hisoblanmaydi: bu o'zgarishlar joriy oydan boshlab amal qiladi. Yopilgan oyni talaba kartochkasida qayta hisoblash mumkin.",
     "filterBranch": "Filial",
     "allBranches": "Barcha filiallar",
+    "filterTeacher": "O'qituvchi",
+    "allTeachers": "Barcha o'qituvchilar",
     "writeInTelegram": "Telegramga yozish"
   },
   "parents": {

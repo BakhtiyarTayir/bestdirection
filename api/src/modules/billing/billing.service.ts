@@ -89,12 +89,19 @@ export class BillingService {
     });
   }
 
-  async debtors(params: { month?: string; courseId?: string; groupId?: string; branchId?: string }) {
+  async debtors(params: {
+    month?: string;
+    courseId?: string;
+    groupId?: string;
+    branchId?: string;
+    teacherId?: string;
+  }) {
     const month = params.month && isValidMonth(params.month) ? params.month : currentMonthKey();
     const rows = await this.computeBillingRows(month, {
       courseId: params.courseId,
       groupId: params.groupId,
       branchId: params.branchId,
+      teacherId: params.teacherId,
     });
 
     const debtors = rows.filter((row) => row.debt > 0).sort((a, b) => b.debt - a.debt);

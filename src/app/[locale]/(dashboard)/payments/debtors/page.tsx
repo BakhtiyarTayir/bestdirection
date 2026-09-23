@@ -2,6 +2,7 @@ import { requireRole } from "@/lib/auth-guard";
 import { getTranslations } from "next-intl/server";
 import { getDebtors, getPaymentFormOptions } from "@/lib/api/billing.server";
 import { getBranches } from "@/lib/api/branches.server";
+import { getTeacherOptions } from "@/lib/api/groups.server";
 import { DebtorsList } from "./debtors-list";
 
 export const dynamic = "force-dynamic";
@@ -20,10 +21,16 @@ export default async function DebtorsPage({
     return typeof value === "string" && value ? value : undefined;
   };
 
-  const [debtorsResult, optionsResult, branchesResult] = await Promise.all([
-    getDebtors({ month: single("month"), courseId: single("courseId"), branchId: single("branchId") }),
+  const [debtorsResult, optionsResult, branchesResult, teachersResult] = await Promise.all([
+    getDebtors({
+      month: single("month"),
+      courseId: single("courseId"),
+      branchId: single("branchId"),
+      teacherId: single("teacherId"),
+    }),
     getPaymentFormOptions(),
     getBranches(),
+    getTeacherOptions(),
   ]);
 
   const data = debtorsResult.success && debtorsResult.data ? debtorsResult.data : null;
@@ -34,6 +41,7 @@ export default async function DebtorsPage({
   const students =
     optionsResult.success && optionsResult.data ? optionsResult.data.students : [];
   const branches = branchesResult.success && branchesResult.data ? branchesResult.data : [];
+  const teachers = teachersResult.success && teachersResult.data ? teachersResult.data : [];
 
   return (
     <div>
@@ -54,6 +62,8 @@ export default async function DebtorsPage({
         courses={courses}
         branchId={single("branchId")}
         branches={branches}
+        teacherId={single("teacherId")}
+        teachers={teachers}
       />
     </div>
   );

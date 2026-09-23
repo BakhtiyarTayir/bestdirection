@@ -73,10 +73,17 @@ interface PaymentsListProps {
   payments: PaymentRow[];
   total: number;
   count: number;
-  filters: { month?: string; courseId?: string; method?: PaymentMethodValue; branchId?: string };
+  filters: {
+    month?: string;
+    courseId?: string;
+    method?: PaymentMethodValue;
+    branchId?: string;
+    teacherId?: string;
+  };
   students: PaymentStudentOption[];
   courses: { id: string; title: string }[];
   branches: { id: string; name: string }[];
+  teachers: { id: string; firstName: string; lastName: string }[];
 }
 
 /** Значение-заглушка для «все»: SelectItem не принимает пустую строку */
@@ -90,6 +97,7 @@ export function PaymentsList({
   students,
   courses,
   branches,
+  teachers,
 }: PaymentsListProps) {
   const t = useTranslations("payments");
   const tErrors = useTranslations("errors");
@@ -206,6 +214,28 @@ export function PaymentsList({
                   {branches.map((branch) => (
                     <SelectItem key={branch.id} value={branch.id}>
                       {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {teachers.length > 0 && (
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">{t("filterTeacher")}</Label>
+              <Select
+                value={filters.teacherId ?? ALL}
+                onValueChange={(value) => setFilter("teacherId", value)}
+              >
+                <SelectTrigger className="w-56">
+                  <SelectValue placeholder={t("allTeachers")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ALL}>{t("allTeachers")}</SelectItem>
+                  {teachers.map((teacher) => (
+                    <SelectItem key={teacher.id} value={teacher.id}>
+                      {teacher.lastName} {teacher.firstName}
                     </SelectItem>
                   ))}
                 </SelectContent>

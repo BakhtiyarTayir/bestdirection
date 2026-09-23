@@ -42,6 +42,7 @@ export const paymentFiltersSchema = z.object({
   studentId: z.string().max(40).optional(),
   method: z.enum(paymentMethods).optional(),
   branchId: z.string().max(40).optional(),
+  teacherId: z.string().max(40).optional(),
 });
 
 export const debtorsQuerySchema = z.object({
@@ -52,6 +53,7 @@ export const debtorsQuerySchema = z.object({
   // ученик без группы при этом фильтре выпадает — это ожидаемо, счётчик
   // withoutGroup в ответе не даёт этому потеряться незаметно
   branchId: z.string().max(40).optional(),
+  teacherId: z.string().max(40).optional(),
 });
 
 export const monthQuerySchema = z.object({ month: monthString });

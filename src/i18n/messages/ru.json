@@ -1601,7 +1601,9 @@
       "TRANSFER": "Перечисление"
     },
     "filterBranch": "Филиал",
-    "allBranches": "Все филиалы"
+    "allBranches": "Все филиалы",
+    "filterTeacher": "Преподаватель",
+    "allTeachers": "Все преподаватели"
   },
   "debtors": {
     "title": "Должники",
@@ -1654,6 +1656,8 @@
     "closedMonthsNote": "Прошедшие месяцы закрыты и не пересчитываются: эти правки действуют с текущего месяца. Закрытый месяц можно пересчитать в карточке студента.",
     "filterBranch": "Филиал",
     "allBranches": "Все филиалы",
+    "filterTeacher": "Преподаватель",
+    "allTeachers": "Все преподаватели",
     "writeInTelegram": "Написать в Telegram"
   },
   "parents": {
