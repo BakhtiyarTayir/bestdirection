@@ -1916,6 +1916,20 @@
     "historyTitle": "Oylar bo'yicha",
     "colMonth": "Oy",
     "colCashProfit": "Kassa bo'yicha foyda",
-    "colAccrualProfit": "Hisoblangan bo'yicha foyda"
+    "colAccrualProfit": "Hisoblangan bo'yicha foyda",
+    "monthNames": {
+      "m1": "Yanvar",
+      "m2": "Fevral",
+      "m3": "Mart",
+      "m4": "Aprel",
+      "m5": "May",
+      "m6": "Iyun",
+      "m7": "Iyul",
+      "m8": "Avgust",
+      "m9": "Sentabr",
+      "m10": "Oktabr",
+      "m11": "Noyabr",
+      "m12": "Dekabr"
+    }
   }
 }

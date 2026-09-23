@@ -29,8 +29,13 @@ export function FinanceView({ data, branchId, branches }: FinanceViewProps) {
   const { page, totalPages, pageItems, setPage } = usePagination(data.teachers, `${data.month}|${branchId ?? ""}`);
 
   const money = new Intl.NumberFormat(intlLocale(locale));
-  const monthName = new Intl.DateTimeFormat(intlLocale(locale), { month: "long", year: "numeric", timeZone: "UTC" });
-  const formatMonth = (month: string) => monthName.format(new Date(`${month}-01T12:00:00.000Z`));
+  // Названия месяцев — из переводов, а не из Intl: в данных ICU браузера
+  // нет узбекского отдельного названия месяца, и «Sentabr 2026» выходило
+  // как «2026 M09»
+  const formatMonth = (month: string) => {
+    const [year, monthNumber] = month.split("-");
+    return `${t(`monthNames.m${Number(monthNumber)}`)} ${year}`;
+  };
   // Убыток — красным: иначе минус в длинной колонке цифр легко пропустить
   const profitClass = (value: number) => (value < 0 ? "text-destructive" : undefined);
 
@@ -187,7 +192,7 @@ export function FinanceView({ data, branchId, branches }: FinanceViewProps) {
             <TableBody>
               {data.months.map((row) => (
                 <TableRow key={row.month}>
-                  <TableCell className="whitespace-nowrap capitalize">{formatMonth(row.month)}</TableCell>
+                  <TableCell className="whitespace-nowrap">{formatMonth(row.month)}</TableCell>
                   <TableCell className="whitespace-nowrap text-right tabular-nums">{money.format(row.received)}</TableCell>
                   <TableCell className="whitespace-nowrap text-right tabular-nums">{money.format(row.paidOut)}</TableCell>
                   <TableCell className={cn("whitespace-nowrap text-right font-medium tabular-nums", profitClass(row.cashProfit))}>
