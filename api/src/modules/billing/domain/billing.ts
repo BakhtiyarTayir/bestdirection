@@ -88,6 +88,16 @@ export function currentMonthKey(now: Date = new Date()): string {
   return monthKey(new Date(now.getTime() + SCHOOL_UTC_OFFSET_HOURS * 3_600_000));
 }
 
+/**
+ * Сегодняшняя календарная дата по местному времени школы, "YYYY-MM-DD".
+ * Тот же сдвиг, что у currentMonthKey — нужна дашборду («Сегодня», «Требует
+ * внимания») и не должна расходиться с тем, как определяется текущий месяц.
+ */
+export function currentDateKey(now: Date = new Date()): string {
+  const shifted = new Date(now.getTime() + SCHOOL_UTC_OFFSET_HOURS * 3_600_000);
+  return shifted.toISOString().slice(0, 10);
+}
+
 /** Первый день месяца, полдень UTC */
 export function monthStart(month: string): Date {
   const [year, monthNumber] = month.split("-").map(Number);
