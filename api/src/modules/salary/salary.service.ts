@@ -791,6 +791,9 @@ export class SalaryService {
               // журнале группы за месяц, независимо от того, кто их вёл.
               // null — раскладка неприменима (курс без группы)
               sessionsMarked: marks?.sessionsMarked ?? null,
+              // Занятий по расписанию группы — для «отмечено N из M» и в
+              // запасном пути, где у самой строки lessonsPlanned пусто
+              lessonsScheduled: marks?.lessonsPlanned ?? null,
               // Раскладка недоступна — нет расписания или ни одной отметки
               // за месяц (4.5); у курса без группы это неприменимо, не пометка
               fallback: unit.groupId ? !marks || marks.fallback : false,

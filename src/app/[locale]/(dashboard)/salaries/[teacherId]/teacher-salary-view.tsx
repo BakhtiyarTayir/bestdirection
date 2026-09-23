@@ -184,7 +184,12 @@ export function TeacherSalaryView({
                               {row.fallback ? (
                                 <div className="flex items-start gap-1 text-xs text-amber-600">
                                   <TriangleAlert className="mt-0.5 h-3 w-3 shrink-0" />
-                                  <span>{t("lessonsNotMarked")}</span>
+                                  <span>
+                                    {t("lessonsNotMarked", {
+                                      marked: row.sessionsMarked ?? 0,
+                                      planned: row.lessonsScheduled ?? 0,
+                                    })}
+                                  </span>
                                 </div>
                               ) : (
                                 <div className="space-y-1">

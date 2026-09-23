@@ -1847,7 +1847,7 @@
     "unratedGroups": "{count, plural, other {# guruhda stavka yo'q}}",
     "fallbackGroups": "{count, plural, other {# guruhda darslar bo'yicha taqsimot yo'q}}",
     "colLessons": "Darslar",
-    "lessonsNotMarked": "Almashtirish bo'yicha taqsimot mavjud emas: oy davomida darslar jurnalda belgilanmagan, summa guruh o'qituvchisiga to'liq hisoblangan",
+    "lessonsNotMarked": "{planned} tadan {marked} tasi belgilangan: oylik jurnal to'liq emas, almashtirishlar hisobga olinmaydi, summa guruh o'qituvchisiga to'liq hisoblangan",
     "lessonsMarkedOf": "{planned} tadan {taught} tasi belgilangan",
     "makeup": "o'tkazib yuborilgan dars o'rniga",
     "accruedToDate": "{month} gacha hisoblangan",

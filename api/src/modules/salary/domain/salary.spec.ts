@@ -300,27 +300,44 @@ describe("computeMonthLessonMarks — когда раскладка вообще
     expect(marks.sessionsMarked).toBe(0);
   });
 
-  it("хотя бы одна запись есть — раскладка возможна, запасной путь не нужен", () => {
-    const marks = computeMonthLessonMarks(scheduleDays, from, to, [
-      { date: new Date("2026-09-02T00:00:00.000Z"), teacherStatus: "PRESENT", responsibleTeacherId: "t1" },
-    ]);
+  /** Все занятия месяца по расписанию — полный журнал */
+  const fullMonth = (status: (index: number) => string = () => "PRESENT") => {
+    const dates: Date[] = [];
+    for (let day = 1; day <= 30; day++) {
+      const date = new Date(Date.UTC(2026, 8, day));
+      const iso = date.getUTCDay() === 0 ? 7 : date.getUTCDay();
+      if (scheduleDays.includes(iso)) dates.push(date);
+    }
+    return dates.map((date, index) => ({ date, teacherStatus: status(index), responsibleTeacherId: "t1" }));
+  };
+
+  it("отмечено меньше занятий, чем по расписанию, — запасной путь (вариант А)", () => {
+    // Две отметки из тринадцати: раньше педагог получал 2/13 месяца
+    const marks = computeMonthLessonMarks(scheduleDays, from, to, fullMonth().slice(0, 2));
+    expect(marks.fallback).toBe(true);
+    expect(marks.sessionsMarked).toBe(2);
+    expect(marks.taughtByTeacher.size).toBe(0);
+  });
+
+  it("отмечены все занятия по расписанию — раскладка возможна", () => {
+    const marks = computeMonthLessonMarks(scheduleDays, from, to, fullMonth());
     expect(marks.fallback).toBe(false);
-    expect(marks.sessionsMarked).toBe(1);
+    expect(marks.sessionsMarked).toBe(marks.lessonsPlanned);
+    expect(marks.taughtByTeacher.get("t1")).toBe(marks.lessonsPlanned);
   });
 
   it("ABSENT не засчитывается никому, но и знаменатель (lessonsPlanned) не уменьшает (4.3)", () => {
-    const marks = computeMonthLessonMarks(scheduleDays, from, to, [
-      { date: new Date("2026-09-02T00:00:00.000Z"), teacherStatus: "ABSENT", responsibleTeacherId: "t1" },
-      { date: new Date("2026-09-04T00:00:00.000Z"), teacherStatus: "PRESENT", responsibleTeacherId: "t1" },
-    ]);
-    expect(marks.taughtByTeacher.get("t1")).toBe(1);
+    // ABSENT — это отметка: журнал за месяц полный, раскладка идёт
+    const marks = computeMonthLessonMarks(scheduleDays, from, to, fullMonth((index) => (index === 0 ? "ABSENT" : "PRESENT")));
+    expect(marks.fallback).toBe(false);
+    expect(marks.taughtByTeacher.get("t1")).toBe(marks.lessonsPlanned - 1);
     expect(marks.lessonsPlanned).toBe(countLessons(scheduleDays, from, to));
   });
 
   it("ведущий неизвестен (лестница не разрешилась) — занятие не засчитывается никому", () => {
-    const marks = computeMonthLessonMarks(scheduleDays, from, to, [
-      { date: new Date("2026-09-02T00:00:00.000Z"), teacherStatus: "PRESENT", responsibleTeacherId: null },
-    ]);
+    const sessions = fullMonth().map((session) => ({ ...session, responsibleTeacherId: null }));
+    const marks = computeMonthLessonMarks(scheduleDays, from, to, sessions);
+    expect(marks.fallback).toBe(false);
     expect(marks.taughtByTeacher.size).toBe(0);
     expect(marks.countedSessions).toHaveLength(0);
   });
