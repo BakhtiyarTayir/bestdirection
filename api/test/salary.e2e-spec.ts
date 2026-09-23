@@ -539,4 +539,124 @@ describe("модуль salary", () => {
       expect(subRowInOverview.base).toBe(mainRow.base);
     });
   });
+
+  // Правка «история зарплаты идёт за нынешним составом группы»: база
+  // закрытого месяца бралась по ученикам, которые в группе СЕЙЧАС, а
+  // заморозка шла по отдельным педагогам. Перевод ученика приносил его
+  // прошлые месяцы в базу новой группы (оплата дважды), смена педагога
+  // группы давала новому педагогу начисления за всю её историю.
+  describe("история зарплаты: перевод ученика и смена педагога группы", () => {
+    let courseId: string;
+    let groupOld: string;
+    let groupNew: string;
+    let studentId: string;
+    let thirdTeacher: string;
+
+    beforeAll(async () => {
+      const branch = await createBranch("История");
+      const course = await testDb().course.create({
+        data: { slug: `salary-history-${run}`, title: "Курс истории", teacherId: ids.TEACHER, price: 300_000 },
+      });
+      courseId = course.id;
+      const start = new Date(`${startMonth}-01T12:00:00.000Z`);
+      groupOld = (
+        await testDb().group.create({
+          data: { name: `Old-${run}`, courseId, branchId: branch.id, scheduleDays: [1, 3, 5], teacherId: ids.TEACHER, salaryPercentBp: 4000, startDate: start },
+        })
+      ).id;
+      // Новая группа: другой педагог, та же ставка — чтобы задвоение
+      // проявилось деньгами, а не нулём
+      groupNew = (
+        await testDb().group.create({
+          data: { name: `New-${run}`, courseId, branchId: branch.id, scheduleDays: [2, 4], teacherId: ids.otherTeacher, salaryPercentBp: 4000, startDate: start },
+        })
+      ).id;
+      const student = await createUser({ role: "STUDENT" });
+      studentId = student.id;
+      await testDb().enrollment.create({ data: { studentId, courseId, groupId: groupOld, startsAt: start } });
+      thirdTeacher = (await createUser({ role: "TEACHER" })).id;
+    });
+
+    it("переведённый ученик не попадает в закрытые месяцы новой группы", async () => {
+      await get(`/salary?month=${current}`, "ADMIN");
+      const res = await send("post", `/groups/${groupNew}/move-student`, "ADMIN", { studentId, courseId });
+      expect(res.status).toBe(201);
+      await get(`/salary?month=${current}`, "ADMIN");
+
+      const oldRows = await testDb().teacherSalaryAccrual.findMany({ where: { groupId: groupOld, month: prevMonth } });
+      expect(oldRows).toHaveLength(1);
+      expect(oldRows[0].base).toBe(300_000);
+      expect(oldRows[0].isOwner).toBe(true);
+
+      // Раньше здесь появлялась строка с той же базой — повторная оплата
+      const newRows = await testDb().teacherSalaryAccrual.findMany({ where: { groupId: groupNew, month: { lt: current } } });
+      expect(newRows).toHaveLength(0);
+
+      // Снимок группы в реестре начислений — прежняя группа
+      const charge = await testDb().monthlyCharge.findFirst({ where: { enrollment: { studentId, courseId }, month: prevMonth } });
+      expect(charge?.groupId).toBe(groupOld);
+    });
+
+    it("текущий месяц переведённого — уже в новой группе", async () => {
+      const res = await get(`/salary/${ids.otherTeacher}?month=${current}`, "ADMIN");
+      const group = res.body.groups.find((g: { groupId: string }) => g.groupId === groupNew);
+      const month = group.months.find((m: { month: string }) => m.month === current);
+      expect(month.base).toBeGreaterThan(0);
+    });
+
+    it("пересчёт закрытого месяца прежней группы не теряет переведённого", async () => {
+      const res = await send("post", `/salary/${ids.TEACHER}/recalc?month=${prevMonth}&groupId=${groupOld}`, "ADMIN");
+      expect(res.status).toBe(201);
+      expect(res.body.changed).toBe(false);
+      const row = await testDb().teacherSalaryAccrual.findFirst({ where: { groupId: groupOld, month: prevMonth } });
+      expect(row?.base).toBe(300_000);
+    });
+
+    it("новый педагог группы не получает её прошлые месяцы, прежний их не теряет", async () => {
+      const before = await testDb().teacherSalaryAccrual.findMany({ where: { groupId: groupOld } });
+      expect(before.length).toBeGreaterThan(0);
+
+      const res = await send("patch", `/groups/${groupOld}`, "ADMIN", { teacherId: thirdTeacher });
+      expect(res.status).toBe(200);
+      await get(`/salary?month=${current}`, "ADMIN");
+      await get(`/salary/${thirdTeacher}?month=${current}`, "ADMIN");
+
+      const stolen = await testDb().teacherSalaryAccrual.findMany({ where: { teacherId: thirdTeacher, groupId: groupOld } });
+      expect(stolen).toHaveLength(0);
+
+      // Прежний педагог по-прежнему видит закрытые месяцы этой группы
+      const detail = await get(`/salary/${ids.TEACHER}?month=${current}`, "ADMIN");
+      const group = detail.body.groups.find((g: { groupId: string }) => g.groupId === groupOld);
+      expect(group).toBeDefined();
+      const prev = group.months.find((m: { month: string }) => m.month === prevMonth);
+      expect(prev.amount).toBe(120_000);
+      expect(prev.locked).toBe(true);
+
+      // Пересчёт прежнему педагогу не обнуляет его месяц: владелец того
+      // месяца — он, а не нынешний педагог группы
+      const recalc = await send("post", `/salary/${ids.TEACHER}/recalc?month=${prevMonth}&groupId=${groupOld}`, "ADMIN");
+      expect(recalc.status).toBe(201);
+      expect(recalc.body.amount).toBe(120_000);
+    });
+
+    it("пересчёт курса без группы требует курс, если таких курсов несколько", async () => {
+      const start = new Date(`${startMonth}-01T12:00:00.000Z`);
+      const courseIds: string[] = [];
+      for (const suffix of ["a", "b"]) {
+        const course = await testDb().course.create({
+          data: { slug: `salary-nogroup-${suffix}-${run}`, title: `Без группы ${suffix}`, teacherId: thirdTeacher, price: 200_000 },
+        });
+        courseIds.push(course.id);
+        const student = await createUser({ role: "STUDENT" });
+        await testDb().enrollment.create({ data: { studentId: student.id, courseId: course.id, startsAt: start } });
+      }
+      await get(`/salary/${thirdTeacher}?month=${current}`, "ADMIN");
+
+      const ambiguous = await send("post", `/salary/${thirdTeacher}/recalc?month=${prevMonth}`, "ADMIN");
+      expect(ambiguous.status).toBe(400);
+
+      const exact = await send("post", `/salary/${thirdTeacher}/recalc?month=${prevMonth}&courseId=${courseIds[1]}`, "ADMIN");
+      expect(exact.status).toBe(201);
+    });
+  });
 });

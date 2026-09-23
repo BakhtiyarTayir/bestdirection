@@ -238,6 +238,11 @@ export class GroupsService {
     // И зарплату преподавателя группы — ДО удаления строки Group: после
     // delete() педагога и ставку группы взять будет неоткуда (план, 5.4)
     await this.salary.freezeClosedMonths({ groupId });
+    // И учеников курса без группы: строки зарплаты удалённой группы
+    // переходят к курсу без группы (SetNull), и закрытый месяц, в котором они
+    // есть, для новых строк уже закрыт — ученики без группы, ещё не
+    // замороженные к этому моменту, в нём бы потерялись
+    await this.salary.freezeClosedMonths({ groupId: null, courseId: group.courseId });
 
     // Записи на курс сохраняются, группа с них снимается
     await this.prisma.enrollment.updateMany({ where: { groupId }, data: { groupId: null } });

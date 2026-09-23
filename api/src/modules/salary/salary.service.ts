@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { AuditService } from "../../common/audit/audit.service";
 import type { SessionUser } from "../../common/auth/session-user";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import type { Prisma } from "../../../generated/prisma";
 import { BillingLedgerService, type LoadedEnrollment } from "../billing/billing-ledger.service";
 import {
   addMonths,
@@ -203,7 +204,49 @@ export class SalaryService {
       scheduleDays: [] as number[],
     }));
 
-    const raw = [...groupUnits, ...courseUnits].filter(
+    // Единицы из истории: у кого уже есть замороженные строки, даже если
+    // сейчас он группу не ведёт. Без этого смена педагога группы стирала
+    // прежнему педагогу его закрытые месяцы со страницы зарплаты и из
+    // сводки, хотя деньги за них он заработал. Педагог, ставка и расписание
+    // берутся текущие — они нужны только открытым месяцам, а открытый месяц
+    // бывшему педагогу достаётся лишь по отметкам в журнале.
+    const historicalRows = await this.prisma.teacherSalaryAccrual.findMany({
+      where: {
+        course: { deletedAt: null },
+        ...(filters.teacherId ? { teacherId: filters.teacherId } : {}),
+        ...(filters.courseId ? { courseId: filters.courseId } : {}),
+        ...(filters.branchId ? { branchId: filters.branchId } : {}),
+        ...(wantsUngroupedOnly ? { groupId: null } : {}),
+        ...(wantsSpecificGroup ? { groupId: filters.groupId as string } : {}),
+      },
+      distinct: ["teacherId", "courseId", "groupId"],
+      select: {
+        teacherId: true,
+        courseId: true,
+        groupId: true,
+        branchId: true,
+        course: { select: { title: true, teacherId: true } },
+        group: { select: { name: true, branchId: true, salaryPercentBp: true, teacherId: true, scheduleDays: true } },
+      },
+    });
+    const unitKey = (unit: { teacherId: string; courseId: string; groupId: string | null }) =>
+      `${unit.teacherId}|${unit.courseId}|${unit.groupId ?? ""}`;
+    const knownKeys = new Set([...groupUnits, ...courseUnits].map(unitKey));
+    const historicalUnits = historicalRows
+      .filter((row) => !knownKeys.has(unitKey(row)))
+      .map((row) => ({
+        teacherId: row.teacherId,
+        courseId: row.courseId,
+        courseTitle: row.course.title,
+        groupId: row.groupId,
+        groupName: row.group?.name ?? null,
+        branchId: row.group?.branchId ?? row.branchId,
+        groupPercentBp: row.group?.salaryPercentBp ?? null,
+        ownerTeacherId: row.group?.teacherId ?? row.course.teacherId,
+        scheduleDays: row.group?.scheduleDays ?? [],
+      }));
+
+    const raw = [...groupUnits, ...courseUnits, ...historicalUnits].filter(
       (unit) => !filters.teacherId || unit.teacherId === filters.teacherId
     );
     if (raw.length === 0) return [];
@@ -304,30 +347,169 @@ export class SalaryService {
   }
 
   /**
+   * База закрытых месяцев единицы — по СНИМКУ группы в MonthlyCharge, а не
+   * по нынешнему составу. Ученик, переведённый в октябре, в сентябре учился
+   * в прежней группе: его сентябрь принадлежит её базе, и в базу новой
+   * группы он попасть не должен, иначе его оплачивают дважды.
+   *
+   * Удалённые курсы и ученики отсеиваются так же, как в
+   * BillingLedgerService.loadBillableEnrollments.
+   */
+  private async snapshotBase(
+    unit: Pick<Unit, "courseId" | "groupId">,
+    month: Prisma.StringFilter | string
+  ): Promise<Map<string, { base: number; studentsCount: number }>> {
+    const rows = await this.prisma.monthlyCharge.findMany({
+      where: {
+        month,
+        lockedAt: { not: null },
+        groupId: unit.groupId,
+        enrollment: { courseId: unit.courseId, course: { deletedAt: null }, student: { deletedAt: null } },
+      },
+      select: { month: true, amount: true },
+    });
+
+    const totals = new Map<string, { base: number; studentsCount: number }>();
+    for (const row of rows) {
+      const entry = totals.get(row.month) ?? { base: 0, studentsCount: 0 };
+      entry.base += row.amount;
+      if (row.amount > 0) entry.studentsCount += 1;
+      totals.set(row.month, entry);
+    }
+    return totals;
+  }
+
+  /**
+   * Замораживает закрытые месяцы ГРУППЫ (или курса без группы) целиком —
+   * сразу все строки месяца: владельцу и каждому, кто вёл занятия.
+   *
+   * Месяц, у которого есть хоть одна строка, уже закрыт для всех: новые
+   * строки в него не добавляются. Именно это не даёт новому педагогу группы
+   * получить начисления за месяцы, которые вёл и уже получил прежний, — а
+   * раньше заморозка шла по единицам, и у нового педагога «своих» строк за
+   * прошлое не было, поэтому они создавались заново. Замена, отмеченная в
+   * журнале задним числом, тоже не заводит строку в закрытом месяце — это
+   * правка через явный пересчёт, как и любая другая.
+   *
+   * Параллельные вызовы безопасны: оба посчитают одинаковые строки, дубли
+   * отсечёт уникальный индекс со skipDuplicates.
+   */
+  private async freezeGroupClosedMonths(unit: Unit, upToMonth: string, now: Date): Promise<void> {
+    const lastClosedMonth = addMonths(monthKey(now), -1);
+    const limit = upToMonth < lastClosedMonth ? upToMonth : lastClosedMonth;
+
+    const totals = await this.snapshotBase(unit, { lte: limit });
+    // Месяц без денег зарплаты не даёт — строк за него не заводим
+    const candidates = [...totals.entries()].filter(([, entry]) => entry.base > 0).map(([month]) => month);
+    if (candidates.length === 0) return;
+
+    const sealed = await this.prisma.teacherSalaryAccrual.findMany({
+      where: { courseId: unit.courseId, groupId: unit.groupId, month: { in: candidates } },
+      select: { month: true },
+      distinct: ["month"],
+    });
+    const sealedMonths = new Set(sealed.map((row) => row.month));
+    const months = candidates.filter((month) => !sealedMonths.has(month));
+    if (months.length === 0) return;
+
+    const marksByMonth =
+      unit.groupId && unit.scheduleDays.length > 0
+        ? await this.loadLessonMarks(unit.groupId, unit.scheduleDays, unit.ownerTeacherId, months)
+        : new Map<string, MonthLessonMarks>();
+
+    const data: Prisma.TeacherSalaryAccrualCreateManyInput[] = [];
+    for (const month of months) {
+      const { base, studentsCount } = totals.get(month)!;
+      // Ставка группы ?? личная ставка ВЛАДЕЛЬЦА — одна на всех, кто вёл
+      const percentUsed = resolveSalaryPercentBp({
+        groupPercentBp: unit.groupPercentBp,
+        teacherPercentBp: unit.teacherPercentBp,
+      });
+      const potAmount = computeFormulaAmount(base, percentUsed);
+      const shared = {
+        courseId: unit.courseId,
+        groupId: unit.groupId,
+        branchId: unit.branchId,
+        month,
+        base,
+        studentsCount,
+        percentUsed,
+        lockedAt: now,
+      };
+
+      const marks = marksByMonth.get(month);
+      if (!marks || marks.fallback) {
+        // Запасной путь (4.5): отметок нет — вся сумма владельцу
+        data.push({
+          ...shared,
+          teacherId: unit.ownerTeacherId,
+          isOwner: true,
+          amount: potAmount,
+          lessonsPlanned: null,
+          lessonsTaught: null,
+        });
+        continue;
+      }
+
+      const shares = splitAccrualByTeacher(potAmount, marks.lessonsPlanned, marks.taughtByTeacher);
+      for (const share of shares) {
+        data.push({
+          ...shared,
+          teacherId: share.teacherId,
+          isOwner: share.teacherId === unit.ownerTeacherId,
+          amount: share.amount,
+          lessonsPlanned: marks.lessonsPlanned,
+          lessonsTaught: share.lessonsTaught,
+        });
+      }
+      // Владелец, не проведший в месяце ни одного занятия, всё равно
+      // получает строку с нулём — как и раньше: видно, что месяц его и
+      // что он пропущен, а не забыт
+      if (!shares.some((share) => share.teacherId === unit.ownerTeacherId)) {
+        data.push({
+          ...shared,
+          teacherId: unit.ownerTeacherId,
+          isOwner: true,
+          amount: 0,
+          lessonsPlanned: marks.lessonsPlanned,
+          lessonsTaught: 0,
+        });
+      }
+    }
+
+    await this.prisma.teacherSalaryAccrual.createMany({ data, skipDuplicates: true });
+  }
+
+  /**
    * Расписание начислений одной единицы по месяцам с учётом реестра
-   * TeacherSalaryAccrual — прямой аналог BillingLedgerService.resolveSchedules,
-   * только база агрегируется по всем ученикам единицы, а не по одной записи.
+   * TeacherSalaryAccrual.
+   *
+   * Закрытые месяцы — только из реестра: перед чтением группа замораживается
+   * целиком (freezeGroupClosedMonths) по снимку групп в MonthlyCharge.
+   * Открытые месяцы считаются формулой по нынешнему составу группы — для
+   * них нынешний состав и есть правильный.
    *
    * С этапа 3 сумма месяца может делиться между несколькими единицами одной
    * группы (владелец + замены, см. loadUnits) по числу проведённых занятий —
    * marksByMonth в возврате несёт «отмечено N из M» для интерфейса (этап 2),
    * отдельно от самих сумм.
-   *
-   * Закрытый месяц без строки фиксируется тут же (ленивая заморозка, как у
-   * начислений учеников): повторные и параллельные вызовы безопасны —
-   * уникальный индекс (teacherId, courseId, groupId, month) плюс частичный
-   * индекс для groupId IS NULL, оба плюс skipDuplicates.
    */
   private async unitSchedule(
     unit: Unit,
     upToMonth: string
   ): Promise<{ months: MonthAccrual[]; marksByMonth: Map<string, MonthLessonMarks> }> {
+    const now = new Date();
     const enrollments = await this.loadUnitEnrollments(unit);
+    // Сначала биллинг: закрытые месяцы нынешних учеников фиксируются вместе
+    // со снимком группы, и только потом по этому снимку считается зарплата
+    // (план зарплат, 5.6)
     const schedules = await this.ledger.resolveSchedules(enrollments, upToMonth);
+    await this.freezeGroupClosedMonths(unit, upToMonth, now);
 
     const monthTotals = new Map<string, { base: number; studentsCount: number }>();
     for (const enrollment of enrollments) {
       for (const item of schedules.get(enrollment.id) ?? []) {
+        if (isClosedMonth(item.month, now)) continue;
         const totals = monthTotals.get(item.month) ?? { base: 0, studentsCount: 0 };
         totals.base += item.charge.amount;
         // Считаются ученики, за которых в этом месяце что-то начислено —
@@ -337,16 +519,30 @@ export class SalaryService {
       }
     }
 
+    const storedRows = await this.prisma.teacherSalaryAccrual.findMany({
+      where: { teacherId: unit.teacherId, courseId: unit.courseId, groupId: unit.groupId, month: { lte: upToMonth } },
+      select: {
+        month: true,
+        base: true,
+        studentsCount: true,
+        percentUsed: true,
+        amount: true,
+        manualAmount: true,
+        lessonsPlanned: true,
+        lessonsTaught: true,
+      },
+    });
+
     // Раскладка по занятиям возможна только у группы с расписанием — у курса
     // без группы (scheduleDays: []) плана занятий нет, считать не на чем:
     // там всегда старая логика — вся сумма целиком владельцу (запасной путь)
-    const allMonths = [...monthTotals.keys()];
+    const allMonths = [...new Set([...monthTotals.keys(), ...storedRows.map((row) => row.month)])];
     const marksByMonth =
       unit.groupId && unit.scheduleDays.length > 0
         ? await this.loadLessonMarks(unit.groupId, unit.scheduleDays, unit.ownerTeacherId, allMonths)
         : new Map<string, MonthLessonMarks>();
 
-    const computed = allMonths
+    const computed = [...monthTotals.keys()]
       .map((month) => {
         const totals = monthTotals.get(month)!;
         const baseInput = {
@@ -388,44 +584,7 @@ export class SalaryService {
       })
       .filter((item): item is { month: string; input: NonNullable<typeof item>["input"] } => item !== null);
 
-    const storedRows = await this.prisma.teacherSalaryAccrual.findMany({
-      where: { teacherId: unit.teacherId, courseId: unit.courseId, groupId: unit.groupId, month: { lte: upToMonth } },
-      select: {
-        month: true,
-        base: true,
-        studentsCount: true,
-        percentUsed: true,
-        amount: true,
-        manualAmount: true,
-        lessonsPlanned: true,
-        lessonsTaught: true,
-      },
-    });
-
-    const now = new Date();
     const months = mergeAccrualMonths(computed, storedRows, now);
-
-    const toFreeze = months
-      .filter((item) => !item.locked && isClosedMonth(item.month, now))
-      .map((item) => ({
-        teacherId: unit.teacherId,
-        courseId: unit.courseId,
-        groupId: unit.groupId,
-        branchId: unit.branchId,
-        month: item.month,
-        base: item.accrual.base,
-        percentUsed: item.accrual.percentUsed,
-        amount: item.accrual.amount,
-        studentsCount: item.accrual.studentsCount,
-        lessonsPlanned: item.accrual.lessonsPlanned,
-        lessonsTaught: item.accrual.lessonsTaught,
-        lockedAt: now,
-      }));
-
-    if (toFreeze.length > 0) {
-      await this.prisma.teacherSalaryAccrual.createMany({ data: toFreeze, skipDuplicates: true });
-    }
-
     return { months, marksByMonth };
   }
 
@@ -721,16 +880,21 @@ export class SalaryService {
    * начисления могли измениться — например, пересчётом billing.recalculateMonth).
    *
    * Ставка, по которой считали (percentUsed), берётся ЗАФИКСИРОВАННАЯ, а не
-   * текущая — ровно как priceUsed в billing.service.ts:446. Пересчёт
-   * исправляет базу, но не переписывает ставку задним числом: иначе кнопка
-   * стала бы обходом самой заморозки.
+   * текущая — ровно как priceUsed в billing.service.ts. Пересчёт исправляет
+   * базу, но не переписывает ставку задним числом: иначе кнопка стала бы
+   * обходом самой заморозки. Единственное исключение — месяц, замороженный
+   * вовсе без ставки (см. ниже).
    */
   async recalculateMonth(teacherId: string, query: RecalcQueryDto, actor: SessionUser) {
-    const { month, groupId } = query;
+    const { month, groupId, courseId } = query;
     if (!isValidMonth(month) || !isClosedMonth(month)) throw new BadRequestException("monthNotClosed");
 
     const resolvedGroupId = groupId ?? null;
-    const units = await this.loadUnits({ teacherId, groupId: resolvedGroupId });
+    const units = await this.loadUnits({ teacherId, groupId: resolvedGroupId, courseId });
+    // Без группы единица определяется курсом: у педагога может быть
+    // несколько курсов с учениками без группы, и первый попавшийся — это
+    // пересчёт чужого курса
+    if (units.length > 1) throw new BadRequestException("courseRequired");
     const unit = units[0];
     if (!unit) throw new NotFoundException("unitNotFound");
 
@@ -739,30 +903,52 @@ export class SalaryService {
     });
     if (!stored) throw new NotFoundException("accrualNotFound");
 
+    // Биллинг нынешних учеников — до чтения снимка, как и в unitSchedule
     const enrollments = await this.loadUnitEnrollments(unit);
-    const schedules = await this.ledger.resolveSchedules(enrollments, month);
+    await this.ledger.resolveSchedules(enrollments, month);
+    // База — по снимку группы в MonthlyCharge: ученики, которые были в
+    // группе в том месяце, включая переведённых с тех пор, и никто из
+    // пришедших позже
+    const { base, studentsCount } = (await this.snapshotBase(unit, month)).get(month) ?? { base: 0, studentsCount: 0 };
 
-    let base = 0;
-    let studentsCount = 0;
-    for (const enrollment of enrollments) {
-      const charge = (schedules.get(enrollment.id) ?? []).find((item) => item.month === month)?.charge;
-      if (!charge) continue;
-      base += charge.amount;
-      if (charge.amount > 0) studentsCount += 1;
+    // Ведущий группы в том месяце — не обязательно нынешний: педагога
+    // могли сменить. Ему засчитываются занятия без явного ведущего
+    const ownerRow = await this.prisma.teacherSalaryAccrual.findFirst({
+      where: { courseId: unit.courseId, groupId: unit.groupId, month, isOwner: true },
+      select: { teacherId: true },
+    });
+    // Своя пометка важнее найденной: после удаления группы её строки
+    // переходят к курсу без группы (SetNull), и строк-владельцев за месяц
+    // может оказаться две
+    const monthOwnerId = stored.isOwner ? unit.teacherId : (ownerRow?.teacherId ?? unit.ownerTeacherId);
+
+    // Ставка — зафиксированная (как priceUsed в billing.service.ts): пересчёт
+    // исправляет базу, но не переписывает ставку задним числом. Исключение —
+    // месяц, замороженный вовсе без ставки: её забыли задать, и без этого
+    // исправить такой месяц можно было бы только ручной суммой
+    let percentUsed = stored.percentUsed;
+    if (percentUsed === null) {
+      const owner = await this.prismaService.prismaUnscoped.user.findUnique({
+        where: { id: monthOwnerId },
+        select: { salaryPercentBp: true },
+      });
+      percentUsed = resolveSalaryPercentBp({
+        groupPercentBp: unit.groupPercentBp,
+        teacherPercentBp: owner?.salaryPercentBp ?? null,
+      });
     }
 
-    // Сумма группы целиком по формуле — ставка (percentUsed) осталась
-    // зафиксированной, но сама раскладка по занятиям пересчитывается по
-    // СВЕЖИМ данным журнала: замена, отмеченная задним числом после
-    // закрытия месяца, сама зарплату не двигает — для этого и есть кнопка
-    // пересчёта (план, 4.8.2)
-    const potAmount = computeFormulaAmount(base, stored.percentUsed);
+    // Сумма группы целиком по формуле, а раскладка по занятиям — по СВЕЖИМ
+    // данным журнала: замена, отмеченная задним числом после закрытия
+    // месяца, сама зарплату не двигает — для этого и есть кнопка пересчёта
+    // (план, 4.8.2)
+    const potAmount = computeFormulaAmount(base, percentUsed);
     let nextAmount = potAmount;
     let lessonsPlanned: number | null = null;
     let lessonsTaught: number | null = null;
 
     if (unit.groupId && unit.scheduleDays.length > 0) {
-      const marksByMonth = await this.loadLessonMarks(unit.groupId, unit.scheduleDays, unit.ownerTeacherId, [month]);
+      const marksByMonth = await this.loadLessonMarks(unit.groupId, unit.scheduleDays, monthOwnerId, [month]);
       const marks = marksByMonth.get(month);
       if (marks && !marks.fallback) {
         const share = splitAccrualByTeacher(potAmount, marks.lessonsPlanned, marks.taughtByTeacher).find(
@@ -771,15 +957,18 @@ export class SalaryService {
         lessonsPlanned = marks.lessonsPlanned;
         lessonsTaught = share?.lessonsTaught ?? 0;
         nextAmount = share?.amount ?? 0;
-      } else if (unit.teacherId !== unit.ownerTeacherId) {
+      } else if (unit.teacherId !== monthOwnerId) {
         // Запасной путь пересчитан для строки замены — оснований для неё
         // больше нет (отметки исчезли или расписание сняли): строка
         // обнуляется, чужая сумма ей не переходит
         nextAmount = 0;
       }
+    } else if (unit.teacherId !== monthOwnerId) {
+      nextAmount = 0;
     }
 
     const changed =
+      stored.percentUsed !== percentUsed ||
       stored.base !== base ||
       stored.studentsCount !== studentsCount ||
       stored.amount !== nextAmount ||
@@ -796,20 +985,21 @@ export class SalaryService {
           entityId: stored.id,
           action: "UPDATE",
           changes: {
+            percentUsed: { old: stored.percentUsed, new: percentUsed },
             base: { old: stored.base, new: base },
             studentsCount: { old: stored.studentsCount, new: studentsCount },
             amount: { old: stored.amount, new: nextAmount },
             lessonsPlanned: { old: stored.lessonsPlanned, new: lessonsPlanned },
             lessonsTaught: { old: stored.lessonsTaught, new: lessonsTaught },
           },
-          metadata: { recalculated: true, teacherId, month, groupId: unit.groupId, percentUsed: stored.percentUsed },
+          metadata: { recalculated: true, teacherId, month, groupId: unit.groupId, courseId: unit.courseId },
         },
         tx
       );
 
       await tx.teacherSalaryAccrual.update({
         where: { id: stored.id },
-        data: { base, studentsCount, amount: nextAmount, lessonsPlanned, lessonsTaught, lockedAt: new Date() },
+        data: { percentUsed, base, studentsCount, amount: nextAmount, lessonsPlanned, lessonsTaught, lockedAt: new Date() },
       });
     });
 

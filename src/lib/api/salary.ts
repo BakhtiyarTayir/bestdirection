@@ -109,10 +109,11 @@ export interface ApiPayoutsPage {
 export const setManualSalaryAmount = (accrualId: string, manualAmount: number | null) =>
   apiFetch<{ amount: number }>(`/salary/accruals/${accrualId}`, { method: "PATCH", body: { manualAmount } });
 
-export const recalculateSalaryMonth = (teacherId: string, month: string, groupId: string | null) =>
+export const recalculateSalaryMonth = (teacherId: string, month: string, groupId: string | null, courseId: string) =>
   apiFetch<{ amount: number; changed: boolean }>(`/salary/${teacherId}/recalc`, {
     method: "POST",
-    query: { month, groupId: groupId ?? undefined },
+    // courseId нужен для записей без группы: курсов у педагога может быть несколько
+    query: { month, groupId: groupId ?? undefined, courseId },
   });
 
 export const createPayout = (body: {

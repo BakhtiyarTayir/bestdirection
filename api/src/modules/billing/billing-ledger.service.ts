@@ -190,6 +190,10 @@ export class BillingLedgerService {
           unitsTotal: item.charge.unitsTotal,
           unitsBilled: item.charge.unitsBilled,
           priceUsed: priceFor(billing) ?? 0,
+          // Снимок группы для базы зарплаты. Текущая группа здесь и есть
+          // группа закрытого месяца: каждый перевод сначала замораживает
+          // закрытые месяцы (freezeClosedMonths) и только потом меняет groupId
+          groupId: enrollment.group?.id ?? null,
           lockedAt: now,
         });
       }

@@ -229,6 +229,7 @@ export function TeacherSalaryView({
                                   teacherId={teacherId}
                                   month={row.month}
                                   groupId={group.groupId}
+                                  courseId={group.courseId}
                                   onDone={() => router.refresh()}
                                 />
                               )}
@@ -400,11 +401,13 @@ function RecalcButton({
   teacherId,
   month,
   groupId,
+  courseId,
   onDone,
 }: {
   teacherId: string;
   month: string;
   groupId: string | null;
+  courseId: string;
   onDone: () => void;
 }) {
   const t = useTranslations("salaries");
@@ -433,7 +436,7 @@ function RecalcButton({
               event.preventDefault();
               setIsSaving(true);
               try {
-                const result = await recalculateSalaryMonth(teacherId, month, groupId);
+                const result = await recalculateSalaryMonth(teacherId, month, groupId, courseId);
                 if (result.success) {
                   toast({ title: result.data.changed ? t("recalcDone") : t("recalcNoChange") });
                   onDone();

@@ -27,6 +27,9 @@ export const recalcQuerySchema = z.object({
   month: monthString,
   // Пусто — пересчитать начисление по записям курса без группы
   groupId: z.string().max(40).optional(),
+  // Для записей без группы — какой из курсов педагога пересчитать: их
+  // может быть несколько
+  courseId: z.string().max(40).optional(),
 });
 
 export const payoutFiltersSchema = z.object({
