@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { ListPagination, usePagination } from "@/components/ui/list-pagination";
 import {
   Table,
   TableBody,
@@ -70,6 +71,9 @@ function ScoreBadge({ score }: { score: number }) {
 export function GroupStatistics({ data }: GroupStatisticsProps) {
   const t = useTranslations("groups");
   const { summary, students } = data;
+  // Хук — до раннего выхода ниже: порядок хуков не должен зависеть от данных
+  const sortedStudents = [...students].sort((a, b) => b.overallScore - a.overallScore);
+  const { page, totalPages, pageItems, setPage } = usePagination(sortedStudents);
 
   if (summary.totalStudents === 0) {
     return (
@@ -79,8 +83,6 @@ export function GroupStatistics({ data }: GroupStatisticsProps) {
       </div>
     );
   }
-
-  const sortedStudents = [...students].sort((a, b) => b.overallScore - a.overallScore);
 
   const summaryCards = [
     {
@@ -147,7 +149,7 @@ export function GroupStatistics({ data }: GroupStatisticsProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedStudents.map((student) => (
+              {pageItems.map((student) => (
                 <TableRow key={student.id}>
                   <TableCell className="font-medium">
                     {student.firstName} {student.lastName}
@@ -187,6 +189,7 @@ export function GroupStatistics({ data }: GroupStatisticsProps) {
               ))}
             </TableBody>
           </Table>
+          <ListPagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </CardContent>
       </Card>
     </div>

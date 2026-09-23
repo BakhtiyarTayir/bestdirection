@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ListPagination, usePagination } from "@/components/ui/list-pagination";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -76,6 +77,8 @@ export function UsersHomeworkStatistics({
   const t = useTranslations("users");
   const searchParams = useSearchParams();
   const router = useRouter();
+  // Курс, задание и группа — в адресе: их смена открывает первую страницу
+  const { page, totalPages, pageItems, setPage } = usePagination(rows, searchParams.toString());
 
   const updateFilter = (key: string, value: string, reset?: string[]) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -238,7 +241,7 @@ export function UsersHomeworkStatistics({
                 </TableCell>
               </TableRow>
             ) : (
-              rows.map((row) => (
+              pageItems.map((row) => (
                 <TableRow key={row.studentId}>
                   <TableCell>
                     <div className="font-medium">{row.fullName}</div>
@@ -266,6 +269,7 @@ export function UsersHomeworkStatistics({
           </TableBody>
         </Table>
       </div>
+      <ListPagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }

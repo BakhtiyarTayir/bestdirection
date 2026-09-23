@@ -5,6 +5,7 @@ import { formatDateTime } from "@/lib/format-date";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ListPagination, usePagination } from "@/components/ui/list-pagination";
 import {
   Table,
   TableBody,
@@ -38,6 +39,7 @@ export function LeadList({ initialLeads }: LeadListProps) {
   const [leads, setLeads] = useState(initialLeads);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  const { page, totalPages, pageItems, setPage } = usePagination(leads);
 
   const handleToggle = (id: string, contacted: boolean) => {
     setPendingId(id);
@@ -59,47 +61,50 @@ export function LeadList({ initialLeads }: LeadListProps) {
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>{t("dateColumn")}</TableHead>
-          <TableHead>{t("courseColumn")}</TableHead>
-          <TableHead>{t("nameColumn")}</TableHead>
-          <TableHead>{t("phoneColumn")}</TableHead>
-          <TableHead>{t("messageColumn")}</TableHead>
-          <TableHead>{t("statusColumn")}</TableHead>
-          <TableHead />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {leads.map((lead) => (
-          <TableRow key={lead.id}>
-            <TableCell className="whitespace-nowrap">
-              {formatDateTime(lead.createdAt)}
-            </TableCell>
-            <TableCell>{lead.courseName}</TableCell>
-            <TableCell>{lead.fullName}</TableCell>
-            <TableCell>{lead.phone}</TableCell>
-            <TableCell className="max-w-xs truncate">{lead.message || "—"}</TableCell>
-            <TableCell>
-              <Badge variant={lead.contacted ? "secondary" : "default"}>
-                {lead.contacted ? t("contacted") : t("notContacted")}
-              </Badge>
-            </TableCell>
-            <TableCell>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={pendingId === lead.id}
-                onClick={() => handleToggle(lead.id, !lead.contacted)}
-              >
-                {pendingId === lead.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {lead.contacted ? t("markNotContacted") : t("markContacted")}
-              </Button>
-            </TableCell>
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>{t("dateColumn")}</TableHead>
+            <TableHead>{t("courseColumn")}</TableHead>
+            <TableHead>{t("nameColumn")}</TableHead>
+            <TableHead>{t("phoneColumn")}</TableHead>
+            <TableHead>{t("messageColumn")}</TableHead>
+            <TableHead>{t("statusColumn")}</TableHead>
+            <TableHead />
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {pageItems.map((lead) => (
+            <TableRow key={lead.id}>
+              <TableCell className="whitespace-nowrap">
+                {formatDateTime(lead.createdAt)}
+              </TableCell>
+              <TableCell>{lead.courseName}</TableCell>
+              <TableCell>{lead.fullName}</TableCell>
+              <TableCell>{lead.phone}</TableCell>
+              <TableCell className="max-w-xs truncate">{lead.message || "—"}</TableCell>
+              <TableCell>
+                <Badge variant={lead.contacted ? "secondary" : "default"}>
+                  {lead.contacted ? t("contacted") : t("notContacted")}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={pendingId === lead.id}
+                  onClick={() => handleToggle(lead.id, !lead.contacted)}
+                >
+                  {pendingId === lead.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {lead.contacted ? t("markNotContacted") : t("markContacted")}
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <ListPagination page={page} totalPages={totalPages} onPageChange={setPage} />
+    </>
   );
 }

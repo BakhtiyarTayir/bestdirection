@@ -5,6 +5,7 @@ import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ListPagination, usePagination } from "@/components/ui/list-pagination";
 import {
   Table,
   TableBody,
@@ -55,6 +56,7 @@ export function DeactivatedUserList({ users }: DeactivatedUserListProps) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [purgeTarget, setPurgeTarget] = useState<DeactivatedUser | null>(null);
+  const { page, totalPages, offset, pageItems, setPage } = usePagination(users);
 
   // Причины отказа приходят от серверного действия кодами — переводим их
   // здесь, потому что пользователю нужно понимать, что именно мешает.
@@ -158,10 +160,10 @@ export function DeactivatedUserList({ users }: DeactivatedUserListProps) {
                 </TableCell>
               </TableRow>
             ) : (
-              users.map((user, index) => (
+              pageItems.map((user, index) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-mono text-muted-foreground tabular-nums">
-                    {index + 1}
+                    {offset + index + 1}
                   </TableCell>
                   <TableCell className="font-medium">
                     {user.firstName} {user.lastName}
@@ -211,6 +213,7 @@ export function DeactivatedUserList({ users }: DeactivatedUserListProps) {
           </TableBody>
         </Table>
       </div>
+      <ListPagination page={page} totalPages={totalPages} onPageChange={setPage} />
 
       <AlertDialog
         open={purgeTarget !== null}

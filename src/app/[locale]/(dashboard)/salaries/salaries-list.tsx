@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TriangleAlert } from "lucide-react";
+import { ListPagination, usePagination } from "@/components/ui/list-pagination";
 import type { ApiSalaryOverviewRow } from "@/lib/api/salary";
 
 interface SalariesListProps {
@@ -41,6 +42,8 @@ export function SalariesList({ month, rows, totals, branchId, branches }: Salari
   const router = useRouter();
   const pathname = usePathname();
   const [, startTransition] = useTransition();
+  // Месяц и филиал — в адресе: их смена открывает первую страницу
+  const { page, totalPages, pageItems, setPage } = usePagination(rows, `${month}|${branchId ?? ""}`);
 
   const money = new Intl.NumberFormat(intlLocale(locale));
 
@@ -125,7 +128,7 @@ export function SalariesList({ month, rows, totals, branchId, branches }: Salari
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((row) => (
+              {pageItems.map((row) => (
                 <TableRow key={row.teacherId}>
                   <TableCell>
                     <Link href={`/salaries/${row.teacherId}`} className="font-medium hover:underline">
@@ -158,6 +161,9 @@ export function SalariesList({ month, rows, totals, branchId, branches }: Salari
               ))}
             </TableBody>
           </Table>
+          <div className="px-4 pb-4">
+            <ListPagination page={page} totalPages={totalPages} onPageChange={setPage} />
+          </div>
         </div>
       )}
     </div>

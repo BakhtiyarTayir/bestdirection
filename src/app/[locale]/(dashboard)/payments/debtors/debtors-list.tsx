@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ListPagination, usePagination } from "@/components/ui/list-pagination";
 import {
   Select,
   SelectContent,
@@ -101,6 +102,12 @@ export function DebtorsList({
   const [editing, setEditing] = useState<string | null>(null);
   const [paying, setPaying] = useState<DebtorRow | null>(null);
   const [, startTransition] = useTransition();
+  // Фильтры — в адресе, список приходит с сервера: их смена открывает
+  // первую страницу, а обновление после оплаты — нет
+  const { page, totalPages, pageItems, setPage } = usePagination(
+    debtors,
+    `${month}|${courseId ?? ""}|${branchId ?? ""}|${teacherId ?? ""}`
+  );
 
   const money = new Intl.NumberFormat(intlLocale(locale));
 
@@ -257,7 +264,7 @@ export function DebtorsList({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {debtors.map((row) => {
+              {pageItems.map((row) => {
                 const isOpen = expanded === row.enrollmentId;
                 return (
                   <Fragment key={row.enrollmentId}>
@@ -379,6 +386,9 @@ export function DebtorsList({
               })}
             </TableBody>
           </Table>
+          <div className="px-4 pb-4">
+            <ListPagination page={page} totalPages={totalPages} onPageChange={setPage} />
+          </div>
         </div>
       )}
 

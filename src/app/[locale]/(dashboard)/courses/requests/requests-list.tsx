@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ListPagination, usePagination } from "@/components/ui/list-pagination";
 import { useToast } from "@/components/ui/use-toast";
 import { formatDateTime } from "@/lib/format-date";
 import { Check, X, Loader2 } from "lucide-react";
@@ -46,6 +47,7 @@ export function RequestsList({ requests }: { requests: RequestRow[] }) {
   const [rows, setRows] = useState(requests);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  const { page, totalPages, pageItems, setPage } = usePagination(rows);
 
   const priceFormatter = new Intl.NumberFormat(intlLocale(locale));
 
@@ -110,7 +112,7 @@ export function RequestsList({ requests }: { requests: RequestRow[] }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((row) => (
+          {pageItems.map((row) => (
             <TableRow key={row.id}>
               <TableCell className="whitespace-nowrap">
                 {formatDateTime(row.createdAt)}
@@ -171,6 +173,9 @@ export function RequestsList({ requests }: { requests: RequestRow[] }) {
           ))}
         </TableBody>
       </Table>
+      <div className="px-4 pb-4">
+        <ListPagination page={page} totalPages={totalPages} onPageChange={setPage} />
+      </div>
     </div>
   );
 }

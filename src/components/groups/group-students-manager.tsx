@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ListPagination, usePagination } from "@/components/ui/list-pagination";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -105,6 +106,9 @@ export function GroupStudentsManager({
 
   const visibleAvailable = sortedAvailable.filter((s) => matches(s, availableQuery));
   const visibleStudents = students.filter((s) => matches(s, groupQuery));
+  // Поиск сужает список — новый запрос открывает первую страницу
+  const availablePages = usePagination(visibleAvailable, availableQuery);
+  const groupPages = usePagination(visibleStudents, groupQuery);
 
   const handleAddStudent = (student: AvailableStudent) => {
     setAddingId(student.id);
@@ -190,7 +194,7 @@ export function GroupStudentsManager({
               ) : visibleAvailable.length === 0 ? (
                 <p className="p-4 text-sm text-muted-foreground">{t("nothingFound")}</p>
               ) : (
-                visibleAvailable.map((student) => {
+                availablePages.pageItems.map((student) => {
                   const busy = isPending && addingId === student.id;
                   return (
                     <button
@@ -225,6 +229,11 @@ export function GroupStudentsManager({
                 })
               )}
             </ScrollArea>
+            <ListPagination
+              page={availablePages.page}
+              totalPages={availablePages.totalPages}
+              onPageChange={availablePages.setPage}
+            />
           </CardContent>
         </Card>
 
@@ -240,7 +249,7 @@ export function GroupStudentsManager({
               ) : visibleStudents.length === 0 ? (
                 <p className="p-4 text-sm text-muted-foreground">{t("nothingFound")}</p>
               ) : (
-                visibleStudents.map((student) => (
+                groupPages.pageItems.map((student) => (
                   <div
                     key={student.id}
                     className="flex items-center gap-2 border-b p-3 last:border-b-0 hover:bg-muted/50"
@@ -277,6 +286,11 @@ export function GroupStudentsManager({
                 ))
               )}
             </ScrollArea>
+            <ListPagination
+              page={groupPages.page}
+              totalPages={groupPages.totalPages}
+              onPageChange={groupPages.setPage}
+            />
           </CardContent>
         </Card>
       </div>
