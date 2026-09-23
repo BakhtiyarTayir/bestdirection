@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart3, Plus } from "lucide-react";
 import { UserList } from "./user-list";
 import { DeactivatedUserList } from "./deactivated-user-list";
+import { MarkUsersSeen } from "./mark-users-seen";
 import { BranchFilter } from "@/components/branch-filter";
 import { getTranslations } from "next-intl/server";
 
@@ -84,6 +85,7 @@ async function UsersPageContent({
 
   return (
     <div>
+      {canManageUsers && <MarkUsersSeen />}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">{t("title")}</h1>
         <div className="flex items-center gap-2">

@@ -183,3 +183,7 @@ export const changePassword = (body: { currentPassword: string; newPassword: str
 export const getTelegramStatus = () => apiFetch<ApiTelegramStatus>("/me/telegram");
 export const generateTelegramLinkCode = () => apiFetch<{ code: string }>("/me/telegram/code", { method: "POST" });
 export const unlinkTelegram = () => apiFetch<{ ok: true }>("/me/telegram", { method: "DELETE" });
+
+/** Администратор открыл список — обнуляет цифру новых пользователей в меню */
+export const markUsersSeen = (): Promise<ApiResult<{ ok: boolean }>> =>
+  apiFetch("/users/new/seen", { method: "POST" });

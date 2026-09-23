@@ -308,6 +308,36 @@ export class UsersService {
     });
   }
 
+  /**
+   * Сколько пользователей завели ДРУГИЕ сотрудники с тех пор, как этот
+   * администратор последний раз открывал список. Своих не считаем: о них он
+   * и так знает. Кто кого завёл — из журнала (User/CREATE пишут и форма
+   * создания, и привязка родителя). Удалённых с тех пор не считаем.
+   */
+  async newUsersCount(actor: SessionUser) {
+    const me = await this.prisma.user.findUnique({ where: { id: actor.id }, select: { usersSeenAt: true } });
+    if (!me?.usersSeenAt) {
+      // Новый администратор: отсчёт с этого момента, а не за всю историю
+      await this.markUsersSeen(actor);
+      return { count: 0 };
+    }
+
+    const created = await this.prisma.auditLog.findMany({
+      where: { entityType: "User", action: "CREATE", userId: { not: actor.id }, createdAt: { gt: me.usersSeenAt } },
+      select: { entityId: true },
+    });
+    if (created.length === 0) return { count: 0 };
+
+    const count = await this.prisma.user.count({
+      where: { id: { in: created.map((row) => row.entityId) } },
+    });
+    return { count };
+  }
+
+  async markUsersSeen(actor: SessionUser) {
+    await this.prisma.user.update({ where: { id: actor.id }, data: { usersSeenAt: new Date() } });
+  }
+
   async deactivate(id: string, actor: SessionUser) {
     if (actor.id === id) throw new BadRequestException("cannotDeactivateSelf");
     const target = await this.prisma.user.findUnique({ where: { id }, select: { role: true } });

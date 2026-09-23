@@ -69,7 +69,7 @@ interface NavItem {
   labelKey: string;
   icon: React.ElementType;
   roles: string[];
-  badge?: "homework" | "enrollmentRequests" | "debtors";
+  badge?: "homework" | "enrollmentRequests" | "debtors" | "newUsers";
   /** Подсвечивать только на самом href: иначе родитель горит на вложенном пути */
   exact?: boolean;
   /** Подпункты: родитель становится раскрывающимся разделом */
@@ -82,7 +82,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard, roles: ["ADMIN", "TEACHER", "STUDENT"] },
   { href: "/courses", labelKey: "courses", icon: BookOpen, roles: ["ADMIN", "TEACHER", "STUDENT"] },
-  { href: "/users", labelKey: "users", icon: Users, roles: ["ADMIN", "TEACHER"] },
+  { href: "/users", labelKey: "users", icon: Users, roles: ["ADMIN", "TEACHER"], badge: "newUsers" },
   { href: "/teachers", labelKey: "teachers", icon: GraduationCap, roles: ["ADMIN"] },
   { href: "/students", labelKey: "students", icon: UserRound, roles: ["ADMIN"] },
   {
@@ -170,10 +170,13 @@ export function Sidebar({ role, userName, logoUrl }: SidebarProps) {
     role === "ADMIN" || role === "TEACHER"
   );
   const debtorsCount = useBadgeCount("/api/debtors/count", role === "ADMIN");
+  // Сколько пользователей завели другие сотрудники с последнего открытия списка
+  const newUsersCount = useBadgeCount("/api/users/new-count", role === "ADMIN");
   const badgeCounts = {
     homework: homeworkCount,
     enrollmentRequests: requestsCount,
     debtors: debtorsCount,
+    newUsers: newUsersCount,
   } as const;
 
   const filteredItems = navItems.filter((item) => item.roles.includes(role));

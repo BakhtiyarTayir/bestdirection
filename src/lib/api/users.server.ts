@@ -16,6 +16,7 @@ import type {
 
 export const getUsers = (branchId?: string) => apiServerFetch<ApiUser[]>("/users", { query: { branchId } });
 export const getDeactivatedUsers = () => apiServerFetch<ApiDeactivatedUser[]>("/users/deactivated");
+export const getNewUsersCount = () => apiServerFetch<{ count: number }>("/users/new/count");
 export const getTeachers = () => apiServerFetch<ApiTeacher[]>("/users/teachers");
 export const getUserById = (id: string) => apiServerFetch<ApiUser>(`/users/${id}`);
 

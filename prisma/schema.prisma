@@ -164,6 +164,11 @@ model User {
   role         Role      @default(STUDENT)
   isActive     Boolean   @default(true)
   lastSeenAt   DateTime?
+  // Когда администратор последний раз открывал список пользователей. Цифра
+  // в меню «Пользователи» — сколько людей с тех пор завели ДРУГИЕ сотрудники
+  // (по AuditLog User/CREATE). Пусто — ещё не открывал: считаем с первого
+  // запроса цифры, а не за всю историю.
+  usersSeenAt  DateTime?
   deletedAt    DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt

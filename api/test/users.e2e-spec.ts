@@ -764,4 +764,42 @@ describe("модуль users", () => {
       expect(res.body.message).toBe("validationFailed");
     });
   });
+
+  // Цифра «новые пользователи» в меню: сколько людей завели ДРУГИЕ
+  // сотрудники с последнего открытия списка этим администратором
+  describe("новые пользователи для администратора", () => {
+    beforeAll(async () => {
+      const otherAdmin = await createUser({ role: "ADMIN" });
+      cookies.OTHER_ADMIN = await sessionCookie(otherAdmin, { roleInToken: "ADMIN" });
+    });
+
+    const createStudent = async (role: string, branchId: string) =>
+      send("post", "/users", role, {
+        login: uniqueLogin("new-count"),
+        password: "Password123",
+        firstName: "Новый",
+        lastName: "Ученик",
+        role: "STUDENT",
+        branchId,
+      });
+
+    it("только администратор", async () => {
+      expect((await get("/users/new/count", "TEACHER")).status).toBe(403);
+    });
+
+    it("считает созданных другим администратором, не своих, и обнуляется после просмотра", async () => {
+      const branch = await createBranch();
+      // Первый запрос ставит точку отсчёта — история не считается
+      await send("post", "/users/new/seen", "ADMIN");
+      expect((await get("/users/new/count", "ADMIN")).body.count).toBe(0);
+
+      expect((await createStudent("OTHER_ADMIN", branch.id)).status).toBe(201);
+      expect((await createStudent("ADMIN", branch.id)).status).toBe(201);
+      // Своего не считаем: о нём администратор и так знает
+      expect((await get("/users/new/count", "ADMIN")).body.count).toBe(1);
+
+      expect((await send("post", "/users/new/seen", "ADMIN")).status).toBe(201);
+      expect((await get("/users/new/count", "ADMIN")).body.count).toBe(0);
+    });
+  });
 });

@@ -39,6 +39,22 @@ export class UsersController {
     return this.users.deactivated();
   }
 
+  // Цифра «новые пользователи» в меню. До @Get(":id") — иначе Nest примет
+  // "new" за id пользователя
+  @CheckPolicies((ability) => ability.can("manage", "User"))
+  @Get("new/count")
+  newUsersCount(@CurrentUser() actor: SessionUser) {
+    return this.users.newUsersCount(actor);
+  }
+
+  /** Администратор открыл список — цифра обнуляется. */
+  @CheckPolicies((ability) => ability.can("manage", "User"))
+  @Post("new/seen")
+  async markUsersSeen(@CurrentUser() actor: SessionUser) {
+    await this.users.markUsersSeen(actor);
+    return { ok: true };
+  }
+
   // Три следующих маршрута обслуживают форму создания пользователя (тот же
   // доступ, что у самого создания) и ДОЛЖНЫ стоять до @Get(":id") — иначе
   // Nest примет "login-available"/"form-options" за значение :id
