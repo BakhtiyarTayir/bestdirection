@@ -1,7 +1,7 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { BillingLedgerService } from "../src/modules/billing/billing-ledger.service";
-import { addMonths, monthKey } from "../src/modules/billing/domain/billing";
+import { addMonths, currentMonthKey } from "../src/modules/billing/domain/billing";
 import { createBranch, createTestApp, createUser, sessionCookie, TEST_APP_URL, testDb, type TestApp } from "./helpers";
 
 describe("модуль groups", () => {
@@ -9,7 +9,9 @@ describe("модуль groups", () => {
   const cookies: Record<string, string> = {};
   const ids: Record<string, string> = {};
   const run = Date.now().toString(36);
-  const current = monthKey(new Date());
+  // Месяц по времени школы (Ташкент), а не UTC — иначе тест мог бы поехать
+  // в окне 19:00–24:00 UTC, когда в Ташкенте уже следующий месяц
+  const current = currentMonthKey();
 
   beforeAll(async () => {
     app = await createTestApp();

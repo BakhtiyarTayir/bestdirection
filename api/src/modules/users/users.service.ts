@@ -345,7 +345,9 @@ export class UsersService {
 
   /**
    * Полное удаление строки. Освобождает логин и telegramChatId и каскадом
-   * уносит всё, что на пользователя завязано.
+   * уносит то, что на пользователя завязано, — кроме денежной истории
+   * (принятые платежи, начисления и выплаты зарплаты на RESTRICT, см. ниже):
+   * её удаление блокируется, а не стирается вместе с пользователем.
    */
   async purge(id: string, actor: SessionUser) {
     if (actor.id === id) throw new BadRequestException("cannotPurgeSelf");

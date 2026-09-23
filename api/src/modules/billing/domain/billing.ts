@@ -70,6 +70,22 @@ export function monthKey(date: Date): string {
   return `${year}-${month}`;
 }
 
+// Школа в Ташкенте, UTC+5. Смещение фиксированное, а не через Intl/tz base —
+// в Узбекистане нет перехода на летнее время, часовой пояс с 2024 года не
+// менялся, и городить обращение к таймзоне ради одной константы незачем.
+export const SCHOOL_UTC_OFFSET_HOURS = 5;
+
+/**
+ * Какой сейчас месяц по местному времени школы, а не по UTC. С полуночи до
+ * 05:00 по Ташкенту 1-го числа UTC ещё показывает прошлый месяц — если считать
+ * monthKey(new Date()) напрямую, «текущим» месяцем это окно ошибочно называет
+ * предыдущий. Только для определения «какой сейчас месяц» — хранение дат
+ * биллинга (полдень UTC) эта функция не трогает.
+ */
+export function currentMonthKey(now: Date = new Date()): string {
+  return monthKey(new Date(now.getTime() + SCHOOL_UTC_OFFSET_HOURS * 3_600_000));
+}
+
 /** Первый день месяца, полдень UTC */
 export function monthStart(month: string): Date {
   const [year, monthNumber] = month.split("-").map(Number);
@@ -271,7 +287,7 @@ export interface StoredCharge {
  * админ поправит дату начала.
  */
 export function isClosedMonth(month: string, now: Date = new Date()): boolean {
-  return month < monthKey(now);
+  return month < currentMonthKey(now);
 }
 
 /**

@@ -7,6 +7,7 @@ import {
   monthRange,
   addMonths,
   monthKey,
+  currentMonthKey,
   paymentMonth,
   isClosedMonth,
   mergeSchedule,
@@ -251,6 +252,25 @@ const NOW = utc("2026-10-15");
 check("прошедший месяц закрыт", isClosedMonth("2026-09", NOW), true);
 check("текущий месяц открыт", isClosedMonth("2026-10", NOW), false);
 check("будущий месяц открыт", isClosedMonth("2026-11", NOW), false);
+
+// ── текущий месяц по Ташкенту (UTC+5), а не по UTC ──
+// 2026-09-30T19:30:00Z — в Ташкенте уже 2026-10-01T00:30, октябрь начался
+check(
+  "после 19:00 UTC 30 сентября в Ташкенте уже октябрь",
+  currentMonthKey(new Date("2026-09-30T19:30:00Z")),
+  "2026-10"
+);
+// 2026-09-30T18:59:00Z — в Ташкенте ещё 2026-09-30T23:59, сентябрь не кончился
+check(
+  "до 19:00 UTC 30 сентября в Ташкенте ещё сентябрь",
+  currentMonthKey(new Date("2026-09-30T18:59:00Z")),
+  "2026-09"
+);
+check(
+  "isClosedMonth использует ташкентский месяц, а не UTC",
+  isClosedMonth("2026-09", new Date("2026-09-30T19:30:00Z")),
+  true
+);
 
 const computed: MonthCharge[] = [
   { month: "2026-09", charge: { amount: 650000, basis: "full", unitsTotal: 1, unitsBilled: 1 } },

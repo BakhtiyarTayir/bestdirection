@@ -9,8 +9,11 @@ import { PrismaService } from "../../common/prisma/prisma.service";
  * всего, что лежит в Корзине, deletedAt как раз проставлен: поиск молча
  * возвращал null, и окончательное удаление не срабатывало никогда.
  *
- * Удаляем только то, что уже в Корзине. Курс уносит каскадом уроки, группы,
- * записи и оплаты, и живой курс не должен исчезать одним вызовом в обход неё.
+ * Удаляем только то, что уже в Корзине. Курс уносит каскадом уроки, группы и
+ * записи (Enrollment → MonthlyCharge), а живой курс не должен исчезать одним
+ * вызовом в обход неё. Оплаты и начисления зарплаты — денежная история на
+ * ON DELETE RESTRICT: если они есть, курс не удаляем вовсе (courseHasMoneyHistory
+ * ниже), а не полагаемся на каскад.
  *
  * Запись в журнал и DELETE идут одной транзакцией: строка исчезает навсегда
  * вместе с каскадом, и удаление не должно состояться при незаписанном журнале.
@@ -31,7 +34,9 @@ export class TrashService {
         slug: true,
         deletedAt: true,
         // Что унесёт каскад. Payment здесь не опечатка: окончательное удаление
-        // курса стирает и историю оплат.
+        // курса раньше стирало и историю оплат — теперь это FK на RESTRICT
+        // (см. courseHasMoneyHistory ниже), а _count.payments остаётся
+        // диагностикой каскада для журнала.
         _count: {
           select: {
             lessons: true,
@@ -43,11 +48,36 @@ export class TrashService {
             attendanceSessions: true,
           },
         },
+        // Payment здесь не в SOFT_DELETE_MODELS, поэтому этот count уже
+        // включает и «отменённые» (deletedAt проставлен) оплаты — ровно то,
+        // что нужно: денежная история не должна исчезать, даже если запись
+        // об оплате отменена.
       },
     });
 
     if (!course) return { ok: false as const, error: "courseNotFound" };
     if (!course.deletedAt) return { ok: false as const, error: "notInTrash" };
+
+    // Payment/TeacherSalaryAccrual теперь на ON DELETE RESTRICT — сырой DELETE
+    // ниже упал бы ошибкой БД. Проверяем заранее и отвечаем понятным кодом,
+    // а не 500-й от Postgres.
+    if (course._count.payments > 0) {
+      return { ok: false as const, error: "courseHasMoneyHistory" };
+    }
+    const salaryAccrualsCount = await this.prismaUnscoped.teacherSalaryAccrual.count({ where: { courseId } });
+    if (salaryAccrualsCount > 0) {
+      return { ok: false as const, error: "courseHasMoneyHistory" };
+    }
+    // Оплат и начислений зарплаты нет, но каскад unenrollments → MonthlyCharge
+    // может нести собственную денежную историю (начисления ученикам без
+    // единой оплаты, например при ручной коррекции). amount > 0 — значит,
+    // за месяц реально что-то начислено, и это тоже история, а не шум.
+    const billedMonthlyChargesCount = await this.prismaUnscoped.monthlyCharge.count({
+      where: { enrollment: { courseId }, amount: { gt: 0 } },
+    });
+    if (billedMonthlyChargesCount > 0) {
+      return { ok: false as const, error: "courseHasMoneyHistory" };
+    }
 
     await this.prismaUnscoped.$transaction(async (tx) => {
       await tx.auditLog.create({

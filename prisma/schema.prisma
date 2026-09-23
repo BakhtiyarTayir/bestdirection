@@ -340,11 +340,14 @@ model Payment {
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
+  // Restrict, а не Cascade: Payment — журнал кассы, окончательное удаление
+  // ученика/курса не должно стирать историю денег (UsersService.purge,
+  // TrashService.hardDeleteCourseRecord ловят это заранее).
   studentId String
-  student   User   @relation("StudentPayments", fields: [studentId], references: [id], onDelete: Cascade)
+  student   User   @relation("StudentPayments", fields: [studentId], references: [id], onDelete: Restrict)
 
   courseId String
-  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Restrict)
 
   groupId String?
   group   Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
@@ -543,11 +546,13 @@ model Group {
 model TeacherSalaryAccrual {
   id String @id @default(cuid())
 
+  // Restrict, а не Cascade: начисление зарплаты — денежная история, стирать
+  // её окончательным удалением педагога/курса нельзя (см. Payment выше).
   teacherId String
-  teacher   User   @relation("TeacherSalaryAccruals", fields: [teacherId], references: [id], onDelete: Cascade)
+  teacher   User   @relation("TeacherSalaryAccruals", fields: [teacherId], references: [id], onDelete: Restrict)
 
   courseId String
-  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Restrict)
 
   // Пусто — начисление по записям курса без группы
   groupId String?
@@ -623,8 +628,10 @@ model TeacherPayout {
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
+  // Restrict, а не Cascade: выплата — журнал, а не счёт (см. коммент к модели
+  // выше), стирать её удалением педагога нельзя.
   teacherId String
-  teacher   User   @relation("TeacherPayouts", fields: [teacherId], references: [id], onDelete: Cascade)
+  teacher   User   @relation("TeacherPayouts", fields: [teacherId], references: [id], onDelete: Restrict)
 
   branchId String?
   branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
