@@ -416,6 +416,15 @@ export class UsersService {
     if (target.isActive && !target.deletedAt) throw new BadRequestException("userIsActive");
     if (target.role === "ADMIN") await this.assertNotLastAdmin(id);
 
+    // Начисления ученика (MonthlyCharge) уходят каскадом вместе с его
+    // записями на курсы, а FK-ограничения тут нет: ученик с долгом, но без
+    // единой оплаты, стирался бы вместе с историей долга. Проверяем заранее —
+    // та же денежная история, что оплаты и выплаты на RESTRICT
+    const billedMonths = await this.prismaUnscoped.monthlyCharge.count({
+      where: { enrollment: { studentId: id }, amount: { gt: 0 } },
+    });
+    if (billedMonths > 0) throw new ConflictException("userHasProtectedRecords");
+
     try {
       // Мимо расширения мягкого удаления: нужна именно строка, а не deletedAt
       await this.prismaUnscoped.user.delete({ where: { id } });

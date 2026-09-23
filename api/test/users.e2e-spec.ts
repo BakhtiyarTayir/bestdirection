@@ -502,6 +502,23 @@ describe("модуль users", () => {
 
     // Регрессия: Payment/TeacherPayout были на ON DELETE CASCADE — удаление
     // ученика или преподавателя стирало кассу и выплаты вместе с ним
+    it("ученика с начислениями без оплат стереть нельзя — история долга остаётся", async () => {
+      const teacher = await createUser({ role: "TEACHER" });
+      const target = await createUser({ role: "STUDENT", isActive: false, deletedAt: new Date() });
+      const course = await testDb().course.create({
+        data: { slug: uniqueLogin("debt-course"), title: "Курс с долгом", teacherId: teacher.id, price: 100000 },
+      });
+      const enrollment = await testDb().enrollment.create({ data: { studentId: target.id, courseId: course.id } });
+      const charge = await testDb().monthlyCharge.create({
+        data: { enrollmentId: enrollment.id, month: "2026-01", amount: 100000, basis: "full", unitsTotal: 1, unitsBilled: 1, priceUsed: 100000, lockedAt: new Date() },
+      });
+
+      const res = await send("delete", `/users/${target.id}`, "ADMIN");
+      expect(res.status).toBe(409);
+      expect(res.body.message).toBe("userHasProtectedRecords");
+      expect(await testDb().monthlyCharge.findUnique({ where: { id: charge.id } })).not.toBeNull();
+    });
+
     it("ученика с оплатой стереть нельзя — оплата остаётся на месте", async () => {
       const teacher = await createUser({ role: "TEACHER" });
       const target = await createUser({ role: "STUDENT", isActive: false, deletedAt: new Date() });

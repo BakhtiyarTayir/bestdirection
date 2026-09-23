@@ -344,6 +344,34 @@ describe("модуль billing", () => {
   // Правка «оплата: groupId от клиента не проверяется» — PaymentsService.create
   // раньше принимал ЛЮБОЙ groupId из тела запроса без проверки принадлежности
   // курсу, и у платежа сохранялся чужой филиал (branchId — снимок из группы).
+  // Правка «форма оплаты подставляет цену курса»: действующая цена —
+  // индивидуальная → группы → курса (priceFor), как в начислениях
+  describe("форма оплаты: действующая цена записи (правка)", () => {
+    it("цена группы и индивидуальная цена важнее цены курса", async () => {
+      const course = await testDb().course.create({
+        data: { slug: `form-price-${run}`, title: "Цена формы", teacherId: ids.TEACHER, price: 500_000 },
+      });
+      const group = await testDb().group.create({
+        data: { name: `FP-${run}`, courseId: course.id, scheduleDays: [1], branchId: ids.branch, price: 400_000 },
+      });
+      const byGroup = await createUser({ role: "STUDENT" });
+      const byOverride = await createUser({ role: "STUDENT" });
+      await testDb().enrollment.create({ data: { studentId: byGroup.id, courseId: course.id, groupId: group.id } });
+      await testDb().enrollment.create({
+        data: { studentId: byOverride.id, courseId: course.id, groupId: group.id, priceOverride: 350_000 },
+      });
+
+      const res = await get("/billing/payments/form-options", "ADMIN");
+      expect(res.status).toBe(200);
+      const priceOf = (studentId: string) =>
+        res.body.students
+          .find((s: { id: string }) => s.id === studentId)
+          .enrollments.find((e: { courseId: string }) => e.courseId === course.id).price;
+      expect(priceOf(byGroup.id)).toBe(400_000);
+      expect(priceOf(byOverride.id)).toBe(350_000);
+    });
+  });
+
   describe("оплата: чужой groupId отклоняется (правка)", () => {
     it("группа другого курса — 400 groupMismatch", async () => {
       const otherCourse = await testDb().course.create({
