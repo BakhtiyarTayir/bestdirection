@@ -27,10 +27,10 @@ export default async function DashboardPage() {
       <div>
         <h1 className="text-3xl font-bold mb-6">{t("adminTitle")}</h1>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <StatCard title={t("users")} value={summary.users} icon={Users} />
-          <StatCard title={t("courses")} value={summary.courses} icon={BookOpen} />
-          <StatCard title={t("teachers")} value={summary.teachers} icon={GraduationCap} />
-          <StatCard title={t("students")} value={summary.students} icon={ClipboardCheck} />
+          <StatCard title={t("users")} value={summary.users} icon={Users} href="/users" />
+          <StatCard title={t("courses")} value={summary.courses} icon={BookOpen} href="/courses" />
+          <StatCard title={t("teachers")} value={summary.teachers} icon={GraduationCap} href="/teachers" />
+          <StatCard title={t("students")} value={summary.students} icon={ClipboardCheck} href="/students" />
         </div>
       </div>
     );
