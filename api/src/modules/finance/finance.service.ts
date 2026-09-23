@@ -8,6 +8,13 @@ import type { FinanceQueryDto } from "./dto/finance.dto";
 /** Сколько месяцев показывает таблица помесячной динамики, включая выбранный */
 const HISTORY_MONTHS = 12;
 
+/**
+ * С какого месяца в системе ведётся учёт денег (реестр начислений, зарплаты,
+ * журнал оплат). Раньше — пустые строки, которые только сбивают с толку
+ * (решение владельца 2026-09-23).
+ */
+export const ACCOUNTING_START_MONTH = "2026-09";
+
 export interface FinanceMonth {
   month: string;
   /** Касса: оплаты учеников, принятые в этом месяце (по дате приёма денег) */
@@ -49,7 +56,15 @@ export class FinanceService {
   async overview(query: FinanceQueryDto) {
     const month = query.month && isValidMonth(query.month) ? query.month : currentMonthKey();
     const branchId = query.branchId || undefined;
-    const firstMonth = addMonths(month, -(HISTORY_MONTHS - 1));
+    // Не раньше начала учёта и не больше HISTORY_MONTHS назад; выбранный
+    // месяц до начала учёта показывается сам по себе
+    const windowStart = addMonths(month, -(HISTORY_MONTHS - 1));
+    const firstMonth =
+      month < ACCOUNTING_START_MONTH
+        ? month
+        : windowStart > ACCOUNTING_START_MONTH
+          ? windowStart
+          : ACCOUNTING_START_MONTH;
     const months = monthRange(firstMonth, month);
     // paidAt хранится полднем UTC, поэтому границы месяца по UTC не режут дни
     const paidAt = {

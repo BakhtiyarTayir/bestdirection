@@ -1,6 +1,7 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { addMonths, currentMonthKey } from "../src/modules/billing/domain/billing";
+import { addMonths, currentMonthKey, monthRange } from "../src/modules/billing/domain/billing";
+import { ACCOUNTING_START_MONTH } from "../src/modules/finance/finance.service";
 import { createBranch, createTestApp, createUser, sessionCookie, TEST_APP_URL, testDb, type TestApp } from "./helpers";
 
 // Отчёт «Финансы»: прибыль по кассе (оплаты − выплаты по датам движения
@@ -13,7 +14,6 @@ describe("модуль finance", () => {
   const ids: Record<string, string> = {};
   const run = Date.now().toString(36);
   const current = currentMonthKey();
-  const prevMonth = addMonths(current, -1);
   const startMonth = addMonths(current, -3);
   // Середина текущего месяца по UTC — оплата и выплата точно «в этом месяце»
   const inCurrentMonth = new Date(`${current}-10T12:00:00.000Z`);
@@ -87,11 +87,14 @@ describe("модуль finance", () => {
 
   it("по начислениям: цена группы, а не курса, минус 40% зарплаты", async () => {
     const res = await get(`/finance?month=${current}&branchId=${ids.branch}`, "ADMIN");
-    const prev = res.body.months.find((m: { month: string }) => m.month === prevMonth);
-    expect(prev).toMatchObject({ charged: 500_000, salaryAccrued: 200_000, accrualProfit: 300_000 });
-    // 12 месяцев, новые сверху
-    expect(res.body.months).toHaveLength(12);
+    // Текущий месяц полный: обучение с начала трёх месяцев назад
+    expect(res.body.current).toMatchObject({ charged: 500_000, salaryAccrued: 200_000, accrualProfit: 300_000 });
+    // С начала учёта, но не больше 12 месяцев; новые сверху
+    const windowStart = addMonths(current, -11);
+    const expectedFirst = windowStart > ACCOUNTING_START_MONTH ? windowStart : ACCOUNTING_START_MONTH;
+    expect(res.body.months).toHaveLength(monthRange(expectedFirst, current).length);
     expect(res.body.months[0].month).toBe(current);
+    expect(res.body.months.at(-1).month).toBe(expectedFirst);
   });
 
   it("по каждому преподавателю: начислено и выдано за месяц", async () => {
