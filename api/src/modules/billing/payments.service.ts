@@ -3,6 +3,7 @@ import { AuditService } from "../../common/audit/audit.service";
 import type { SessionUser } from "../../common/auth/session-user";
 import { toNoonUtc } from "../../common/date-only";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { paymentTeacherFilter } from "./billing-ledger.service";
 import { priceFor } from "./domain/billing";
 import type { CreatePaymentDto, PaymentFiltersDto } from "./dto/billing.dto";
 
@@ -29,7 +30,7 @@ export class PaymentsService {
    * месяц), а не по периоду forMonth.
    */
   async list(filters: PaymentFiltersDto) {
-    const { month, courseId, groupId, studentId, method, branchId } = filters;
+    const { month, courseId, groupId, studentId, method, branchId, teacherId } = filters;
     const where = {
       deletedAt: null,
       ...(month ? { paidAt: monthRange(month) } : {}),
@@ -40,6 +41,8 @@ export class PaymentsService {
       // Снимок на платеже, а не через группу: касса за закрытый месяц не
       // должна дрожать от перевода или удаления группы
       ...(branchId ? { branchId } : {}),
+      // Группа платежа (тот же снимок) — не текущая группа ученика
+      ...(teacherId ? paymentTeacherFilter(teacherId) : {}),
     };
 
     const [payments, totals] = await Promise.all([

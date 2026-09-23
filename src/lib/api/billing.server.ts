@@ -12,7 +12,13 @@ import { apiServerFetch } from "./server";
 // Те же маршруты биллинга для серверных компонентов, см. users.server.
 
 export const getDebtors = (
-  query: { month?: string; courseId?: string; groupId?: string; branchId?: string } = {}
+  query: {
+    month?: string;
+    courseId?: string;
+    groupId?: string;
+    branchId?: string;
+    teacherId?: string;
+  } = {}
 ) => apiServerFetch<ApiDebtors>("/billing/debtors", { query });
 
 export const getDebtorsCount = () => apiServerFetch<{ count: number }>("/billing/debtors/count");
@@ -31,6 +37,7 @@ export const getPayments = (
     studentId?: string;
     method?: PaymentMethodValue;
     branchId?: string;
+    teacherId?: string;
   } = {}
 ) => apiServerFetch<ApiPaymentsPage>("/billing/payments", { query });
 

@@ -29,6 +29,38 @@ export function activeEnrollmentFilter(): Prisma.EnrollmentWhereInput {
   return { unenrolledAt: null };
 }
 
+/**
+ * Prisma-фильтр «чья запись» для фильтра по преподавателю. Лестница одна на
+ * весь проект (attendance-access.ts responsibleTeacherId, salary.service.ts
+ * loadUnits): педагог группы, а если у группы педагог не задан или группы
+ * нет — педагог курса. Единственное место, где она собрана в Prisma-условие,
+ * — иначе фильтр должников и фильтр оплат со временем разъехались бы.
+ */
+export function enrollmentTeacherFilter(teacherId: string): Prisma.EnrollmentWhereInput {
+  return {
+    OR: [
+      { group: { is: { teacherId } } },
+      { group: { is: { teacherId: null } }, course: { teacherId } },
+      { groupId: null, course: { teacherId } },
+    ],
+  };
+}
+
+/**
+ * Тот же приём для Payment: группа берётся ИЗ ПЛАТЕЖА (снимок на момент
+ * приёма денег), а не текущая группа ученика — перевод студента в другую
+ * группу не должен задним числом менять кассу закрытого месяца.
+ */
+export function paymentTeacherFilter(teacherId: string): Prisma.PaymentWhereInput {
+  return {
+    OR: [
+      { group: { is: { teacherId } } },
+      { group: { is: { teacherId: null } }, course: { teacherId } },
+      { groupId: null, course: { teacherId } },
+    ],
+  };
+}
+
 export interface LedgerFilters {
   enrollmentId?: string;
   courseId?: string;
@@ -38,6 +70,8 @@ export interface LedgerFilters {
   // идёт через группу, а записи без группы при этом фильтре не попадают —
   // это решает вызывающий код (withoutGroup в счётчиках должников)
   branchId?: string;
+  // Педагог записи — enrollmentTeacherFilter выше
+  teacherId?: string;
 }
 
 /**
@@ -69,25 +103,34 @@ export class BillingLedgerService {
    * прошлые месяцы замёрзли бы уже по новой цене.
    */
   loadBillableEnrollments(filters: LedgerFilters, options: { includeFree?: boolean } = {}) {
+    // Условия собираются в массив, а не разворачиваются спредом в один
+    // объект: и платность (OR), и фильтр по преподавателю (тоже OR) не
+    // могут ужиться в одном объекте — второй спред тихо перезаписал бы
+    // первый. AND с массивом условий этого не допускает.
     return this.prisma.enrollment.findMany({
       where: {
-        course: { deletedAt: null },
-        student: { deletedAt: null },
-        ...(options.includeFree
-          ? {}
-          : {
-              OR: [
-                { course: { price: { not: null } } },
-                { group: { price: { not: null } } },
-                { priceOverride: { not: null } },
-                { monthlyCharges: { some: { amount: { gt: 0 } } } },
-              ],
-            }),
-        ...(filters.enrollmentId ? { id: filters.enrollmentId } : {}),
-        ...(filters.courseId ? { courseId: filters.courseId } : {}),
-        ...(filters.groupId ? { groupId: filters.groupId } : {}),
-        ...(filters.studentId ? { studentId: filters.studentId } : {}),
-        ...(filters.branchId ? { group: { is: { branchId: filters.branchId } } } : {}),
+        AND: [
+          { course: { deletedAt: null } },
+          { student: { deletedAt: null } },
+          ...(options.includeFree
+            ? []
+            : [
+                {
+                  OR: [
+                    { course: { price: { not: null } } },
+                    { group: { price: { not: null } } },
+                    { priceOverride: { not: null } },
+                    { monthlyCharges: { some: { amount: { gt: 0 } } } },
+                  ],
+                },
+              ]),
+          ...(filters.enrollmentId ? [{ id: filters.enrollmentId }] : []),
+          ...(filters.courseId ? [{ courseId: filters.courseId }] : []),
+          ...(filters.groupId ? [{ groupId: filters.groupId }] : []),
+          ...(filters.studentId ? [{ studentId: filters.studentId }] : []),
+          ...(filters.branchId ? [{ group: { is: { branchId: filters.branchId } } }] : []),
+          ...(filters.teacherId ? [enrollmentTeacherFilter(filters.teacherId)] : []),
+        ],
       },
       select: {
         id: true,

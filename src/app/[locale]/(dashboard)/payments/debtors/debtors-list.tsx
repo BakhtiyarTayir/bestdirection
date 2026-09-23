@@ -70,6 +70,8 @@ interface DebtorsListProps {
   courses: { id: string; title: string }[];
   branchId?: string;
   branches: { id: string; name: string }[];
+  teacherId?: string;
+  teachers: { id: string; firstName: string; lastName: string }[];
 }
 
 const ALL = "all";
@@ -87,6 +89,8 @@ export function DebtorsList({
   courses,
   branchId,
   branches,
+  teacherId,
+  teachers,
 }: DebtorsListProps) {
   const t = useTranslations("debtors");
   const tPayments = useTranslations("payments");
@@ -101,7 +105,7 @@ export function DebtorsList({
   const money = new Intl.NumberFormat(intlLocale(locale));
 
   const setFilter = (key: string, value: string) => {
-    const next = { month, courseId, branchId, [key]: value === ALL ? "" : value };
+    const next = { month, courseId, branchId, teacherId, [key]: value === ALL ? "" : value };
     const params = new URLSearchParams();
     for (const [k, v] of Object.entries(next)) {
       if (v) params.set(k, v);
@@ -170,6 +174,24 @@ export function DebtorsList({
                 {branches.map((branch) => (
                   <SelectItem key={branch.id} value={branch.id}>
                     {branch.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        {teachers.length > 0 && (
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">{t("filterTeacher")}</Label>
+            <Select value={teacherId ?? ALL} onValueChange={(value) => setFilter("teacherId", value)}>
+              <SelectTrigger className="w-56">
+                <SelectValue placeholder={t("allTeachers")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>{t("allTeachers")}</SelectItem>
+                {teachers.map((teacher) => (
+                  <SelectItem key={teacher.id} value={teacher.id}>
+                    {teacher.lastName} {teacher.firstName}
                   </SelectItem>
                 ))}
               </SelectContent>
