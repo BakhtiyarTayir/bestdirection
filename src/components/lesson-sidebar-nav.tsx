@@ -76,7 +76,8 @@ export function LessonSidebarNav({
   return (
     <nav
       className={cn(
-        "flex-1 min-h-0 overflow-y-auto",
+        // Прокрутку держит родитель (sidebar.tsx) — вместе с нижним блоком
+        "flex-1",
         collapsed ? "p-2" : "p-4"
       )}
     >

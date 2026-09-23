@@ -194,6 +194,10 @@ export function Sidebar({ role, userName, logoUrl }: SidebarProps) {
         {!collapsed && <span className="text-lg font-semibold">Best Direction</span>}
       </div>
 
+      {/* Меню и нижний блок (имя, роль, язык, выход) прокручиваются вместе:
+          блок стоит в конце списка, а не закреплён поверх него. Короткое
+          меню растягивается (flex-1), и блок остаётся внизу панели */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       {lessonRoute ? (
         <LessonSidebarNav
           courseSlug={lessonRoute.courseSlug}
@@ -202,7 +206,7 @@ export function Sidebar({ role, userName, logoUrl }: SidebarProps) {
           onNavigate={() => setMobileOpen(false)}
         />
       ) : (
-      <nav className={cn("flex-1 min-h-0 overflow-y-auto space-y-1", collapsed ? "p-2" : "p-4")}>
+      <nav className={cn("flex-1 space-y-1", collapsed ? "p-2" : "p-4")}>
         <TooltipProvider delayDuration={0}>
           {filteredItems.map((item) => {
             const isActive = item.exact
@@ -341,6 +345,7 @@ export function Sidebar({ role, userName, logoUrl }: SidebarProps) {
             {collapsed && <TooltipContent side="right">{tAuth("logout")}</TooltipContent>}
           </Tooltip>
         </TooltipProvider>
+      </div>
       </div>
     </div>
   );
