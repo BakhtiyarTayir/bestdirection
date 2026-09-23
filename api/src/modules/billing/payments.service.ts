@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { AuditService } from "../../common/audit/audit.service";
 import type { SessionUser } from "../../common/auth/session-user";
 import { toNoonUtc } from "../../common/date-only";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { priceFor } from "./domain/billing";
 import type { CreatePaymentDto, PaymentFiltersDto } from "./dto/billing.dto";
 
 /** Границы календарного месяца "YYYY-MM" в UTC: [начало, начало следующего) */
@@ -77,7 +78,8 @@ export class PaymentsService {
             courseId: true,
             course: { select: { title: true, price: true } },
             groupId: true,
-            group: { select: { name: true } },
+            group: { select: { name: true, price: true } },
+            priceOverride: true,
           },
         },
       },
@@ -99,7 +101,22 @@ export class PaymentsService {
         enrollments: student.enrollments.map((enrollment) => ({
           courseId: enrollment.courseId,
           courseTitle: enrollment.course.title,
-          price: enrollment.course.price,
+          // Действующая цена — priceOverride → цена группы → цена курса
+          // (priceFor, единое правило биллинга). Раньше форма подставляла
+          // всегда цену курса, даже если у записи своя цена или у группы
+          // другая — сумма платежа сразу расходилась с начислением.
+          price: priceFor({
+            startsAt: null,
+            createdAt: new Date(0),
+            billingEndsAt: null,
+            priceOverride: enrollment.priceOverride,
+            firstMonthCharge: null,
+            coursePrice: enrollment.course.price,
+            groupPrice: enrollment.group?.price ?? null,
+            scheduleDays: [],
+            groupEndDate: null,
+            groupStartDate: null,
+          }),
           groupId: enrollment.groupId,
           groupName: enrollment.group?.name ?? null,
         })),
@@ -116,6 +133,19 @@ export class PaymentsService {
       select: { groupId: true },
     });
     if (!enrollment) throw new NotFoundException("notEnrolled");
+
+    // Группа из формы — справочная, но не доверенная: клиент может прислать
+    // groupId чужой группы (другого курса), и тогда у платежа зафиксируется
+    // чужой филиал (branchId ниже берётся именно из группы). Проверяем
+    // только когда она расходится с группой записи — тот случай, когда
+    // клиент вообще что-то прислал сам, а не подставил то, что уже пришло.
+    if (data.groupId && data.groupId !== enrollment.groupId) {
+      const group = await this.prisma.group.findUnique({
+        where: { id: data.groupId },
+        select: { courseId: true },
+      });
+      if (!group || group.courseId !== data.courseId) throw new BadRequestException("groupMismatch");
+    }
 
     // Группу берём из записи студента: в форме она справочная
     const groupId = data.groupId || enrollment.groupId;

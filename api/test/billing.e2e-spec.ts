@@ -265,5 +265,133 @@ describe("модуль billing", () => {
     it("несуществующий студент — 404", async () => {
       expect((await get("/billing/students/no-such-id", "ADMIN")).status).toBe(404);
     });
+
+    // Правка «карточка ученика показывает будущие месяцы как долг»:
+    // resolveSchedules раньше доводился до месяца ПОСЛЕДНЕЙ оплаты по ВСЕМ
+    // курсам студента — аванс за курс A дописывал курсу B начисления за
+    // месяцы, которые ещё не наступили. Свои студент/курсы/группа, чтобы не
+    // задеть баланс ids.enrollment из describe выше.
+    describe("будущие месяцы одного курса не начисляются другому (правка)", () => {
+      it("курс без аванса не получает месяцы позже текущего, а его баланс сходится со списком", async () => {
+        const branch = await createBranch(`Карточка-${run}`);
+        const student = await createUser({ role: "STUDENT" });
+
+        const courseA = await testDb().course.create({
+          data: { slug: `billing-card-a-${run}`, title: "Курс A", teacherId: ids.TEACHER, price: 500000 },
+        });
+        const courseB = await testDb().course.create({
+          data: { slug: `billing-card-b-${run}`, title: "Курс B", teacherId: ids.TEACHER, price: 300000 },
+        });
+        const groupA = await testDb().group.create({
+          data: { name: `CA-${run}`, courseId: courseA.id, scheduleDays: [1, 3, 5], branchId: branch.id },
+        });
+        const groupB = await testDb().group.create({
+          data: { name: `CB-${run}`, courseId: courseB.id, scheduleDays: [2, 4], branchId: branch.id },
+        });
+
+        const startsAt = new Date(`${addMonths(current, -3)}-01T12:00:00.000Z`);
+        await testDb().enrollment.create({
+          data: { studentId: student.id, courseId: courseA.id, groupId: groupA.id, startsAt },
+        });
+        await testDb().enrollment.create({
+          data: { studentId: student.id, courseId: courseB.id, groupId: groupB.id, startsAt },
+        });
+
+        // Аванс по курсу A — за месяц на два вперёд от текущего
+        const futureMonth = addMonths(current, 2);
+        const prepaidAmount = 500000;
+        await send("post", "/billing/payments", "ADMIN", {
+          studentId: student.id,
+          courseId: courseA.id,
+          amount: prepaidAmount,
+          method: "CASH",
+          paidAt: `${current}-05`,
+          forMonth: futureMonth,
+        });
+
+        const res = await get(`/billing/students/${student.id}`, "ADMIN");
+        expect(res.status).toBe(200);
+        expect(res.body.upToMonth).toBe(current);
+
+        const cardA = res.body.courses.find((c: { course: { id: string } }) => c.course.id === courseA.id);
+        const cardB = res.body.courses.find((c: { course: { id: string } }) => c.course.id === courseB.id);
+        expect(cardA).toBeDefined();
+        expect(cardB).toBeDefined();
+
+        // Курс B без аванса — у него нет ни одного месяца позже текущего
+        expect(cardB.months.every((m: { month: string }) => m.month <= current)).toBe(true);
+        // Баланс курса B = -(начислено), как в списке студентов на текущий месяц
+        expect(cardB.balance).toBe(-cardB.totalCharged);
+        expect(cardB.prepaidFuture).toBe(0);
+
+        // Курс A: аванс за будущий месяц вынесен отдельно и не искажает баланс
+        expect(cardA.prepaidFuture).toBe(prepaidAmount);
+        expect(cardA.balance).toBe(cardA.totalPaid - cardA.totalCharged);
+
+        // Список студентов считает баланс на текущий месяц — карточка курса B
+        // (без аванса) должна с ним сойтись buck-for-buck
+        const overview = await get(`/billing/students?branchId=${branch.id}`, "ADMIN");
+        const overviewRow = overview.body.find((s: { id: string }) => s.id === student.id);
+        expect(overviewRow).toBeDefined();
+        // В списке баланс студента суммарный по всем его курсам — совпадает
+        // с суммой курсовых балансов карточки (без учёта аванса, он туда и
+        // не входит — аванс за будущее у debtors() тоже не в текущем долге)
+        expect(overviewRow.balance).toBe(cardA.balance + cardB.balance);
+      });
+    });
+  });
+
+  // Правка «оплата: groupId от клиента не проверяется» — PaymentsService.create
+  // раньше принимал ЛЮБОЙ groupId из тела запроса без проверки принадлежности
+  // курсу, и у платежа сохранялся чужой филиал (branchId — снимок из группы).
+  describe("оплата: чужой groupId отклоняется (правка)", () => {
+    it("группа другого курса — 400 groupMismatch", async () => {
+      const otherCourse = await testDb().course.create({
+        data: { slug: `billing-mismatch-${run}`, title: "Другой курс", teacherId: ids.TEACHER, price: 200000 },
+      });
+      const otherBranch = await createBranch(`Чужой-${run}`);
+      const otherGroup = await testDb().group.create({
+        data: { name: `OG-${run}`, courseId: otherCourse.id, scheduleDays: [1], branchId: otherBranch.id },
+      });
+
+      // ids.STUDENT записан на ids.course (см. beforeAll) — шлём его же
+      // курс, но группу ЧУЖОГО курса
+      const res = await send("post", "/billing/payments", "ADMIN", {
+        studentId: ids.STUDENT,
+        courseId: ids.course,
+        groupId: otherGroup.id,
+        amount: 100000,
+        method: "CASH",
+        paidAt: `${current}-05`,
+      });
+      expect(res.status).toBe(400);
+      expect(res.body.message).toBe("groupMismatch");
+    });
+
+    it("несуществующий groupId — тоже 400 groupMismatch", async () => {
+      const res = await send("post", "/billing/payments", "ADMIN", {
+        studentId: ids.STUDENT,
+        courseId: ids.course,
+        groupId: "no-such-group",
+        amount: 100000,
+        method: "CASH",
+        paidAt: `${current}-05`,
+      });
+      expect(res.status).toBe(400);
+      expect(res.body.message).toBe("groupMismatch");
+    });
+
+    it("groupId, совпадающий с группой записи — по-прежнему принимается", async () => {
+      const res = await send("post", "/billing/payments", "ADMIN", {
+        studentId: ids.STUDENT,
+        courseId: ids.course,
+        groupId: ids.group,
+        amount: 100000,
+        method: "CASH",
+        paidAt: `${current}-05`,
+      });
+      expect(res.status).toBe(201);
+      await send("delete", `/billing/payments/${res.body.id}`, "ADMIN");
+    });
   });
 });

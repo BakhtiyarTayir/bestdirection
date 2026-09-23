@@ -190,7 +190,11 @@ export function CreatePaymentDialog({
         toast({
           title: tErrors("error"),
           description:
-            result.error === "notEnrolled" ? t("notEnrolled") : t("createFailed"),
+            result.error === "notEnrolled"
+              ? t("notEnrolled")
+              : result.error === "groupMismatch"
+                ? t("groupMismatch")
+                : t("createFailed"),
           variant: "destructive",
         });
       }

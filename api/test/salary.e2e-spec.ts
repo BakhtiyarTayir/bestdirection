@@ -661,4 +661,76 @@ describe("модуль salary", () => {
       expect(exact.status).toBe(201);
     });
   });
+
+  // Правка «сводка зарплат с фильтром по филиалу считает неверный долг»: с
+  // branchId начисленное берётся только по единицам этого филиала, а выплаты
+  // раньше подтягивались ВСЕ, независимо от их снимка branchId — долг
+  // получался заниженным. Свои филиал/курс/группа/преподаватель, чтобы не
+  // задеть долг из describe выше.
+  describe("сводка зарплат с фильтром по филиалу: выплата другого филиала не уменьшает долг (правка)", () => {
+    it("выплата со снимком чужого филиала не считается в долге отфильтрованной сводки, но считается в общей", async () => {
+      const branchOwn = await createBranch("Долг-свой");
+      const branchOther = await createBranch("Долг-чужой");
+      const teacher = await createUser({ role: "TEACHER" });
+
+      const course = await testDb().course.create({
+        data: { slug: `salary-branch-debt-${run}`, title: "Курс долг филиала", teacherId: teacher.id, price: 400_000 },
+      });
+      const group = await testDb().group.create({
+        data: {
+          name: `DB-${run}`,
+          courseId: course.id,
+          branchId: branchOwn.id,
+          scheduleDays: [1, 3, 5],
+          teacherId: teacher.id,
+          salaryPercentBp: 5000,
+          startDate: new Date(`${startMonth}-01T12:00:00.000Z`),
+        },
+      });
+      const student = await createUser({ role: "STUDENT" });
+      await testDb().enrollment.create({
+        data: {
+          studentId: student.id,
+          courseId: course.id,
+          groupId: group.id,
+          startsAt: new Date(`${startMonth}-01T12:00:00.000Z`),
+        },
+      });
+
+      const before = await get(`/salary?month=${prevMonth}&branchId=${branchOwn.id}`, "ADMIN");
+      expect(before.status).toBe(200);
+      const rowBefore = before.body.rows.find((r: { teacherId: string }) => r.teacherId === teacher.id);
+      expect(rowBefore).toBeDefined();
+      expect(rowBefore.debt).toBeGreaterThan(0);
+
+      // Выплата со снимком ЧУЖОГО филиала — как если бы преподавателя
+      // выплатили, пока он числился в другом филиале, а сюда перевели позже.
+      // Пишем напрямую в базу: PayoutsService сам берёт branchId из
+      // user.branchId преподавателя, а нам нужен именно рассинхрон снимков.
+      await testDb().teacherPayout.create({
+        data: {
+          teacherId: teacher.id,
+          amount: rowBefore.debt,
+          method: "CASH",
+          paidAt: new Date(`${current}-05T12:00:00.000Z`),
+          forMonth: prevMonth,
+          branchId: branchOther.id,
+          createdById: ids.ADMIN,
+        },
+      });
+
+      const afterFiltered = await get(`/salary?month=${prevMonth}&branchId=${branchOwn.id}`, "ADMIN");
+      const rowAfterFiltered = afterFiltered.body.rows.find((r: { teacherId: string }) => r.teacherId === teacher.id);
+      // Выплата снята с другого филиала — в сводке ЭТОГО филиала долг как был
+      expect(rowAfterFiltered.debt).toBe(rowBefore.debt);
+
+      // Без фильтра по филиалу выплата учитывается всегда — она реальна,
+      // просто снимок филиала у неё не совпал с фильтром сводки
+      const afterUnfiltered = await get(`/salary?month=${prevMonth}`, "ADMIN");
+      const rowAfterUnfiltered = afterUnfiltered.body.rows.find(
+        (r: { teacherId: string }) => r.teacherId === teacher.id
+      );
+      expect(rowAfterUnfiltered.debt).toBe(0);
+    });
+  });
 });

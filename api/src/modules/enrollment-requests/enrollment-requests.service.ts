@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { AuditService } from "../../common/audit/audit.service";
 import type { SessionUser } from "../../common/auth/session-user";
+import { toNoonUtc } from "../../common/date-only";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { botMessages } from "../../common/telegram/messages";
 import { TelegramNotifyService } from "../../common/telegram/telegram-notify.service";
@@ -102,9 +103,19 @@ export class EnrollmentRequestsService {
           if (taken >= course.intakeSeats) throw new Error("NO_SEATS_LEFT");
         }
         if (finishedId) {
+          // startsAt — на сегодня, иначе старая дата начала (от прошлого
+          // обучения) насчитала бы текущий месяц целиком; firstMonthCharge —
+          // сбрасываем, ручная сумма относилась к прошлому первому месяцу.
+          // Замороженные месяцы прошлого обучения не пострадают —
+          // mergeSchedule сохраняет их независимо от новой startsAt.
           await tx.enrollment.update({
             where: { id: finishedId },
-            data: { billingEndsAt: null, unenrolledAt: null },
+            data: {
+              billingEndsAt: null,
+              unenrolledAt: null,
+              startsAt: toNoonUtc(new Date().toISOString().slice(0, 10)),
+              firstMonthCharge: null,
+            },
           });
         } else {
           await tx.enrollment.create({ data: { studentId: student.id, courseId } });
@@ -257,9 +268,17 @@ export class EnrollmentRequestsService {
           if (taken >= request.course.intakeSeats) throw new Error("NO_SEATS_LEFT");
         }
         if (finishedId) {
+          // Тот же приём, что в enrollInFreeCourse выше: startsAt — на
+          // сегодня (иначе текущий месяц насчитался бы целиком по старой
+          // дате начала), firstMonthCharge — сбрасываем.
           await tx.enrollment.update({
             where: { id: finishedId },
-            data: { billingEndsAt: null, unenrolledAt: null },
+            data: {
+              billingEndsAt: null,
+              unenrolledAt: null,
+              startsAt: toNoonUtc(new Date().toISOString().slice(0, 10)),
+              firstMonthCharge: null,
+            },
           });
         } else {
           await tx.enrollment.create({
