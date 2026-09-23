@@ -8,6 +8,7 @@ import {
   addMonths,
   monthKey,
   currentMonthKey,
+  currentDateKey,
   paymentMonth,
   isClosedMonth,
   mergeSchedule,
@@ -264,6 +265,17 @@ check(
   "до 19:00 UTC 30 сентября в Ташкенте ещё сентябрь",
   currentMonthKey(new Date("2026-09-30T18:59:00Z")),
   "2026-09"
+);
+// ── сегодняшняя дата по Ташкенту (для дашборда преподавателя) ──
+check(
+  "после 19:00 UTC 30 сентября в Ташкенте уже 1 октября",
+  currentDateKey(new Date("2026-09-30T19:30:00Z")),
+  "2026-10-01"
+);
+check(
+  "до 19:00 UTC 30 сентября в Ташкенте ещё 30 сентября",
+  currentDateKey(new Date("2026-09-30T18:59:00Z")),
+  "2026-09-30"
 );
 check(
   "isClosedMonth использует ташкентский месяц, а не UTC",

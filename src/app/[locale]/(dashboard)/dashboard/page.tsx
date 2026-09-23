@@ -6,6 +6,7 @@ import { BookOpen, Users, FileText } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { getDashboardSummary } from "@/lib/api/dashboard.server";
 import { AdminDashboard } from "./admin-dashboard";
+import { TeacherDashboard } from "./teacher-dashboard";
 
 export const dynamic = "force-dynamic";
 
@@ -35,20 +36,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   }
 
   if (summary.role === "TEACHER") {
-    return (
-      <div>
-        <h1 className="text-3xl font-bold mb-6">{t("teacherTitle")}</h1>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <StatCard title={t("myCourses")} value={summary.courses} icon={BookOpen} href="/courses" />
-          <StatCard
-            title={t("enrolledStudents")}
-            value={summary.students}
-            icon={Users}
-            href="/statistics"
-          />
-        </div>
-      </div>
-    );
+    return <TeacherDashboard />;
   }
 
   return (
