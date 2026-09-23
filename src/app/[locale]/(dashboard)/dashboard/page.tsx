@@ -2,17 +2,23 @@ import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Users, ClipboardCheck, FileText, GraduationCap } from "lucide-react";
+import { BookOpen, Users, FileText } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { getDashboardSummary } from "@/lib/api/dashboard.server";
+import { AdminDashboard } from "./admin-dashboard";
 
 export const dynamic = "force-dynamic";
 
+interface DashboardPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
 /**
  * Сводка на главной. Числа считает api и по роли вызывающего — интерфейс
- * только раскладывает их по карточкам.
+ * только раскладывает их по карточкам. searchParams — только ради branchId
+ * администратора (план дашборда, 1.4); другие роли его не используют.
  */
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const session = await getSession();
   if (!session?.user) redirect("/login");
 
@@ -23,17 +29,9 @@ export default async function DashboardPage() {
   const summary = result.data;
 
   if (summary.role === "ADMIN") {
-    return (
-      <div>
-        <h1 className="text-3xl font-bold mb-6">{t("adminTitle")}</h1>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <StatCard title={t("users")} value={summary.users} icon={Users} href="/users" />
-          <StatCard title={t("courses")} value={summary.courses} icon={BookOpen} href="/courses" />
-          <StatCard title={t("teachers")} value={summary.teachers} icon={GraduationCap} href="/teachers" />
-          <StatCard title={t("students")} value={summary.students} icon={ClipboardCheck} href="/students" />
-        </div>
-      </div>
-    );
+    const params = await searchParams;
+    const branchId = typeof params.branchId === "string" && params.branchId ? params.branchId : undefined;
+    return <AdminDashboard summary={summary} branchId={branchId} />;
   }
 
   if (summary.role === "TEACHER") {

@@ -6,9 +6,13 @@ import { FinanceService } from "./finance.service";
 
 // Отчёт «Финансы»: касса и начисления учеников (BillingModule) минус
 // выплаты и начисленная зарплата (SalaryModule). Своих данных не хранит.
+// FinanceService экспортируется: главной панели администратора нужна
+// прибыль по кассе и сравнение с прошлым месяцем, а пересчитывать деньги
+// своим кодом там нельзя (план дашборда, 1.1).
 @Module({
   imports: [BillingModule, SalaryModule],
   controllers: [FinanceController],
   providers: [FinanceService],
+  exports: [FinanceService],
 })
 export class FinanceModule {}
