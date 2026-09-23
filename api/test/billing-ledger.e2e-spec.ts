@@ -117,7 +117,8 @@ it("реестр начислений и Корзина на настоящей 
   const byStudent = await enroll(free.id, { priceOverride: 400000 });
   const noPrice = await enroll(free.id);
   const billable = new Set((await ledger.loadBillableEnrollments({})).map((e) => e.id));
-  await check("цена у курса — платная", billable.has(byCourse.id), true);
+  // Цена курса в начислениях не участвует (решение владельца 2026-09-23)
+  await check("цена только у курса — не платная", billable.has(byCourse.id), false);
   await check("цена у группы — платная", billable.has(byGroup.id), true);
   await check("цена у студента на курсе без цены — платная", billable.has(byStudent.id), true);
   await check("цены нет нигде — не платная", billable.has(noPrice.id), false);
@@ -161,9 +162,12 @@ it("реестр начислений и Корзина на настоящей 
 
   const late = await course("late-price", null);
   const e5 = await enroll(late.id);
-  await ledger.freezeClosedMonths({ courseId: late.id }); // как updateCourse
   await prisma.course.update({ where: { id: late.id }, data: { price: 650000 } });
-  await check("поставили цену курсу — прошлое осталось нулевым", await amounts(e5.id), [...atPrice(0), [current, 650000]]);
+  await check(
+    "цена курса — только витрина: запись без группы и своей цены не начисляется",
+    (await ledger.loadBillableEnrollments({ enrollmentId: e5.id })).length,
+    0
+  );
 
   // ── платная запись становится бесплатной ──
   const g3 = await group("g3", free.id, 500000);

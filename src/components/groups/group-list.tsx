@@ -47,10 +47,9 @@ interface GroupData {
   branch?: { id: string; name: string } | null;
   // Карточка группы (план «Уроки и карточка группы», этап 4): своего
   // преподавателя может не быть — тогда показывается педагог курса с
-  // пометкой, что он унаследован; то же для цены
+  // пометкой, что он унаследован
   teacher: ApiGroupTeacher | null;
   courseTeacher?: ApiGroupTeacher;
-  coursePrice?: number | null;
 }
 
 interface GroupListProps {
@@ -78,7 +77,7 @@ export function GroupList({ groups, courseSlug }: GroupListProps) {
       if (!result.success) {
         toast({ title: tErrors("error"), description: result.error, variant: "destructive" });
       } else {
-        toast({ title: t("groupDeleted") });
+        toast({ title: result.data.closed ? t("groupClosed") : t("groupDeleted") });
         router.refresh();
       }
     });
@@ -118,10 +117,8 @@ export function GroupList({ groups, courseSlug }: GroupListProps) {
         // отчёты, и зарплата (план, 5.2)
         const teacher = group.teacher ?? group.courseTeacher ?? null;
         const teacherInherited = group.teacher === null && group.courseTeacher !== undefined;
-        // Своей цены нет — цена курса, тоже с пометкой: иначе не отличить
-        // от «месяц бесплатный»
-        const price = group.price ?? group.coursePrice ?? null;
-        const priceInherited = group.price === null && group.coursePrice !== undefined;
+        // Цена — только группы: цена курса в начислениях не участвует
+        const price = group.price;
 
         return (
           <Card key={group.id} className={!group.isActive ? "opacity-60" : ""}>
@@ -201,9 +198,6 @@ export function GroupList({ groups, courseSlug }: GroupListProps) {
                     <Banknote className="h-4 w-4 shrink-0" />
                     <span>
                       {money.format(price)} UZS
-                      {priceInherited && (
-                        <span className="ml-1 text-xs">({t("priceFromCourseShort")})</span>
-                      )}
                     </span>
                   </div>
                 )}

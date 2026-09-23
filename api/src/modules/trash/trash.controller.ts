@@ -4,6 +4,8 @@ import { CurrentUser } from "../../common/auth/decorators";
 import type { SessionUser } from "../../common/auth/session-user";
 import { CheckPolicies } from "../../common/policies/check-policies.decorator";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { BillingLedgerService } from "../billing/billing-ledger.service";
+import { SalaryService } from "../salary/salary.service";
 import { TrashService } from "./trash.service";
 import { ConflictException, NotFoundException } from "@nestjs/common";
 
@@ -16,7 +18,9 @@ export class TrashController {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly trash: TrashService,
-    private readonly audit: AuditService
+    private readonly audit: AuditService,
+    private readonly ledger: BillingLedgerService,
+    private readonly salary: SalaryService
   ) {}
 
   private get prismaUnscoped() {
@@ -65,6 +69,12 @@ export class TrashController {
     });
     if (!course) throw new NotFoundException("courseNotFound");
     if (!course.deletedAt) throw new ConflictException("notInTrash");
+
+    // Пока курс лежал в Корзине, начислений не было (дата переноса — дата
+    // окончания). Фиксируем эти закрытые месяцы нулями ДО восстановления:
+    // иначе после него они посчитались бы по полной цене задним числом
+    await this.ledger.freezeClosedMonths({ courseId: id });
+    await this.salary.freezeClosedMonths({ courseId: id });
 
     await this.prismaUnscoped.course.update({ where: { id }, data: { deletedAt: null } });
     await this.audit.record({

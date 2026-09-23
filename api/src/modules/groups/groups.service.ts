@@ -31,22 +31,22 @@ export class GroupsService {
         branch: { select: { id: true, name: true } },
         _count: { select: { enrollments: true } },
         // Преподаватель и цена группы — прямо в карточке (план, этап 4,
-        // раздел 5.4). Педагог и цена КУРСА — запасной вариант: своих нет,
-        // показываем курсовые с пометкой в интерфейсе, что они унаследованы
+        // раздел 5.4). Педагог КУРСА — запасной вариант: своего нет,
+        // показываем курсового с пометкой в интерфейсе, что он унаследован.
+        // Цены курса здесь нет: в начислениях она не участвует
         teacher: { select: { id: true, firstName: true, lastName: true } },
         course: {
-          select: { price: true, teacher: { select: { id: true, firstName: true, lastName: true } } },
+          select: { teacher: { select: { id: true, firstName: true, lastName: true } } },
         },
       },
       orderBy: { sortOrder: "asc" },
     });
-    // Разворачиваем вложенный course в плоские courseTeacher/coursePrice —
+    // Разворачиваем вложенный course в плоский courseTeacher —
     // тот же приём, что и в all() ниже, чтобы карточка группы на веб не
     // гадала, в каком из двух маршрутов какая форма ответа
     return groups.map(({ course, ...group }) => ({
       ...group,
       courseTeacher: course.teacher,
-      coursePrice: course.price,
     }));
   }
 
@@ -66,7 +66,6 @@ export class GroupsService {
             id: true,
             slug: true,
             title: true,
-            price: true,
             teacher: { select: { id: true, firstName: true, lastName: true } },
           },
         },
@@ -80,7 +79,6 @@ export class GroupsService {
       ...group,
       course: { id: course.id, slug: course.slug, title: course.title },
       courseTeacher: course.teacher,
-      coursePrice: course.price,
     }));
   }
 
@@ -139,8 +137,7 @@ export class GroupsService {
         schedule: data.schedule,
         scheduleDays: data.scheduleDays,
         isActive: data.isActive,
-        // Пустая строка из формы — цены у группы нет, берётся цена курса
-        price: data.price === "" || data.price === undefined ? null : data.price,
+        price: data.price,
         // Пустая строка — ставки у группы нет, зарплата берёт ставку
         // преподавателя (план зарплат, 5.2)
         salaryPercentBp:
@@ -206,8 +203,8 @@ export class GroupsService {
         ...(data.scheduleDays !== undefined && { scheduleDays: data.scheduleDays }),
         ...(data.isActive !== undefined && { isActive: data.isActive }),
         ...(data.sortOrder !== undefined && { sortOrder: data.sortOrder }),
-        // undefined — не трогаем, "" — убираем цену группы
-        price: data.price === undefined ? undefined : data.price === "" ? null : data.price,
+        // undefined — не трогаем; снять цену нельзя (DTO), только поменять
+        price: data.price,
         // undefined — не трогаем, "" — снимаем ставку группы (берётся ставка преподавателя)
         salaryPercentBp:
           data.salaryPercentBp === undefined ? undefined : data.salaryPercentBp === "" ? null : data.salaryPercentBp,
@@ -229,23 +226,52 @@ export class GroupsService {
     return updated;
   }
 
+  /**
+   * Удаление группы. Группу с учениками или денежной историей не удаляем, а
+   * ЗАКРЫВАЕМ (решение владельца 2026-09-23): дата окончания — сегодня,
+   * группа неактивна, ученики остаются в ней. Так долги целы: у учеников
+   * сохраняются цена и расписание группы, текущий месяц начисляется по
+   * сегодняшний день, а закрытые месяцы, зарплата и их пересчёт по-прежнему
+   * привязаны к существующей группе. Физическое удаление снимало группу с
+   * учеников — цена пропадала, и текущий месяц переставал начисляться.
+   * Физически удаляется только пустая группа без истории.
+   */
   async remove(groupId: string, ability: AppAbility, actor: SessionUser) {
     const group = await this.manageableGroup(ability, groupId);
 
-    // Студенты теряют цену и расписание группы — сначала фиксируем их
-    // закрытые месяцы по нынешним данным
+    // Закрытые месяцы — по нынешним данным ДО любой правки (ленивая
+    // заморозка), зарплата строго после биллинга (план зарплат, 5.4)
     await this.ledger.freezeClosedMonths({ groupId });
-    // И зарплату преподавателя группы — ДО удаления строки Group: после
-    // delete() педагога и ставку группы взять будет неоткуда (план, 5.4)
     await this.salary.freezeClosedMonths({ groupId });
-    // И учеников курса без группы: строки зарплаты удалённой группы
-    // переходят к курсу без группы (SetNull), и закрытый месяц, в котором они
-    // есть, для новых строк уже закрыт — ученики без группы, ещё не
-    // замороженные к этому моменту, в нём бы потерялись
-    await this.salary.freezeClosedMonths({ groupId: null, courseId: group.courseId });
 
-    // Записи на курс сохраняются, группа с них снимается
-    await this.prisma.enrollment.updateMany({ where: { groupId }, data: { groupId: null } });
+    const [enrollments, charges, payments, accruals] = await Promise.all([
+      this.prisma.enrollment.count({ where: { groupId } }),
+      this.prisma.monthlyCharge.count({ where: { groupId, amount: { gt: 0 } } }),
+      this.prisma.payment.count({ where: { groupId } }),
+      this.prisma.teacherSalaryAccrual.count({ where: { groupId } }),
+    ]);
+
+    if (enrollments + charges + payments + accruals > 0) {
+      const today = toNoonUtc(new Date().toISOString().slice(0, 10));
+      // Уже заданная более ранняя дата окончания остаётся — закрытие не
+      // должно продлевать начисления
+      const endDate = group.endDate && group.endDate.getTime() < today.getTime() ? group.endDate : today;
+      await this.prisma.group.update({ where: { id: groupId }, data: { isActive: false, endDate } });
+
+      await this.audit.record({
+        userId: actor.id,
+        entityType: "Group",
+        entityId: groupId,
+        action: "UPDATE",
+        metadata: { closed: true, groupName: group.name, courseId: group.courseId },
+        changes: {
+          isActive: { old: group.isActive, new: false },
+          endDate: { old: group.endDate, new: endDate },
+        },
+      });
+      return { id: groupId, closed: true };
+    }
+
     await this.prisma.group.delete({ where: { id: groupId } });
 
     await this.audit.record({
@@ -255,7 +281,7 @@ export class GroupsService {
       action: "DELETE",
       metadata: { groupName: group.name, courseId: group.courseId },
     });
-    return { id: groupId };
+    return { id: groupId, closed: false };
   }
 
   async toggleActive(groupId: string, ability: AppAbility) {

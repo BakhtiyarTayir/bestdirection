@@ -36,7 +36,6 @@ export interface ApiEnrollmentBilling {
   studentName: string;
   courseTitle: string;
   groupName: string | null;
-  coursePrice: number | null;
   groupPrice: number | null;
   startsAt: string;
   startsAtExplicit: boolean;

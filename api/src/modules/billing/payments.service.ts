@@ -76,7 +76,7 @@ export class PaymentsService {
           where: { course: { deletedAt: null } },
           select: {
             courseId: true,
-            course: { select: { title: true, price: true } },
+            course: { select: { title: true } },
             groupId: true,
             group: { select: { name: true, price: true } },
             priceOverride: true,
@@ -101,17 +101,14 @@ export class PaymentsService {
         enrollments: student.enrollments.map((enrollment) => ({
           courseId: enrollment.courseId,
           courseTitle: enrollment.course.title,
-          // Действующая цена — priceOverride → цена группы → цена курса
-          // (priceFor, единое правило биллинга). Раньше форма подставляла
-          // всегда цену курса, даже если у записи своя цена или у группы
-          // другая — сумма платежа сразу расходилась с начислением.
+          // Действующая цена — priceOverride → цена группы (priceFor, единое
+          // правило биллинга; цена курса в начислениях не участвует)
           price: priceFor({
             startsAt: null,
             createdAt: new Date(0),
             billingEndsAt: null,
             priceOverride: enrollment.priceOverride,
             firstMonthCharge: null,
-            coursePrice: enrollment.course.price,
             groupPrice: enrollment.group?.price ?? null,
             scheduleDays: [],
             groupEndDate: null,

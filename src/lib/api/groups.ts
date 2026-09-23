@@ -35,12 +35,11 @@ export interface ApiGroup {
   // тогда показывается педагог курса с пометкой, что он унаследован, именно
   // по этой лестнице считаются и отчёты, и зарплата
   teacher: ApiGroupTeacher | null;
-  // Запасной вариант для преподавателя и цены — данные курса. Отдают их
-  // только byCourse/all (список групп, где нужна карточка); details() для
-  // формы редактирования их не считает — там нужен именно СВОЙ teacherId,
-  // а не унаследованный, поэтому здесь они необязательны, а не всегда есть
+  // Запасной вариант для преподавателя — педагог курса. Отдают его только
+  // byCourse/all (список групп, где нужна карточка); details() для формы
+  // редактирования его не считает — там нужен именно СВОЙ teacherId, а не
+  // унаследованный, поэтому поле необязательное
   courseTeacher?: ApiGroupTeacher;
-  coursePrice?: number | null;
 }
 
 export interface ApiGroupStudent {
@@ -138,7 +137,8 @@ export const updateGroup = (groupId: string, body: GroupInput) =>
   apiFetch<ApiGroup>(`/groups/${groupId}`, { method: "PATCH", body });
 
 export const deleteGroup = (groupId: string) =>
-  apiFetch<{ id: string }>(`/groups/${groupId}`, { method: "DELETE" });
+  // closed — у группы были ученики или деньги, её закрыли, а не удалили
+  apiFetch<{ id: string; closed: boolean }>(`/groups/${groupId}`, { method: "DELETE" });
 
 export const toggleGroupActive = (groupId: string) =>
   apiFetch<ApiGroup>(`/groups/${groupId}/toggle-active`, { method: "POST" });

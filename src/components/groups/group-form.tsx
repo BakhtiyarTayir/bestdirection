@@ -66,6 +66,7 @@ export function GroupForm({ courseId, courseSlug, group, teachers = [], branches
     register,
     handleSubmit,
     control,
+    setError,
     formState: { errors },
   } = useForm<CreateGroupInput>({
     resolver: zodResolver(createGroupSchema),
@@ -84,6 +85,13 @@ export function GroupForm({ courseId, courseSlug, group, teachers = [], branches
   });
 
   const onSubmit = (data: CreateGroupInput) => {
+    // Цена группы обязательна: по ней одной начисляется оплата (цена курса
+    // в начислениях не участвует). Схема пропускает "" как начальное
+    // значение поля, поэтому пустое ловим здесь
+    if (data.price === "" || data.price === undefined) {
+      setError("price", { type: "required" });
+      return;
+    }
     startTransition(async () => {
       const result = isEdit
         ? await updateGroup(group.id, data)

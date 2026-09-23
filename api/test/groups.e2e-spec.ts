@@ -85,6 +85,7 @@ describe("модуль groups", () => {
         branchId: ids.branch,
         name: `A-${run}`,
         scheduleDays: [1, 3, 5],
+        price: 600000,
       });
       expect(res.status).toBe(201);
       expect(res.body.teacherId).toBe(ids.TEACHER);
@@ -98,6 +99,7 @@ describe("модуль groups", () => {
         branchId: ids.branch,
         name: `A-${run}`,
         scheduleDays: [1, 3, 5],
+        price: 600000,
       });
       expect(res.status).toBe(409);
       expect(res.body.message).toBe("groupNameExists");
@@ -109,6 +111,7 @@ describe("модуль groups", () => {
         branchId: ids.otherBranch,
         name: `A-${run}`,
         scheduleDays: [1, 3, 5],
+        price: 600000,
       });
       expect(res.status).toBe(201);
       ids.sameNameOtherBranch = res.body.id;
@@ -139,11 +142,24 @@ describe("модуль groups", () => {
       expect(res.body.message).toBe("validationFailed");
     });
 
-    it("пустая строка в цене убирает цену группы", async () => {
+    // Цена группы обязательна: цена курса в начислениях не участвует, и
+    // группа без цены означала бы бесплатное обучение
+    it("снять цену группы нельзя: пустая строка — 400, цена на месте", async () => {
       await send("patch", `/groups/${ids.group}`, "TEACHER", { price: 700000 });
       const res = await send("patch", `/groups/${ids.group}`, "TEACHER", { price: "" });
-      expect(res.status).toBe(200);
-      expect(res.body.price).toBeNull();
+      expect(res.status).toBe(400);
+      const unchanged = await testDb().group.findUnique({ where: { id: ids.group } });
+      expect(unchanged?.price).toBe(700000);
+    });
+
+    it("группу без цены не создать", async () => {
+      const res = await send("post", "/groups", "TEACHER", {
+        courseId: ids.own,
+        branchId: ids.branch,
+        name: `NoPrice-${run}`,
+        scheduleDays: [1, 3, 5],
+      });
+      expect(res.status).toBe(400);
     });
 
     it("в чужом курсе группу не создать и не изменить", async () => {
@@ -152,6 +168,7 @@ describe("модуль groups", () => {
         branchId: ids.branch,
         name: "Взлом",
         scheduleDays: [1, 3, 5],
+        price: 600000,
       });
       expect(create.status).toBe(404);
       expect((await send("patch", `/groups/${ids.foreignGroup}`, "TEACHER", { name: "Взлом" })).status).toBe(404);
@@ -186,7 +203,7 @@ describe("модуль groups", () => {
     });
 
     it("перевод в другую группу сначала фиксирует закрытые месяцы", async () => {
-      // Запись со старта три месяца назад и цена у курса — есть что замораживать
+      // Запись со старта три месяца назад и цена у группы — есть что замораживать
       await testDb().enrollment.update({
         where: { studentId_courseId: { studentId: ids.student, courseId: ids.own } },
         data: { startsAt: new Date(`${addMonths(current, -3)}-01T12:00:00.000Z`) },
@@ -209,8 +226,9 @@ describe("модуль groups", () => {
         where: { enrollmentId: (await enrollmentOf(ids.student, ids.own)).id },
       });
       expect(frozen.length).toBeGreaterThan(0);
-      // Прошлое посчитано по цене курса, а не по цене новой группы
-      expect(frozen.every((row) => row.priceUsed === 600000)).toBe(true);
+      // Прошлое посчитано по цене прежней группы (700000 — её поставил тест
+      // «снять цену группы нельзя»), а не по цене новой
+      expect(frozen.every((row) => row.priceUsed === 700000)).toBe(true);
       ids.secondGroup = second.body.id;
     });
 
@@ -235,16 +253,37 @@ describe("модуль groups", () => {
       ).toBe(0);
     });
 
-    it("удаление группы снимает её с записей, но не удаляет их", async () => {
+    // Решение владельца 2026-09-23: группу с учениками не удаляем, а
+    // закрываем — иначе ученики теряли цену группы и текущий месяц
+    it("группа с учениками не удаляется, а закрывается: ученики и цена на месте", async () => {
       const student = await createUser({ role: "STUDENT" });
       await send("post", `/groups/${ids.group}/students`, "TEACHER", { studentIds: [student.id] });
 
       const res = await send("delete", `/groups/${ids.group}`, "TEACHER");
       expect(res.status).toBe(200);
+      expect(res.body.closed).toBe(true);
 
       const enrollment = await enrollmentOf(student.id, ids.own);
-      expect(enrollment.groupId).toBeNull();
-      expect(await testDb().group.count({ where: { id: ids.group } })).toBe(0);
+      expect(enrollment.groupId).toBe(ids.group);
+      const closed = await testDb().group.findUnique({ where: { id: ids.group } });
+      expect(closed?.isActive).toBe(false);
+      expect(closed?.endDate).not.toBeNull();
+      expect(closed?.price).not.toBeNull();
+    });
+
+    it("пустая группа без истории удаляется физически", async () => {
+      const created = await send("post", "/groups", "TEACHER", {
+        courseId: ids.own,
+        branchId: ids.branch,
+        name: `Empty-${run}`,
+        scheduleDays: [1, 3, 5],
+        price: 600000,
+      });
+      expect(created.status).toBe(201);
+      const res = await send("delete", `/groups/${created.body.id}`, "TEACHER");
+      expect(res.status).toBe(200);
+      expect(res.body.closed).toBe(false);
+      expect(await testDb().group.count({ where: { id: created.body.id } })).toBe(0);
     });
   });
 
@@ -280,7 +319,7 @@ describe("модуль groups", () => {
       });
       courseId = course.id;
       const group = await testDb().group.create({
-        data: { name: `H-${run}`, courseId, branchId: ids.branch, scheduleDays: [1, 3, 5] },
+        data: { price: 600000, name: `H-${run}`, courseId, branchId: ids.branch, scheduleDays: [1, 3, 5] },
       });
       groupId = group.id;
     });

@@ -143,18 +143,9 @@ export class CoursesService {
       slugUpdate = { slug: newSlug };
     }
 
-    // Цена курса меняется только вперёд. Заморозка ленивая, поэтому сначала
-    // фиксируем закрытые месяцы по старой цене — иначе месяц, который никто
-    // ещё не открывал после его конца, заморозился бы уже по новой
-    if (data.price !== undefined && data.price !== existing.price) {
-      await this.ledger.freezeClosedMonths({ courseId: id });
-      // Зарплата опирается на начисления — её заморозка идёт СТРОГО ПОСЛЕ
-      // биллинговой и ДО записи новой цены (план зарплат, 5.4): цена курса —
-      // база для групп этого курса без своей цены (priceFor), как цена
-      // группы. Без этого правка цены задним числом уводила бы зарплату за
-      // закрытый, но ещё не замороженный месяц
-      await this.salary.freezeClosedMonths({ courseId: id });
-    }
+    // Цена курса — только для витрины (каталог, заявки, лендинг): в
+    // начислениях она не участвует (решение владельца 2026-09-23), поэтому
+    // её смена ничего не замораживает
 
     const course = await this.prisma.course.update({
       where: { id },
@@ -207,6 +198,12 @@ export class CoursesService {
    */
   async remove(id: string, ability: AppAbility, actor: SessionUser) {
     const existing = await this.manageable(ability, id);
+
+    // Дата переноса в Корзину останавливает начисления (toBillingEnrollment),
+    // а заморозка ленивая: закрытые месяцы фиксируем ДО, иначе ещё не
+    // открытый месяц посчитался бы уже с новой датой окончания
+    await this.ledger.freezeClosedMonths({ courseId: id });
+    await this.salary.freezeClosedMonths({ courseId: id });
 
     await this.prisma.course.update({ where: { id }, data: { deletedAt: new Date() } });
 

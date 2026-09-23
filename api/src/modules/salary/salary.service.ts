@@ -211,9 +211,10 @@ export class SalaryService {
     // сводки, хотя деньги за них он заработал. Педагог, ставка и расписание
     // берутся текущие — они нужны только открытым месяцам, а открытый месяц
     // бывшему педагогу достаётся лишь по отметкам в журнале.
+    // Курсы в Корзине здесь не отсеиваются: заработанное по ним уже
+    // заморожено, и удаление курса не должно стирать его из долга центра
     const historicalRows = await this.prisma.teacherSalaryAccrual.findMany({
       where: {
-        course: { deletedAt: null },
         ...(filters.teacherId ? { teacherId: filters.teacherId } : {}),
         ...(filters.courseId ? { courseId: filters.courseId } : {}),
         ...(filters.branchId ? { branchId: filters.branchId } : {}),
@@ -353,8 +354,9 @@ export class SalaryService {
    * в прежней группе: его сентябрь принадлежит её базе, и в базу новой
    * группы он попасть не должен, иначе его оплачивают дважды.
    *
-   * Удалённые курсы и ученики отсеиваются так же, как в
-   * BillingLedgerService.loadBillableEnrollments.
+   * Удалённые ученики отсеиваются так же, как в
+   * BillingLedgerService.loadBillableEnrollments, а курсы в Корзине — нет:
+   * замороженные начисления по ним остаются.
    */
   private async snapshotBase(
     unit: Pick<Unit, "courseId" | "groupId">,
@@ -365,7 +367,7 @@ export class SalaryService {
         month,
         lockedAt: { not: null },
         groupId: unit.groupId,
-        enrollment: { courseId: unit.courseId, course: { deletedAt: null }, student: { deletedAt: null } },
+        enrollment: { courseId: unit.courseId, student: { deletedAt: null } },
       },
       select: { month: true, amount: true },
     });

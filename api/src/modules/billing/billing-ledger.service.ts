@@ -29,6 +29,13 @@ export function activeEnrollmentFilter(): Prisma.EnrollmentWhereInput {
   return { unenrolledAt: null };
 }
 
+/** Более ранняя из двух дат; null — даты нет */
+function earliestDate(a: Date | null, b: Date | null): Date | null {
+  if (!a) return b;
+  if (!b) return a;
+  return a.getTime() <= b.getTime() ? a : b;
+}
+
 export interface LedgerFilters {
   enrollmentId?: string;
   courseId?: string;
@@ -54,11 +61,14 @@ export class BillingLedgerService {
   }
 
   /**
-   * Записи вместе со всем, что нужно для начисления. Удалённые курсы и студенты
-   * отсеиваются.
+   * Записи вместе со всем, что нужно для начисления. Удалённые студенты
+   * отсеиваются, а курсы в Корзине — нет (решение владельца 2026-09-23): долг
+   * ученика не исчезает оттого, что курс убрали. Новых начислений по такому
+   * курсу нет — дата переноса в Корзину работает как дата окончания
+   * (toBillingEnrollment).
    *
-   * По умолчанию — только платные: цена есть у курса, у группы или у самого
-   * студента, либо у записи уже зафиксирован ненулевой долг. Последнее условие
+   * По умолчанию — только платные: цена есть у группы или у самого студента,
+   * либо у записи уже зафиксирован ненулевой долг. Последнее условие
    * держит в расчёте запись, которая перестала быть платной (цену группы убрали,
    * группу удалили): иначе её замороженный долг лежал бы в базе, но пропал бы из
    * должников, карточки студента и пересчёта. Именно ненулевой — заморозка
@@ -71,13 +81,11 @@ export class BillingLedgerService {
   loadBillableEnrollments(filters: LedgerFilters, options: { includeFree?: boolean } = {}) {
     return this.prisma.enrollment.findMany({
       where: {
-        course: { deletedAt: null },
         student: { deletedAt: null },
         ...(options.includeFree
           ? {}
           : {
               OR: [
-                { course: { price: { not: null } } },
                 { group: { price: { not: null } } },
                 { priceOverride: { not: null } },
                 { monthlyCharges: { some: { amount: { gt: 0 } } } },
@@ -102,7 +110,7 @@ export class BillingLedgerService {
         student: {
           select: { id: true, firstName: true, lastName: true, phone: true, telegramUsername: true },
         },
-        course: { select: { id: true, title: true, price: true } },
+        course: { select: { id: true, title: true, deletedAt: true } },
         group: {
           select: { id: true, name: true, price: true, scheduleDays: true, startDate: true, endDate: true },
         },
@@ -114,10 +122,10 @@ export class BillingLedgerService {
     return {
       startsAt: enrollment.startsAt,
       createdAt: enrollment.createdAt,
-      billingEndsAt: enrollment.billingEndsAt,
+      // Курс в Корзине начисляет не дольше дня переноса туда
+      billingEndsAt: earliestDate(enrollment.billingEndsAt, enrollment.course.deletedAt),
       priceOverride: enrollment.priceOverride,
       firstMonthCharge: enrollment.firstMonthCharge,
-      coursePrice: enrollment.course.price,
       groupPrice: enrollment.group?.price ?? null,
       scheduleDays: enrollment.group?.scheduleDays ?? [],
       groupEndDate: enrollment.group?.endDate ?? null,

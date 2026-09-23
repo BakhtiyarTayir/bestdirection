@@ -42,7 +42,7 @@ describe("модуль salary", () => {
 
     // 40% — ставка группы, важнее ставки преподавателя (5.2)
     const groupA = await testDb().group.create({
-      data: {
+      data: { price: 500_000,
         name: `A-${run}`,
         courseId: course.id,
         branchId: branch.id,
@@ -56,7 +56,7 @@ describe("модуль salary", () => {
 
     // Группа без своей ставки — берётся ставка преподавателя, но её пока нет
     const groupB = await testDb().group.create({
-      data: {
+      data: { price: 500_000,
         name: `B-${run}`,
         courseId: course.id,
         branchId: branch.id,
@@ -316,7 +316,7 @@ describe("модуль salary", () => {
       });
       courseId = course.id;
       const group = await testDb().group.create({
-        data: {
+        data: { price: 300_000,
           name: `L-${run}`,
           courseId,
           branchId: ids.branch,
@@ -470,7 +470,7 @@ describe("модуль salary", () => {
         data: { slug: `salary-dedup-${run}`, title: "Курс дедуп", teacherId: ids.TEACHER, price: 300_000 },
       });
       const group = await testDb().group.create({
-        data: {
+        data: { price: 300_000,
           name: `D-${run}`,
           courseId: course.id,
           branchId: branch.id,
@@ -563,14 +563,14 @@ describe("модуль salary", () => {
       const start = new Date(`${startMonth}-01T12:00:00.000Z`);
       groupOld = (
         await testDb().group.create({
-          data: { name: `Old-${run}`, courseId, branchId: branch.id, scheduleDays: [1, 3, 5], teacherId: ids.TEACHER, salaryPercentBp: 4000, startDate: start },
+          data: { price: 300_000, name: `Old-${run}`, courseId, branchId: branch.id, scheduleDays: [1, 3, 5], teacherId: ids.TEACHER, salaryPercentBp: 4000, startDate: start },
         })
       ).id;
       // Новая группа: другой педагог, та же ставка — чтобы задвоение
       // проявилось деньгами, а не нулём
       groupNew = (
         await testDb().group.create({
-          data: { name: `New-${run}`, courseId, branchId: branch.id, scheduleDays: [2, 4], teacherId: ids.otherTeacher, salaryPercentBp: 4000, startDate: start },
+          data: { price: 300_000, name: `New-${run}`, courseId, branchId: branch.id, scheduleDays: [2, 4], teacherId: ids.otherTeacher, salaryPercentBp: 4000, startDate: start },
         })
       ).id;
       const student = await createUser({ role: "STUDENT" });
@@ -650,7 +650,11 @@ describe("модуль salary", () => {
         });
         courseIds.push(course.id);
         const student = await createUser({ role: "STUDENT" });
-        await testDb().enrollment.create({ data: { studentId: student.id, courseId: course.id, startsAt: start } });
+        // Без группы цены группы нет, а цена курса в начислениях не участвует —
+        // нужна своя цена ученика
+        await testDb().enrollment.create({
+          data: { studentId: student.id, courseId: course.id, startsAt: start, priceOverride: 200_000 },
+        });
       }
       await get(`/salary/${thirdTeacher}?month=${current}`, "ADMIN");
 
@@ -677,7 +681,7 @@ describe("модуль salary", () => {
         data: { slug: `salary-branch-debt-${run}`, title: "Курс долг филиала", teacherId: teacher.id, price: 400_000 },
       });
       const group = await testDb().group.create({
-        data: {
+        data: { price: 400_000,
           name: `DB-${run}`,
           courseId: course.id,
           branchId: branchOwn.id,

@@ -562,7 +562,7 @@ describe("модуль users", () => {
         data: { slug: `deactivate-${run}`, title: "Курс деактивации", teacherId: teacher.id, price: 400000 },
       });
       const group = await testDb().group.create({
-        data: { name: `D-${run}`, courseId: course.id, branchId: branch.id, scheduleDays: [1, 3, 5] },
+        data: { price: 400000, name: `D-${run}`, courseId: course.id, branchId: branch.id, scheduleDays: [1, 3, 5] },
       });
       const student = await createUser({ role: "STUDENT" });
       const current = currentMonthKey();
@@ -620,7 +620,7 @@ describe("модуль users", () => {
         data: { slug: `restore-${run}`, title: "Курс восстановления", teacherId: teacher.id, price: 400000 },
       });
       const group = await testDb().group.create({
-        data: { name: `R-${run}`, courseId: course.id, branchId: branch.id, scheduleDays: [1, 3, 5] },
+        data: { price: 400000, name: `R-${run}`, courseId: course.id, branchId: branch.id, scheduleDays: [1, 3, 5] },
       });
       const student = await createUser({ role: "STUDENT" });
       const enrollment = await testDb().enrollment.create({

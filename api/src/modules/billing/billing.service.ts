@@ -133,7 +133,7 @@ export class BillingService {
         priceOverride: true,
         firstMonthCharge: true,
         student: { select: { firstName: true, lastName: true } },
-        course: { select: { title: true, price: true } },
+        course: { select: { title: true } },
         group: { select: { name: true, price: true, scheduleDays: true, startDate: true, endDate: true } },
       },
     });
@@ -146,7 +146,6 @@ export class BillingService {
       billingEndsAt: enrollment.billingEndsAt,
       priceOverride: enrollment.priceOverride,
       firstMonthCharge: null,
-      coursePrice: enrollment.course.price,
       groupPrice: enrollment.group?.price ?? null,
       scheduleDays: enrollment.group?.scheduleDays ?? [],
       groupEndDate: enrollment.group?.endDate ?? null,
@@ -164,7 +163,6 @@ export class BillingService {
       studentName: `${enrollment.student.lastName} ${enrollment.student.firstName}`,
       courseTitle: enrollment.course.title,
       groupName: enrollment.group?.name ?? null,
-      coursePrice: enrollment.course.price,
       groupPrice: enrollment.group?.price ?? null,
       // Форму заполняет ИМЕННО сохранённое значение: подставить сюда
       // фактическое начало (отложенное стартом группы) нельзя — админ,

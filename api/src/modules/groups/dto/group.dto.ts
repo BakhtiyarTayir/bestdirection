@@ -11,12 +11,10 @@ import { z } from "zod";
  */
 const dateOnly = z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "invalidDate"), z.literal("")]);
 
-// Пустая строка — цены у группы нет, берётся цена курса. Ноль не допускаем:
-// иначе пустое поле, приведённое к числу, тихо сделало бы месяц бесплатным.
-const price = z.union([
-  z.coerce.number().int().positive("pricePositive").max(1_000_000_000, "amountTooLarge"),
-  z.literal(""),
-]);
+// Цена группы обязательна: цена курса в начислениях не участвует (решение
+// владельца 2026-09-23), и группа без цены означала бы бесплатное обучение.
+// Пустая строка приводится к нулю и отклоняется — «снять цену» больше нельзя.
+const price = z.coerce.number().int().positive("pricePositive").max(1_000_000_000, "amountTooLarge");
 
 // Ставка зарплаты группы в базисных пунктах (4000 = 40.00%). В форме процент
 // вводится с одним знаком после запятой, поэтому шаг — десятые доли процента,
@@ -44,7 +42,6 @@ const groupFields = {
   teacherId: z.string().max(40).optional(),
   startDate: dateOnly.optional(),
   endDate: dateOnly.optional(),
-  price: price.optional(),
   salaryPercentBp: salaryPercentBp.optional(),
   isActive: z.boolean().optional(),
   sortOrder: z.number().int().min(0).max(10_000).optional(),
@@ -57,6 +54,7 @@ export const createGroupSchema = z.object({
   // владельца 2026-09-20). Имя группы уникально внутри (courseId, branchId).
   branchId: z.string().min(1, "branchRequired").max(40),
   scheduleDays: scheduleDaysField.min(1, "scheduleDaysRequired"),
+  price,
   ...groupFields,
 });
 
@@ -69,6 +67,7 @@ export const updateGroupSchema = z.object({
   // Но если поле всё же передано — пустым оно быть не должно: иначе PATCH
   // мог бы тем же движением, что и create, снять уже заданное расписание.
   scheduleDays: scheduleDaysField.min(1, "scheduleDaysRequired").optional(),
+  price: price.optional(),
   ...groupFields,
 });
 

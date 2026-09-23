@@ -28,7 +28,7 @@ describe("модуль billing", () => {
     const branch = await createBranch();
     ids.branch = branch.id;
     const group = await testDb().group.create({
-      data: { name: `G-${run}`, courseId: course.id, scheduleDays: [1, 3, 5], branchId: branch.id },
+      data: { price: 600000, name: `G-${run}`, courseId: course.id, scheduleDays: [1, 3, 5], branchId: branch.id },
     });
     ids.group = group.id;
     const enrollment = await testDb().enrollment.create({
@@ -283,10 +283,10 @@ describe("модуль billing", () => {
           data: { slug: `billing-card-b-${run}`, title: "Курс B", teacherId: ids.TEACHER, price: 300000 },
         });
         const groupA = await testDb().group.create({
-          data: { name: `CA-${run}`, courseId: courseA.id, scheduleDays: [1, 3, 5], branchId: branch.id },
+          data: { price: 500000, name: `CA-${run}`, courseId: courseA.id, scheduleDays: [1, 3, 5], branchId: branch.id },
         });
         const groupB = await testDb().group.create({
-          data: { name: `CB-${run}`, courseId: courseB.id, scheduleDays: [2, 4], branchId: branch.id },
+          data: { price: 300000, name: `CB-${run}`, courseId: courseB.id, scheduleDays: [2, 4], branchId: branch.id },
         });
 
         const startsAt = new Date(`${addMonths(current, -3)}-01T12:00:00.000Z`);
@@ -379,7 +379,7 @@ describe("модуль billing", () => {
       });
       const otherBranch = await createBranch(`Чужой-${run}`);
       const otherGroup = await testDb().group.create({
-        data: { name: `OG-${run}`, courseId: otherCourse.id, scheduleDays: [1], branchId: otherBranch.id },
+        data: { price: 200000, name: `OG-${run}`, courseId: otherCourse.id, scheduleDays: [1], branchId: otherBranch.id },
       });
 
       // ids.STUDENT записан на ids.course (см. beforeAll) — шлём его же

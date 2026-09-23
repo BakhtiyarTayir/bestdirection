@@ -35,8 +35,7 @@ const base: BillingEnrollment = {
   billingEndsAt: null,
   priceOverride: null,
   firstMonthCharge: null,
-  coursePrice: 650000,
-  groupPrice: null,
+  groupPrice: 650000,
   scheduleDays: [1, 3, 5], // пн/ср/пт
   groupEndDate: null,
   groupStartDate: null,
@@ -181,19 +180,19 @@ check(
 
 // ── цена ──
 check(
-  "priceOverride вместо цены курса",
+  "priceOverride вместо цены группы",
   chargeForMonth({ ...base, startsAt: utc("2026-07-01"), priceOverride: 400000 }, "2026-08").amount,
   400000
 );
 check(
-  "курс без цены не биллится",
-  chargeForMonth({ ...base, startsAt: utc("2026-07-01"), coursePrice: null }, "2026-08").basis,
+  "группа без цены не биллится (цена курса в начислениях не участвует)",
+  chargeForMonth({ ...base, startsAt: utc("2026-07-01"), groupPrice: null }, "2026-08").basis,
   "none"
 );
 
 // ── цена группы ──
-check("без цены группы — цена курса", priceFor(base), 650000);
-check("цена группы важнее цены курса", priceFor({ ...base, groupPrice: 500000 }), 500000);
+check("цена группы", priceFor(base), 650000);
+check("ни цены группы, ни своей — цены нет", priceFor({ ...base, groupPrice: null }), null);
 check(
   "цена студента важнее цены группы",
   priceFor({ ...base, groupPrice: 500000, priceOverride: 450000 }),
@@ -213,12 +212,12 @@ check(
   { amount: 120000, basis: "lessons", unitsTotal: 13, unitsBilled: 3 }
 );
 check(
-  "цена группы на курсе без цены — начисляется",
+  "цена ученика важнее цены группы",
   chargeForMonth(
-    { ...base, startsAt: utc("2026-07-01"), coursePrice: null, groupPrice: 500000 },
+    { ...base, startsAt: utc("2026-07-01"), priceOverride: 400000, groupPrice: 500000 },
     "2026-08"
   ).amount,
-  500000
+  400000
 );
 check(
   "новая цена группы не переписывает закрытый месяц",
