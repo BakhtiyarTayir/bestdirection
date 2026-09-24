@@ -95,6 +95,8 @@ services:
       TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
       # Имя бота для кнопки входа: его api отдаёт странице входа
       TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
+      # Выключатель еженедельной сводки родителям: "off" отключает без деплоя
+      PARENT_WEEKLY_DIGEST: ${PARENT_WEEKLY_DIGEST:-}
       # Доступ к шлюзу СМС: рассылки и журнал теперь считает api
       ESKIZ_EMAIL: ${ESKIZ_EMAIL:-}
       ESKIZ_PASSWORD: ${ESKIZ_PASSWORD:-}

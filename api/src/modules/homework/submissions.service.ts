@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import { unlink } from "node:fs/promises";
@@ -14,6 +15,7 @@ import { accessibleWhere, type AppAbility } from "../../common/policies/abilitie
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { submissionMimeType } from "../../common/submission-files";
 import { activeEnrollmentFilter } from "../billing/billing-ledger.service";
+import { ParentNotifyService } from "../parent-notifications/parent-notify.service";
 
 /**
  * Перенесено из src/actions/homework-review-actions.ts, src/lib/homework-submission.ts
@@ -24,9 +26,12 @@ import { activeEnrollmentFilter } from "../billing/billing-ledger.service";
  */
 @Injectable()
 export class SubmissionsService {
+  private readonly logger = new Logger(SubmissionsService.name);
+
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly audit: AuditService
+    private readonly audit: AuditService,
+    private readonly parentNotify: ParentNotifyService
   ) {}
 
   private get prisma() {
@@ -322,8 +327,9 @@ export class SubmissionsService {
         teacherComment: true,
         studentId: true,
         homeworkId: true,
+        student: { select: { firstName: true, lastName: true } },
         homework: {
-          select: { maxScore: true, lesson: { select: { courseId: true } } },
+          select: { title: true, maxScore: true, lesson: { select: { courseId: true } } },
         },
       },
     });
@@ -365,6 +371,19 @@ export class SubmissionsService {
         }
       ),
       metadata: { studentId: submission.studentId, homeworkId: submission.homeworkId },
+    });
+
+    // Родителям — после записи в БД, не раньше (план, 2.2). Все три исхода
+    // проверки (принято/отклонено/на доработку) — событие «работу
+    // посмотрели», а не только «принято»: родителю одинаково важно узнать
+    // про отказ, план явно называет лишь два исхода примером, а не списком
+    // целиком.
+    await this.parentNotify.notifyHomeworkReviewed({
+      studentId: submission.studentId,
+      studentName: `${submission.student.firstName} ${submission.student.lastName}`.trim(),
+      homeworkTitle: submission.homework.title,
+      status: updated.manualStatus as "APPROVED" | "REJECTED" | "REVISION",
+      score: updated.manualScore != null ? `${updated.manualScore}/${maxScore}` : null,
     });
 
     return updated;

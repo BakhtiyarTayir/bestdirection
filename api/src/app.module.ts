@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { APP_FILTER, APP_GUARD, APP_PIPE } from "@nestjs/core";
+import { ScheduleModule } from "@nestjs/schedule";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { ZodValidationPipe } from "nestjs-zod";
 import { AuditModule } from "./common/audit/audit.module";
@@ -26,6 +27,7 @@ import { HomeworkModule } from "./modules/homework/homework.module";
 import { LessonsModule } from "./modules/lessons/lessons.module";
 import { MarketingModule } from "./modules/marketing/marketing.module";
 import { NotificationsModule } from "./modules/notifications/notifications.module";
+import { ParentNotificationsModule } from "./modules/parent-notifications/parent-notifications.module";
 import { ParentsModule } from "./modules/parents/parents.module";
 import { SalaryModule } from "./modules/salary/salary.module";
 import { FinanceModule } from "./modules/finance/finance.module";
@@ -44,6 +46,9 @@ import { UsersModule } from "./modules/users/users.module";
     AuthModule,
     // 120 запросов в минуту с одного IP — с запасом для живого пользователя
     ThrottlerModule.forRoot({ throttlers: [{ ttl: 60_000, limit: 120 }] }),
+    // Еженедельная сводка родителям (WeeklyDigestService) — единственный
+    // потребитель cron в api на сегодня
+    ScheduleModule.forRoot(),
     UsersModule,
     AuditLogModule,
     BillingModule,
@@ -60,6 +65,7 @@ import { UsersModule } from "./modules/users/users.module";
     AuthApiModule,
     AssessmentsModule,
     ParentsModule,
+    ParentNotificationsModule,
     TelegramModule,
     TrashModule,
     SalaryModule,
