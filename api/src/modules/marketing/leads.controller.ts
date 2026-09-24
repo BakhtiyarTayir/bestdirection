@@ -27,6 +27,13 @@ export class LeadsController {
     return this.leads.list();
   }
 
+  /** Бейдж «Заявки» в сайдбаре: сколько заявок ещё без отметки «связались». */
+  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @Get("count")
+  count() {
+    return this.leads.uncontactedCount();
+  }
+
   @CheckPolicies((ability) => ability.can("manage", "all"))
   @Patch(":id")
   markContacted(@Param("id") id: string, @Body() body: LeadContactedDto) {

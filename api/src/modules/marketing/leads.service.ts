@@ -53,6 +53,10 @@ export class LeadsService {
     });
   }
 
+  async uncontactedCount() {
+    return { count: await this.prisma.courseLead.count({ where: { contacted: false } }) };
+  }
+
   async markContacted(id: string, contacted: boolean) {
     const lead = await this.prisma.courseLead.findUnique({ where: { id }, select: { id: true } });
     if (!lead) throw new NotFoundException("leadNotFound");

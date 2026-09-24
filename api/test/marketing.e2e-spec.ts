@@ -256,9 +256,16 @@ describe("лендинг и заявки", () => {
       expect(list.status).toBe(200);
       expect(list.body.length).toBeGreaterThan(0);
 
-      const marked = await send("patch", `/leads/${list.body[0].id}`, "ADMIN", { contacted: true });
+      // Цифра у «Заявок» в меню — заявки без отметки «связались»
+      expect((await get("/leads/count", "TEACHER")).status).toBe(403);
+      const before = (await get("/leads/count", "ADMIN")).body.count;
+      const target = list.body.find((lead: { contacted: boolean }) => !lead.contacted);
+      expect(target).toBeDefined();
+
+      const marked = await send("patch", `/leads/${target.id}`, "ADMIN", { contacted: true });
       expect(marked.status).toBe(200);
       expect(marked.body.contacted).toBe(true);
+      expect((await get("/leads/count", "ADMIN")).body.count).toBe(before - 1);
     });
 
     it("регрессия аудита 7.1: поток заявок ограничен", async () => {

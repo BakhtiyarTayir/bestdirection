@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
 import { markLeadContacted } from "@/lib/api/marketing";
+import { refreshBadges } from "@/lib/badge-refresh";
 import { Loader2 } from "lucide-react";
 
 interface Lead {
@@ -49,6 +50,8 @@ export function LeadList({ initialLeads }: LeadListProps) {
         setLeads((prev) =>
           prev.map((lead) => (lead.id === id ? { ...lead, contacted } : lead))
         );
+        // Цифра у «Заявок» в меню — сразу, не через минуту опроса
+        refreshBadges();
       } else {
         toast({ variant: "destructive", description: result.error });
       }

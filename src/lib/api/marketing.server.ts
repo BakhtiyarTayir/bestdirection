@@ -120,3 +120,6 @@ export const getLeads = () =>
       courseName: string;
     }[]
   >("/leads");
+
+/** Бейдж «Заявки» в сайдбаре — заявки без отметки «связались» */
+export const getUncontactedLeadsCount = () => apiServerFetch<{ count: number }>("/leads/count");
