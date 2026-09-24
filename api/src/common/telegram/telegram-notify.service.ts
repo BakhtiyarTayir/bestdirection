@@ -20,6 +20,9 @@ export class TelegramNotifyService {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ chat_id: chatId, text }),
+        // Отправку ждут синхронные операции (отметка в журнале, проверка
+        // задания): без предела медленный Telegram подвешивал бы их ответ
+        signal: AbortSignal.timeout(5_000),
       });
       if (!response.ok) {
         this.logger.warn(`Telegram ответил ${response.status} на sendMessage`);
