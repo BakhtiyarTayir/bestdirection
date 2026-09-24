@@ -1,9 +1,11 @@
 import { requireRole } from "@/lib/auth-guard";
 import { getParentChildren } from "@/lib/api/attendance.server";
 import { getTranslations } from "next-intl/server";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Phone } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Link } from "@/i18n/navigation";
+import { Phone, TrendingUp } from "lucide-react";
 import type { ParentRelation } from "@/validators/parent";
 
 // Обобщённый тип withAuth не сохраняет форму data, поэтому описываем её явно
@@ -30,6 +32,7 @@ export default async function MyChildrenPage() {
   await requireRole(["PARENT", "ADMIN"]);
 
   const t = await getTranslations("parents");
+  const tProgress = await getTranslations("progress");
   const result = await getParentChildren();
   const links: ChildLink[] = result.success ? (result.data as ChildLink[]) : [];
 
@@ -85,6 +88,14 @@ export default async function MyChildrenPage() {
                   </ul>
                 )}
               </CardContent>
+              <CardFooter>
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/my-children/${link.student.id}/progress`}>
+                    <TrendingUp className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                    {tProgress("viewProgress")}
+                  </Link>
+                </Button>
+              </CardFooter>
             </Card>
           ))}
         </div>

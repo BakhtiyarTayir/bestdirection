@@ -1,6 +1,8 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { Card, CardContent } from "@/components/ui/card";
-import { BookOpen, FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Link } from "@/i18n/navigation";
+import { BookOpen, FileText, TrendingUp } from "lucide-react";
 import { getStudentDashboard } from "@/lib/api/dashboard.server";
 import type { ApiDashboardSummary } from "@/lib/api/dashboard";
 import { StudentBlocks } from "@/components/dashboard/student/student-blocks";
@@ -16,6 +18,7 @@ type StudentSummary = Extract<ApiDashboardSummary, { role: "STUDENT" }>;
  */
 export async function StudentDashboard({ summary }: { summary: StudentSummary }) {
   const t = await getTranslations("dashboardStudent");
+  const tProgress = await getTranslations("progress");
   const locale = await getLocale();
   const result = await getStudentDashboard();
 
@@ -40,9 +43,17 @@ export async function StudentDashboard({ summary }: { summary: StudentSummary })
           <div className="space-y-8">
             {data.children.map((child) => (
               <div key={child.studentId}>
-                <h2 className="mb-3 text-xl font-semibold">
-                  {child.lastName} {child.firstName}
-                </h2>
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="text-xl font-semibold">
+                    {child.lastName} {child.firstName}
+                  </h2>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={`/my-children/${child.studentId}/progress`}>
+                      <TrendingUp className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                      {tProgress("viewProgress")}
+                    </Link>
+                  </Button>
+                </div>
                 <StudentBlocks block={child} locale={locale} />
               </div>
             ))}
