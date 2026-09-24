@@ -69,6 +69,12 @@ export default async function SessionPage({ params }: SessionPageProps) {
 
   const existingRecords = currentSession.records ?? [];
 
+  // Занятие с группой — вернуться в её журнал (план «Журнал посещаемости по
+  // группам», п.2), без группы — на обзор курса, как раньше
+  const returnTo = currentSession.groupId
+    ? `/courses/${courseSlug}/groups/${currentSession.groupId}/attendance`
+    : `/courses/${courseSlug}/attendance`;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -81,7 +87,7 @@ export default async function SessionPage({ params }: SessionPageProps) {
         </div>
         <DeleteSessionButton
           sessionId={sessionId}
-          courseSlug={courseSlug}
+          returnTo={returnTo}
         />
       </div>
 

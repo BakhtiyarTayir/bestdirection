@@ -6,6 +6,9 @@ import { getTeacherOptions } from "@/lib/api/groups.server";
 import { getBranches } from "@/lib/api/branches.server";
 import { getSmsTemplates } from "@/lib/api/sms.server";
 import { BroadcastPanel } from "@/components/sms/broadcast-panel";
+import { Button } from "@/components/ui/button";
+import { Link } from "@/i18n/navigation";
+import { CalendarCheck } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { resolveCourseSlug } from "@/lib/slug-resolvers";
 
@@ -41,7 +44,15 @@ export default async function GroupDetailPage({ params }: GroupDetailPageProps) 
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">{t("editGroup")}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">{t("editGroup")}</h1>
+        <Link href={`/courses/${courseSlug}/groups/${groupId}/attendance`}>
+          <Button variant="outline" size="sm">
+            <CalendarCheck className="mr-2 h-4 w-4" />
+            {t("attendanceJournal")}
+          </Button>
+        </Link>
+      </div>
       <GroupForm courseId={courseId} courseSlug={courseSlug} group={group} teachers={teachers} branches={branches} />
       <BroadcastPanel groupId={groupId} templates={templates} />
     </div>

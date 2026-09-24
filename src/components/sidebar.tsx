@@ -87,10 +87,13 @@ const navItems: NavItem[] = [
   { href: "/teachers", labelKey: "teachers", icon: GraduationCap, roles: ["ADMIN"] },
   { href: "/students", labelKey: "students", icon: UserRound, roles: ["ADMIN"] },
   {
+    // Раздел стал журналом по группам (план «Журнал посещаемости по
+    // группам», 2026-09-24) — отмечать посещаемость может только персонал,
+    // своего журнала для ученика здесь по-прежнему нет
     href: "/attendance",
     labelKey: "attendance",
     icon: CalendarCheck,
-    roles: ["ADMIN", "TEACHER", "STUDENT"],
+    roles: ["ADMIN", "TEACHER"],
     children: [
       { href: "/attendance", labelKey: "attendanceByCourse" },
       { href: "/attendance/teachers", labelKey: "teacherAttendance", roles: ["ADMIN", "TEACHER"] },

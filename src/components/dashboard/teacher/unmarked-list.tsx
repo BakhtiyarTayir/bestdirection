@@ -30,7 +30,10 @@ export async function UnmarkedList({ groups }: UnmarkedListProps) {
         <ul className="space-y-2">
           {groups.map((group) => (
             <li key={group.groupId} className="rounded-md border p-3">
-              <Link href={`/courses/${group.courseSlug}/attendance`} className="font-medium text-primary underline underline-offset-2">
+              <Link
+                href={`/courses/${group.courseSlug}/groups/${group.groupId}/attendance`}
+                className="font-medium text-primary underline underline-offset-2"
+              >
                 {group.courseTitle} — {group.groupName}
               </Link>
               <div className="mt-1 text-sm text-muted-foreground">{group.dates.join(", ")}</div>

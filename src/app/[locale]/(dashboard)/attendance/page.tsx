@@ -1,36 +1,45 @@
-import { requireAuth } from "@/lib/auth-guard";
-import { getCourses } from "@/lib/api/courses.server";
-import { getAttendanceSessions } from "@/lib/api/attendance.server";
-import { Link } from "@/i18n/navigation";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Calendar, ArrowRight } from "lucide-react";
+import { requireRole } from "@/lib/auth-guard";
+import { getAttendanceGroups } from "@/lib/api/attendance.server";
+import { getBranches } from "@/lib/api/branches.server";
+import { getTeacherOptions } from "@/lib/api/groups.server";
+import { Calendar } from "lucide-react";
 import { getTranslations } from "next-intl/server";
+import { BranchFilter } from "@/components/branch-filter";
+import { TeacherFilter } from "@/components/teacher-filter";
+import { MonthFilter } from "@/components/month-filter";
+import { AttendanceGroupsList } from "./attendance-groups-list";
 
 export const dynamic = "force-dynamic";
 
-export default async function AttendancePage() {
-  const session = await requireAuth();
-  const role = session.user.role;
+interface AttendancePageProps {
+  searchParams: Promise<{ branchId?: string; teacherId?: string; month?: string }>;
+}
+
+/**
+ * Раздел «Посещаемость» (план «Журнал посещаемости по группам», п.3): вместо
+ * списка курсов — список групп, у каждой свой журнал. Страница полезна
+ * только персоналу — у ученика своего журнала отсюда нет (сам отмечать
+ * некого, а смотреть свою посещаемость эта страница пока не умеет).
+ */
+export default async function AttendancePage({ searchParams }: AttendancePageProps) {
+  const session = await requireRole(["ADMIN", "TEACHER"]);
   const t = await getTranslations("attendance");
-  const tCourses = await getTranslations("courses");
+  const { branchId, teacherId, month } = await searchParams;
 
-  const result = await getCourses();
-  const courses = result.success && result.data ? result.data : [];
+  const [groupsResult, branchesResult, teachersResult] = await Promise.all([
+    getAttendanceGroups({ branchId, teacherId, month }),
+    getBranches(),
+    // Фильтр по преподавателю — только администратору: преподаватель и так
+    // видит только свои группы
+    session.user.role === "ADMIN" ? getTeacherOptions() : Promise.resolve(null),
+  ]);
 
-  const coursesWithAttendance = await Promise.all(
-    courses.map(async (course) => {
-      const sessionsResult = await getAttendanceSessions(course.id);
-      const sessions =
-        sessionsResult.success && sessionsResult.data ? sessionsResult.data : [];
-      return { course, sessionCount: sessions.length };
-    })
-  );
+  const groups = groupsResult.success ? groupsResult.data : [];
+  const branches = branchesResult.success && branchesResult.data ? branchesResult.data : [];
+  const teachers = teachersResult?.success ? teachersResult.data : [];
+  // Месяц по умолчанию — текущий, тот же, что берёт api без параметра;
+  // без него input[type=month] остался бы пустым при первом заходе
+  const effectiveMonth = month ?? new Date().toISOString().slice(0, 7);
 
   return (
     <div className="space-y-6">
@@ -39,35 +48,15 @@ export default async function AttendancePage() {
         <h1 className="text-3xl font-bold">{t("title")}</h1>
       </div>
 
-      {coursesWithAttendance.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-12 text-center">
-          <Calendar className="mx-auto h-12 w-12 text-muted-foreground" />
-          <p className="mt-4 text-muted-foreground">{t("noCourses")}</p>
-        </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {coursesWithAttendance.map(({ course, sessionCount }) => (
-            <Card key={course.id} className="flex flex-col">
-              <CardHeader>
-                <CardTitle className="text-lg">{course.title}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex-1 flex flex-col justify-between gap-4">
-                <div className="text-sm text-muted-foreground">
-                  {t("sessionCount", { count: sessionCount })}
-                </div>
-                <Link href={`/courses/${course.slug}/attendance`}>
-                  <Button variant="outline" className="w-full">
-                    {role === "STUDENT"
-                      ? t("viewAttendance")
-                      : t("manageAttendance")}
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      <div className="flex flex-wrap items-end gap-3">
+        <MonthFilter month={effectiveMonth} namespace="attendance" />
+        <BranchFilter branchId={branchId} branches={branches} namespace="attendance" />
+        {teachers.length > 0 && (
+          <TeacherFilter teacherId={teacherId} teachers={teachers} namespace="attendance" />
+        )}
+      </div>
+
+      <AttendanceGroupsList groups={groups} resetKey={`${effectiveMonth}|${branchId ?? ""}|${teacherId ?? ""}`} />
     </div>
   );
 }

@@ -133,7 +133,10 @@ function LessonList({
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <StatusBadge lesson={lesson} t={t} />
-            <Link href={`/courses/${lesson.courseSlug}/attendance`} className="text-sm text-primary underline underline-offset-2">
+            <Link
+              href={`/courses/${lesson.courseSlug}/groups/${lesson.groupId}/attendance`}
+              className="text-sm text-primary underline underline-offset-2"
+            >
               {t("openJournal")}
             </Link>
           </div>

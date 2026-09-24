@@ -4,6 +4,7 @@ import type { SessionUser } from "../../common/auth/session-user";
 import { CheckPolicies } from "../../common/policies/check-policies.decorator";
 import { AttendanceService } from "./attendance.service";
 import {
+  AttendanceGroupsQueryDto,
   CourseQueryDto,
   CreateSessionDto,
   StudentQueryDto,
@@ -22,12 +23,24 @@ export class AttendanceController {
 
   /**
    * Занятия курса. Ученику отдаются только его собственные отметки, поэтому
-   * маршрут открыт любому вошедшему, а сужает выборку сам сервис.
+   * маршрут открыт любому вошедшему, а сужает выборку сам сервис. groupId —
+   * журнал одной группы (план «Журнал посещаемости по группам», п.1).
    */
   @Authenticated()
   @Get("sessions")
   sessions(@Query() query: CourseQueryDto, @CurrentUser() user: SessionUser) {
-    return this.attendance.sessions(query.courseId, user);
+    return this.attendance.sessions(query.courseId, user, query.groupId);
+  }
+
+  /**
+   * Группы для раздела «Посещаемость» (план, п.1): группа, курс, филиал,
+   * преподаватель и «отмечено N из M» за месяц. Тот же маршрут отдаёт и
+   * одну группу (query.groupId) — сводку для шапки её журнала.
+   */
+  @CheckPolicies((ability) => ability.can("read", "UserDirectory"))
+  @Get("groups")
+  groups(@Query() query: AttendanceGroupsQueryDto, @CurrentUser() user: SessionUser) {
+    return this.attendance.groupsOverview(query, user);
   }
 
   @CheckPolicies((ability) => ability.can("manage", "Attendance"))
@@ -54,11 +67,12 @@ export class AttendanceController {
     return { ok: true };
   }
 
-  // Матрица посещаемости содержит контакты учеников — только персоналу
+  // Матрица посещаемости содержит контакты учеников — только персоналу.
+  // groupId сужает её до одной группы (план, п.1)
   @CheckPolicies((ability) => ability.can("read", "UserDirectory"))
   @Get("report")
-  report(@Query() query: CourseQueryDto) {
-    return this.attendance.report(query.courseId);
+  report(@Query() query: CourseQueryDto, @CurrentUser() user: SessionUser) {
+    return this.attendance.report(query.courseId, user, query.groupId);
   }
 
   /**
