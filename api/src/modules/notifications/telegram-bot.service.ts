@@ -8,6 +8,7 @@ import { PrismaService } from "../../common/prisma/prisma.service";
 import { botMessages, SUBMIT_ERROR_MESSAGES } from "../../common/telegram/messages";
 import { activeEnrollmentFilter } from "../billing/billing-ledger.service";
 import { uploadDir } from "../homework/uploads.service";
+import { WeeklyDigestService } from "../parent-notifications/weekly-digest.service";
 import { SubmissionsService } from "../homework/submissions.service";
 
 /**
@@ -37,6 +38,7 @@ interface PendingTelegramFile extends TelegramDocumentMeta {
   createdAt: number;
 }
 
+
 @Injectable()
 export class TelegramBotService implements OnModuleDestroy {
   private readonly logger = new Logger(TelegramBotService.name);
@@ -48,7 +50,8 @@ export class TelegramBotService implements OnModuleDestroy {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly submissions: SubmissionsService,
-    private readonly audit: AuditService
+    private readonly audit: AuditService,
+    private readonly weeklyDigest: WeeklyDigestService
   ) {}
 
   private get prisma() {
@@ -126,9 +129,11 @@ export class TelegramBotService implements OnModuleDestroy {
           });
         }
       }
-      const greeting = user
-        ? botMessages.linkedGreeting(user.firstName, user.lastName)
-        : botMessages.notLinkedGreeting;
+      const greeting = !user
+        ? botMessages.notLinkedGreeting
+        : user.role === "PARENT"
+          ? botMessages.parentGreeting(user.firstName, user.lastName)
+          : botMessages.linkedGreeting(user.firstName, user.lastName);
       await ctx.reply(wasStopped ? `${greeting}\n\n${botMessages.notificationsResumed}` : greeting);
     });
 
@@ -145,10 +150,35 @@ export class TelegramBotService implements OnModuleDestroy {
       await ctx.reply(botMessages.notificationsStopped);
     });
 
+    // Родителю — сводка по детям за текущую неделю (тот же расчёт, что у
+    // понедельничной рассылки). Остальным ролям команда не нужна
+    bot.command("progress", async (ctx) => {
+      const user = await this.findUserByChatId(String(ctx.chat.id));
+      if (!user) {
+        await ctx.reply(botMessages.linkAccountFirst);
+        return;
+      }
+      if (user.role !== "PARENT") {
+        await ctx.reply(botMessages.progressParentsOnly);
+        return;
+      }
+      const summaries = await this.weeklyDigest.summariesForParent(user.id);
+      if (summaries.length === 0) {
+        await ctx.reply(botMessages.noChildrenLinked);
+        return;
+      }
+      for (const summary of summaries) await ctx.reply(summary);
+    });
+
     bot.command("homework", async (ctx) => {
       const user = await this.findUserByChatId(String(ctx.chat.id));
       if (!user) {
         await ctx.reply(botMessages.linkAccountFirst);
+        return;
+      }
+      // Задания и загрузка кода — для учеников; родителю — про ребёнка
+      if (user.role === "PARENT") {
+        await ctx.reply(botMessages.parentHomeworkHint);
         return;
       }
 
@@ -187,6 +217,10 @@ export class TelegramBotService implements OnModuleDestroy {
       const user = await this.findUserByChatId(String(ctx.chat.id));
       if (!user) {
         await ctx.reply(botMessages.linkAccountFirst);
+        return;
+      }
+      if (user.role === "PARENT") {
+        await ctx.reply(botMessages.parentHomeworkHint);
         return;
       }
 
@@ -317,7 +351,7 @@ export class TelegramBotService implements OnModuleDestroy {
     // привязки ломала вход (аудит 2.8).
     const request = await this.prisma.telegramLinkRequest.findUnique({
       where: { code: linkCode },
-      include: { user: { select: { id: true, firstName: true, lastName: true } } },
+      include: { user: { select: { id: true, firstName: true, lastName: true, role: true } } },
     });
 
     if (!request || request.expiresAt < new Date()) {
@@ -357,6 +391,22 @@ export class TelegramBotService implements OnModuleDestroy {
       this.prisma.telegramLinkRequest.deleteMany({ where: { userId: pendingUser.id } }),
     ]);
 
+    if (pendingUser.role === "PARENT") {
+      // Родитель привязал СВОЙ Telegram — дальше ему пишут о детях, поэтому
+      // сразу называем, о ком будут приходить сообщения
+      const children = await this.prisma.parentStudent.findMany({
+        where: { parentId: pendingUser.id },
+        select: { student: { select: { firstName: true, lastName: true } } },
+      });
+      await ctx.reply(
+        botMessages.parentLinked(
+          pendingUser.firstName,
+          pendingUser.lastName,
+          children.map((link) => `${link.student.firstName} ${link.student.lastName}`.trim())
+        )
+      );
+      return;
+    }
     await ctx.reply(botMessages.accountLinked(pendingUser.firstName, pendingUser.lastName));
   }
 

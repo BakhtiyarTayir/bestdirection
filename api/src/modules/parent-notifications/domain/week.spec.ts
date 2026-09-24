@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { previousWeek, weekDateRange } from "./week";
+import { currentWeek, previousWeek, weekDateRange } from "./week";
 
 // Прошедшая неделя — чистая функция от "сейчас", датой управляем явно вместо
 // реального Date.now(): иначе тест зависел бы от дня запуска.
@@ -38,5 +38,23 @@ describe("previousWeek", () => {
     const range = weekDateRange(week);
     expect(range.gte.toISOString().slice(0, 10)).toBe("2026-09-21");
     expect(range.lte.toISOString().slice(0, 10)).toBe("2026-09-27");
+  });
+});
+
+// Текущая неделя — для /progress в боте: с понедельника по сегодня
+describe("currentWeek", () => {
+  it("четверг — с понедельника этой недели по сегодня включительно", () => {
+    // 2026-09-24 — четверг, 10:00 по Ташкенту
+    const week = currentWeek(new Date("2026-09-24T05:00:00.000Z"));
+    expect(week.fromDateKey).toBe("2026-09-21");
+    expect(week.toDateKey).toBe("2026-09-24");
+    // Конец окна — завтрашняя полночь по Ташкенту, исключая
+    expect(week.toInstantExclusive.toISOString()).toBe("2026-09-24T19:00:00.000Z");
+  });
+
+  it("в 23:30 воскресенья по Ташкенту это ещё та же неделя, хотя по UTC уже воскресенье 18:30", () => {
+    const week = currentWeek(new Date("2026-09-27T18:30:00.000Z"));
+    expect(week.fromDateKey).toBe("2026-09-21");
+    expect(week.toDateKey).toBe("2026-09-27");
   });
 });

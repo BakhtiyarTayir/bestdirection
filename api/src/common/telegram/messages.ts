@@ -24,6 +24,27 @@ export const botMessages = {
     "/unlink — hisobni uzish\n\n" +
     "Tekshirish uchun kod fayli (.py, .js va hokazo) yuboring.",
 
+  // Родитель: бот говорит с ним о ребёнке, а не о своих заданиях — к
+  // аккаунту родителя привязан именно родитель, и /homework с загрузкой кода
+  // ему ни к чему
+  parentGreeting: (firstName: string, lastName: string) =>
+    `Siz ${firstName} ${lastName} sifatida bog'langansiz (ota-ona).\n\n` +
+    "Buyruqlar:\n" +
+    "/progress — farzandingizning shu haftadagi davomati va baholari\n" +
+    "/stop — xabarnomalarni o'chirish\n" +
+    "/unlink — hisobni uzish",
+  parentLinked: (firstName: string, lastName: string, childrenNames: string[]) =>
+    `Hisob bog'landi! ${firstName} ${lastName}\n\n` +
+    (childrenNames.length > 0
+      ? `Endi farzandingiz (${childrenNames.join(", ")}) darsga kelmasa, vazifasi tekshirilsa va har dushanba haftalik hisobot haqida xabar olasiz.\n\n`
+      : "Administrator farzandingizni biriktirgach, u haqida xabarlar kela boshlaydi.\n\n") +
+    "/progress — shu haftadagi davomat va baholar\n" +
+    "/stop — xabarnomalarni o'chirish",
+  parentHomeworkHint:
+    "Bu buyruq o'quvchilar uchun. Farzandingiz haqida ma'lumot: /progress",
+  progressParentsOnly: "Bu buyruq ota-onalar uchun.",
+  noChildrenLinked: "Sizga hali farzand biriktirilmagan. Administratorga murojaat qiling.",
+
   notLinkedGreeting:
     "Assalomu alaykum! Hisobingizni saytdagi shaxsiy kabinet orqali bog'lang.\n" +
     "Profil → Telegramni bog'lash bo'limiga o'ting.",

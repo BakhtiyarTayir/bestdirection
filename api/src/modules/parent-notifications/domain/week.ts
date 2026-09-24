@@ -53,6 +53,28 @@ export function previousWeek(now: Date = new Date()): WeekBounds {
   };
 }
 
+/**
+ * Текущая неделя по Ташкенту — с понедельника по сегодня включительно. Для
+ * команды /progress в боте: родитель спрашивает «как дела сейчас», а не за
+ * прошлую неделю, как в понедельничной сводке.
+ */
+export function currentWeek(now: Date = new Date()): WeekBounds {
+  const shiftedNow = new Date(now.getTime() + OFFSET_MS);
+  const shiftedToday = new Date(
+    Date.UTC(shiftedNow.getUTCFullYear(), shiftedNow.getUTCMonth(), shiftedNow.getUTCDate())
+  );
+  const shiftedThisMonday = new Date(shiftedToday.getTime() - (isoWeekday(shiftedToday) - 1) * DAY_MS);
+  const fromDateKey = dateKeyOf(shiftedThisMonday);
+
+  return {
+    weekKey: fromDateKey,
+    fromInstant: new Date(shiftedThisMonday.getTime() - OFFSET_MS),
+    toInstantExclusive: new Date(shiftedToday.getTime() + DAY_MS - OFFSET_MS),
+    fromDateKey,
+    toDateKey: dateKeyOf(shiftedToday),
+  };
+}
+
 /** Границы недели как Date для запроса по @db.Date полю (включительно с обеих сторон). */
 export function weekDateRange(bounds: WeekBounds): { gte: Date; lte: Date } {
   return { gte: toUtcMidnight(bounds.fromDateKey), lte: toUtcMidnight(bounds.toDateKey) };

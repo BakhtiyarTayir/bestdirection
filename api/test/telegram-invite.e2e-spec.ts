@@ -2,6 +2,7 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { SmsService } from "../src/modules/notifications/sms.service";
 import { TelegramBotService } from "../src/modules/notifications/telegram-bot.service";
+import { WeeklyDigestService } from "../src/modules/parent-notifications/weekly-digest.service";
 import { createUser, createTestApp, sessionCookie, TEST_APP_URL, testDb, type TestApp } from "./helpers";
 
 /**
@@ -86,16 +87,23 @@ describe("модуль users: приглашение в Telegram", () => {
       expect(ttlMs).toBeLessThan(7.1 * 24 * 60 * 60 * 1000);
     });
 
-    it("повторная выдача отменяет прежний код", async () => {
+    it("повторное открытие приглашения отдаёт ту же ссылку, пока она действует", async () => {
+      // Ссылка могла уже уйти родителю по SMS — новое открытие окна не
+      // должно её гасить
       const first = await post(`/users/${ids.studentWithPhone}/telegram-invite`, "ADMIN");
-      const firstCode = /start=([0-9a-f]{32})/.exec(first.body.url)![1];
-
       const second = await post(`/users/${ids.studentWithPhone}/telegram-invite`, "ADMIN");
-      const secondCode = /start=([0-9a-f]{32})/.exec(second.body.url)![1];
+      expect(second.body.url).toBe(first.body.url);
+    });
 
-      expect(secondCode).not.toBe(firstCode);
-      expect(await testDb().telegramLinkRequest.findUnique({ where: { code: firstCode } })).toBeNull();
-      expect(await testDb().telegramLinkRequest.findUnique({ where: { code: secondCode } })).not.toBeNull();
+    it("код из профиля (15 минут) не переиспользуется как приглашение — выдаётся новый недельный", async () => {
+      const user = await createUser({ role: "PARENT" });
+      await testDb().telegramLinkRequest.create({
+        data: { code: "f".repeat(32), userId: user.id, expiresAt: new Date(Date.now() + 15 * 60 * 1000) },
+      });
+      const res = await post(`/users/${user.id}/telegram-invite`, "ADMIN");
+      expect(res.body.url).not.toContain("f".repeat(32));
+      const days = (new Date(res.body.expiresAt).getTime() - Date.now()) / 86_400_000;
+      expect(days).toBeGreaterThan(6.9);
     });
 
     it("уже привязанному пользователю тоже выдаёт ссылку, но isLinked: true", async () => {
@@ -116,6 +124,42 @@ describe("модуль users: приглашение в Telegram", () => {
     it("неизвестный пользователь — 404", async () => {
       const res = await post("/users/does-not-exist/telegram-invite", "ADMIN");
       expect(res.status).toBe(404);
+    });
+  });
+
+  // Родитель привязывает СВОЙ Telegram: бот должен говорить с ним о ребёнке,
+  // а не предлагать сдавать задания, как ученику
+  describe("/start <код> у родителя", () => {
+    it("ответ — про ребёнка, без /homework и загрузки кода", async () => {
+      const parent = await createUser({ role: "PARENT" });
+      const child = await createUser({ role: "STUDENT" });
+      await testDb().parentStudent.create({ data: { parentId: parent.id, studentId: child.id } });
+
+      const res = await post(`/users/${parent.id}/telegram-invite`, "ADMIN");
+      const code = /start=([0-9a-f]{32})/.exec(res.body.url)![1];
+
+      const replies: string[] = [];
+      const fakeCtx = {
+        chat: { id: 555000111 },
+        from: { username: "parent_user" },
+        reply: async (text: string) => {
+          replies.push(text);
+        },
+      };
+      const bot = app.get(TelegramBotService);
+      await (
+        bot as unknown as { handleLinkAccount(ctx: typeof fakeCtx, code: string): Promise<void> }
+      ).handleLinkAccount(fakeCtx, code);
+
+      expect(replies).toHaveLength(1);
+      expect(replies[0]).toContain(child.firstName);
+      expect(replies[0]).toContain("/progress");
+      expect(replies[0]).not.toContain("/homework");
+
+      // Сводка для /progress собирается по ребёнку родителя
+      const summaries = await app.get(WeeklyDigestService).summariesForParent(parent.id);
+      expect(summaries).toHaveLength(1);
+      expect(summaries[0]).toContain(child.firstName);
     });
   });
 

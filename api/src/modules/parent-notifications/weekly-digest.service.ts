@@ -6,7 +6,7 @@ import { TelegramNotifyService } from "../../common/telegram/telegram-notify.ser
 import { BillingService } from "../billing/billing.service";
 import { toDdMm } from "../dashboard/teacher-dashboard.service";
 import { buildWeeklyDigestText } from "./domain/weekly-digest-text";
-import { previousWeek, weekDateRange, type WeekBounds } from "./domain/week";
+import { currentWeek, previousWeek, weekDateRange, type WeekBounds } from "./domain/week";
 
 type ReviewedStatus = "APPROVED" | "REJECTED" | "REVISION";
 
@@ -95,6 +95,20 @@ export class WeeklyDigestService {
 
     this.logger.log(`Еженедельная сводка за неделю ${week.weekKey}: отправлено ${sent}`);
     return { sent, skipped: null };
+  }
+
+  /**
+   * Сводка по каждому ребёнку родителя за текущую неделю — команда /progress
+   * в боте. Тот же расчёт, что у понедельничной рассылки, только окно —
+   * «с понедельника по сегодня». Пустой массив — детей у родителя нет.
+   */
+  async summariesForParent(parentId: string, now: Date = new Date()): Promise<string[]> {
+    const links = await this.prisma.parentStudent.findMany({
+      where: { parentId },
+      select: { student: { select: { id: true, firstName: true, lastName: true } } },
+    });
+    const week = currentWeek(now);
+    return Promise.all(links.map((link) => this.buildDigestFor(link.student, week)));
   }
 
   /**

@@ -15,6 +15,7 @@ import { WeeklyDigestService } from "./weekly-digest.service";
 @Module({
   imports: [BillingModule],
   providers: [ParentNotifyService, WeeklyDigestService],
-  exports: [ParentNotifyService],
+  // WeeklyDigestService — ещё и боту: команда /progress у родителя
+  exports: [ParentNotifyService, WeeklyDigestService],
 })
 export class ParentNotificationsModule {}

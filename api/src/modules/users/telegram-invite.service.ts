@@ -19,6 +19,13 @@ import { TelegramLinkService } from "./telegram-link.service";
 // рассчитан на то, что человек тут же открывает бота сам.
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+// Действующее приглашение переиспользуется, если ему осталось жить дольше
+// суток. Раньше каждое открытие окна приглашения выдавало новый код и гасило
+// прежний — ссылка, уже ушедшая родителю по SMS, умирала, едва администратор
+// снова открыл окно («Bog'lash kodi topilmadi» у родителя). 15-минутный код
+// из профиля сюда не подходит — под этот порог он не попадает.
+const REUSE_MIN_REMAINING_MS = 24 * 60 * 60 * 1000;
+
 @Injectable()
 export class TelegramInviteService {
   constructor(
@@ -50,6 +57,13 @@ export class TelegramInviteService {
   private async issueLink(userId: string) {
     const bot = this.botUsername();
     if (!bot) throw new ConflictException("botNotConfigured");
+
+    const existing = await this.prisma.telegramLinkRequest.findFirst({
+      where: { userId, expiresAt: { gt: new Date(Date.now() + REUSE_MIN_REMAINING_MS) } },
+      orderBy: { expiresAt: "desc" },
+      select: { code: true, expiresAt: true },
+    });
+    if (existing) return { url: `https://t.me/${bot}?start=${existing.code}`, expiresAt: existing.expiresAt };
 
     const { code, expiresAt } = await this.telegramLink.createCode(userId, INVITE_TTL_MS);
     return { url: `https://t.me/${bot}?start=${code}`, expiresAt };
