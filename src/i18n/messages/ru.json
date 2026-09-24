@@ -810,7 +810,11 @@
     "enrollmentFirstMonthChargePlaceholder": "Посчитать автоматически",
     "writeInTelegram": "Написать в Telegram",
     "openBilling": "Открыть биллинг",
-    "credentialsCopyText": "Сайт: {site}\nЛогин: {login}\nПароль: {password}"
+    "credentialsCopyText": "Логин: {login}\nПароль: {password}",
+    "credentialsSite": "Сайт",
+    "credentialsLogin": "Логин",
+    "credentialsPassword": "Пароль",
+    "copyLoginAndPassword": "Скопировать логин и пароль"
   },
   "groups": {
     "title": "Группы",

@@ -178,7 +178,8 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
   };
 
   const [revealPassword, setRevealPassword] = useState<{ login: string; password: string } | null>(null);
-  const [copied, setCopied] = useState(false);
+  // Какая строка только что скопирована: "site" | "login" | "password" | "both"
+  const [copied, setCopied] = useState<string | null>(null);
 
   // ─── Блок «Обучение» (только создание ученика, 4.4) ──────────────────────
   const [enrollmentEnabled, setEnrollmentEnabled] = useState(false);
@@ -240,20 +241,13 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
     }
   };
 
-  const copyPassword = async () => {
-    if (!revealPassword) return;
-    // Копируем всё, что нужно передать человеку одним сообщением: адрес
-    // сайта, логин и пароль. Раньше копировался только пароль, хотя на
-    // экране показаны оба
-    await navigator.clipboard.writeText(
-      t("credentialsCopyText", {
-        site: window.location.origin,
-        login: revealPassword.login,
-        password: revealPassword.password,
-      })
-    );
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  // Адрес сайта, логин и пароль копируются по отдельности — их передают
+  // человеку разными сообщениями или вставляют в разные поля; логин с
+  // паролем вместе — отдельной кнопкой
+  const copyValue = async (key: string, value: string) => {
+    await navigator.clipboard.writeText(value);
+    setCopied(key);
+    setTimeout(() => setCopied((current) => (current === key ? null : current)), 2000);
   };
 
   const continueAfterReveal = () => {
@@ -273,15 +267,40 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">{t("generatedPasswordDescription")}</p>
-          <div className="flex items-center gap-2">
-            <div className="flex-1 rounded-md border bg-muted px-3 py-2 font-mono text-sm">
-              {revealPassword.login} / {revealPassword.password}
+          {[
+            { key: "site", label: t("credentialsSite"), value: window.location.origin },
+            { key: "login", label: t("credentialsLogin"), value: revealPassword.login },
+            { key: "password", label: t("credentialsPassword"), value: revealPassword.password },
+          ].map((row) => (
+            <div key={row.key} className="flex items-center gap-2">
+              <span className="w-16 shrink-0 text-sm text-muted-foreground">{row.label}</span>
+              <div className="min-w-0 flex-1 break-all rounded-md border bg-muted px-3 py-2 font-mono text-sm">
+                {row.value}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label={t("copyPassword")}
+                onClick={() => copyValue(row.key, row.value)}
+              >
+                {copied === row.key ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              </Button>
             </div>
-            <Button type="button" variant="outline" onClick={copyPassword}>
-              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-              {copied ? t("copied") : t("copyPassword")}
-            </Button>
-          </div>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() =>
+              copyValue(
+                "both",
+                t("credentialsCopyText", { login: revealPassword.login, password: revealPassword.password })
+              )
+            }
+          >
+            {copied === "both" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            {copied === "both" ? t("copied") : t("copyLoginAndPassword")}
+          </Button>
           <Button type="button" onClick={continueAfterReveal}>
             {tCommon("saveChanges")}
           </Button>

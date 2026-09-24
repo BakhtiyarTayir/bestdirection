@@ -810,7 +810,11 @@
     "enrollmentFirstMonthChargePlaceholder": "Avtomatik hisoblash",
     "writeInTelegram": "Telegramga yozish",
     "openBilling": "Billingni ochish",
-    "credentialsCopyText": "Sayt: {site}\nLogin: {login}\nParol: {password}"
+    "credentialsCopyText": "Login: {login}\nParol: {password}",
+    "credentialsSite": "Sayt",
+    "credentialsLogin": "Login",
+    "credentialsPassword": "Parol",
+    "copyLoginAndPassword": "Login va parolni nusxalash"
   },
   "groups": {
     "title": "Guruhlar",
