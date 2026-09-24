@@ -7,6 +7,15 @@
  * второй язык, эти функции останутся единственным местом правки
  * (аудит 4.6 — двуязычие бота остаётся открытым).
  */
+/** Статус проверки задания словом — общий и для точечного уведомления, и для строки в сводке. */
+export function homeworkStatusWord(status: "APPROVED" | "REJECTED" | "REVISION"): string {
+  return {
+    APPROVED: "qabul qilindi ✅",
+    REJECTED: "rad etildi ❌",
+    REVISION: "qayta ishlashga yuborildi 🔁",
+  }[status];
+}
+
 export const botMessages = {
   linkedGreeting: (firstName: string, lastName: string) =>
     `Siz ${firstName} ${lastName} sifatida bog'langansiz.\n\n` +
@@ -107,6 +116,46 @@ export const botMessages = {
   enrollmentRejected: (courseTitle: string) =>
     `❌ «${courseTitle}» kursiga arizangiz rad etildi.\n` +
     "Agar bu xato bo'lsa — o'quv markazi bilan bog'laning va arizani qaytadan yuboring.",
+
+  // Родителям об успеваемости ребёнка (план PLAN-PARENT-PROGRESS-2026-09-24,
+  // раздел 2). Как и весь остальной бот, только по-узбекски: языка у
+  // пользователя нигде не хранится (см. шапку файла) — если появится
+  // сохранённый язык интерфейса, переключение живёт здесь же.
+  studentAbsent: (studentName: string, groupOrCourseName: string, dateDdMm: string) =>
+    `❗ ${studentName} ${dateDdMm} kuni «${groupOrCourseName}» darsida yo'q edi.`,
+
+  homeworkReviewed: (
+    studentName: string,
+    homeworkTitle: string,
+    status: "APPROVED" | "REJECTED" | "REVISION",
+    score: string | null
+  ) =>
+    `📋 ${studentName} — «${homeworkTitle}» vazifasi tekshirildi.\n` +
+    `Holat: ${homeworkStatusWord(status)}` +
+    (score ? `\nBaho: ${score}` : ""),
+
+  notificationsStopped:
+    "Xabarnomalar o'chirildi. Farzandingiz haqidagi xabarlar endi kelmaydi.\n" +
+    "Qayta yoqish uchun /start yuboring.",
+  notificationsResumed: "Xabarnomalar yoqildi.",
+
+  // Еженедельная сводка (2.3): по одному сообщению на ребёнка, части
+  // собираются функциями ниже и склеиваются в weekly-digest.service.ts —
+  // текст не резиновый, а из готовых кусков, чтобы легко было юнит-тестировать.
+  weeklyDigestHeader: (studentName: string, weekFromDdMm: string, weekToDdMm: string) =>
+    `📊 ${studentName}: hafta yakuni (${weekFromDdMm}–${weekToDdMm})`,
+  weeklyDigestAttendance: (total: number, absent: number) =>
+    total > 0
+      ? `Davomat: ${total} ta darsdan ${absent} ta sababsiz qoldirilgan`
+      : "Davomat: bu hafta darslar bo'lmadi",
+  weeklyDigestHomeworkLine: (title: string, status: string, score: string | null) =>
+    `  • ${title} — ${status}` + (score ? ` (${score})` : ""),
+  weeklyDigestHomeworkHeader: "Tekshirilgan vazifalar:",
+  weeklyDigestNoHomework: "Bu hafta tekshirilgan vazifa yo'q",
+  weeklyDigestTestLine: (title: string, percentage: number) => `  • ${title} — ${percentage}%`,
+  weeklyDigestTestHeader: "Topshirilgan testlar:",
+  weeklyDigestNoTests: "Bu hafta test topshirilmagan",
+  weeklyDigestDebt: (amount: string) => `⚠️ Qarzdorlik: ${amount}`,
 } as const;
 
 /** Причины отказа от submitSolutionInternal — в текст для студента. */

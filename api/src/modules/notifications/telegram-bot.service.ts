@@ -113,11 +113,36 @@ export class TelegramBotService implements OnModuleDestroy {
       }
 
       const user = await this.findUserByChatId(String(ctx.chat.id));
-      await ctx.reply(
-        user
-          ? botMessages.linkedGreeting(user.firstName, user.lastName)
-          : botMessages.notLinkedGreeting
-      );
+      let wasStopped = false;
+      if (user) {
+        // /start без кода — не только приветствие уже привязанному: это же
+        // команда включения обратно после /stop (план PLAN-PARENT-PROGRESS-2026-09-24,
+        // 2.4).
+        wasStopped = !user.parentProgressNotifications;
+        if (wasStopped) {
+          await this.prisma.user.update({
+            where: { id: user.id },
+            data: { parentProgressNotifications: true },
+          });
+        }
+      }
+      const greeting = user
+        ? botMessages.linkedGreeting(user.firstName, user.lastName)
+        : botMessages.notLinkedGreeting;
+      await ctx.reply(wasStopped ? `${greeting}\n\n${botMessages.notificationsResumed}` : greeting);
+    });
+
+    bot.command("stop", async (ctx) => {
+      const user = await this.findUserByChatId(String(ctx.chat.id));
+      if (!user) {
+        await ctx.reply(botMessages.linkAccountFirst);
+        return;
+      }
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { parentProgressNotifications: false },
+      });
+      await ctx.reply(botMessages.notificationsStopped);
     });
 
     bot.command("homework", async (ctx) => {
@@ -527,7 +552,7 @@ export class TelegramBotService implements OnModuleDestroy {
   private findUserByChatId(chatId: string) {
     return this.prisma.user.findUnique({
       where: { telegramChatId: chatId },
-      select: { id: true, firstName: true, lastName: true, role: true },
+      select: { id: true, firstName: true, lastName: true, role: true, parentProgressNotifications: true },
     });
   }
 }

@@ -1,9 +1,18 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from "@nestjs/common";
 import { Prisma } from "../../../generated/prisma";
 import { AuditService } from "../../common/audit/audit.service";
 import type { SessionUser } from "../../common/auth/session-user";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { activeEnrollmentFilter } from "../billing/billing-ledger.service";
+import { dateKeyOf, toDdMm } from "../dashboard/teacher-dashboard.service";
+import { ParentNotifyService } from "../parent-notifications/parent-notify.service";
 import { SalaryService } from "../salary/salary.service";
 import { canManageCourseAttendance, canManageSession, responsibleTeacherId } from "./domain/attendance-access";
 import type { CreateSessionDto, UpdateRecordsDto } from "./dto/attendance.dto";
@@ -13,10 +22,13 @@ type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
 /** Перенесено из src/actions/attendance-actions.ts в web. */
 @Injectable()
 export class AttendanceService {
+  private readonly logger = new Logger(AttendanceService.name);
+
   constructor(
     private readonly prismaService: PrismaService,
     private readonly audit: AuditService,
-    private readonly salary: SalaryService
+    private readonly salary: SalaryService,
+    private readonly parentNotify: ParentNotifyService
   ) {}
 
   private get prisma() {
@@ -155,6 +167,22 @@ export class AttendanceService {
       }
     }
 
+    // Кому шлём «не был(а) на занятии» (план, 2.1): только переход В ABSENT.
+    // Старые статусы нужны ДО транзакции — после неё в базе уже новые.
+    // Дедуп по studentId — последняя запись массива побеждает: на случай
+    // дубля в одном payload сравниваем со старым статусом только финальное
+    // значение, а не промежуточное (иначе «сняли в рамках того же сохранения»
+    // всё равно улетело бы уведомлением).
+    const finalStatusByStudent = new Map(data.records.map((record) => [record.studentId, record.status]));
+    const previousRecords = await this.prisma.attendanceRecord.findMany({
+      where: { sessionId, studentId: { in: [...finalStatusByStudent.keys()] } },
+      select: { studentId: true, status: true },
+    });
+    const previousStatusByStudent = new Map(previousRecords.map((r) => [r.studentId, r.status]));
+    const newlyAbsentStudentIds = [...finalStatusByStudent.entries()]
+      .filter(([studentId, status]) => status === "ABSENT" && previousStatusByStudent.get(studentId) !== "ABSENT")
+      .map(([studentId]) => studentId);
+
     await this.prisma.$transaction([
       ...(Object.keys(teacherData).length > 0
         ? [this.prisma.attendanceSession.update({ where: { id: sessionId }, data: teacherData })]
@@ -184,6 +212,41 @@ export class AttendanceService {
         records: data.records.map((record) => ({ studentId: record.studentId, status: record.status })),
       },
     });
+
+    // Уведомление — после записи в БД, не в транзакции: ошибка отправки не
+    // должна откатывать отметку в журнале. await, а не fire-and-forget — как
+    // и остальные вызовы telegram.send() в проекте (enrollment-requests,
+    // auth.service): ParentNotifyService сам ловит свои ошибки и не бросает
+    // наружу, поэтому await не рискует уронить запрос, зато отправка гарантированно
+    // завершается до ответа — важно и тестам (детерминизм), и логике «не
+    // послать дважды на один и тот же пропуск» при быстрых повторных сохранениях.
+    if (newlyAbsentStudentIds.length > 0) {
+      await this.notifyAbsences(newlyAbsentStudentIds, session).catch((error) =>
+        this.logger.warn(`Не удалось разослать уведомления о пропуске: ${String(error)}`)
+      );
+    }
+  }
+
+  private async notifyAbsences(
+    studentIds: string[],
+    session: { date: Date; course: { title: string }; group: { name: string } | null }
+  ) {
+    const students = await this.prisma.user.findMany({
+      where: { id: { in: studentIds } },
+      select: { id: true, firstName: true, lastName: true },
+    });
+    const dateDdMm = toDdMm(dateKeyOf(session.date));
+    const groupOrCourseName = session.group?.name ?? session.course.title;
+    await Promise.all(
+      students.map((student) =>
+        this.parentNotify.notifyAbsence({
+          studentId: student.id,
+          studentName: `${student.firstName} ${student.lastName}`.trim(),
+          groupOrCourseName,
+          dateDdMm,
+        })
+      )
+    );
   }
 
   async deleteSession(sessionId: string, actor: SessionUser) {
@@ -311,8 +374,11 @@ export class AttendanceService {
     const session = await this.prisma.attendanceSession.findUnique({
       where: { id: sessionId },
       include: {
-        course: { select: { id: true, teacherId: true } },
-        group: { select: { teacherId: true } },
+        // title/name нужны только уведомлению о пропуске (updateRecords), но
+        // это одна общая функция для всех операций над занятием — лишние
+        // строки в select дешевле второго похожего запроса
+        course: { select: { id: true, title: true, teacherId: true } },
+        group: { select: { name: true, teacherId: true } },
       },
     });
     if (!session) throw new NotFoundException("sessionNotFound");

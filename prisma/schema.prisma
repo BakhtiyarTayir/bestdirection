@@ -194,6 +194,12 @@ model User {
   recordedPayments           Payment[]           @relation("RecordedPayments")
   telegramChatId             String?             @unique
   telegramUsername           String?
+  // Родитель мог отключить уведомления об успеваемости ребёнка (пропуск,
+  // проверенное задание, еженедельная сводка) командой /stop боту — сам
+  // бот при этом остаётся привязан, /start снова включает. У остальных ролей
+  // поле не используется, но оно на User, а не на ParentStudent: бот видит
+  // только chatId, а не то, чьим родителем является собеседник.
+  parentProgressNotifications Boolean            @default(true)
 
   // Ставка преподавателя по умолчанию в базисных пунктах: 4000 = 40 %.
   // Сотые доли процента, а не целые проценты: в договорах встречаются
@@ -725,6 +731,19 @@ model PasswordResetRequest {
   attempts  Int      @default(0)
   expiresAt DateTime
   sentAt    DateTime @default(now())
+}
+
+// Отметка «еженедельная сводка родителям за эту неделю уже отправлена».
+// Планировщик (@nestjs/schedule) не гарантирует, что контейнер не перезапустят
+// в то же понедельниковое окно — уникальность weekKey ловит повторный запуск
+// на уровне БД (create упадёт P2002), а не проверкой «есть ли уже запись»
+// перед отправкой: два инстанса, стартующих одновременно, иначе оба прошли бы
+// проверку и разослали сводку дважды.
+model WeeklyDigestRun {
+  id        String   @id @default(cuid())
+  // Понедельник недели, за которую шлём сводку, "YYYY-MM-DD" по Ташкенту
+  weekKey   String   @unique
+  createdAt DateTime @default(now())
 }
 
 // Одноразовая заявка на вход через Telegram-бота (deep-link t.me/bot?start=login_<code>)
