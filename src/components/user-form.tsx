@@ -242,7 +242,16 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
 
   const copyPassword = async () => {
     if (!revealPassword) return;
-    await navigator.clipboard.writeText(revealPassword.password);
+    // Копируем всё, что нужно передать человеку одним сообщением: адрес
+    // сайта, логин и пароль. Раньше копировался только пароль, хотя на
+    // экране показаны оба
+    await navigator.clipboard.writeText(
+      t("credentialsCopyText", {
+        site: window.location.origin,
+        login: revealPassword.login,
+        password: revealPassword.password,
+      })
+    );
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

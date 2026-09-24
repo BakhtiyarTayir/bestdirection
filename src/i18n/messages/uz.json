@@ -809,7 +809,8 @@
     "enrollmentFirstMonthCharge": "Birinchi oy uchun hisoblash",
     "enrollmentFirstMonthChargePlaceholder": "Avtomatik hisoblash",
     "writeInTelegram": "Telegramga yozish",
-    "openBilling": "Billingni ochish"
+    "openBilling": "Billingni ochish",
+    "credentialsCopyText": "Sayt: {site}\nLogin: {login}\nParol: {password}"
   },
   "groups": {
     "title": "Guruhlar",

@@ -809,7 +809,8 @@
     "enrollmentFirstMonthCharge": "Начисление за первый месяц",
     "enrollmentFirstMonthChargePlaceholder": "Посчитать автоматически",
     "writeInTelegram": "Написать в Telegram",
-    "openBilling": "Открыть биллинг"
+    "openBilling": "Открыть биллинг",
+    "credentialsCopyText": "Сайт: {site}\nЛогин: {login}\nПароль: {password}"
   },
   "groups": {
     "title": "Группы",
