@@ -1180,7 +1180,9 @@
     "branchHasGroups": "Filialda guruhlar bor — avval ularni ko'chiring yoki o'chiring",
     "loginExists": "Bunday loginli foydalanuvchi allaqachon mavjud",
     "groupWrongBranch": "Guruh boshqa filialga tegishli",
-    "telegramUnknown": "Bu Telegram hech qanday akkauntga ulanmagan"
+    "telegramUnknown": "Bu Telegram hech qanday akkauntga ulanmagan",
+    "botNotConfigured": "Telegram bot sozlanmagan",
+    "noPhone": "Foydalanuvchida telefon raqami yo'q"
   },
   "success": {
     "saved": "Saqlandi",
@@ -2042,5 +2044,25 @@
     "attemptsCount": "Urinishlar: {count}",
     "lessonsCount": "{total} darsdan {completed} tasi tugallangan",
     "viewProgress": "O'zlashtirish"
+  },
+  "telegramInvite": {
+    "button": "Telegramga taklif qilish",
+    "linked": "Telegram ulangan ✓",
+    "notLinked": "Telegram ulanmagan",
+    "dialogTitle": "Telegramga taklifnoma",
+    "instructions": "Havolani insonga yuboring: u havolani ochib botda Start tugmasini bosadi — shundan so'ng bildirishnomalar kela boshlaydi va saytga «Telegram orqali kirish» tugmasi bilan kira oladi.",
+    "qrAlt": "Taklifnoma havolasining QR-kodi",
+    "expiresAt": "Havola {date} gacha amal qiladi",
+    "sendSms": "SMS orqali yuborish",
+    "smsTo": "SMS {phone} raqamiga yuboriladi",
+    "noPhoneHint": "Foydalanuvchida telefon raqami yo'q — SMS yuborib bo'lmaydi",
+    "smsSent": "SMS yuborildi",
+    "smsFailed": "SMS yuborilmadi",
+    "smsReason": {
+      "notConfigured": "SMS shlyuzi sozlanmagan",
+      "invalidPhone": "Telefon raqami noto'g'ri",
+      "providerError": "Shlyuz yuborishni rad etdi",
+      "emptyText": "Xabar matni bo'sh"
+    }
   }
 }

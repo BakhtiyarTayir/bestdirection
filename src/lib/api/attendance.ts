@@ -80,6 +80,8 @@ export interface ApiParentLink {
     lastName: string;
     phone: string | null;
     isActive: boolean;
+    // Сам chat id api не отдаёт — только признак привязки (план приглашений в Telegram)
+    hasTelegram: boolean;
   };
 }
 

@@ -28,6 +28,8 @@ export interface ApiUser {
   branch: { id: string; name: string } | null;
   // Для кнопки «Написать в Telegram» на карточках других людей (4.2)
   telegramUsername: string | null;
+  // Сам chat id api не отдаёт — только признак привязки (план приглашений в Telegram)
+  hasTelegram: boolean;
   // Ставка зарплаты преподавателя в базисных пунктах — см. updateUser
   salaryPercentBp: number | null;
 }
@@ -173,6 +175,24 @@ export const checkLoginAvailable = (login: string) =>
 export const deactivateUser = (id: string) => apiFetch<{ ok: true }>(`/users/${id}/deactivate`, { method: "POST" });
 export const restoreUser = (id: string) => apiFetch<{ ok: true }>(`/users/${id}/restore`, { method: "POST" });
 export const purgeUser = (id: string) => apiFetch<{ ok: true }>(`/users/${id}`, { method: "DELETE" });
+
+/** Ссылка-приглашение в Telegram для родителя или ученика — выдаёт администратор. */
+export interface ApiTelegramInvite {
+  url: string;
+  expiresAt: string;
+  isLinked: boolean;
+}
+
+export interface ApiTelegramInviteSms extends ApiTelegramInvite {
+  sent: boolean;
+  reason?: string;
+}
+
+export const createTelegramInvite = (userId: string) =>
+  apiFetch<ApiTelegramInvite>(`/users/${userId}/telegram-invite`, { method: "POST" });
+
+export const sendTelegramInviteSms = (userId: string) =>
+  apiFetch<ApiTelegramInviteSms>(`/users/${userId}/telegram-invite/sms`, { method: "POST" });
 
 export const updateProfile = (body: { firstName: string; lastName: string; phone?: string }) =>
   apiFetch<ApiProfile>("/me/profile", { method: "PATCH", body });

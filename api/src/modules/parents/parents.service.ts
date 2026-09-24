@@ -6,6 +6,7 @@ import { AuditService } from "../../common/audit/audit.service";
 import { generateUniqueLogin, loginBaseFromName } from "../../common/auth/login-generator";
 import type { SessionUser } from "../../common/auth/session-user";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { withHasTelegram } from "../../common/telegram/with-has-telegram";
 import type { CreateParentDto, LinkParentDto, UpdateLinkDto } from "./dto/parent.dto";
 
 const PARENT_SELECT = {
@@ -35,8 +36,8 @@ export class ParentsService {
     return this.prismaService.prisma;
   }
 
-  byStudent(studentId: string) {
-    return this.prisma.parentStudent.findMany({
+  async byStudent(studentId: string) {
+    const links = await this.prisma.parentStudent.findMany({
       where: { studentId },
       orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
       select: {
@@ -44,9 +45,12 @@ export class ParentsService {
         relation: true,
         isPrimary: true,
         createdAt: true,
-        parent: { select: PARENT_SELECT },
+        // telegramChatId — только для признака hasTelegram у кнопки
+        // «Пригласить в Telegram» (parents-panel.tsx), наружу сам id не идёт
+        parent: { select: { ...PARENT_SELECT, telegramChatId: true } },
       },
     });
+    return links.map((link) => ({ ...link, parent: withHasTelegram(link.parent) }));
   }
 
   /**
@@ -221,7 +225,9 @@ export class ParentsService {
       action: "CREATE",
       metadata: { role: "PARENT", linkedStudentId: data.studentId },
     });
-    return result.parent;
+    // Свежий родитель — Telegram точно не привязан, но форма ждёт то же
+    // поле, что и byStudent (ApiParentLink["parent"])
+    return { ...result.parent, hasTelegram: false };
   }
 
   async updateLink(id: string, data: UpdateLinkDto, actor: SessionUser) {

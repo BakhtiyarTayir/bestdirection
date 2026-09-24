@@ -14,6 +14,7 @@ import type { SessionUser } from "../../common/auth/session-user";
 import { toNoonUtc } from "../../common/date-only";
 import { accessibleWhere, type AppAbility } from "../../common/policies/abilities";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { withHasTelegram } from "../../common/telegram/with-has-telegram";
 import { BillingLedgerService } from "../billing/billing-ledger.service";
 import { SalaryService } from "../salary/salary.service";
 import type { CreateUserDto, UpdateProfileDto, UpdateUserDto } from "./dto/user.dto";
@@ -33,6 +34,9 @@ const USER_SELECT = {
   branch: { select: { id: true, name: true } },
   // Для кнопки «Написать в Telegram» на карточках других людей (4.2)
   telegramUsername: true,
+  // Сам chat id наружу не отдаём (план приглашений в Telegram) — только
+  // признак hasTelegram, который считает withHasTelegram ниже
+  telegramChatId: true,
   // Ставка преподавателя — нужна форме правки, чтобы показать текущее
   // значение. Для STUDENT/PARENT/ADMIN поле просто пустое.
   salaryPercentBp: true,
@@ -58,19 +62,20 @@ export class UsersService {
     return this.prismaService.prismaUnscoped;
   }
 
-  list(ability: AppAbility, branchId?: string) {
+  async list(ability: AppAbility, branchId?: string) {
     // Кого видно, решают правила: администратор — всех, преподаватель —
     // учеников и себя. Раньше это был ручной if по роли внутри действия.
     // Фильтр здесь — по «домашнему» branchId пользователя: для списка
     // персонала (в отличие от студентов-должников) это справочная приписка,
     // а не привязка через группу.
-    return this.prisma.user.findMany({
+    const users = await this.prisma.user.findMany({
       where: {
         AND: [accessibleWhere<Prisma.UserWhereInput>(ability, "User"), ...(branchId ? [{ branchId }] : [])],
       },
       orderBy: { createdAt: "desc" },
       select: USER_SELECT,
     });
+    return users.map(withHasTelegram);
   }
 
   async byId(ability: AppAbility, id: string) {
@@ -81,7 +86,7 @@ export class UsersService {
     // Недоступный объект — 404, а не 403: иначе ответ подтверждает, что такой
     // пользователь существует.
     if (!user) throw new NotFoundException("userNotFound");
-    return user;
+    return withHasTelegram(user);
   }
 
   async create(data: CreateUserDto, actor: SessionUser) {
@@ -135,7 +140,7 @@ export class UsersService {
           enrollmentId = enrollment.id;
         }
 
-        return { ...user, enrollmentId };
+        return { ...withHasTelegram(user), enrollmentId };
       });
     } catch (error) {
       // Гонка: между проверкой и вставкой логин мог занять другой администратор
@@ -284,7 +289,7 @@ export class UsersService {
         changes,
       });
     }
-    return user;
+    return withHasTelegram(user);
   }
 
   /**

@@ -7,6 +7,7 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { EditUserForm } from "./edit-user-form";
 import { ParentsPanel } from "@/components/parents-panel";
+import { TelegramInviteDialog } from "@/components/telegram-invite-dialog";
 import { TelegramWriteButton } from "@/components/telegram-write-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -48,9 +49,14 @@ async function EditUserPageContent({ user, branches }: { user: any; branches: { 
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-bold">{t("editUser")}</h1>
-        <TelegramWriteButton username={user.telegramUsername} />
+        <div className="flex items-center gap-2">
+          <TelegramWriteButton username={user.telegramUsername} />
+          {(user.role === "STUDENT" || user.role === "PARENT") && (
+            <TelegramInviteDialog userId={user.id} hasTelegram={user.hasTelegram} phone={user.phone} />
+          )}
+        </div>
       </div>
       <EditUserForm user={user} branches={branches} />
       {user.role === "STUDENT" && enrollments.length > 0 && (

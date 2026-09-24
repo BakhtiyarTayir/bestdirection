@@ -17,21 +17,26 @@ export class TelegramLinkService {
    * Одноразовый код для привязки Telegram. Хранится отдельной строкой, а не в
    * User.telegramChatId: раньше вторая попытка привязки затирала реальный chat
    * id, и вход через Telegram терялся навсегда (аудит 2.8).
+   *
+   * ttlMs по умолчанию — код из профиля (15 минут, человек тут же открывает
+   * бота сам). Приглашение администратора живёт дольше (см.
+   * TelegramInviteService): его отправляют по SMS, и открывают не сразу.
    */
-  async createCode(userId: string) {
+  async createCode(userId: string, ttlMs: number = CODE_TTL_MS) {
     const code = randomBytes(16).toString("hex");
+    const expiresAt = new Date(Date.now() + ttlMs);
 
     await this.prisma.$transaction([
       // Прошлые коды этого пользователя больше не нужны
       this.prisma.telegramLinkRequest.deleteMany({ where: { userId } }),
       this.prisma.telegramLinkRequest.create({
-        data: { code, userId, expiresAt: new Date(Date.now() + CODE_TTL_MS) },
+        data: { code, userId, expiresAt },
       }),
       // Заодно подчищаем чужие протухшие: отдельного планировщика нет
       this.prisma.telegramLinkRequest.deleteMany({ where: { expiresAt: { lt: new Date() } } }),
     ]);
 
-    return { code };
+    return { code, expiresAt };
   }
 
   async status(userId: string) {
