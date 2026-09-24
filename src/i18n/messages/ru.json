@@ -134,7 +134,8 @@
     "branches": "Филиалы",
     "salaries": "Зарплаты",
     "mySalary": "Моя зарплата",
-    "finance": "Финансы"
+    "finance": "Финансы",
+    "progress": "Успеваемость"
   },
   "weekdays": {
     "mon": "Пн",
@@ -178,7 +179,9 @@
     "statistics": "Статистика",
     "teachers": "Преподаватели",
     "payments": "Оплаты",
-    "debtors": "Должники"
+    "debtors": "Должники",
+    "progress": "Успеваемость",
+    "myChildren": "Мои дети"
   },
   "dashboard": {
     "adminTitle": "Панель администратора",
@@ -2011,5 +2014,33 @@
     "dueDate": "срок до {date}",
     "myCourses": "Моих курсов",
     "testsPassed": "Пройдено тестов"
+  },
+  "progress": {
+    "title": "Успеваемость",
+    "subtitle": "Посещаемость, домашние задания и тесты",
+    "loadError": "Не удалось загрузить данные",
+    "selectMonth": "Месяц",
+    "tileAttendance": "Посещаемость",
+    "tileHomeworkDone": "Сдано заданий",
+    "tileHomeworkAvg": "Средний балл за задания",
+    "tileTestAvg": "Средний балл за тесты",
+    "noValue": "—",
+    "coursesEmpty": "Ученик пока не записан ни на один курс",
+    "sectionAttendance": "Посещаемость",
+    "sectionHomework": "Домашние задания",
+    "sectionTests": "Тесты",
+    "sectionLessons": "Уроки",
+    "attendanceCount": "{present} из {total} занятий",
+    "attendanceEmpty": "В этом месяце занятий в журнале ещё не было",
+    "absencesLabel": "Пропуски",
+    "noAbsences": "Пропусков нет",
+    "homeworkCount": "{done} из {total}",
+    "homeworkEmpty": "Заданий пока нет",
+    "dueDateLabel": "Срок — {date}",
+    "gradeLabel": "Оценка — {percent}%",
+    "testsEmpty": "Тестов и экзаменов пока нет",
+    "attemptsCount": "Попыток: {count}",
+    "lessonsCount": "{completed} из {total} уроков пройдено",
+    "viewProgress": "Успеваемость"
   }
 }

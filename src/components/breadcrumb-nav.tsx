@@ -41,6 +41,8 @@ const SEGMENT_KEYS: Record<string, string> = {
   student: "student",
   review: "review",
   statistics: "statistics",
+  "my-children": "myChildren",
+  progress: "progress",
 };
 
 function isCuidSegment(segment: string): boolean {

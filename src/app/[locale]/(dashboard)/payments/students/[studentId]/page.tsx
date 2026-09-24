@@ -5,6 +5,9 @@ import { intlLocale } from "@/i18n/config";
 import { getStudentBilling } from "@/lib/api/billing.server";
 import { formatDate } from "@/lib/format-date";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Link } from "@/i18n/navigation";
+import { TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -72,6 +75,7 @@ export default async function StudentBillingPage({ params }: StudentBillingPageP
   const t = await getTranslations("studentBilling");
   const tDebtors = await getTranslations("debtors");
   const tPayments = await getTranslations("payments");
+  const tProgress = await getTranslations("progress");
   const locale = await getLocale();
   const money = new Intl.NumberFormat(intlLocale(locale));
 
@@ -130,7 +134,15 @@ export default async function StudentBillingPage({ params }: StudentBillingPageP
             {student.login && ` · ${student.login}`}
           </p>
         </div>
-        <TelegramWriteButton username={student.telegramUsername} />
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/my-children/${studentId}/progress`}>
+              <TrendingUp className="mr-1.5 h-4 w-4" aria-hidden="true" />
+              {tProgress("viewProgress")}
+            </Link>
+          </Button>
+          <TelegramWriteButton username={student.telegramUsername} />
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">

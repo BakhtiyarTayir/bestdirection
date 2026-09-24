@@ -134,7 +134,8 @@
     "branches": "Filiallar",
     "salaries": "Ish haqi",
     "mySalary": "Mening ish haqim",
-    "finance": "Moliya"
+    "finance": "Moliya",
+    "progress": "O'zlashtirish"
   },
   "weekdays": {
     "mon": "Du",
@@ -178,7 +179,9 @@
     "statistics": "Statistika",
     "teachers": "O'qituvchilar",
     "payments": "To'lovlar",
-    "debtors": "Qarzdorlar"
+    "debtors": "Qarzdorlar",
+    "progress": "O'zlashtirish",
+    "myChildren": "Farzandlarim"
   },
   "dashboard": {
     "adminTitle": "Administrator paneli",
@@ -2011,5 +2014,33 @@
     "dueDate": "muddati {date} gacha",
     "myCourses": "Mening kurslarim",
     "testsPassed": "O‘tilgan testlar"
+  },
+  "progress": {
+    "title": "O'zlashtirish",
+    "subtitle": "Davomat, uy vazifalari va testlar",
+    "loadError": "Ma'lumotlarni yuklab bo'lmadi",
+    "selectMonth": "Oy",
+    "tileAttendance": "Davomat",
+    "tileHomeworkDone": "Topshirilgan vazifalar",
+    "tileHomeworkAvg": "Vazifalar bo'yicha o'rtacha ball",
+    "tileTestAvg": "Testlar bo'yicha o'rtacha ball",
+    "noValue": "—",
+    "coursesEmpty": "O'quvchi hali birorta kursga yozilmagan",
+    "sectionAttendance": "Davomat",
+    "sectionHomework": "Uy vazifalari",
+    "sectionTests": "Testlar",
+    "sectionLessons": "Darslar",
+    "attendanceCount": "{total} darsdan {present} tasida qatnashgan",
+    "attendanceEmpty": "Bu oyda jurnalda darslar hali bo'lmagan",
+    "absencesLabel": "Kelmagan kunlar",
+    "noAbsences": "Kelmagan kunlar yo'q",
+    "homeworkCount": "{total} tadan {done} tasi topshirilgan",
+    "homeworkEmpty": "Hozircha vazifalar yo'q",
+    "dueDateLabel": "Muddati — {date}",
+    "gradeLabel": "Baho — {percent}%",
+    "testsEmpty": "Hozircha test va imtihonlar yo'q",
+    "attemptsCount": "Urinishlar: {count}",
+    "lessonsCount": "{total} darsdan {completed} tasi tugallangan",
+    "viewProgress": "O'zlashtirish"
   }
 }

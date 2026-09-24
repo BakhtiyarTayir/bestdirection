@@ -35,6 +35,12 @@ export function formatShortDateTime(date: Date | string): string {
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+/** Дата без года: DD.MM — список пропусков на странице успеваемости, где год не нужен. */
+export function formatDayMonth(date: Date | string): string {
+  const d = new Date(date);
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}`;
+}
+
 function pad(value: number): string {
   return String(value).padStart(2, "0");
 }

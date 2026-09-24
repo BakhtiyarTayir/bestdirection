@@ -33,6 +33,7 @@ import {
   TrendingUp,
   TriangleAlert,
   Building2,
+  LineChart,
 } from "lucide-react";
 import { logout } from "@/lib/api/auth";
 import { Button } from "./ui/button";
@@ -122,6 +123,7 @@ const navItems: NavItem[] = [
   { href: "/audit", labelKey: "audit", icon: ScrollText, roles: ["ADMIN"] },
   { href: "/homework", labelKey: "homework", icon: ClipboardList, roles: ["ADMIN", "TEACHER", "STUDENT"], badge: "homework" },
   { href: "/my-results", labelKey: "myResults", icon: FileText, roles: ["STUDENT"] },
+  { href: "/progress", labelKey: "progress", icon: LineChart, roles: ["STUDENT"] },
   { href: "/my-children", labelKey: "myChildren", icon: UsersRound, roles: ["PARENT"] },
   { href: "/salaries/me", labelKey: "mySalary", icon: Wallet, roles: ["TEACHER"] },
   { href: "/profile", labelKey: "profile", icon: User, roles: ["ADMIN", "TEACHER", "STUDENT", "PARENT"] },
