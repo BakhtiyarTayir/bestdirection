@@ -33,24 +33,41 @@ interface Group {
   name: string;
 }
 
+// Сентинел «Все группы» — value у Radix Select не бывает пустой строкой,
+// поэтому пустая строка отдана состоянию «выбор ещё не сделан» (плейсхолдер)
+const ALL_GROUPS = "all";
+
 interface CreateSessionDialogProps {
   courseId: string;
   courseSlug: string;
+  /**
+   * Группа зафиксирована — журнал одной группы (план «Журнал посещаемости
+   * по группам», п.2): выбор скрыт, список групп курса даже не грузится.
+   */
+  fixedGroup?: { id: string; name: string };
+  /**
+   * Группу нужно выбрать явно — вкладка курса по группам (план, п.4):
+   * «без группы» здесь не предлагаем, по умолчанию — группа открытой вкладки.
+   */
+  defaultGroupId?: string;
   onSuccess?: () => void;
 }
 
 export function CreateSessionDialog({
   courseId,
   courseSlug,
+  fixedGroup,
+  defaultGroupId,
   onSuccess,
 }: CreateSessionDialogProps) {
   const t = useTranslations("attendance");
   const tCommon = useTranslations("common");
   const tErrors = useTranslations("errors");
+  const requireGroup = fixedGroup !== undefined || defaultGroupId !== undefined;
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState<Date | undefined>();
   const [note, setNote] = useState("");
-  const [groupId, setGroupId] = useState<string>("");
+  const [groupId, setGroupId] = useState<string>(fixedGroup?.id ?? defaultGroupId ?? ALL_GROUPS);
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingGroups, setIsLoadingGroups] = useState(false);
@@ -58,7 +75,8 @@ export function CreateSessionDialog({
   const router = useRouter();
 
   useEffect(() => {
-    if (open) {
+    // Группа зафиксирована — выбирать не из чего, список групп курса тут не нужен
+    if (open && !fixedGroup) {
       setIsLoadingGroups(true);
       getCourseGroups(courseId)
         .then((result) => {
@@ -68,7 +86,7 @@ export function CreateSessionDialog({
         })
         .finally(() => setIsLoadingGroups(false));
     }
-  }, [open, courseId]);
+  }, [open, courseId, fixedGroup]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,6 +95,14 @@ export function CreateSessionDialog({
       toast({
         title: tErrors("error"),
         description: t("selectDateError"),
+        variant: "destructive",
+      });
+      return;
+    }
+    if (requireGroup && (!groupId || groupId === ALL_GROUPS)) {
+      toast({
+        title: tErrors("error"),
+        description: t("selectGroupError"),
         variant: "destructive",
       });
       return;
@@ -91,7 +117,7 @@ export function CreateSessionDialog({
         // for timezones ahead of UTC.
         date: format(date, "yyyy-MM-dd"),
         note: note.trim() || undefined,
-        groupId: groupId || undefined,
+        groupId: groupId && groupId !== ALL_GROUPS ? groupId : undefined,
       });
 
       if (result.success) {
@@ -101,8 +127,9 @@ export function CreateSessionDialog({
         });
         setDate(undefined);
         setNote("");
-        setGroupId("");
+        setGroupId(fixedGroup?.id ?? defaultGroupId ?? ALL_GROUPS);
         setOpen(false);
+        onSuccess?.();
         router.push(`/courses/${courseSlug}/attendance/${result.data.id}`);
       } else {
         toast({
@@ -147,23 +174,30 @@ export function CreateSessionDialog({
               placeholder={t("selectDate")}
             />
           </div>
-          {groups.length > 0 && (
+          {fixedGroup ? (
             <div className="space-y-2">
-              <Label>{t("groupOptional")}</Label>
-              <Select value={groupId} onValueChange={setGroupId}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t("allGroups")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("allGroups")}</SelectItem>
-                  {groups.map((group) => (
-                    <SelectItem key={group.id} value={group.id}>
-                      {group.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>{t("group")}</Label>
+              <p className="text-sm">{fixedGroup.name}</p>
             </div>
+          ) : (
+            groups.length > 0 && (
+              <div className="space-y-2">
+                <Label>{requireGroup ? t("group") : t("groupOptional")}</Label>
+                <Select value={groupId} onValueChange={setGroupId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("allGroups")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {!requireGroup && <SelectItem value={ALL_GROUPS}>{t("allGroups")}</SelectItem>}
+                    {groups.map((group) => (
+                      <SelectItem key={group.id} value={group.id}>
+                        {group.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )
           )}
           {isLoadingGroups && (
             <p className="text-sm text-muted-foreground">{tCommon("loading")}</p>

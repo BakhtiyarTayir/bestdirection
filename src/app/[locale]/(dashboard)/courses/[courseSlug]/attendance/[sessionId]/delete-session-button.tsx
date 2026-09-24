@@ -10,12 +10,13 @@ import { useTranslations } from "next-intl";
 
 interface DeleteSessionButtonProps {
   sessionId: string;
-  courseSlug: string;
+  /** Куда вернуться после удаления — журнал группы или обзор курса, откуда открыли занятие */
+  returnTo: string;
 }
 
 export function DeleteSessionButton({
   sessionId,
-  courseSlug,
+  returnTo,
 }: DeleteSessionButtonProps) {
   const t = useTranslations("attendance");
   const tErrors = useTranslations("errors");
@@ -37,7 +38,7 @@ export function DeleteSessionButton({
         toast({
           title: t("sessionDeleted"),
         });
-        router.push(`/courses/${courseSlug}/attendance`);
+        router.push(returnTo);
         router.refresh();
       } else {
         toast({

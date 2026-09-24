@@ -30,7 +30,10 @@ export async function TodaySchedule({ today }: { today: ApiAdminDashboardToday }
               {today.lessons.map((lesson) => (
                 <li key={lesson.groupId} className="flex flex-wrap items-center justify-between gap-3 py-2">
                   <div className="min-w-0">
-                    <Link href={`/courses/${lesson.courseSlug}/attendance`} className="font-medium hover:underline">
+                    <Link
+                      href={`/courses/${lesson.courseSlug}/groups/${lesson.groupId}/attendance`}
+                      className="font-medium hover:underline"
+                    >
                       {lesson.groupName}
                     </Link>
                     <p className="text-xs text-muted-foreground">

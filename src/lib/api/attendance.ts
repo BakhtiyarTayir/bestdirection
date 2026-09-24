@@ -44,6 +44,24 @@ export interface ApiStudentAttendance {
   records: { sessionId: string; date: string; status: AttendanceStatus; note: string | null }[];
 }
 
+/** Строка списка групп раздела «Посещаемость» — GET /attendance/groups. */
+export interface ApiAttendanceGroup {
+  groupId: string;
+  groupName: string;
+  courseId: string;
+  courseSlug: string;
+  courseTitle: string;
+  branchId: string;
+  branchName: string;
+  teacherId: string | null;
+  teacherName: string | null;
+  // «Отмечено N из M» за выбранный месяц (план «Журнал посещаемости по
+  // группам», п.1) — тот же расчёт, что у неполного журнала на главной
+  plannedLessons: number;
+  markedLessons: number;
+  lastSessionDate: string | null;
+}
+
 export interface ApiTeacherAttendanceRow {
   teacherId: string;
   firstName: string;
@@ -112,8 +130,8 @@ export interface ApiChildLink {
 
 // ---------- браузер ----------
 
-export const getAttendanceSessions = (courseId: string) =>
-  apiFetch<ApiAttendanceSession[]>("/attendance/sessions", { query: { courseId } });
+export const getAttendanceSessions = (courseId: string, groupId?: string) =>
+  apiFetch<ApiAttendanceSession[]>("/attendance/sessions", { query: { courseId, groupId } });
 
 export const createAttendanceSession = (body: {
   courseId: string;

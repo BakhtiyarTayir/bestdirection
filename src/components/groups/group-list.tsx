@@ -21,6 +21,7 @@ import {
   BarChart3,
   Banknote,
   GraduationCap,
+  CalendarCheck,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { useRouter } from "@/i18n/navigation";
@@ -150,6 +151,12 @@ export function GroupList({ groups, courseSlug }: GroupListProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link href={`/courses/${courseSlug}/groups/${group.id}/attendance`}>
+                      <CalendarCheck className="mr-2 h-4 w-4" />
+                      {t("attendanceJournal")}
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href={`/courses/${courseSlug}/groups/${group.id}/statistics`}>
                       <BarChart3 className="mr-2 h-4 w-4" />

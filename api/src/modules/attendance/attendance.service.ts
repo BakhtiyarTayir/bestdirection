@@ -9,13 +9,15 @@ import {
 import { Prisma } from "../../../generated/prisma";
 import { AuditService } from "../../common/audit/audit.service";
 import type { SessionUser } from "../../common/auth/session-user";
+import { toNoonUtc } from "../../common/date-only";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { activeEnrollmentFilter } from "../billing/billing-ledger.service";
+import { countLessons, currentDateKey, currentMonthKey, monthEnd, monthStart } from "../billing/domain/billing";
 import { dateKeyOf, toDdMm } from "../dashboard/teacher-dashboard.service";
 import { ParentNotifyService } from "../parent-notifications/parent-notify.service";
 import { SalaryService } from "../salary/salary.service";
 import { canManageCourseAttendance, canManageSession, responsibleTeacherId } from "./domain/attendance-access";
-import type { CreateSessionDto, UpdateRecordsDto } from "./dto/attendance.dto";
+import type { AttendanceGroupsQueryDto, CreateSessionDto, UpdateRecordsDto } from "./dto/attendance.dto";
 
 type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE" | "EXCUSED";
 
@@ -43,8 +45,13 @@ export class AttendanceService {
   /**
    * Занятия курса. Ученик видит занятия только своего курса и только свои
    * отметки: раньше любой вошедший получал отметки всех учеников с их email.
+   *
+   * groupId сужает выборку до журнала одной группы (план «Журнал
+   * посещаемости по группам», п.1). С ним доступ уже, чем просто «свой
+   * курс»: ученик — только своя группа, преподаватель — только её педагог
+   * или педагог курса (та же лестница, что и на управление занятиями).
    */
-  async sessions(courseId: string, user: SessionUser) {
+  async sessions(courseId: string, user: SessionUser, groupId?: string) {
     const isStaff = user.role === "ADMIN" || user.role === "TEACHER";
 
     if (!isStaff) {
@@ -53,13 +60,24 @@ export class AttendanceService {
       // запись жива только ради истории начислений
       const enrollment = await this.prisma.enrollment.findFirst({
         where: { studentId: user.id, courseId, ...activeEnrollmentFilter() },
-        select: { id: true },
+        select: { id: true, groupId: true },
       });
       if (!enrollment) throw new ForbiddenException("forbidden");
+      // Чужую группу курса не отдаём даже с пустыми (не своими) отметками —
+      // иначе через URL утекли бы даты и заметки чужих занятий
+      if (groupId && enrollment.groupId !== groupId) throw new ForbiddenException("forbidden");
+    } else if (user.role === "TEACHER" && groupId) {
+      const course = await this.prisma.course.findUnique({
+        where: { id: courseId },
+        select: { teacherId: true, groups: { select: { id: true, teacherId: true } } },
+      });
+      if (!course || !canManageCourseAttendance(user, course, groupId)) {
+        throw new NotFoundException("courseNotFound");
+      }
     }
 
     return this.prisma.attendanceSession.findMany({
-      where: { courseId },
+      where: { courseId, ...(groupId ? { groupId } : {}) },
       include: {
         _count: { select: { records: true } },
         teacher: { select: { id: true, firstName: true, lastName: true } },
@@ -86,6 +104,17 @@ export class AttendanceService {
     // Не только педагог курса: занятие группы вправе завести и её педагог
     if (!canManageCourseAttendance(actor, course, data.groupId ?? null)) {
       throw new NotFoundException("courseNotFound");
+    }
+
+    // У курса есть группы — занятие обязательно заводится в одной из них:
+    // «ничьё» занятие иначе не попало бы ни в один журнал группы (план
+    // «Журнал посещаемости по группам», п.1). У курсов без групп (на проде
+    // таких нет) поведение прежнее — группа необязательна.
+    if (course.groups.length > 0 && !data.groupId) {
+      throw new BadRequestException("groupRequired");
+    }
+    if (data.groupId && !course.groups.some((group) => group.id === data.groupId)) {
+      throw new BadRequestException("groupNotInCourse");
     }
 
     // Преподаватель подставляется заранее: у группы свой, иначе педагог курса.
@@ -267,10 +296,20 @@ export class AttendanceService {
     });
   }
 
-  /** Матрица «ученик × занятие» для отчёта по курсу. */
-  async report(courseId: string) {
+  /** Матрица «ученик × занятие» для отчёта по курсу, groupId — по одной группе. */
+  async report(courseId: string, user: SessionUser, groupId?: string) {
+    if (user.role === "TEACHER" && groupId) {
+      const course = await this.prisma.course.findUnique({
+        where: { id: courseId },
+        select: { teacherId: true, groups: { select: { id: true, teacherId: true } } },
+      });
+      if (!course || !canManageCourseAttendance(user, course, groupId)) {
+        throw new NotFoundException("courseNotFound");
+      }
+    }
+
     const sessions = await this.prisma.attendanceSession.findMany({
-      where: { courseId },
+      where: { courseId, ...(groupId ? { groupId } : {}) },
       include: {
         records: {
           include: { student: { select: { id: true, firstName: true, lastName: true } } },
@@ -280,7 +319,7 @@ export class AttendanceService {
     });
 
     const enrollments = await this.prisma.enrollment.findMany({
-      where: { courseId },
+      where: { courseId, ...(groupId ? { groupId } : {}) },
       include: { student: { select: { id: true, firstName: true, lastName: true } } },
       orderBy: { student: { firstName: "asc" } },
     });
@@ -352,6 +391,109 @@ export class AttendanceService {
     }
 
     return [...courseMap.values()];
+  }
+
+  /**
+   * Группы для раздела «Посещаемость» (план «Журнал посещаемости по
+   * группам», п.1): группа, курс, филиал, преподаватель, занятий по
+   * расписанию за месяц и сколько из них отмечено — тот же расчёт, что и
+   * «неполный журнал» на главной администратора
+   * (admin-dashboard.service.ts → countGroupsWithIncompleteJournal), только
+   * с самими числами, а не только фактом неполноты. query.groupId сужает
+   * список до одной группы — им пользуется шапка её журнала (раздел 2 плана),
+   * чтобы не держать этот расчёт в двух местах.
+   */
+  async groupsOverview(query: AttendanceGroupsQueryDto, user: SessionUser) {
+    if (user.role !== "ADMIN" && user.role !== "TEACHER") throw new ForbiddenException("forbidden");
+
+    const month = query.month ?? currentMonthKey();
+    const monthFrom = monthStart(month);
+    const isCurrentMonth = month === currentMonthKey();
+    // За прошлый месяц журнал уже закрыт целиком — план считаем по конец
+    // месяца; за текущий — по сегодня, иначе план обгонит ещё не наступившие дни
+    const periodTo = isCurrentMonth ? toNoonUtc(currentDateKey()) : monthEnd(month);
+
+    const responsibleTeacherFilter = (teacherId: string) => ({
+      OR: [{ teacherId }, { AND: [{ teacherId: null }, { course: { teacherId } }] }],
+    });
+
+    const groups = await this.prisma.group.findMany({
+      where: {
+        AND: [
+          { isActive: true, course: { deletedAt: null } },
+          query.groupId ? { id: query.groupId } : {},
+          query.branchId ? { branchId: query.branchId } : {},
+          query.teacherId ? responsibleTeacherFilter(query.teacherId) : {},
+          // Та же лестница «педагог группы → педагог курса», что и на
+          // управление занятиями (canManageCourseAttendance): курс целиком
+          // виден своему педагогу, чужой курс — только по своей группе в нём
+          user.role === "TEACHER" ? { OR: [{ teacherId: user.id }, { course: { teacherId: user.id } }] } : {},
+        ],
+      },
+      include: {
+        course: {
+          select: {
+            id: true,
+            slug: true,
+            title: true,
+            teacher: { select: { id: true, firstName: true, lastName: true } },
+          },
+        },
+        branch: { select: { id: true, name: true } },
+        teacher: { select: { id: true, firstName: true, lastName: true } },
+      },
+      orderBy: [{ branch: { name: "asc" } }, { course: { title: "asc" } }, { name: "asc" }],
+    });
+
+    const groupIds = groups.map((group) => group.id);
+    // Все занятия групп, не только за выбранный месяц: последняя дата занятия
+    // нужна не только за него — это просто «когда журнал трогали в последний раз»
+    const sessions =
+      groupIds.length > 0
+        ? await this.prisma.attendanceSession.findMany({
+            where: { groupId: { in: groupIds } },
+            select: { groupId: true, date: true },
+          })
+        : [];
+    const datesByGroup = new Map<string, Date[]>();
+    for (const session of sessions) {
+      if (!session.groupId) continue;
+      const list = datesByGroup.get(session.groupId) ?? [];
+      list.push(session.date);
+      datesByGroup.set(session.groupId, list);
+    }
+
+    return groups.map((group) => {
+      const teacher = group.teacher ?? group.course.teacher;
+      const dates = datesByGroup.get(group.id) ?? [];
+      const from =
+        group.startDate && group.startDate.getTime() > monthFrom.getTime() ? group.startDate : monthFrom;
+      // Группа ещё не начала заниматься в выбранном месяце — план нулевой,
+      // а не отрицательный интервал
+      const planned =
+        group.scheduleDays.length === 0 || from.getTime() > periodTo.getTime()
+          ? 0
+          : countLessons(group.scheduleDays, from, periodTo);
+      const marked = dates.filter((date) => date.getTime() >= from.getTime() && date.getTime() <= periodTo.getTime())
+        .length;
+      const lastSessionDate =
+        dates.length > 0 ? new Date(Math.max(...dates.map((date) => date.getTime()))) : null;
+
+      return {
+        groupId: group.id,
+        groupName: group.name,
+        courseId: group.course.id,
+        courseSlug: group.course.slug,
+        courseTitle: group.course.title,
+        branchId: group.branch.id,
+        branchName: group.branch.name,
+        teacherId: teacher?.id ?? null,
+        teacherName: teacher ? `${teacher.lastName} ${teacher.firstName}` : null,
+        plannedLessons: planned,
+        markedLessons: marked,
+        lastSessionDate,
+      };
+    });
   }
 
   private async resolveDefaultTeacherId(courseId: string, groupId: string | null) {

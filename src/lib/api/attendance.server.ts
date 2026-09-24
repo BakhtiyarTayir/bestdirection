@@ -1,5 +1,6 @@
 import "server-only";
 import type {
+  ApiAttendanceGroup,
   ApiAttendanceReport,
   ApiAttendanceSession,
   ApiChildLink,
@@ -12,11 +13,19 @@ import { apiServerFetch } from "./server";
 
 // Те же маршруты посещаемости и родителей для серверных компонентов.
 
-export const getAttendanceSessions = (courseId: string) =>
-  apiServerFetch<ApiAttendanceSession[]>("/attendance/sessions", { query: { courseId } });
+export const getAttendanceSessions = (courseId: string, groupId?: string) =>
+  apiServerFetch<ApiAttendanceSession[]>("/attendance/sessions", { query: { courseId, groupId } });
 
-export const getAttendanceReport = (courseId: string) =>
-  apiServerFetch<ApiAttendanceReport>("/attendance/report", { query: { courseId } });
+export const getAttendanceReport = (courseId: string, groupId?: string) =>
+  apiServerFetch<ApiAttendanceReport>("/attendance/report", { query: { courseId, groupId } });
+
+/** Список групп раздела «Посещаемость» (план, п.1); groupId — сводка одной группы. */
+export const getAttendanceGroups = (query: {
+  branchId?: string;
+  teacherId?: string;
+  month?: string;
+  groupId?: string;
+}) => apiServerFetch<ApiAttendanceGroup[]>("/attendance/groups", { query });
 
 export const getStudentAttendance = (studentId?: string) =>
   apiServerFetch<ApiStudentAttendance[]>("/attendance/student", { query: { studentId } });
