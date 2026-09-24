@@ -1180,7 +1180,9 @@
     "branchHasGroups": "В филиале есть группы — сначала перенесите или удалите их",
     "loginExists": "Пользователь с таким логином уже существует",
     "groupWrongBranch": "Группа принадлежит другому филиалу",
-    "telegramUnknown": "Этот Telegram не привязан ни к одному аккаунту"
+    "telegramUnknown": "Этот Telegram не привязан ни к одному аккаунту",
+    "botNotConfigured": "Telegram-бот не настроен",
+    "noPhone": "У пользователя не указан телефон"
   },
   "success": {
     "saved": "Сохранено",
@@ -2042,5 +2044,25 @@
     "attemptsCount": "Попыток: {count}",
     "lessonsCount": "{completed} из {total} уроков пройдено",
     "viewProgress": "Успеваемость"
+  },
+  "telegramInvite": {
+    "button": "Пригласить в Telegram",
+    "linked": "Telegram привязан ✓",
+    "notLinked": "Telegram не привязан",
+    "dialogTitle": "Приглашение в Telegram",
+    "instructions": "Отправьте ссылку человеку: он откроет её и нажмёт Start в боте — после этого начнёт получать уведомления и сможет входить на сайт кнопкой «Войти через Telegram».",
+    "qrAlt": "QR-код ссылки-приглашения",
+    "expiresAt": "Ссылка действует до {date}",
+    "sendSms": "Отправить по SMS",
+    "smsTo": "СМС уйдёт на номер {phone}",
+    "noPhoneHint": "У пользователя не указан телефон — SMS отправить нельзя",
+    "smsSent": "SMS отправлено",
+    "smsFailed": "Не удалось отправить SMS",
+    "smsReason": {
+      "notConfigured": "SMS-шлюз не настроен",
+      "invalidPhone": "Некорректный номер телефона",
+      "providerError": "Шлюз отклонил отправку",
+      "emptyText": "Пустой текст сообщения"
+    }
   }
 }

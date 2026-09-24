@@ -24,6 +24,7 @@ import {
   unlinkParent,
   updateParentLink,
 } from "@/lib/api/attendance";
+import { TelegramInviteDialog } from "@/components/telegram-invite-dialog";
 import type { ParentRelation } from "@/validators/parent";
 import { Loader2, Phone, Star, Trash2, UserPlus, Search } from "lucide-react";
 
@@ -39,6 +40,7 @@ interface ParentLink {
     lastName: string;
     phone: string | null;
     isActive: boolean;
+    hasTelegram: boolean;
   };
 }
 
@@ -206,6 +208,12 @@ export function ParentsPanel({ studentId }: { studentId: string }) {
                     ))}
                   </SelectContent>
                 </Select>
+
+                <TelegramInviteDialog
+                  userId={link.parent.id}
+                  hasTelegram={link.parent.hasTelegram}
+                  phone={link.parent.phone}
+                />
 
                 {!link.isPrimary && (
                   <Button

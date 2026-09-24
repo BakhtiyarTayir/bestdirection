@@ -12,13 +12,15 @@ import {
   UsersQueryDto,
 } from "./dto/user.dto";
 import { HomeworkStatisticsService } from "./homework-statistics.service";
+import { TelegramInviteService } from "./telegram-invite.service";
 import { UsersService } from "./users.service";
 
 @Controller("users")
 export class UsersController {
   constructor(
     private readonly users: UsersService,
-    private readonly statistics: HomeworkStatisticsService
+    private readonly statistics: HomeworkStatisticsService,
+    private readonly telegramInvites: TelegramInviteService
   ) {}
 
   @CheckPolicies((ability) => ability.can("read", "UserDirectory"))
@@ -112,6 +114,20 @@ export class UsersController {
   async restore(@Param("id") id: string, @CurrentUser() actor: SessionUser) {
     await this.users.restore(id, actor);
     return { ok: true };
+  }
+
+  /** Ссылка-приглашение в Telegram: копировать или показать QR-кодом. */
+  @CheckPolicies((ability) => ability.can("manage", "User"))
+  @Post(":id/telegram-invite")
+  telegramInvite(@Param("id") id: string, @CurrentUser() actor: SessionUser) {
+    return this.telegramInvites.createInvite(id, actor);
+  }
+
+  /** Та же ссылка + отправка по SMS на телефон из карточки. */
+  @CheckPolicies((ability) => ability.can("manage", "User"))
+  @Post(":id/telegram-invite/sms")
+  telegramInviteSms(@Param("id") id: string, @CurrentUser() actor: SessionUser) {
+    return this.telegramInvites.sendInviteSms(id, actor);
   }
 
   /** Окончательное удаление строки — только с вкладки деактивированных. */
