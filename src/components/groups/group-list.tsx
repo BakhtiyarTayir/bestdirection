@@ -152,12 +152,6 @@ export function GroupList({ groups, courseSlug }: GroupListProps) {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem asChild>
-                    <Link href={`/courses/${courseSlug}/groups/${group.id}/attendance`}>
-                      <CalendarCheck className="mr-2 h-4 w-4" />
-                      {t("attendanceJournal")}
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
                     <Link href={`/courses/${courseSlug}/groups/${group.id}/statistics`}>
                       <BarChart3 className="mr-2 h-4 w-4" />
                       {t("statistics")}
@@ -182,6 +176,15 @@ export function GroupList({ groups, courseSlug }: GroupListProps) {
                 <div className="flex items-center gap-1.5">
                   <Users className="h-4 w-4 shrink-0" />
                   {t("studentsCount", { count: group._count.enrollments })}
+                  {/* Состав группы — прямо у числа учеников: только просмотр */}
+                  {group._count.enrollments > 0 && (
+                    <Link
+                      href={`/courses/${courseSlug}/groups/${group.id}/roster`}
+                      className="ml-1 text-primary underline-offset-2 hover:underline"
+                    >
+                      {t("viewList")}
+                    </Link>
+                  )}
                 </div>
                 {group.schedule && (
                   <div className="flex items-center gap-1.5">
@@ -210,8 +213,9 @@ export function GroupList({ groups, courseSlug }: GroupListProps) {
                 )}
               </div>
 
-              {/* Наружу — только действия, которыми пользуются постоянно;
-                  остальное («Статистика», вкл/выкл, удаление) — под «тремя
+              {/* Наружу — только действия, которыми пользуются постоянно
+                  (правка, ученики, журнал); остальное («Статистика», вкл/выкл,
+                  удаление) — под «тремя
                   точками», это редкие и опасные действия (план, 5.3) */}
               <div className="flex flex-wrap gap-2 pt-1">
                 <Link href={`/courses/${courseSlug}/groups/${group.id}`} className="flex-1 min-w-[130px] sm:flex-none">
@@ -227,6 +231,17 @@ export function GroupList({ groups, courseSlug }: GroupListProps) {
                   <Button variant="outline" size="sm" className="w-full">
                     <UserPlus className="mr-2 h-4 w-4" />
                     {t("addStudents")}
+                  </Button>
+                </Link>
+                {/* Журнал — ежедневное действие преподавателя, поэтому снаружи,
+                    а не под «тремя точками» */}
+                <Link
+                  href={`/courses/${courseSlug}/groups/${group.id}/attendance`}
+                  className="flex-1 min-w-[130px] sm:flex-none"
+                >
+                  <Button variant="outline" size="sm" className="w-full">
+                    <CalendarCheck className="mr-2 h-4 w-4" />
+                    {t("attendanceJournal")}
                   </Button>
                 </Link>
               </div>

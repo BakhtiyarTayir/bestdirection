@@ -911,7 +911,11 @@
     "badgeInGroup": "в группе «{group}»",
     "badgeOnCourseNoGroup": "на курсе без группы",
     "badgeNew": "новый",
-    "attendanceJournal": "Журнал посещаемости"
+    "attendanceJournal": "Журнал посещаемости",
+    "studentList": "Список учеников",
+    "rosterPhone": "Телефон",
+    "rosterProgress": "Успеваемость",
+    "viewList": "посмотреть список"
   },
   "profile": {
     "title": "Мой профиль",

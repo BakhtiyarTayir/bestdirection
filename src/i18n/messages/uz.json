@@ -911,7 +911,11 @@
     "badgeInGroup": "«{group}» guruhida",
     "badgeOnCourseNoGroup": "kursda, guruhsiz",
     "badgeNew": "yangi",
-    "attendanceJournal": "Davomat jurnali"
+    "attendanceJournal": "Davomat jurnali",
+    "studentList": "O'quvchilar ro'yxati",
+    "rosterPhone": "Telefon",
+    "rosterProgress": "O'zlashtirish",
+    "viewList": "ro'yxatni ko'rish"
   },
   "profile": {
     "title": "Mening profilim",
