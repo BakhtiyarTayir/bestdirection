@@ -516,6 +516,7 @@ describe("модуль users", () => {
       const res = await send("delete", `/users/${target.id}`, "ADMIN");
       expect(res.status).toBe(409);
       expect(res.body.message).toBe("userHasProtectedRecords");
+      expect(res.body.details.blockers).toEqual([{ reason: "billedMonths", count: 1 }]);
       expect(await testDb().monthlyCharge.findUnique({ where: { id: charge.id } })).not.toBeNull();
     });
 
@@ -532,6 +533,7 @@ describe("модуль users", () => {
       const res = await send("delete", `/users/${target.id}`, "ADMIN");
       expect(res.status).toBe(409);
       expect(res.body.message).toBe("userHasProtectedRecords");
+      expect(res.body.details.blockers).toEqual([{ reason: "studentPayments", count: 1 }]);
       expect(await testDb().payment.findUnique({ where: { id: payment.id } })).not.toBeNull();
       expect(await testDb().user.findUnique({ where: { id: target.id } })).not.toBeNull();
     });
@@ -545,7 +547,34 @@ describe("модуль users", () => {
       const res = await send("delete", `/users/${teacher.id}`, "ADMIN");
       expect(res.status).toBe(409);
       expect(res.body.message).toBe("userHasProtectedRecords");
+      expect(res.body.details.blockers).toEqual([{ reason: "receivedPayouts", count: 1 }]);
       expect(await testDb().teacherPayout.findUnique({ where: { id: payout.id } })).not.toBeNull();
+    });
+
+    // Курс в Корзине — строка жива и держит FK: администратор видел общий
+    // список возможных причин и не понимал, что мешает
+    it("преподавателя с курсом в Корзине стереть нельзя — в ответе названия курсов", async () => {
+      const teacher = await createUser({ role: "TEACHER", isActive: false, deletedAt: new Date() });
+      await testDb().course.create({
+        data: { slug: uniqueLogin("trashed"), title: "Курс в Корзине", teacherId: teacher.id, deletedAt: new Date() },
+      });
+      await testDb().course.create({
+        data: { slug: uniqueLogin("live"), title: "Живой курс", teacherId: teacher.id },
+      });
+
+      const res = await send("delete", `/users/${teacher.id}`, "ADMIN");
+      expect(res.status).toBe(409);
+      expect(res.body.details.blockers).toEqual([
+        {
+          reason: "courses",
+          count: 2,
+          items: [
+            { title: "Живой курс", inTrash: false },
+            { title: "Курс в Корзине", inTrash: true },
+          ],
+        },
+      ]);
+      expect(await testDb().user.findUnique({ where: { id: teacher.id } })).not.toBeNull();
     });
   });
 

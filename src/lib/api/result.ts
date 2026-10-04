@@ -4,7 +4,9 @@
  * Формат сохранён намеренно — компоненты при переносе модуля меняют только
  * импорт, а обработка ошибок и переводы остаются прежними.
  */
-export type ApiResult<T> = { success: true; data: T } | { success: false; error: string };
+export type ApiResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: string; details?: unknown };
 
 export const API_PREFIX = "/api/v2";
 
@@ -35,7 +37,9 @@ export async function toResult<T>(response: Response): Promise<ApiResult<T>> {
       parsed && typeof parsed === "object" && typeof (parsed as { message?: unknown }).message === "string"
         ? (parsed as { message: string }).message
         : "somethingWentWrong";
-    return { success: false, error: message };
+    // details api отдаёт только там, где сервис объясняет отказ подробно
+    const details = parsed && typeof parsed === "object" ? (parsed as { details?: unknown }).details : undefined;
+    return { success: false, error: message, ...(details !== undefined && { details }) };
   }
 
   return { success: true, data: parsed as T };

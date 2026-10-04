@@ -176,6 +176,26 @@ export const deactivateUser = (id: string) => apiFetch<{ ok: true }>(`/users/${i
 export const restoreUser = (id: string) => apiFetch<{ ok: true }>(`/users/${id}/restore`, { method: "POST" });
 export const purgeUser = (id: string) => apiFetch<{ ok: true }>(`/users/${id}`, { method: "DELETE" });
 
+/** Причина отказа в полном удалении — приходит в details при userHasProtectedRecords. */
+export interface ApiPurgeBlocker {
+  reason:
+    | "courses"
+    | "studentPayments"
+    | "billedMonths"
+    | "acceptedPayments"
+    | "salaryAccruals"
+    | "receivedPayouts"
+    | "issuedPayouts"
+    | "smsBroadcasts";
+  count: number;
+  items?: { title: string; inTrash: boolean }[];
+}
+
+export function purgeBlockersOf(details: unknown): ApiPurgeBlocker[] {
+  const blockers = (details as { blockers?: unknown } | undefined)?.blockers;
+  return Array.isArray(blockers) ? (blockers as ApiPurgeBlocker[]) : [];
+}
+
 /** Ссылка-приглашение в Telegram для родителя или ученика — выдаёт администратор. */
 export interface ApiTelegramInvite {
   url: string;

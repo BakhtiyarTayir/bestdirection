@@ -42,6 +42,26 @@ const USER_SELECT = {
   salaryPercentBp: true,
 } as const;
 
+/** Одна причина, по которой пользователя нельзя стереть; web переводит reason. */
+export interface PurgeBlocker {
+  reason:
+    | "courses"
+    | "studentPayments"
+    | "billedMonths"
+    | "acceptedPayments"
+    | "salaryAccruals"
+    | "receivedPayouts"
+    | "issuedPayouts"
+    | "smsBroadcasts";
+  count: number;
+  /** Только для courses: какие именно курсы и лежат ли они в Корзине. */
+  items?: { title: string; inTrash: boolean }[];
+}
+
+function protectedRecords(blockers: PurgeBlocker[]) {
+  return new ConflictException({ message: "userHasProtectedRecords", details: { blockers } });
+}
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -451,22 +471,18 @@ export class UsersService {
     if (target.isActive && !target.deletedAt) throw new BadRequestException("userIsActive");
     if (target.role === "ADMIN") await this.assertNotLastAdmin(id);
 
-    // Начисления ученика (MonthlyCharge) уходят каскадом вместе с его
-    // записями на курсы, а FK-ограничения тут нет: ученик с долгом, но без
-    // единой оплаты, стирался бы вместе с историей долга. Проверяем заранее —
-    // та же денежная история, что оплаты и выплаты на RESTRICT
-    const billedMonths = await this.prismaUnscoped.monthlyCharge.count({
-      where: { enrollment: { studentId: id }, amount: { gt: 0 } },
-    });
-    if (billedMonths > 0) throw new ConflictException("userHasProtectedRecords");
+    // Причины отказа ищем заранее: администратору нужно знать, что именно
+    // держит пользователя, а не общий список возможных связей
+    const blockers = await this.purgeBlockers(id);
+    if (blockers.length > 0) throw protectedRecords(blockers);
 
     try {
       // Мимо расширения мягкого удаления: нужна именно строка, а не deletedAt
       await this.prismaUnscoped.user.delete({ where: { id } });
     } catch (error) {
-      // Часть связей на RESTRICT: курсы преподавателя, принятые платежи, рассылки
+      // Связь появилась между проверкой и удалением — пересчитываем причины
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
-        throw new ConflictException("userHasProtectedRecords");
+        throw protectedRecords(await this.purgeBlockers(id));
       }
       throw error;
     }
@@ -486,6 +502,62 @@ export class UsersService {
         name: `${target.firstName} ${target.lastName}`,
       },
     });
+  }
+
+  /**
+   * Что мешает стереть пользователя. Каждая связь на RESTRICT (FK к "User")
+   * плюс начисления ученика: MonthlyCharge уходит каскадом вместе с записями
+   * на курсы, и без этой проверки ученик с долгом, но без единой оплаты,
+   * стирался бы вместе с историей долга. Курсы считаются вместе с Корзиной —
+   * строка курса там жива и держит FK так же.
+   */
+  private async purgeBlockers(id: string): Promise<PurgeBlocker[]> {
+    const db = this.prismaUnscoped;
+    const [
+      courses,
+      studentPayments,
+      acceptedPayments,
+      smsBroadcasts,
+      salaryAccruals,
+      receivedPayouts,
+      issuedPayouts,
+      billedMonths,
+    ] = await Promise.all([
+      db.course.findMany({
+        where: { teacherId: id },
+        select: { title: true, deletedAt: true },
+        orderBy: { title: "asc" },
+      }),
+      db.payment.count({ where: { studentId: id } }),
+      db.payment.count({ where: { createdById: id } }),
+      db.smsBroadcast.count({ where: { createdById: id } }),
+      db.teacherSalaryAccrual.count({ where: { teacherId: id } }),
+      db.teacherPayout.count({ where: { teacherId: id } }),
+      db.teacherPayout.count({ where: { createdById: id } }),
+      db.monthlyCharge.count({ where: { enrollment: { studentId: id }, amount: { gt: 0 } } }),
+    ]);
+
+    const blockers: PurgeBlocker[] = [];
+    if (courses.length > 0) {
+      blockers.push({
+        reason: "courses",
+        count: courses.length,
+        items: courses.map((course) => ({ title: course.title, inTrash: course.deletedAt !== null })),
+      });
+    }
+    const counted: [PurgeBlocker["reason"], number][] = [
+      ["studentPayments", studentPayments],
+      ["billedMonths", billedMonths],
+      ["acceptedPayments", acceptedPayments],
+      ["salaryAccruals", salaryAccruals],
+      ["receivedPayouts", receivedPayouts],
+      ["issuedPayouts", issuedPayouts],
+      ["smsBroadcasts", smsBroadcasts],
+    ];
+    for (const [reason, count] of counted) {
+      if (count > 0) blockers.push({ reason, count });
+    }
+    return blockers;
   }
 
   /**

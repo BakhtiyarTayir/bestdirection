@@ -53,7 +53,15 @@ export class ApiExceptionFilter implements ExceptionFilter {
         typeof rawMessage === "string" && TRANSLATION_KEY.test(rawMessage)
           ? rawMessage
           : (DEFAULT_KEYS[statusCode] ?? "somethingWentWrong");
-      return { statusCode, error: httpStatusName(statusCode), message };
+      // Подробности отказа (например, что держит пользователя от удаления) —
+      // только если сервис передал их явно: throw new XxxException({ message, details })
+      const details = typeof raw === "object" ? (raw as { details?: unknown }).details : undefined;
+      return {
+        statusCode,
+        error: httpStatusName(statusCode),
+        message,
+        ...(details !== undefined && { details }),
+      };
     }
 
     this.logger.error(exception instanceof Error ? exception.stack : String(exception));

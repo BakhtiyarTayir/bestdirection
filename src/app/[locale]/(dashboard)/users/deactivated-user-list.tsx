@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { restoreUser, purgeUser } from "@/lib/api/users";
+import { restoreUser, purgeUser, purgeBlockersOf, type ApiPurgeBlocker } from "@/lib/api/users";
 import { RotateCcw, Trash2, Loader2 } from "lucide-react";
 
 const roleBadgeVariant: Record<string, "destructive" | "default" | "secondary"> = {
@@ -56,6 +56,9 @@ export function DeactivatedUserList({ users }: DeactivatedUserListProps) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [purgeTarget, setPurgeTarget] = useState<DeactivatedUser | null>(null);
+  // Отказ из-за связанных записей — не сбой, а объяснение: показываем его
+  // окном с конкретными причинами, а не красным тостом
+  const [blocked, setBlocked] = useState<{ name: string; blockers: ApiPurgeBlocker[] } | null>(null);
   const { page, totalPages, offset, pageItems, setPage } = usePagination(users);
 
   // Причины отказа приходят от серверного действия кодами — переводим их
@@ -121,11 +124,16 @@ export function DeactivatedUserList({ users }: DeactivatedUserListProps) {
           description: t("userPurgedDescription", { name }),
         });
       } else {
-        toast({
-          title: tErrors("error"),
-          description: purgeErrorMessage(result.error),
-          variant: "destructive",
-        });
+        const blockers = result.error === "userHasProtectedRecords" ? purgeBlockersOf(result.details) : [];
+        if (blockers.length > 0) {
+          setBlocked({ name, blockers });
+        } else {
+          toast({
+            title: tErrors("error"),
+            description: purgeErrorMessage(result.error),
+            variant: "destructive",
+          });
+        }
       }
     } catch {
       toast({
@@ -242,6 +250,40 @@ export function DeactivatedUserList({ users }: DeactivatedUserListProps) {
             >
               {t("purgeUser")}
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={blocked !== null} onOpenChange={(open) => !open && setBlocked(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("purgeBlockedTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("purgeBlockedIntro", { name: blocked?.name ?? "" })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <ul className="list-disc space-y-2 pl-5 text-sm">
+            {blocked?.blockers.map((blocker) => (
+              <li key={blocker.reason}>
+                {t(`purgeReason.${blocker.reason}`, { count: blocker.count })}
+                {blocker.items && blocker.items.length > 0 && (
+                  <ul className="mt-1 list-[circle] space-y-0.5 pl-5">
+                    {blocker.items.map((item, index) => (
+                      <li key={index}>
+                        <span className="font-medium">{item.title}</span>
+                        {item.inTrash && (
+                          <span className="text-muted-foreground"> — {t("purgeBlockedInTrash")}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ul>
+          <p className="text-sm text-muted-foreground">{t("purgeBlockedHint")}</p>
+          <AlertDialogFooter>
+            <AlertDialogAction>{t("purgeBlockedGotIt")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
