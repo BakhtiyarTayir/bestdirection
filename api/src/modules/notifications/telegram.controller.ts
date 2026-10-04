@@ -1,6 +1,6 @@
 import { Controller, Post, Req, Res } from "@nestjs/common";
 import type { Request, Response } from "express";
-import { webhookCallback } from "grammy";
+import { BotError, webhookCallback } from "grammy";
 import { Public, Webhook } from "../../common/auth/decorators";
 import { TelegramBotService } from "./telegram-bot.service";
 
@@ -31,7 +31,12 @@ export class TelegramController {
       // Отвечаем 200 даже при ошибке: bot.catch в grammY не действует в
       // режиме webhook, а 500 заставит Telegram бесконечно повторять
       // обновление, и очередь бота встанет.
-      console.error("Ошибка вебхука Telegram:", error);
+      // Только текст ошибки: объект BotError несёт контекст с токеном бота.
+      const cause = error instanceof BotError ? error.error : error;
+      console.error(
+        "Ошибка вебхука Telegram:",
+        cause instanceof Error ? cause.message : String(cause),
+      );
       if (!response.headersSent) response.json({ ok: true });
     }
   }
