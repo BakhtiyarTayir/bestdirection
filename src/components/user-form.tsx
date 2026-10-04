@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,7 +39,7 @@ import {
 import { checkLoginAvailable, findNamesakes, suggestLogin } from "@/lib/api/users";
 import type { ApiNamesake, ApiUsersFormOptions } from "@/lib/api/users";
 import { addStudentsToGroup } from "@/lib/api/groups";
-import { Loader2, Wand2, Copy, Check, TriangleAlert } from "lucide-react";
+import { Loader2, Wand2, Copy, Check, TriangleAlert, Pencil } from "lucide-react";
 
 interface UserData {
   id: string;
@@ -460,6 +460,17 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
                               .map((e) => (e.groupName ? `${e.courseTitle} · ${e.groupName}` : e.courseTitle))
                               .join("; ")}
                       </span>
+                      {/* В новой вкладке: заполненная форма не теряется */}
+                      {(
+                        <Link
+                          href={`/users/${namesake.id}/edit`}
+                          target="_blank"
+                          className="inline-flex items-center gap-1 text-primary underline-offset-4 hover:underline"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          {tCommon("edit")}
+                        </Link>
+                      )}
                       {namesake.role === "STUDENT" && role === "STUDENT" && enrollTarget && (
                         inTargetCourse ? (
                           <span className="ml-auto text-muted-foreground">{t("namesakeAlreadyInCourse")}</span>
