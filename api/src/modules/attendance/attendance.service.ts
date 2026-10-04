@@ -474,8 +474,17 @@ export class AttendanceService {
         group.scheduleDays.length === 0 || from.getTime() > periodTo.getTime()
           ? 0
           : countLessons(group.scheduleDays, from, periodTo);
-      const marked = dates.filter((date) => date.getTime() >= from.getTime() && date.getTime() <= periodTo.getTime())
-        .length;
+      // Даты занятий — @db.Date (из базы приходят ПОЛНОЧЬЮ UTC), а from/periodTo
+      // — полдень UTC (monthStart/monthEnd/toNoonUtc). Сравниваем по календарному
+      // дню, а не по мгновенному значению: иначе занятие в день границы (день
+      // старта группы или 1-е число месяца) полночь < полдень и молча выпадало
+      // из подсчёта «отмечено».
+      const fromDay = Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate());
+      const toDay = Date.UTC(periodTo.getUTCFullYear(), periodTo.getUTCMonth(), periodTo.getUTCDate());
+      const marked = dates.filter((date) => {
+        const day = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+        return day >= fromDay && day <= toDay;
+      }).length;
       const lastSessionDate =
         dates.length > 0 ? new Date(Math.max(...dates.map((date) => date.getTime()))) : null;
 
