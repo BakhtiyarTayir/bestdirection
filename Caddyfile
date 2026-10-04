@@ -8,8 +8,22 @@
 	email {$ACME_EMAIL}
 }
 
+# Журнал запросов: метод, путь, статус, длительность и заголовки (Content-Length
+# показывает размер тела). Cookie и Authorization Caddy сам заменяет на REDACTED.
+# Файл в томе caddy_data с ротацией, чтобы журнал не съел диск: 5 × 10 МБ.
+(access_log) {
+	log {
+		output file /data/access.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+		format json
+	}
+}
+
 # Лендинг
 {$MARKETING_DOMAIN} {
+	import access_log
 	encode zstd gzip
 
 	# Форма заявки на лендинге обращается к api по своему же домену: так
@@ -31,6 +45,7 @@ www.{$MARKETING_DOMAIN} {
 
 # Личный кабинет / CRM
 {$APP_DOMAIN} {
+	import access_log
 	encode zstd gzip
 
 	# Перенос на NestJS: /api/v2/* обслуживает api, всё остальное — app.
