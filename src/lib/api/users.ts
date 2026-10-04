@@ -172,6 +172,18 @@ export const suggestLogin = (body: { firstName: string; lastName: string }) =>
 export const checkLoginAvailable = (login: string) =>
   apiFetch<{ available: boolean }>("/users/login-available", { query: { login } });
 
+/** Активный пользователь с теми же именем и фамилией — для предупреждения о дубликате. */
+export interface ApiNamesake {
+  id: string;
+  login: string | null;
+  role: string;
+  createdAt: string;
+  enrollments: { courseId: string; courseTitle: string; groupId: string | null; groupName: string | null }[];
+}
+
+export const findNamesakes = (firstName: string, lastName: string) =>
+  apiFetch<ApiNamesake[]>("/users/namesakes", { query: { firstName, lastName } });
+
 export const deactivateUser = (id: string) => apiFetch<{ ok: true }>(`/users/${id}/deactivate`, { method: "POST" });
 export const restoreUser = (id: string) => apiFetch<{ ok: true }>(`/users/${id}/restore`, { method: "POST" });
 export const purgeUser = (id: string) => apiFetch<{ ok: true }>(`/users/${id}`, { method: "DELETE" });

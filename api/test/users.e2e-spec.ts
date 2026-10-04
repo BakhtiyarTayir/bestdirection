@@ -311,6 +311,44 @@ describe("модуль users", () => {
     });
   });
 
+  describe("тёзки — предупреждение о дубликате в форме создания", () => {
+    it("находит активного тёзку без учёта регистра, с его курсом и группой; деактивированного — нет", async () => {
+      const lastName = uniqueName("Tyozka");
+      const teacher = await createUser({ role: "TEACHER" });
+      const active = await createUser({ role: "STUDENT" });
+      const inactive = await createUser({ role: "STUDENT", isActive: false });
+      await testDb().user.updateMany({
+        where: { id: { in: [active.id, inactive.id] } },
+        data: { firstName: "Otabek", lastName },
+      });
+      const branch = await createBranch();
+      const course = await testDb().course.create({
+        data: { slug: uniqueLogin("namesake"), title: "Курс тёзки", teacherId: teacher.id },
+      });
+      const group = await testDb().group.create({
+        data: { name: uniqueName("Группа тёзки"), courseId: course.id, branchId: branch.id },
+      });
+      await testDb().enrollment.create({ data: { studentId: active.id, courseId: course.id, groupId: group.id } });
+
+      const res = await get(
+        `/users/namesakes?firstName=otabek&lastName=${encodeURIComponent(lastName.toUpperCase())}`,
+        "ADMIN"
+      );
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(1);
+      expect(res.body[0]).toMatchObject({
+        id: active.id,
+        enrollments: [{ courseId: course.id, courseTitle: "Курс тёзки", groupId: group.id, groupName: group.name }],
+      });
+    });
+
+    it("пустое имя — пустой список; STUDENT и TEACHER не могут искать тёзок", async () => {
+      expect((await get("/users/namesakes?firstName=&lastName=X", "ADMIN")).body).toEqual([]);
+      expect((await get("/users/namesakes?firstName=X&lastName=Y", "STUDENT")).status).toBe(403);
+      expect((await get("/users/namesakes?firstName=X&lastName=Y", "TEACHER")).status).toBe(403);
+    });
+  });
+
   describe("филиал пользователя — справочная приписка (этап 1 плана филиалов)", () => {
     it("несуществующий филиал — 404, а не 500 от внешнего ключа", async () => {
       const res = await send("post", "/users", "ADMIN", {

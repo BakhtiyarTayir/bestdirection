@@ -93,6 +93,13 @@ export const loginSuggestionSchema = z.object({
   lastName: nameSchema,
 });
 
+// Тёзки для предупреждения о дубликате в форме создания: пустые имена
+// допустимы (форма ещё не заполнена) — сервис тогда отвечает пустым списком
+export const namesakesQuerySchema = z.object({
+  firstName: z.string().trim().max(100),
+  lastName: z.string().trim().max(100),
+});
+
 export const loginAvailableQuerySchema = z.object({
   login: z.string().trim().toLowerCase().max(30),
 });
@@ -126,3 +133,4 @@ export class ChangePasswordDto extends createZodDto(changePasswordSchema) {}
 export class HomeworkStatisticsQueryDto extends createZodDto(homeworkStatisticsQuerySchema) {}
 export class LoginSuggestionDto extends createZodDto(loginSuggestionSchema) {}
 export class LoginAvailableQueryDto extends createZodDto(loginAvailableQuerySchema) {}
+export class NamesakesQueryDto extends createZodDto(namesakesQuerySchema) {}

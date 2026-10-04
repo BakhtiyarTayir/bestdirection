@@ -190,6 +190,55 @@ export class UsersService {
     return { available: !(await this.loginTakenBy(login)) };
   }
 
+  /**
+   * Активные пользователи с теми же именем и фамилией (без учёта регистра) —
+   * из тех, кого актору видно. С текущими записями на курсы: форма показывает,
+   * где тёзка уже учится, и предлагает записать его, а не заводить второго.
+   */
+  async namesakes(ability: AppAbility, firstName: string, lastName: string) {
+    if (!firstName || !lastName) return [];
+    const users = await this.prisma.user.findMany({
+      where: {
+        AND: [
+          accessibleWhere<Prisma.UserWhereInput>(ability, "User"),
+          {
+            isActive: true,
+            firstName: { equals: firstName, mode: "insensitive" },
+            lastName: { equals: lastName, mode: "insensitive" },
+          },
+        ],
+      },
+      orderBy: { createdAt: "asc" },
+      take: 10,
+      select: {
+        id: true,
+        login: true,
+        role: true,
+        createdAt: true,
+        enrollments: {
+          where: { unenrolledAt: null, course: { deletedAt: null } },
+          select: {
+            courseId: true,
+            course: { select: { title: true } },
+            group: { select: { id: true, name: true } },
+          },
+        },
+      },
+    });
+    return users.map((user) => ({
+      id: user.id,
+      login: user.login,
+      role: user.role,
+      createdAt: user.createdAt,
+      enrollments: user.enrollments.map((enrollment) => ({
+        courseId: enrollment.courseId,
+        courseTitle: enrollment.course.title,
+        groupId: enrollment.group?.id ?? null,
+        groupName: enrollment.group?.name ?? null,
+      })),
+    }));
+  }
+
   /** Курсы и их группы для блока «Обучение» в форме создания ученика (4.4). */
   async formOptionsForCreate() {
     const [courses, groups] = await Promise.all([

@@ -8,6 +8,7 @@ import {
   HomeworkStatisticsQueryDto,
   LoginAvailableQueryDto,
   LoginSuggestionDto,
+  NamesakesQueryDto,
   UpdateUserDto,
   UsersQueryDto,
 } from "./dto/user.dto";
@@ -57,9 +58,9 @@ export class UsersController {
     return { ok: true };
   }
 
-  // Три следующих маршрута обслуживают форму создания пользователя (тот же
+  // Следующие маршруты обслуживают форму создания пользователя (тот же
   // доступ, что у самого создания) и ДОЛЖНЫ стоять до @Get(":id") — иначе
-  // Nest примет "login-available"/"form-options" за значение :id
+  // Nest примет "login-available"/"namesakes"/"form-options" за значение :id
   @CheckPolicies((ability) => ability.can("create", "User"))
   @Post("login-suggestion")
   loginSuggestion(@Body() body: LoginSuggestionDto) {
@@ -70,6 +71,14 @@ export class UsersController {
   @Get("login-available")
   loginAvailable(@Query() query: LoginAvailableQueryDto) {
     return this.users.loginAvailable(query.login);
+  }
+
+  // Предупреждение «такой ученик уже есть»: без него один и тот же ученик
+  // заводился повторно — логин молча получал суффикс 2, 3
+  @CheckPolicies((ability) => ability.can("create", "User"))
+  @Get("namesakes")
+  namesakes(@Query() query: NamesakesQueryDto, @CurrentAbility() ability: AppAbility) {
+    return this.users.namesakes(ability, query.firstName, query.lastName);
   }
 
   @CheckPolicies((ability) => ability.can("create", "User"))

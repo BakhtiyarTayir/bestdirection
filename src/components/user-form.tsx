@@ -26,9 +26,20 @@ import { useToast } from "@/components/ui/use-toast";
 import { createUserSchema, updateUserSchema } from "@/validators/user";
 import type { CreateUserInput, UpdateUserInput } from "@/validators/user";
 import type { Role } from "@/validators/user";
-import { checkLoginAvailable, suggestLogin } from "@/lib/api/users";
-import type { ApiUsersFormOptions } from "@/lib/api/users";
-import { Loader2, Wand2, Copy, Check } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { checkLoginAvailable, findNamesakes, suggestLogin } from "@/lib/api/users";
+import type { ApiNamesake, ApiUsersFormOptions } from "@/lib/api/users";
+import { addStudentsToGroup } from "@/lib/api/groups";
+import { Loader2, Wand2, Copy, Check, TriangleAlert } from "lucide-react";
 
 interface UserData {
   id: string;
@@ -192,6 +203,75 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
     );
   }, [formOptions, enrollmentCourseId, branchId]);
 
+  // ─── Тёзки: предупреждение о дубликате (только создание) ────────────────
+  // Без него преподаватель завёл одного ученика трижды: логин молча получал
+  // суффикс 2, 3, а форма ничем не намекала, что такой человек уже есть
+  const [namesakes, setNamesakes] = useState<ApiNamesake[]>([]);
+  const [confirmPayload, setConfirmPayload] = useState<CreateUserInput | UpdateUserInput | null>(null);
+  const [enrollingId, setEnrollingId] = useState<string | null>(null);
+  const namesakesTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const enrollmentGroupId = (form.watch as (name: string) => unknown)("enrollment.groupId") as string | undefined;
+
+  useEffect(() => {
+    if (isEditing) return;
+    const first = firstName?.trim() ?? "";
+    const last = lastName?.trim() ?? "";
+    if (namesakesTimer.current) clearTimeout(namesakesTimer.current);
+    if (!first || !last) {
+      setNamesakes([]);
+      return;
+    }
+    namesakesTimer.current = setTimeout(async () => {
+      const result = await findNamesakes(first, last);
+      setNamesakes(result.success ? result.data : []);
+    }, 400);
+    return () => {
+      if (namesakesTimer.current) clearTimeout(namesakesTimer.current);
+    };
+  }, [firstName, lastName, isEditing]);
+
+  // Куда записать тёзку вместо создания нового — то, что выбрано в блоке
+  // «Обучение» (только группа: запись без группы в best-direction убрана)
+  const enrollTarget = useMemo(() => {
+    if (!enrollmentEnabled || !enrollmentCourseId || !formOptions) return null;
+    const course = formOptions.courses.find((c) => c.id === enrollmentCourseId);
+    const group = enrollmentGroupId ? groupsForCourse.find((g) => g.id === enrollmentGroupId) : undefined;
+    if (!course) return null;
+    if (!group) return null;
+    return { courseId: course.id, groupId: group.id, label: group.name };
+  }, [enrollmentEnabled, enrollmentCourseId, enrollmentGroupId, groupsForCourse, formOptions]);
+
+  const enrollNamesake = async (namesake: ApiNamesake) => {
+    if (!enrollTarget) return;
+    setEnrollingId(namesake.id);
+    try {
+      const ok = await addStudentsToGroup(enrollTarget.groupId, [namesake.id]).then(
+        (r) => r.success && r.data.added > 0
+      );
+      if (ok) {
+        toast({
+          title: t("namesakeEnrolled"),
+          description: t("namesakeEnrolledDescription", { login: namesake.login ?? "", target: enrollTarget.label }),
+        });
+        router.push("/users");
+        router.refresh();
+      } else {
+        toast({ title: tErrors("error"), description: t("namesakeEnrollFailed"), variant: "destructive" });
+      }
+    } finally {
+      setEnrollingId(null);
+    }
+  };
+
+  // Тёзка есть — сначала спрашиваем, создавать ли ещё одного
+  const handleSubmitWithCheck = async (data: CreateUserInput | UpdateUserInput) => {
+    if (!isEditing && namesakes.length > 0) {
+      setConfirmPayload(data);
+      return;
+    }
+    await handleSubmit(data);
+  };
+
   const handleSubmit = async (data: CreateUserInput | UpdateUserInput) => {
     setIsLoading(true);
     try {
@@ -301,8 +381,10 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
             {copied === "both" ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             {copied === "both" ? t("copied") : t("copyLoginAndPassword")}
           </Button>
+          {/* Пользователь уже создан — «Сохранить изменения» здесь читалось
+              как «ещё не сохранено» */}
           <Button type="button" onClick={continueAfterReveal}>
-            {tCommon("saveChanges")}
+            {t("credentialsDone")}
           </Button>
         </CardContent>
       </Card>
@@ -320,7 +402,7 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
         {/* autoComplete="off": иначе Chrome принимает пару логин+пароль за
             форму входа и подставляет сюда сохранённые данные администратора */}
         <form
-          onSubmit={form.handleSubmit(handleSubmit)}
+          onSubmit={form.handleSubmit(handleSubmitWithCheck)}
           className="space-y-4"
           autoComplete="off"
         >
@@ -353,6 +435,57 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
               )}
             </div>
           </div>
+
+          {!isEditing && namesakes.length > 0 && (
+            <div className="space-y-3 rounded-md border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+              <div className="flex items-start gap-2">
+                <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                <div>
+                  <p className="font-medium">{t("namesakesTitle")}</p>
+                  <p>{t("namesakesHint")}</p>
+                </div>
+              </div>
+              <ul className="space-y-2">
+                {namesakes.map((namesake) => {
+                  const inTargetCourse =
+                    enrollTarget !== null && namesake.enrollments.some((e) => e.courseId === enrollTarget.courseId);
+                  return (
+                    <li key={namesake.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md bg-background/70 px-3 py-2">
+                      <span className="font-mono">{namesake.login}</span>
+                      {namesake.role !== "STUDENT" && <span>· {tRoles(namesake.role as Role)}</span>}
+                      <span className="text-muted-foreground">
+                        {namesake.enrollments.length === 0
+                          ? t("namesakeNoCourses")
+                          : namesake.enrollments
+                              .map((e) => (e.groupName ? `${e.courseTitle} · ${e.groupName}` : e.courseTitle))
+                              .join("; ")}
+                      </span>
+                      {namesake.role === "STUDENT" && role === "STUDENT" && enrollTarget && (
+                        inTargetCourse ? (
+                          <span className="ml-auto text-muted-foreground">{t("namesakeAlreadyInCourse")}</span>
+                        ) : (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="ml-auto"
+                            disabled={enrollingId !== null}
+                            onClick={() => enrollNamesake(namesake)}
+                          >
+                            {enrollingId === namesake.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {t("namesakeEnroll", { target: enrollTarget.label })}
+                          </Button>
+                        )
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+              {role === "STUDENT" && !enrollTarget && formOptions && (
+                <p className="text-muted-foreground">{t("namesakePickCourse")}</p>
+              )}
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="login">{t("login")}</Label>
@@ -629,6 +762,32 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
             </Button>
           </div>
         </form>
+
+        <AlertDialog open={confirmPayload !== null} onOpenChange={(open) => !open && setConfirmPayload(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("namesakeConfirmTitle")}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("namesakeConfirmDescription", {
+                  name: `${firstName ?? ""} ${lastName ?? ""}`.trim(),
+                  logins: namesakes.map((n) => n.login).join(", "),
+                })}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  const payload = confirmPayload;
+                  setConfirmPayload(null);
+                  if (payload) void handleSubmit(payload);
+                }}
+              >
+                {t("namesakeConfirmCreate")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );
