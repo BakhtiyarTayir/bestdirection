@@ -4,8 +4,9 @@ import { apiServerFetch } from "./server";
 
 // Сводка на главной кабинета: состав зависит от роли вызывающего.
 
-export const getDashboardSummary = () =>
-  apiServerFetch<ApiDashboardSummary>("/dashboard/summary");
+// branchId учитывает только сводка администратора.
+export const getDashboardSummary = (branchId?: string) =>
+  apiServerFetch<ApiDashboardSummary>("/dashboard/summary", { query: { branchId } });
 
 /** Главная панель администратора (план дашборда, раздел 1). */
 export const getAdminDashboard = (branchId?: string) =>

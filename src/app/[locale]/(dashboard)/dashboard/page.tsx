@@ -22,14 +22,15 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   if (!session?.user) redirect("/login");
 
   const t = await getTranslations("dashboard");
-  const result = await getDashboardSummary();
+  const params = await searchParams;
+  const branchId = typeof params.branchId === "string" && params.branchId ? params.branchId : undefined;
+  // Не-администраторам api фильтр филиала не применяет
+  const result = await getDashboardSummary(session.user.role === "ADMIN" ? branchId : undefined);
   if (!result.success) return <DashboardError title={t("studentTitle")} />;
 
   const summary = result.data;
 
   if (summary.role === "ADMIN") {
-    const params = await searchParams;
-    const branchId = typeof params.branchId === "string" && params.branchId ? params.branchId : undefined;
     return <AdminDashboard summary={summary} branchId={branchId} />;
   }
 

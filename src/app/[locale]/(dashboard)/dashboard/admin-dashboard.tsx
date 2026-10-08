@@ -32,6 +32,9 @@ export async function AdminDashboard({ summary, branchId }: AdminDashboardProps)
   const branches = branchesResult.success && branchesResult.data ? branchesResult.data : [];
   const data = dashboardResult.success && dashboardResult.data ? dashboardResult.data : null;
 
+  // Списки пользователей и учеников умеют фильтр по филиалу — ведём туда с ним
+  const branchQuery = branchId ? `?branchId=${encodeURIComponent(branchId)}` : "";
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -56,10 +59,10 @@ export async function AdminDashboard({ summary, branchId }: AdminDashboardProps)
       <div>
         <h2 className="mb-3 text-lg font-semibold">{t("referenceTitle")}</h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <ReferenceCard title={t("users")} value={summary.users} icon={Users} href="/users" />
+          <ReferenceCard title={t("users")} value={summary.users} icon={Users} href={`/users${branchQuery}`} />
           <ReferenceCard title={t("courses")} value={summary.courses} icon={BookOpen} href="/courses" />
           <ReferenceCard title={t("teachers")} value={summary.teachers} icon={GraduationCap} href="/teachers" />
-          <ReferenceCard title={t("students")} value={summary.students} icon={ClipboardCheck} href="/students" />
+          <ReferenceCard title={t("students")} value={summary.students} icon={ClipboardCheck} href={`/students${branchQuery}`} />
         </div>
       </div>
     </div>
