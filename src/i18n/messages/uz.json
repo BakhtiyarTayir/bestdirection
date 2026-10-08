@@ -230,7 +230,8 @@
     "hostingExpired": "Hosting to'lov muddati {date} da tugagan.",
     "hostingPaidUntil": "Hosting to'langan sana",
     "hostingSave": "Saqlash",
-    "hostingSaved": "Hosting to'lov muddati saqlandi"
+    "hostingSaved": "Hosting to'lov muddati saqlandi",
+    "hostingDismiss": "Ertagacha yashirish"
   },
   "courses": {
     "title": "Kurslar",

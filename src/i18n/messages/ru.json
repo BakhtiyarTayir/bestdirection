@@ -230,7 +230,8 @@
     "hostingExpired": "Срок оплаты хостинга истёк {date}.",
     "hostingPaidUntil": "Хостинг оплачен до",
     "hostingSave": "Сохранить",
-    "hostingSaved": "Срок оплаты хостинга сохранён"
+    "hostingSaved": "Срок оплаты хостинга сохранён",
+    "hostingDismiss": "Скрыть до завтра"
   },
   "courses": {
     "title": "Курсы",

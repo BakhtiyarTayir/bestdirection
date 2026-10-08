@@ -45,7 +45,7 @@ export async function AdminDashboard({ summary, branchId }: AdminDashboardProps)
 
       {data ? (
         <>
-          <HostingNotice hosting={data.hosting} />
+          <HostingNotice hosting={data.hosting} today={data.date} />
           <MoneySummary money={data.money} month={data.month} locale={locale} />
           <div className="grid gap-4 lg:grid-cols-2">
             <TodaySchedule today={data.today} />
