@@ -13,6 +13,7 @@ import {
 } from "../billing/domain/billing";
 import { FinanceService } from "../finance/finance.service";
 import { SalaryService } from "../salary/salary.service";
+import { HostingService } from "./hosting.service";
 
 /** Группа, отобранная для проверок 1.2/1.3 — общий набор полей на оба расчёта. */
 interface AttentionGroup {
@@ -38,7 +39,8 @@ export class AdminDashboardService {
     private readonly prismaService: PrismaService,
     private readonly finance: FinanceService,
     private readonly billing: BillingService,
-    private readonly salary: SalaryService
+    private readonly salary: SalaryService,
+    private readonly hosting: HostingService
   ) {}
 
   private get prisma() {
@@ -61,9 +63,10 @@ export class AdminDashboardService {
         ? ((finance.current.received - prevEntry.received) / prevEntry.received) * 100
         : null;
 
-    const [today, attention] = await Promise.all([
+    const [today, attention, hosting] = await Promise.all([
       this.todaySchedule(branchId),
       this.attentionCounts(branchId),
+      this.hosting.status(actor),
     ]);
 
     return {
@@ -79,6 +82,7 @@ export class AdminDashboardService {
       },
       today,
       attention,
+      hosting,
     };
   }
 

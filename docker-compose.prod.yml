@@ -97,6 +97,9 @@ services:
       TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
       # Выключатель еженедельной сводки родителям: "off" отключает без деплоя
       PARENT_WEEKLY_DIGEST: ${PARENT_WEEKLY_DIGEST:-}
+      # Id администратора, который может менять срок оплаты хостинга (VPS на
+      # его аккаунте): по умолчанию bakhtiyar.tayirov, в .env можно переопределить
+      HOSTING_OWNER_ID: ${HOSTING_OWNER_ID:-cmtr61ri20001qr018rfaiv2l}
       # Доступ к шлюзу СМС: рассылки и журнал теперь считает api
       ESKIZ_EMAIL: ${ESKIZ_EMAIL:-}
       ESKIZ_PASSWORD: ${ESKIZ_PASSWORD:-}

@@ -6,3 +6,9 @@ export const adminDashboardQuerySchema = z.object({
 });
 
 export class AdminDashboardQueryDto extends createZodDto(adminDashboardQuerySchema) {}
+
+export const hostingPaidUntilSchema = z.object({
+  paidUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
+export class HostingPaidUntilDto extends createZodDto(hostingPaidUntilSchema) {}
