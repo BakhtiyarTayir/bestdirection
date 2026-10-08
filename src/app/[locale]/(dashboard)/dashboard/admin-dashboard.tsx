@@ -8,6 +8,7 @@ import { getBranches } from "@/lib/api/branches.server";
 import { MoneySummary } from "@/components/dashboard/admin/money-summary";
 import { TodaySchedule } from "@/components/dashboard/admin/today-schedule";
 import { AttentionList } from "@/components/dashboard/admin/attention-list";
+import { HostingNotice } from "@/components/dashboard/admin/hosting-notice";
 import type { ApiDashboardSummary } from "@/lib/api/dashboard";
 
 interface AdminDashboardProps {
@@ -44,6 +45,7 @@ export async function AdminDashboard({ summary, branchId }: AdminDashboardProps)
 
       {data ? (
         <>
+          <HostingNotice hosting={data.hosting} />
           <MoneySummary money={data.money} month={data.month} locale={locale} />
           <div className="grid gap-4 lg:grid-cols-2">
             <TodaySchedule today={data.today} />

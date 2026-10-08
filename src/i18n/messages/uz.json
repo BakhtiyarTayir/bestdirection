@@ -224,7 +224,13 @@
     "users": "Foydalanuvchilar",
     "courses": "Kurslar",
     "teachers": "O'qituvchilar",
-    "students": "Talabalar"
+    "students": "Talabalar",
+    "hostingDaysLeft": "Hosting to'lovi tugashiga {days} kun qoldi ({date} gacha to'langan). To'lanmasa, sayt o'chadi.",
+    "hostingToday": "Bugun to'langan hostingning oxirgi kuni. To'lanmasa, sayt o'chadi.",
+    "hostingExpired": "Hosting to'lov muddati {date} da tugagan.",
+    "hostingPaidUntil": "Hosting to'langan sana",
+    "hostingSave": "Saqlash",
+    "hostingSaved": "Hosting to'lov muddati saqlandi"
   },
   "courses": {
     "title": "Kurslar",
@@ -1238,7 +1244,8 @@
     "groupWrongBranch": "Guruh boshqa filialga tegishli",
     "telegramUnknown": "Bu Telegram hech qanday akkauntga ulanmagan",
     "botNotConfigured": "Telegram bot sozlanmagan",
-    "noPhone": "Foydalanuvchida telefon raqami yo'q"
+    "noPhone": "Foydalanuvchida telefon raqami yo'q",
+    "invalidDate": "Sana noto‘g‘ri"
   },
   "success": {
     "saved": "Saqlandi",
