@@ -22,6 +22,7 @@ import {
   monthEnd,
   monthKey,
   monthStart,
+  paymentMonth,
 } from "../../billing/domain/billing";
 
 export { addMonths, countLessons, currentMonthKey, isClosedMonth, isValidMonth, monthEnd, monthKey, monthStart };
@@ -209,6 +210,80 @@ export function totalAccrued(months: MonthAccrual[]): number {
  */
 export function payoutMonth(payout: { forMonth: string | null; paidAt: Date }): string {
   return payout.forMonth ?? monthKey(payout.paidAt);
+}
+
+// ─── Поступления по ученикам (справочно, зарплату не меняют) ───
+
+/** Начисление ученика за месяц; у нуля тоже есть строка — состав единицы */
+export interface StudentCharge {
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  unenrolled: boolean;
+  amount: number;
+}
+
+export interface StudentPaymentRow {
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  unenrolled: boolean;
+  charged: number;
+  paid: number;
+  /** charged - paid; отрицательное — переплата за месяц */
+  remaining: number;
+}
+
+/**
+ * Сводит начисления и оплаты по ученикам за месяц. Оплата идёт в месяц по
+ * paymentMonth (forMonth, иначе месяц paidAt) — то же правило, что в долгах.
+ * Оплаты учеников вне списка начислений игнорируются (вызывающий уже
+ * отобрал состав). В список попадают ученики с charged > 0 или paid > 0;
+ * сначала с остатком (по убыванию), потом остальные по фамилии.
+ */
+export function studentPaymentRows(
+  charges: StudentCharge[],
+  payments: { studentId: string; amount: number; forMonth: string | null; paidAt: Date }[],
+  month: string
+): {
+  students: StudentPaymentRow[];
+  totals: { charged: number; paid: number; remaining: number };
+} {
+  const byStudent = new Map<string, StudentPaymentRow>();
+  for (const charge of charges) {
+    const row = byStudent.get(charge.studentId) ?? {
+      studentId: charge.studentId,
+      firstName: charge.firstName,
+      lastName: charge.lastName,
+      unenrolled: false,
+      charged: 0,
+      paid: 0,
+      remaining: 0,
+    };
+    row.charged += charge.amount;
+    row.unenrolled = row.unenrolled || charge.unenrolled;
+    byStudent.set(charge.studentId, row);
+  }
+  for (const payment of payments) {
+    if (paymentMonth(payment) !== month) continue;
+    const row = byStudent.get(payment.studentId);
+    if (row) row.paid += payment.amount;
+  }
+
+  const students = [...byStudent.values()]
+    .filter((row) => row.charged > 0 || row.paid > 0)
+    .map((row) => ({ ...row, remaining: row.charged - row.paid }))
+    .sort(
+      (a, b) =>
+        Number(b.remaining > 0) - Number(a.remaining > 0) ||
+        b.remaining - a.remaining ||
+        a.lastName.localeCompare(b.lastName, "ru") ||
+        a.firstName.localeCompare(b.firstName, "ru")
+    );
+
+  const charged = students.reduce((sum, row) => sum + row.charged, 0);
+  const paid = students.reduce((sum, row) => sum + row.paid, 0);
+  return { students, totals: { charged, paid, remaining: charged - paid } };
 }
 
 // ─── Зарплата по проведённым занятиям (план «Уроки и карточка группы», этап 3) ───

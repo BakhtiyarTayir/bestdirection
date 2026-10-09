@@ -19,12 +19,14 @@ import {
   payoutMonth,
   resolveSalaryPercentBp,
   splitAccrualByTeacher,
+  studentPaymentRows,
   totalAccrued,
   type MarkedSession,
+  type StudentCharge,
   type MonthAccrual,
   type MonthLessonMarks,
 } from "./domain/salary";
-import type { RecalcQueryDto, SalaryOverviewQueryDto, TeacherSalaryQueryDto } from "./dto/salary.dto";
+import type { GroupStudentsQueryDto, RecalcQueryDto, SalaryOverviewQueryDto, TeacherSalaryQueryDto } from "./dto/salary.dto";
 
 /**
  * Единица начисления: преподаватель + группа, либо преподаватель + курс без
@@ -349,6 +351,23 @@ export class SalaryService {
   }
 
   /**
+   * Фильтр строк снимка MonthlyCharge, входящих в базу единицы. Один на
+   * snapshotBase и на список учеников (groupStudents): состав учеников и
+   * сумма «Начислено» обязаны совпадать с базой, поэтому фильтр не копируется.
+   */
+  private snapshotWhere(
+    unit: Pick<Unit, "courseId" | "groupId">,
+    month: Prisma.StringFilter | string
+  ): Prisma.MonthlyChargeWhereInput {
+    return {
+      month,
+      lockedAt: { not: null },
+      groupId: unit.groupId,
+      enrollment: { courseId: unit.courseId, student: { deletedAt: null } },
+    };
+  }
+
+  /**
    * База закрытых месяцев единицы — по СНИМКУ группы в MonthlyCharge, а не
    * по нынешнему составу. Ученик, переведённый в октябре, в сентябре учился
    * в прежней группе: его сентябрь принадлежит её базе, и в базу новой
@@ -363,12 +382,7 @@ export class SalaryService {
     month: Prisma.StringFilter | string
   ): Promise<Map<string, { base: number; studentsCount: number }>> {
     const rows = await this.prisma.monthlyCharge.findMany({
-      where: {
-        month,
-        lockedAt: { not: null },
-        groupId: unit.groupId,
-        enrollment: { courseId: unit.courseId, student: { deletedAt: null } },
-      },
+      where: this.snapshotWhere(unit, month),
       select: { month: true, amount: true },
     });
 
@@ -589,6 +603,90 @@ export class SalaryService {
 
     const months = mergeAccrualMonths(computed, storedRows, now);
     return { months, marksByMonth };
+  }
+
+  /**
+   * Ученики группы (курса без группы) за месяц: начислено и поступило. Только
+   * чтение для администратора; зарплата от поступлений НЕ считается (решение
+   * владельца 2026-10-09) — это справочная колонка рядом с базой.
+   *
+   * Состав и «Начислено» берутся тем же путём, что база зарплаты: закрытый
+   * месяц — снимок MonthlyCharge (snapshotWhere), открытый — нынешние записи
+   * единицы и начисление по формуле (loadUnitEnrollments + resolveSchedules,
+   * как monthTotals в unitSchedule).
+   */
+  async groupStudents(query: GroupStudentsQueryDto) {
+    const { month, groupId, courseId } = query;
+    if (!isValidMonth(month)) throw new BadRequestException("invalidMonth");
+    // Без группы единица определяется курсом
+    if (!groupId && !courseId) throw new BadRequestException("courseRequired");
+
+    // У группы несколько единиц (владелец + замены) делят один состав
+    // учеников — для списка достаточно любой
+    const units = await this.loadUnits(groupId ? { groupId, courseId } : { groupId: null, courseId });
+    const unit = units[0];
+    if (!unit) throw new NotFoundException("unitNotFound");
+
+    const now = new Date();
+    const locked = isClosedMonth(month, now);
+    // Биллинг нынешних учеников — до чтения снимка (ленивая заморозка), как
+    // в unitSchedule и recalculateMonth
+    const enrollments = await this.loadUnitEnrollments(unit);
+    const schedules = await this.ledger.resolveSchedules(enrollments, month);
+
+    let charges: StudentCharge[];
+    let frozenBase: number | null = null;
+    if (locked) {
+      await this.freezeGroupClosedMonths(unit, month, now);
+      const rows = await this.prisma.monthlyCharge.findMany({
+        where: this.snapshotWhere(unit, month),
+        select: {
+          amount: true,
+          enrollment: {
+            select: {
+              studentId: true,
+              unenrolledAt: true,
+              student: { select: { firstName: true, lastName: true } },
+            },
+          },
+        },
+      });
+      charges = rows.map((row) => ({
+        studentId: row.enrollment.studentId,
+        firstName: row.enrollment.student.firstName,
+        lastName: row.enrollment.student.lastName,
+        unenrolled: row.enrollment.unenrolledAt !== null,
+        amount: row.amount,
+      }));
+
+      const accrualRows = await this.prisma.teacherSalaryAccrual.findMany({
+        where: { courseId: unit.courseId, groupId: unit.groupId, month },
+        select: { base: true, isOwner: true },
+      });
+      frozenBase = (accrualRows.find((row) => row.isOwner) ?? accrualRows[0])?.base ?? null;
+    } else {
+      charges = enrollments.map((enrollment) => ({
+        studentId: enrollment.studentId,
+        firstName: enrollment.student.firstName,
+        lastName: enrollment.student.lastName,
+        unenrolled: enrollment.unenrolledAt !== null,
+        amount: (schedules.get(enrollment.id) ?? []).find((item) => item.month === month)?.charge.amount ?? 0,
+      }));
+    }
+
+    // Оплаты — по паре «ученик + курс», группу платежа не сверяем (так же
+    // считаются долги). Только ученики этого состава: иначе переведённый
+    // в другую группу курса попал бы в список обеих
+    const studentIds = [...new Set(charges.map((item) => item.studentId))];
+    const payments =
+      studentIds.length > 0
+        ? await this.prisma.payment.findMany({
+            where: { courseId: unit.courseId, studentId: { in: studentIds }, deletedAt: null },
+            select: { studentId: true, amount: true, forMonth: true, paidAt: true },
+          })
+        : [];
+
+    return { month, locked, frozenBase, ...studentPaymentRows(charges, payments, month) };
   }
 
   /**

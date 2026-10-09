@@ -771,4 +771,165 @@ describe("модуль salary", () => {
       expect(rowAfterUnfiltered.debt).toBe(0);
     });
   });
+
+  // Поступления по ученикам в месяце группы: справочная колонка рядом с базой
+  // (план 2026-10-09). Числа обязаны сходиться с базой зарплаты.
+  describe("ученики группы за месяц: начислено и поступило", () => {
+    let courseId: string;
+    let groupId: string;
+    let ungroupedCourseId: string;
+    const students: Record<string, string> = {};
+    const start = new Date(`${startMonth}-01T12:00:00.000Z`);
+    type Row = { studentId: string; charged: number; paid: number; remaining: number; unenrolled: boolean };
+
+    const students$ = (month: string, query: string) => get(`/salary/group-students?month=${month}&${query}`, "ADMIN");
+    const rowOf = (body: { students: Row[] }, key: string) => body.students.find((row) => row.studentId === students[key]);
+    const pay = (key: string, amount: number, extra: { forMonth?: string; paidAt?: string; deletedAt?: Date; course?: string }) =>
+      testDb().payment.create({
+        data: {
+          amount,
+          studentId: students[key],
+          courseId: extra.course ?? courseId,
+          groupId,
+          forMonth: extra.forMonth ?? null,
+          paidAt: new Date(extra.paidAt ?? `${prevMonth}-15T12:00:00.000Z`),
+          deletedAt: extra.deletedAt ?? null,
+          createdById: ids.ADMIN,
+        },
+      });
+
+    beforeAll(async () => {
+      const course = await testDb().course.create({
+        data: { slug: `salary-gs-${run}`, title: "Курс учеников", teacherId: ids.TEACHER, price: 300_000 },
+      });
+      courseId = course.id;
+      const branch = await createBranch("Ученики");
+      groupId = (
+        await testDb().group.create({
+          data: { price: 300_000, name: `GS-${run}`, courseId, branchId: branch.id, scheduleDays: [1, 3, 5], teacherId: ids.TEACHER, salaryPercentBp: 4000, startDate: start },
+        })
+      ).id;
+      for (const key of ["full", "partial", "gone", "zero"]) {
+        students[key] = (await createUser({ role: "STUDENT" })).id;
+      }
+      for (const key of ["full", "partial", "gone"]) {
+        await testDb().enrollment.create({ data: { studentId: students[key], courseId, groupId, startsAt: start } });
+      }
+      // Цена записи 0: начисление нулевое, но запись в составе группы
+      await testDb().enrollment.create({ data: { studentId: students.zero, courseId, groupId, startsAt: start, priceOverride: 0 } });
+
+      // Закрытый месяц замораживаем ДО отчисления: отчисленный остаётся в снимке
+      expect((await students$(prevMonth, `groupId=${groupId}`)).status).toBe(200);
+      await testDb().enrollment.updateMany({ where: { studentId: students.gone, courseId }, data: { unenrolledAt: new Date() } });
+
+      // Платежи: forMonth этого месяца, без forMonth (месяц paidAt), чужой forMonth, удалённый
+      await pay("full", 300_000, { forMonth: prevMonth });
+      await pay("partial", 100_000, { paidAt: `${prevMonth}-15T12:00:00.000Z` });
+      await pay("partial", 50_000, { forMonth: prevMonth });
+      await pay("partial", 11_111, { forMonth: current });
+      await pay("partial", 22_222, { forMonth: prevMonth, deletedAt: new Date() });
+      await pay("zero", 20_000, { forMonth: prevMonth });
+
+      // Курс без группы
+      const ungrouped = await testDb().course.create({
+        data: { slug: `salary-gs-ng-${run}`, title: "Курс без группы", teacherId: ids.TEACHER, price: 200_000 },
+      });
+      ungroupedCourseId = ungrouped.id;
+      students.solo = (await createUser({ role: "STUDENT" })).id;
+      await testDb().enrollment.create({
+        data: { studentId: students.solo, courseId: ungroupedCourseId, startsAt: start, priceOverride: 200_000 },
+      });
+    });
+
+    it("права: администратор 200, преподаватель 403 даже на свою группу, аноним 401", async () => {
+      expect((await students$(prevMonth, `groupId=${groupId}`)).status).toBe(200);
+      expect((await get(`/salary/group-students?month=${prevMonth}&groupId=${groupId}`, "TEACHER")).status).toBe(403);
+      expect((await get(`/salary/group-students?month=${prevMonth}&groupId=${groupId}`)).status).toBe(401);
+    });
+
+    it("ошибки: плохой месяц и нет группы/курса — 400, неизвестная группа — 404", async () => {
+      expect((await students$("2026-13", `groupId=${groupId}`)).status).toBe(400);
+      expect((await students$(prevMonth, "")).status).toBe(400);
+      expect((await students$(prevMonth, "groupId=nope")).status).toBe(404);
+    });
+
+    it("сумма начислено совпадает с базой владельца — закрытый и открытый месяц", async () => {
+      for (const month of [prevMonth, current]) {
+        const res = await students$(month, `groupId=${groupId}`);
+        const detail = await get(`/salary/${ids.TEACHER}?month=${month}`, "ADMIN");
+        const group = detail.body.groups.find((g: { groupId: string }) => g.groupId === groupId);
+        const row = group.months.find((m: { month: string }) => m.month === month);
+        expect(res.body.totals.charged).toBe(row.base);
+        expect(row.base).toBeGreaterThan(0);
+        expect(res.body.students.reduce((sum: number, r: Row) => sum + r.charged, 0)).toBe(row.base);
+      }
+    });
+
+    it("закрытый месяц: locked и замороженная база; открытый — null", async () => {
+      const closed = await students$(prevMonth, `groupId=${groupId}`);
+      const stored = await testDb().teacherSalaryAccrual.findFirst({ where: { groupId, month: prevMonth, isOwner: true } });
+      expect(closed.body.locked).toBe(true);
+      expect(closed.body.frozenBase).toBe(stored!.base);
+      expect(closed.body.frozenBase).toBe(closed.body.totals.charged);
+      const open = await students$(current, `groupId=${groupId}`);
+      expect(open.body.locked).toBe(false);
+      expect(open.body.frozenBase).toBeNull();
+    });
+
+    it("оплаты: forMonth, месяц paidAt; чужой forMonth и удалённая не считаются", async () => {
+      const res = await students$(prevMonth, `groupId=${groupId}`);
+      expect(rowOf(res.body, "full")).toMatchObject({ charged: 300_000, paid: 300_000, remaining: 0 });
+      expect(rowOf(res.body, "partial")).toMatchObject({ charged: 300_000, paid: 150_000, remaining: 150_000 });
+      const open = await students$(current, `groupId=${groupId}`);
+      expect(rowOf(open.body, "partial")!.paid).toBe(11_111);
+      expect(rowOf(open.body, "full")!.paid).toBe(0);
+    });
+
+    it("отчисленный после месяца остаётся в закрытом месяце с unenrolled", async () => {
+      const res = await students$(prevMonth, `groupId=${groupId}`);
+      expect(rowOf(res.body, "gone")).toMatchObject({ unenrolled: true, charged: 300_000 });
+      expect(rowOf(res.body, "full")!.unenrolled).toBe(false);
+    });
+
+    it("ученик без начисления, но с оплатой, виден с charged 0 (переплата — отрицательный остаток)", async () => {
+      const res = await students$(prevMonth, `groupId=${groupId}`);
+      expect(rowOf(res.body, "zero")).toMatchObject({ charged: 0, paid: 20_000, remaining: -20_000 });
+      // Сортировка: с остатком первыми, переплата последней
+      expect(res.body.students.at(-1).studentId).toBe(students.zero);
+      expect(res.body.totals.paid).toBe(
+        res.body.students.reduce((sum: number, r: Row) => sum + r.paid, 0)
+      );
+    });
+
+    it("курс без группы: ученик и начисление по курсу", async () => {
+      const res = await students$(prevMonth, `courseId=${ungroupedCourseId}`);
+      expect(res.status).toBe(200);
+      expect(rowOf(res.body, "solo")).toMatchObject({ charged: 200_000, paid: 0 });
+    });
+
+    it("переведённый ученик: закрытый месяц — в прежней группе, текущий — в новой", async () => {
+      const course = await testDb().course.create({
+        data: { slug: `salary-gs-mv-${run}`, title: "Курс перевода", teacherId: ids.TEACHER, price: 300_000 },
+      });
+      const branch = await createBranch("Перевод");
+      const mk = (name: string) =>
+        testDb().group.create({
+          data: { price: 300_000, name: `${name}-${run}`, courseId: course.id, branchId: branch.id, scheduleDays: [1, 3, 5], teacherId: ids.TEACHER, salaryPercentBp: 4000, startDate: start },
+        });
+      const oldGroup = await mk("MvOld");
+      const newGroup = await mk("MvNew");
+      const moved = (await createUser({ role: "STUDENT" })).id;
+      await testDb().enrollment.create({ data: { studentId: moved, courseId: course.id, groupId: oldGroup.id, startsAt: start } });
+      expect((await students$(prevMonth, `groupId=${oldGroup.id}`)).status).toBe(200);
+
+      const move = await send("post", `/groups/${newGroup.id}/move-student`, "ADMIN", { studentId: moved, courseId: course.id });
+      expect(move.status).toBe(201);
+
+      const has = (body: { students: Row[] }) => body.students.some((r) => r.studentId === moved);
+      expect(has((await students$(prevMonth, `groupId=${oldGroup.id}`)).body)).toBe(true);
+      expect(has((await students$(prevMonth, `groupId=${newGroup.id}`)).body)).toBe(false);
+      expect(has((await students$(current, `groupId=${newGroup.id}`)).body)).toBe(true);
+      expect(has((await students$(current, `groupId=${oldGroup.id}`)).body)).toBe(false);
+    });
+  });
 });

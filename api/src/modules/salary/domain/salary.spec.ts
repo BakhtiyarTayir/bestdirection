@@ -10,6 +10,7 @@ import {
   payoutMonth,
   resolveSalaryPercentBp,
   splitAccrualByTeacher,
+  studentPaymentRows,
   totalAccrued,
   type AccrualComputationInput,
   type StoredAccrual,
@@ -437,5 +438,59 @@ describe("markMakeupSessions — отработка это самые поздн
     const sessions = [{ date: new Date("2026-09-03T00:00:00.000Z"), teacherId: "a" }];
     const marked = markMakeupSessions(sessions, 5);
     expect(marked.every((session) => !session.isMakeup)).toBe(true);
+  });
+});
+
+describe("studentPaymentRows — поступления по ученикам за месяц", () => {
+  const charge = (studentId: string, lastName: string, amount: number, unenrolled = false) => ({
+    studentId,
+    firstName: "Имя",
+    lastName,
+    unenrolled,
+    amount,
+  });
+  const pay = (studentId: string, amount: number, forMonth: string | null, paidAt = "2026-09-10T12:00:00.000Z") => ({
+    studentId,
+    amount,
+    forMonth,
+    paidAt: new Date(paidAt),
+  });
+
+  it("итоги, остаток и сортировка: с остатком по убыванию, потом оплатившие, переплата последней", () => {
+    const result = studentPaymentRows(
+      [charge("a", "Алиев", 300_000), charge("b", "Бобров", 300_000), charge("c", "Волков", 300_000), charge("d", "Гарин", 300_000)],
+      [pay("a", 300_000, "2026-09"), pay("b", 100_000, "2026-09"), pay("c", 350_000, "2026-09")],
+      "2026-09"
+    );
+    expect(result.students.map((row) => row.studentId)).toEqual(["d", "b", "a", "c"]);
+    expect(result.students.map((row) => row.remaining)).toEqual([300_000, 200_000, 0, -50_000]);
+    expect(result.totals).toEqual({ charged: 1_200_000, paid: 750_000, remaining: 450_000 });
+  });
+
+  it("месяц платежа: forMonth, а без него — месяц paidAt; чужой месяц не считается", () => {
+    const result = studentPaymentRows(
+      [charge("a", "Алиев", 100_000)],
+      [pay("a", 10, "2026-09"), pay("a", 20, null, "2026-09-20T12:00:00.000Z"), pay("a", 40, "2026-10"), pay("a", 80, null, "2026-10-02T12:00:00.000Z")],
+      "2026-09"
+    );
+    expect(result.students[0].paid).toBe(30);
+  });
+
+  it("без начисления, но с оплатой — в списке; без обоих — нет; оплата постороннего игнорируется", () => {
+    const result = studentPaymentRows(
+      [charge("a", "Алиев", 0), charge("b", "Бобров", 0)],
+      [pay("a", 5_000, "2026-09"), pay("zzz", 9_000, "2026-09")],
+      "2026-09"
+    );
+    expect(result.students).toHaveLength(1);
+    expect(result.students[0]).toMatchObject({ studentId: "a", charged: 0, paid: 5_000, remaining: -5_000 });
+    expect(result.totals.paid).toBe(5_000);
+  });
+
+  it("отчисленный помечается, строки одного ученика суммируются", () => {
+    const result = studentPaymentRows([charge("a", "Алиев", 100, true), charge("a", "Алиев", 50)], [], "2026-09");
+    expect(result.students).toEqual([
+      { studentId: "a", firstName: "Имя", lastName: "Алиев", unenrolled: true, charged: 150, paid: 0, remaining: 150 },
+    ]);
   });
 });

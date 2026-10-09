@@ -32,6 +32,15 @@ export const recalcQuerySchema = z.object({
   courseId: z.string().max(40).optional(),
 });
 
+export const groupStudentsQuerySchema = z
+  .object({
+    month: monthString,
+    groupId: z.string().max(40).optional(),
+    // Для курса без группы — groupId пуст, courseId обязателен
+    courseId: z.string().max(40).optional(),
+  })
+  .refine((query) => Boolean(query.groupId || query.courseId), { message: "courseRequired", path: ["courseId"] });
+
 export const payoutFiltersSchema = z.object({
   month: monthString.optional(),
   teacherId: z.string().max(40).optional(),
@@ -51,5 +60,6 @@ export class SalaryOverviewQueryDto extends createZodDto(salaryOverviewQuerySche
 export class TeacherSalaryQueryDto extends createZodDto(teacherSalaryQuerySchema) {}
 export class SetManualAmountDto extends createZodDto(setManualAmountSchema) {}
 export class RecalcQueryDto extends createZodDto(recalcQuerySchema) {}
+export class GroupStudentsQueryDto extends createZodDto(groupStudentsQuerySchema) {}
 export class PayoutFiltersDto extends createZodDto(payoutFiltersSchema) {}
 export class CreatePayoutDto extends createZodDto(createPayoutSchema) {}

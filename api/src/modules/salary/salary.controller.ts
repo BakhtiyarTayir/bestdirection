@@ -5,6 +5,7 @@ import { CheckPolicies } from "../../common/policies/check-policies.decorator";
 import type { AppAbility } from "../../common/policies/abilities";
 import {
   CreatePayoutDto,
+  GroupStudentsQueryDto,
   PayoutFiltersDto,
   RecalcQueryDto,
   SalaryOverviewQueryDto,
@@ -41,6 +42,13 @@ export class SalaryController {
   @Get("me")
   me(@Query() query: TeacherSalaryQueryDto, @CurrentUser() actor: SessionUser) {
     return this.salary.teacherDetail(actor.id, query, actor);
+  }
+
+  /** Ученики группы за месяц: начислено и поступило. Только администратор; ДО ":teacherId". */
+  @CheckPolicies(adminOnly)
+  @Get("group-students")
+  groupStudents(@Query() query: GroupStudentsQueryDto) {
+    return this.salary.groupStudents(query);
   }
 
   @CheckPolicies(adminOnly)
