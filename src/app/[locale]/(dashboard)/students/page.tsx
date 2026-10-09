@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { IssuePasswordsDialog } from "@/components/issue-passwords-dialog";
 import { BranchFilter } from "@/components/branch-filter";
 import { TeacherFilter } from "@/components/teacher-filter";
 import { StudentList, type StudentListRow } from "./student-list";
@@ -48,6 +49,9 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <BranchFilter branchId={branchId} branches={branches} namespace="students" />
         <TeacherFilter teacherId={teacherId} teachers={teachers} namespace="students" />
+        <div className="sm:ml-auto">
+          <IssuePasswordsDialog branches={branches} defaultBranchId={branchId} />
+        </div>
       </div>
 
       {students.length === 0 ? (

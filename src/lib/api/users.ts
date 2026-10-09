@@ -239,3 +239,45 @@ export const unlinkTelegram = () => apiFetch<{ ok: true }>("/me/telegram", { met
 /** Администратор открыл список — обнуляет цифру новых пользователей в меню */
 export const markUsersSeen = (): Promise<ApiResult<{ ok: boolean }>> =>
   apiFetch("/users/new/seen", { method: "POST" });
+
+// ---------- доступ учеников (только ADMIN) ----------
+
+export interface ApiStudentCredentials {
+  login: string;
+  password: string | null;
+  state: "known" | "unknown";
+}
+
+export interface ApiNeverLoggedInStudent {
+  id: string;
+  firstName: string;
+  lastName: string;
+  login: string;
+  branch: { id: string; name: string } | null;
+}
+
+export interface ApiIssuedPassword {
+  fullName: string;
+  login: string;
+  password: string;
+  branch: string | null;
+}
+
+/** Пароль загружается только по нажатию «Показать»: пишется в журнал как просмотр. */
+export const getStudentCredentials = (id: string) =>
+  apiFetch<ApiStudentCredentials>(`/users/${id}/credentials`);
+
+/** Пустой пароль — сервер сгенерирует свой. */
+export const setStudentPassword = (id: string, password?: string) =>
+  apiFetch<{ login: string; password: string }>(`/users/${id}/password`, {
+    method: "POST",
+    body: { password: password ?? "" },
+  });
+
+export const getNeverLoggedInStudents = (branchId?: string) =>
+  apiFetch<{ count: number; students: ApiNeverLoggedInStudent[] }>("/users/students/never-logged-in", {
+    query: { branchId },
+  });
+
+export const issueStudentPasswords = (studentIds: string[]) =>
+  apiFetch<ApiIssuedPassword[]>("/users/students/issue-passwords", { method: "POST", body: { studentIds } });

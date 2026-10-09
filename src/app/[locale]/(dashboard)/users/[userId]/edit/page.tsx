@@ -7,6 +7,7 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { EditUserForm } from "./edit-user-form";
 import { ParentsPanel } from "@/components/parents-panel";
+import { StudentAccessCard } from "@/components/student-access-card";
 import { TelegramInviteDialog } from "@/components/telegram-invite-dialog";
 import { TelegramWriteButton } from "@/components/telegram-write-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,6 +60,8 @@ async function EditUserPageContent({ user, branches }: { user: any; branches: { 
         </div>
       </div>
       <EditUserForm user={user} branches={branches} />
+      {/* Логин и пароль ученика видит только администратор (страница под requireRole ADMIN) */}
+      {user.role === "STUDENT" && <StudentAccessCard userId={user.id} login={user.login} />}
       {user.role === "STUDENT" && enrollments.length > 0 && (
         <Card>
           <CardHeader>
