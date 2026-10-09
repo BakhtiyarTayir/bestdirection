@@ -5,6 +5,7 @@ import type { AppAbility } from "../../common/policies/abilities";
 import { CheckPolicies } from "../../common/policies/check-policies.decorator";
 import {
   CreateUserDto,
+  CredentialsExportQueryDto,
   HomeworkStatisticsQueryDto,
   IssuePasswordsDto,
   LoginAvailableQueryDto,
@@ -102,6 +103,12 @@ export class UsersController {
   @Get("students/never-logged-in")
   neverLoggedIn(@Query() query: NeverLoggedInQueryDto) {
     return this.users.neverLoggedInStudents(query.branchId);
+  }
+
+  @CheckPolicies((ability) => ability.can("manage", "User"))
+  @Get("students/credentials-export")
+  credentialsExport(@Query() query: CredentialsExportQueryDto, @CurrentUser() actor: SessionUser) {
+    return this.users.credentialsExport(query, actor);
   }
 
   @CheckPolicies((ability) => ability.can("manage", "User"))

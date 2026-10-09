@@ -53,6 +53,37 @@ export function enrollmentTeacherFilter(teacherId: string): Prisma.EnrollmentWhe
   };
 }
 
+export interface StudentListFilters {
+  branchId?: string;
+  teacherId?: string;
+  courseId?: string;
+  groupId?: string;
+}
+
+/**
+ * Условие на ученика для списка учеников и выгрузки логинов — одно на обоих,
+ * чтобы выгрузка не расходилась с тем, что видно на экране. Все фильтры — к
+ * ОДНОЙ записи: «учится у этого педагога на этом курсе в этом филиале», а не
+ * «где-то там, где-то тут». Филиал смотрит на группу записи (ловушка 3.8.5
+ * плана филиалов), а не на «основной» branchId ученика. Педагог, курс и группа
+ * требуют НЕ отчисленной записи — отчисленный там уже не учится.
+ */
+export function studentListWhere(filters: StudentListFilters): Prisma.UserWhereInput {
+  const { branchId, teacherId, courseId, groupId } = filters;
+  const needsActive = Boolean(teacherId || courseId || groupId);
+  const conditions: Prisma.EnrollmentWhereInput[] = [
+    ...(branchId ? [{ group: { is: { branchId } } }] : []),
+    ...(teacherId ? [enrollmentTeacherFilter(teacherId)] : []),
+    ...(courseId ? [{ courseId }] : []),
+    ...(groupId ? [{ groupId }] : []),
+    ...(needsActive ? [activeEnrollmentFilter()] : []),
+  ];
+  return {
+    role: "STUDENT",
+    ...(conditions.length > 0 ? { enrollments: { some: { AND: conditions } } } : {}),
+  };
+}
+
 /**
  * Тот же приём для Payment: группа берётся ИЗ ПЛАТЕЖА (снимок на момент
  * приёма денег), а не текущая группа ученика — перевод студента в другую

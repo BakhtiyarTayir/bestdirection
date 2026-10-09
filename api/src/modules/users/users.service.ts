@@ -16,7 +16,7 @@ import { accessibleWhere, type AppAbility } from "../../common/policies/abilitie
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { generatePassword, openPassword, sealPassword } from "../../common/security/password-vault";
 import { withHasTelegram } from "../../common/telegram/with-has-telegram";
-import { BillingLedgerService } from "../billing/billing-ledger.service";
+import { BillingLedgerService, studentListWhere, type StudentListFilters } from "../billing/billing-ledger.service";
 import { SalaryService } from "../salary/salary.service";
 import type { CreateUserDto, UpdateProfileDto, UpdateUserDto } from "./dto/user.dto";
 
@@ -789,6 +789,51 @@ export class UsersService {
       },
     });
     return { count: students.length, students };
+  }
+
+  /**
+   * Выгрузка «логин + пароль» по ученикам с теми же фильтрами, что у списка
+   * (studentListWhere). Только действующие ученики. Аудит — ОДНА запись на
+   * выгрузку, без паролей: число строк и фильтры.
+   */
+  async credentialsExport(filters: StudentListFilters, actor: SessionUser) {
+    const students = await this.prisma.user.findMany({
+      where: { ...studentListWhere(filters), isActive: true },
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        login: true,
+        passwordEnc: true,
+        branch: { select: { name: true } },
+        enrollments: {
+          where: { unenrolledAt: null },
+          orderBy: { startsAt: "asc" },
+          select: { course: { select: { title: true } }, group: { select: { name: true } } },
+        },
+      },
+    });
+
+    const rows = students.map((student) => ({
+      fullName: `${student.lastName} ${student.firstName}`,
+      login: student.login,
+      password: openPassword(student.passwordEnc),
+      branch: student.branch?.name ?? null,
+      groups: student.enrollments
+        .filter((e) => e.group)
+        .map((e) => `${e.course?.title ?? "—"} — ${e.group!.name}`)
+        .join("; "),
+    }));
+
+    await this.audit.record({
+      userId: actor.id,
+      entityType: "StudentCredentials",
+      entityId: "export",
+      action: "CREATE",
+      metadata: { exportedPasswords: true, count: rows.length, filters: { ...filters } },
+    });
+    return rows;
   }
 
   async issuePasswords(studentIds: string[], actor: SessionUser) {

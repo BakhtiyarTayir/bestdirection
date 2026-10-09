@@ -5,10 +5,10 @@ import { toNoonUtc } from "../../common/date-only";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import type { Prisma } from "../../../generated/prisma";
 import {
-  activeEnrollmentFilter,
   BillingLedgerService,
-  enrollmentTeacherFilter,
+  studentListWhere,
   type LedgerFilters,
+  type StudentListFilters,
 } from "./billing-ledger.service";
 import {
   billingStart,
@@ -380,26 +380,13 @@ export class BillingService {
    * Список всех студентов с балансом на текущий месяц. Нужен как вход в
    * карточку: список должников показывает только должников.
    */
-  async studentsOverview(branchId?: string, teacherId?: string) {
-    // Ученик может ходить на курсы в разных филиалах — фильтр смотрит на его
-    // группы, а не на «основной» branchId (ловушка 3.8.5 плана филиалов).
-    // Баланс ниже при этом считаем по ВСЕМ его курсам: фильтр решает, кто
-    // попал в список, а не что показать про него. Оба фильтра — к ОДНОЙ
-    // записи: «учится у этого педагога в этом филиале», а не «где-то в
-    // филиале и где-то у педагога».
-    const enrollmentConditions: Prisma.EnrollmentWhereInput[] = [
-      ...(branchId ? [{ group: { is: { branchId } } }] : []),
-      // Педагог — та же лестница, что у должников и оплат (группа → курс).
-      // Только нынешние ученики: отчисленный у педагога уже не учится
-      ...(teacherId ? [enrollmentTeacherFilter(teacherId), activeEnrollmentFilter()] : []),
-    ];
-
+  async studentsOverview(filters: StudentListFilters = {}) {
+    // Что именно попадает в список — studentListWhere (общая с выгрузкой
+    // логинов). Баланс ниже считаем по ВСЕМ курсам ученика: фильтр решает, кто
+    // попал в список, а не что показать про него.
     const [students, rows] = await Promise.all([
       this.prisma.user.findMany({
-        where: {
-          role: "STUDENT",
-          ...(enrollmentConditions.length > 0 ? { enrollments: { some: { AND: enrollmentConditions } } } : {}),
-        },
+        where: studentListWhere(filters),
         orderBy: [{ isActive: "desc" }, { lastName: "asc" }, { firstName: "asc" }],
         select: {
           id: true,

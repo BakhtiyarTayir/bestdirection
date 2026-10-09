@@ -361,4 +361,115 @@ describe("пароли учеников", () => {
       ).toBe(true);
     });
   });
+
+  describe("выгрузка логинов и фильтры списка", () => {
+    const own: {
+      courseA?: string;
+      courseB?: string;
+      groupA?: string;
+      groupB?: string;
+      other?: string;
+      stuA?: { id: string; login: string; lastName: string };
+      stuB?: { id: string; login: string; lastName: string };
+      stuLeft?: { id: string; login: string; lastName: string };
+    } = {};
+
+    beforeAll(async () => {
+      const teacher = await createUser({ role: "TEACHER" });
+      const exportBranch = await createBranch("Выгрузка");
+      const otherBranch = await createBranch("Выгрузка-2");
+      own.other = otherBranch.id;
+      const mkCourse = (key: string) =>
+        testDb().course.create({
+          data: { slug: `exp-${key}-${run}`, title: `Курс ${key}`, teacherId: teacher.id, price: 100000 },
+        });
+      const courseA = await mkCourse("A");
+      const courseB = await mkCourse("B");
+      const mkGroup = (key: string, courseId: string, branch: string) =>
+        testDb().group.create({
+          data: { name: `Гр-${key}-${run}`, courseId, scheduleDays: [1], branchId: branch, price: 100000 },
+        });
+      const groupA = await mkGroup("A", courseA.id, exportBranch.id);
+      const groupB = await mkGroup("B", courseB.id, otherBranch.id);
+      own.courseA = courseA.id;
+      own.courseB = courseB.id;
+      own.groupA = groupA.id;
+      own.groupB = groupB.id;
+
+      const startsAt = new Date("2026-01-01T12:00:00.000Z");
+      const enroll = (studentId: string, courseId: string, groupId: string, unenrolledAt: Date | null = null) =>
+        testDb().enrollment.create({ data: { studentId, courseId, groupId, startsAt, unenrolledAt } });
+
+      own.stuA = await newStudent();
+      own.stuB = await newStudent();
+      own.stuLeft = await newStudent();
+      await enroll(own.stuA.id, courseA.id, groupA.id);
+      await enroll(own.stuB.id, courseB.id, groupB.id);
+      await enroll(own.stuLeft.id, courseA.id, groupA.id, new Date("2026-02-01T12:00:00.000Z"));
+      // stuA знает пароль, stuB нет
+      await as("post", `/users/${own.stuA.id}/password`, "ADMIN", { password: "parol-vygruzki-1" });
+    });
+
+    const exportRows = async (query: string) => {
+      const res = await as("get", `/users/students/credentials-export?${query}`, "ADMIN");
+      expect(res.status).toBe(200);
+      return res.body as { fullName: string; login: string; password: string | null; branch: string | null; groups: string }[];
+    };
+
+    it("права: только ADMIN", async () => {
+      expect((await as("get", "/users/students/credentials-export", "ADMIN")).status).toBe(200);
+      for (const role of ["TEACHER", "STUDENT", "PARENT"]) {
+        expect((await as("get", "/users/students/credentials-export", role)).status, role).toBe(403);
+      }
+    });
+
+    it("фильтр по курсу и по группе; отчисленный не попадает", async () => {
+      const byCourse = (await exportRows(`courseId=${own.courseA}`)).map((r) => r.login);
+      expect(byCourse).toEqual([own.stuA!.login]);
+
+      const byGroup = (await exportRows(`groupId=${own.groupB}`)).map((r) => r.login);
+      expect(byGroup).toEqual([own.stuB!.login]);
+
+      // Курс и группа — к одной записи: группа B не принадлежит курсу A
+      expect(await exportRows(`courseId=${own.courseA}&groupId=${own.groupB}`)).toEqual([]);
+      // Филиал считается по группе записи
+      const byBranch = (await exportRows(`courseId=${own.courseB}&branchId=${own.other}`)).map((r) => r.login);
+      expect(byBranch).toEqual([own.stuB!.login]);
+    });
+
+    it("известный пароль возвращается, неизвестный — null; группы собраны строкой", async () => {
+      const a = (await exportRows(`groupId=${own.groupA}`))[0];
+      expect(a).toMatchObject({ login: own.stuA!.login, password: "parol-vygruzki-1" });
+      expect(a.groups).toBe(`Курс A — Гр-A-${run}`);
+      const b = (await exportRows(`groupId=${own.groupB}`))[0];
+      expect(b.password).toBeNull();
+    });
+
+    it("в аудите одна запись экспорта, без паролей", async () => {
+      const before = await testDb().auditLog.count({ where: { userId: adminId, entityType: "StudentCredentials" } });
+      await exportRows(`courseId=${own.courseA}`);
+      const logs = await testDb().auditLog.findMany({
+        where: { userId: adminId, entityType: "StudentCredentials" },
+        orderBy: { createdAt: "desc" },
+      });
+      expect(logs.length).toBe(before + 1);
+      expect(logs[0].metadata).toMatchObject({ exportedPasswords: true, count: 1, filters: { courseId: own.courseA } });
+      expect(JSON.stringify(logs)).not.toContain("parol-vygruzki-1");
+    });
+
+    it("список учеников: courseId и groupId", async () => {
+      const ids = async (query: string) => {
+        const res = await as("get", `/billing/students?${query}`, "ADMIN");
+        expect(res.status).toBe(200);
+        return res.body.map((s: { id: string }) => s.id) as string[];
+      };
+      const byCourse = await ids(`courseId=${own.courseA}`);
+      expect(byCourse).toContain(own.stuA!.id);
+      expect(byCourse).not.toContain(own.stuB!.id);
+      expect(byCourse).not.toContain(own.stuLeft!.id);
+
+      const byGroup = await ids(`groupId=${own.groupB}`);
+      expect(byGroup).toEqual([own.stuB!.id]);
+    });
+  });
 });

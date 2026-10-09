@@ -61,6 +61,8 @@ export const monthQuerySchema = z.object({ month: monthString });
 export const studentsQuerySchema = z.object({
   branchId: z.string().max(40).optional(),
   teacherId: z.string().max(40).optional(),
+  courseId: z.string().max(40).optional(),
+  groupId: z.string().max(40).optional(),
 });
 
 export class UpdateEnrollmentBillingDto extends createZodDto(updateEnrollmentBillingSchema) {}

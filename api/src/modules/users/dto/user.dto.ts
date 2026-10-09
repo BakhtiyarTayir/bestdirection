@@ -124,6 +124,13 @@ export const neverLoggedInQuerySchema = z.object({
   branchId: z.string().max(40).optional(),
 });
 
+export const credentialsExportQuerySchema = z.object({
+  branchId: z.string().max(40).optional(),
+  teacherId: z.string().max(40).optional(),
+  courseId: z.string().max(40).optional(),
+  groupId: z.string().max(40).optional(),
+});
+
 export const issuePasswordsSchema = z.object({
   studentIds: z.array(z.string().min(1).max(40)).min(1).max(1000),
 });
@@ -150,3 +157,4 @@ export class NamesakesQueryDto extends createZodDto(namesakesQuerySchema) {}
 export class SetStudentPasswordDto extends createZodDto(setStudentPasswordSchema) {}
 export class NeverLoggedInQueryDto extends createZodDto(neverLoggedInQuerySchema) {}
 export class IssuePasswordsDto extends createZodDto(issuePasswordsSchema) {}
+export class CredentialsExportQueryDto extends createZodDto(credentialsExportQuerySchema) {}
