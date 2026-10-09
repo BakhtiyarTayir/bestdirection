@@ -3,7 +3,6 @@ import { AuditService } from "../../common/audit/audit.service";
 import type { SessionUser } from "../../common/auth/session-user";
 import { toNoonUtc } from "../../common/date-only";
 import { PrismaService } from "../../common/prisma/prisma.service";
-import type { Prisma } from "../../../generated/prisma";
 import {
   BillingLedgerService,
   studentListWhere,
