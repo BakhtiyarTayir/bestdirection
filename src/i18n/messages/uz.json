@@ -1913,7 +1913,11 @@
     "filterBranch": "Filial",
     "allBranches": "Barcha filiallar",
     "filterTeacher": "O'qituvchi",
-    "allTeachers": "Barcha o'qituvchilar"
+    "allTeachers": "Barcha o'qituvchilar",
+    "filterCourse": "Kurs",
+    "allCourses": "Barcha kurslar",
+    "filterGroup": "Guruh",
+    "allGroups": "Barcha guruhlar"
   },
   "branches": {
     "title": "Filiallar",
@@ -2183,6 +2187,10 @@
     "colLogin": "Login",
     "colPassword": "Parol",
     "colBranch": "Filial",
-    "downloadCsv": "CSV yuklab olish"
+    "downloadCsv": "CSV yuklab olish",
+    "colGroups": "Guruhlar",
+    "exportButton": "Login va parollarni yuklab olish",
+    "exportEmpty": "Tanlangan filtrlar bo'yicha yuklab olish uchun o'quvchilar yo'q.",
+    "exportUnknown": "noma'lum — kartochkada o'rnating"
   }
 }

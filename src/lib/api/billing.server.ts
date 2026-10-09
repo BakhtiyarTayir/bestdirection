@@ -23,8 +23,12 @@ export const getDebtors = (
 
 export const getDebtorsCount = () => apiServerFetch<{ count: number }>("/billing/debtors/count");
 
-export const getStudentsOverview = (branchId?: string, teacherId?: string) =>
-  apiServerFetch<ApiStudentsOverview[]>("/billing/students", { query: { branchId, teacherId } });
+export const getStudentsOverview = (filters: {
+  branchId?: string;
+  teacherId?: string;
+  courseId?: string;
+  groupId?: string;
+} = {}) => apiServerFetch<ApiStudentsOverview[]>("/billing/students", { query: filters });
 
 export const getStudentBilling = (studentId: string) =>
   apiServerFetch<ApiStudentBilling>(`/billing/students/${studentId}`);

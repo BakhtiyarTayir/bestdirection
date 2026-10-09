@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { copyText } from "@/lib/copy-text";
+import { downloadCsv } from "@/lib/csv";
 import {
   getNeverLoggedInStudents,
   issueStudentPasswords,
@@ -30,13 +31,6 @@ interface IssuePasswordsDialogProps {
   branches: { id: string; name: string }[];
   /** Филиал, выбранный на странице, — начальное значение фильтра в диалоге. */
   defaultBranchId?: string;
-}
-
-/** CSV для Excel: разделитель «;», UTF-8 с BOM — иначе кириллица и узбекские буквы ломаются. */
-function toCsv(rows: ApiIssuedPassword[], headers: string[]): string {
-  const cell = (value: string) => `"${value.replace(/"/g, '""')}"`;
-  const lines = [headers, ...rows.map((r) => [r.fullName, r.login, r.password, r.branch ?? ""])];
-  return "﻿" + lines.map((line) => line.map(cell).join(";")).join("\r\n");
 }
 
 /**
@@ -120,15 +114,12 @@ export function IssuePasswordsDialog({ branches, defaultBranchId }: IssuePasswor
     toast(ok ? { title: t("copied") } : { variant: "destructive", title: t("copyFailed") });
   };
 
-  const downloadCsv = () => {
+  const saveCsv = () => {
     if (!issued) return;
-    const csv = toCsv(issued, [t("colName"), t("colLogin"), t("colPassword"), t("colBranch")]);
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `passwords-${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadCsv(`passwords-${new Date().toISOString().slice(0, 10)}.csv`, [
+      [t("colName"), t("colLogin"), t("colPassword"), t("colBranch")],
+      ...issued.map((r) => [r.fullName, r.login, r.password, r.branch ?? ""]),
+    ]);
   };
 
   return (
@@ -178,7 +169,7 @@ export function IssuePasswordsDialog({ branches, defaultBranchId }: IssuePasswor
                   <Copy className="mr-1 h-4 w-4" aria-hidden="true" />
                   {t("copyAll")}
                 </Button>
-                <Button type="button" variant="outline" onClick={downloadCsv} disabled={issued.length === 0}>
+                <Button type="button" variant="outline" onClick={saveCsv} disabled={issued.length === 0}>
                   <Download className="mr-1 h-4 w-4" aria-hidden="true" />
                   {t("downloadCsv")}
                 </Button>

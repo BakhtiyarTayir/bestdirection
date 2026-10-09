@@ -1913,7 +1913,11 @@
     "filterBranch": "Филиал",
     "allBranches": "Все филиалы",
     "filterTeacher": "Преподаватель",
-    "allTeachers": "Все преподаватели"
+    "allTeachers": "Все преподаватели",
+    "filterCourse": "Курс",
+    "allCourses": "Все курсы",
+    "filterGroup": "Группа",
+    "allGroups": "Все группы"
   },
   "branches": {
     "title": "Филиалы",
@@ -2183,6 +2187,10 @@
     "colLogin": "Логин",
     "colPassword": "Пароль",
     "colBranch": "Филиал",
-    "downloadCsv": "Скачать CSV"
+    "downloadCsv": "Скачать CSV",
+    "colGroups": "Группы",
+    "exportButton": "Скачать логины и пароли",
+    "exportEmpty": "Нет учеников для выгрузки по выбранным фильтрам.",
+    "exportUnknown": "неизвестен — задайте в карточке"
   }
 }

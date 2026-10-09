@@ -281,3 +281,19 @@ export const getNeverLoggedInStudents = (branchId?: string) =>
 
 export const issueStudentPasswords = (studentIds: string[]) =>
   apiFetch<ApiIssuedPassword[]>("/users/students/issue-passwords", { method: "POST", body: { studentIds } });
+
+export interface ApiCredentialsExportRow {
+  fullName: string;
+  login: string;
+  password: string | null;
+  branch: string | null;
+  groups: string;
+}
+
+/** Выгрузка логинов и паролей по тем же фильтрам, что у списка учеников. */
+export const exportStudentCredentials = (query: {
+  branchId?: string;
+  teacherId?: string;
+  courseId?: string;
+  groupId?: string;
+}) => apiFetch<ApiCredentialsExportRow[]>("/users/students/credentials-export", { query });

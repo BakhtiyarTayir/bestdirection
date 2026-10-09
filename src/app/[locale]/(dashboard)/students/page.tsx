@@ -2,7 +2,8 @@ import { requireRole } from "@/lib/auth-guard";
 import { getTranslations } from "next-intl/server";
 import { getStudentsOverview } from "@/lib/api/billing.server";
 import { getBranches } from "@/lib/api/branches.server";
-import { getTeacherOptions } from "@/lib/api/groups.server";
+import { getAllGroups, getTeacherOptions } from "@/lib/api/groups.server";
+import { getCourses } from "@/lib/api/courses.server";
 import {
   Table,
   TableHead,
@@ -12,6 +13,9 @@ import {
 import { IssuePasswordsDialog } from "@/components/issue-passwords-dialog";
 import { BranchFilter } from "@/components/branch-filter";
 import { TeacherFilter } from "@/components/teacher-filter";
+import { CourseFilter } from "@/components/course-filter";
+import { GroupFilter } from "@/components/group-filter";
+import { ExportCredentialsButton } from "@/components/export-credentials-button";
 import { StudentList, type StudentListRow } from "./student-list";
 
 export const dynamic = "force-dynamic";
@@ -30,14 +34,23 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
   const branchId = typeof params.branchId === "string" && params.branchId ? params.branchId : undefined;
   const teacherId = typeof params.teacherId === "string" && params.teacherId ? params.teacherId : undefined;
 
-  const [result, branchesResult, teachersResult] = await Promise.all([
-    getStudentsOverview(branchId, teacherId),
+  const courseId = typeof params.courseId === "string" && params.courseId ? params.courseId : undefined;
+  const groupId = typeof params.groupId === "string" && params.groupId ? params.groupId : undefined;
+
+  const [result, branchesResult, teachersResult, coursesResult, groupsResult] = await Promise.all([
+    getStudentsOverview({ branchId, teacherId, courseId, groupId }),
     getBranches(),
     getTeacherOptions(),
+    getCourses(),
+    getAllGroups(branchId),
   ]);
   const students = (result.success && result.data ? result.data : []) as StudentListRow[];
   const branches = branchesResult.success && branchesResult.data ? branchesResult.data : [];
   const teachers = teachersResult.success && teachersResult.data ? teachersResult.data : [];
+  const courses = coursesResult.success && coursesResult.data ? coursesResult.data : [];
+  // Группы фильтра — выбранного курса (и филиала: его применяет сам запрос)
+  const allGroups = groupsResult.success && groupsResult.data ? groupsResult.data : [];
+  const groups = courseId ? allGroups.filter((group) => group.course.id === courseId) : allGroups;
 
   return (
     <div>
@@ -49,7 +62,10 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <BranchFilter branchId={branchId} branches={branches} namespace="students" />
         <TeacherFilter teacherId={teacherId} teachers={teachers} namespace="students" />
-        <div className="sm:ml-auto">
+        <CourseFilter courseId={courseId} courses={courses} namespace="students" />
+        <GroupFilter groupId={groupId} groups={groups} namespace="students" />
+        <div className="flex flex-wrap gap-2 sm:ml-auto">
+          <ExportCredentialsButton filters={{ branchId, teacherId, courseId, groupId }} />
           <IssuePasswordsDialog branches={branches} defaultBranchId={branchId} />
         </div>
       </div>
