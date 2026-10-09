@@ -3,7 +3,7 @@
 import { Fragment, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { intlLocale } from "@/i18n/config";
-import { useRouter, usePathname } from "@/i18n/navigation";
+import { Link, useRouter, usePathname } from "@/i18n/navigation";
 import {
   Table,
   TableBody,
@@ -37,9 +37,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { formatDate } from "@/lib/format-date";
-import { Pencil, RefreshCw, TriangleAlert, Trash2 } from "lucide-react";
-import type { ApiSalaryGroup, ApiSalaryPayout } from "@/lib/api/salary";
-import { deletePayout, recalculateSalaryMonth, setManualSalaryAmount } from "@/lib/api/salary";
+import { ChevronDown, ChevronRight, Pencil, RefreshCw, TriangleAlert, Trash2 } from "lucide-react";
+import type { ApiSalaryGroup, ApiSalaryGroupStudents, ApiSalaryPayout } from "@/lib/api/salary";
+import { deletePayout, getSalaryGroupStudents, recalculateSalaryMonth, setManualSalaryAmount } from "@/lib/api/salary";
 import { CreatePayoutDialog } from "./create-payout-dialog";
 
 interface TeacherSalaryViewProps {
@@ -77,6 +77,47 @@ export function TeacherSalaryView({
   const { toast } = useToast();
   const [, startTransition] = useTransition();
   const money = new Intl.NumberFormat(intlLocale(locale));
+
+  // Список учеников месяца группы: грузится при первом раскрытии и дальше
+  // берётся из состояния (ключ — группа или курс без группы + месяц). Зарплата
+  // от этих чисел не считается — справочно (решение владельца 2026-10-09)
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [studentsByKey, setStudentsByKey] = useState<Record<string, ApiSalaryGroupStudents>>({});
+  const [studentsErrors, setStudentsErrors] = useState<Record<string, string>>({});
+  const [loadingKeys, setLoadingKeys] = useState<Set<string>>(new Set());
+
+  const toggleStudents = async (key: string, rowMonth: string, groupId: string | null, courseId: string) => {
+    const open = expanded.has(key);
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (open) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+    if (open || studentsByKey[key] || loadingKeys.has(key)) return;
+
+    setLoadingKeys((prev) => new Set(prev).add(key));
+    setStudentsErrors((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+    try {
+      const result = await getSalaryGroupStudents(rowMonth, groupId, courseId);
+      if (result.success) {
+        setStudentsByKey((prev) => ({ ...prev, [key]: result.data }));
+      } else {
+        const message = tErrors.has(result.error) ? tErrors(result.error as never) : result.error;
+        setStudentsErrors((prev) => ({ ...prev, [key]: message }));
+      }
+    } finally {
+      setLoadingKeys((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    }
+  };
 
   const setMonth = (value: string) => {
     startTransition(() => {
@@ -160,8 +201,13 @@ export function TeacherSalaryView({
                         </TableCell>
                       </TableRow>
                     ) : (
-                      group.months.map((row) => (
-                        <TableRow key={row.month}>
+                      group.months.map((row) => {
+                        const studentsKey = `${group.groupId ?? `course:${group.courseId}`}:${row.month}`;
+                        const isOpen = expanded.has(studentsKey);
+                        const students = studentsByKey[studentsKey];
+                        return (
+                        <Fragment key={row.month}>
+                        <TableRow>
                           <TableCell className="whitespace-nowrap">
                             {row.month}
                             {row.locked && (
@@ -170,7 +216,22 @@ export function TeacherSalaryView({
                               </Badge>
                             )}
                           </TableCell>
-                          <TableCell className="whitespace-nowrap text-right">{row.studentsCount}</TableCell>
+                          <TableCell className="whitespace-nowrap text-right">
+                            {row.studentsCount > 0 ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 gap-1 px-2"
+                                aria-expanded={isOpen}
+                                onClick={() => toggleStudents(studentsKey, row.month, group.groupId, group.courseId)}
+                              >
+                                {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                {t("studentsToggle", { count: row.studentsCount })}
+                              </Button>
+                            ) : (
+                              row.studentsCount
+                            )}
+                          </TableCell>
                           <TableCell className="whitespace-nowrap text-right">{money.format(row.base)}</TableCell>
                           <TableCell className="whitespace-nowrap text-right">
                             {row.percentUsed === null ? (
@@ -241,7 +302,22 @@ export function TeacherSalaryView({
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))
+                        {isOpen && (
+                          <TableRow>
+                            <TableCell colSpan={group.groupId !== null ? 7 : 6} className="bg-muted/20 p-3">
+                              {loadingKeys.has(studentsKey) ? (
+                                <p className="text-sm text-muted-foreground">{t("studentsLoading")}</p>
+                              ) : studentsErrors[studentsKey] ? (
+                                <p className="text-sm text-destructive">{studentsErrors[studentsKey]}</p>
+                              ) : students ? (
+                                <GroupStudentsTable data={students} money={money} />
+                              ) : null}
+                            </TableCell>
+                          </TableRow>
+                        )}
+                        </Fragment>
+                        );
+                      })
                     )}
                   </TableBody>
                 </Table>
@@ -318,6 +394,74 @@ export function TeacherSalaryView({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Подтаблица учеников месяца группы: начислено, поступило, осталось. */
+function GroupStudentsTable({ data, money }: { data: ApiSalaryGroupStudents; money: Intl.NumberFormat }) {
+  const t = useTranslations("salaries");
+  const { totals } = data;
+  const percent = totals.charged > 0 ? Math.round((totals.paid / totals.charged) * 100) : null;
+  const mismatch = data.locked && data.frozenBase !== null && data.frozenBase !== totals.charged;
+
+  return (
+    <div className="space-y-2">
+      {/* На узком экране таблица прокручивается внутри блока, а не ломает страницу */}
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t("studentsColName")}</TableHead>
+              <TableHead className="text-right">{t("studentsColCharged")}</TableHead>
+              <TableHead className="text-right">{t("studentsColPaid")}</TableHead>
+              <TableHead className="text-right">{t("studentsColRemaining")}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.students.map((student) => (
+              <TableRow key={student.studentId}>
+                <TableCell className="min-w-[160px]">
+                  <Link href={`/payments/students/${student.studentId}`} className="font-medium hover:underline">
+                    {student.lastName} {student.firstName}
+                  </Link>
+                  {student.unenrolled && (
+                    <Badge variant="outline" className="ml-2 text-xs">
+                      {t("studentUnenrolled")}
+                    </Badge>
+                  )}
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-right">{money.format(student.charged)}</TableCell>
+                <TableCell className="whitespace-nowrap text-right">{money.format(student.paid)}</TableCell>
+                <TableCell
+                  className={`whitespace-nowrap text-right ${
+                    student.remaining > 0 ? "text-red-600" : student.remaining < 0 ? "text-green-600" : ""
+                  }`}
+                >
+                  {student.remaining < 0
+                    ? `${money.format(-student.remaining)} (${t("studentOverpaid")})`
+                    : money.format(student.remaining)}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      <p className="text-sm font-medium">
+        {percent === null
+          ? t("studentsPaidOf", { paid: money.format(totals.paid), charged: money.format(totals.charged) })
+          : t("studentsPaidOfPercent", {
+              paid: money.format(totals.paid),
+              charged: money.format(totals.charged),
+              percent,
+            })}
+      </p>
+      {mismatch && (
+        <div className="flex items-start gap-1 text-xs text-amber-600">
+          <TriangleAlert className="mt-0.5 h-3 w-3 shrink-0" />
+          <span>{t("studentsFrozenMismatch", { base: money.format(data.frozenBase ?? 0) })}</span>
+        </div>
+      )}
     </div>
   );
 }

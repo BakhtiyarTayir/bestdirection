@@ -1993,7 +1993,18 @@
     "recalcTitle": "{month} qayta hisoblansinmi?",
     "recalcDescription": "Baza va o'quvchilar soni o'quvchilarning joriy hisoblariga qarab qayta hisoblanadi. Stavka oy yopilganda qanday qotgan bo'lsa, shunday qoladi — qayta hisoblash uni o'zgartirmaydi.",
     "recalcDone": "Oy qayta hisoblandi",
-    "recalcNoChange": "Qayta hisoblash hech narsani o'zgartirmadi"
+    "recalcNoChange": "Qayta hisoblash hech narsani o'zgartirmadi",
+    "studentsToggle": "O'quvchilar ({count})",
+    "studentsLoading": "Yuklanmoqda…",
+    "studentsColName": "O'quvchi",
+    "studentsColCharged": "Hisoblangan",
+    "studentsColPaid": "Tushgan",
+    "studentsColRemaining": "Qoldi",
+    "studentUnenrolled": "chetlatilgan",
+    "studentOverpaid": "avans",
+    "studentsPaidOf": "{charged} dan {paid} tushdi",
+    "studentsPaidOfPercent": "{charged} dan {paid} tushdi ({percent} %)",
+    "studentsFrozenMismatch": "Ish haqi bazasi {base} deb qotirilgan; o'quvchilar hisoblari shundan keyin o'zgargan — «Qayta hisoblash» tugmasini bosing."
   },
   "finance": {
     "title": "Moliya",

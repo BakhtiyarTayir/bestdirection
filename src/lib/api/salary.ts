@@ -90,6 +90,26 @@ export interface ApiTeacherSalary {
   payouts: ApiSalaryPayout[];
 }
 
+export interface ApiSalaryGroupStudent {
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  unenrolled: boolean;
+  charged: number;
+  paid: number;
+  // charged - paid; отрицательное — переплата за месяц
+  remaining: number;
+}
+
+export interface ApiSalaryGroupStudents {
+  month: string;
+  locked: boolean;
+  // База из строки зарплаты закрытого месяца; null у открытого
+  frozenBase: number | null;
+  totals: { charged: number; paid: number; remaining: number };
+  students: ApiSalaryGroupStudent[];
+}
+
 export interface ApiPayoutsPage {
   payouts: {
     id: string;
@@ -127,3 +147,9 @@ export const createPayout = (body: {
 }) => apiFetch<{ id: string }>("/salary/payouts", { method: "POST", body });
 
 export const deletePayout = (id: string) => apiFetch<{ ok: true }>(`/salary/payouts/${id}`, { method: "DELETE" });
+
+export const getSalaryGroupStudents = (month: string, groupId: string | null, courseId: string) =>
+  apiFetch<ApiSalaryGroupStudents>("/salary/group-students", {
+    // Курс без группы: groupId не передаётся, единицу определяет курс
+    query: groupId ? { month, groupId } : { month, courseId },
+  });

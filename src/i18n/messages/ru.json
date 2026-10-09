@@ -1993,7 +1993,18 @@
     "recalcTitle": "Пересчитать {month}?",
     "recalcDescription": "База и число учеников будут пересчитаны по текущим начислениям учеников. Ставка останется той, что была зафиксирована при закрытии месяца — пересчёт её не меняет.",
     "recalcDone": "Месяц пересчитан",
-    "recalcNoChange": "Пересчёт ничего не изменил"
+    "recalcNoChange": "Пересчёт ничего не изменил",
+    "studentsToggle": "Ученики ({count})",
+    "studentsLoading": "Загрузка…",
+    "studentsColName": "Ученик",
+    "studentsColCharged": "Начислено",
+    "studentsColPaid": "Поступило",
+    "studentsColRemaining": "Осталось",
+    "studentUnenrolled": "отчислен",
+    "studentOverpaid": "аванс",
+    "studentsPaidOf": "Поступило {paid} из {charged}",
+    "studentsPaidOfPercent": "Поступило {paid} из {charged} ({percent} %)",
+    "studentsFrozenMismatch": "База зарплаты зафиксирована как {base}; начисления учеников с тех пор изменились — нажмите «Пересчитать»."
   },
   "finance": {
     "title": "Финансы",
