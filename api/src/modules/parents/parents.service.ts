@@ -181,6 +181,8 @@ export class ParentsService {
           data: {
             login,
             passwordHash,
+            // Родитель — не ученик: обратимого пароля не храним
+            passwordEnc: null,
             firstName: data.firstName,
             lastName: data.lastName,
             phone: data.phone,

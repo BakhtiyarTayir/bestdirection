@@ -8,6 +8,7 @@ import {
   RESET_CODE_TTL_MS,
 } from "../../common/auth/password-reset";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { sealPassword } from "../../common/security/password-vault";
 import { SessionUserCache } from "../../common/auth/session-user.cache";
 import { SessionsService } from "../../common/auth/sessions.service";
 import { TelegramNotifyService } from "../../common/telegram/telegram-notify.service";
@@ -174,7 +175,7 @@ export class AuthService {
     const login = data.login.trim().toLowerCase();
     const user = await this.prisma.user.findUnique({
       where: { login },
-      select: { id: true, isActive: true },
+      select: { id: true, isActive: true, role: true },
     });
     // Код привязан к userId, поэтому неизвестный логин отвечает как неверный код
     if (!user || !user.isActive) throw new BadRequestException("invalidCode");
@@ -195,7 +196,12 @@ export class AuthService {
     await this.prisma.passwordResetRequest.delete({ where: { id: request.id } });
 
     const passwordHash = await bcrypt.hash(data.newPassword, BCRYPT_ROUNDS);
-    await this.prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+    // Пароль ученика запоминаем обратимо для администратора (решение владельца,
+    // PLAN-STUDENT-PASSWORDS-2026-10-09.md); у остальных ролей passwordEnc всегда null
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash, passwordEnc: user.role === "STUDENT" ? sealPassword(data.newPassword) : null },
+    });
 
     // Смена пароля обрывает все сессии: если доступ был у чужого, он потерян
     await this.sessions.destroyAllFor(user.id);
@@ -208,6 +214,8 @@ export class AuthService {
 
   private async startSession(userId: string, context: { userAgent?: string; ip?: string }) {
     const token = await this.sessions.create(userId, context);
+    // Для «ни разу не входил» в выдаче паролей ученикам
+    await this.prisma.user.update({ where: { id: userId }, data: { lastLoginAt: new Date() } });
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
       select: { id: true, role: true, login: true, firstName: true, lastName: true },

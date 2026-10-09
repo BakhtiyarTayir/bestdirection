@@ -115,6 +115,19 @@ export const changePasswordSchema = z.object({
   newPassword: passwordSchema,
 });
 
+// Пароль ученика от администратора: пусто — сгенерировать на сервере
+export const setStudentPasswordSchema = z.object({
+  password: z.union([z.literal(""), passwordSchema]).optional(),
+});
+
+export const neverLoggedInQuerySchema = z.object({
+  branchId: z.string().max(40).optional(),
+});
+
+export const issuePasswordsSchema = z.object({
+  studentIds: z.array(z.string().min(1).max(40)).min(1).max(1000),
+});
+
 export const homeworkStatisticsQuerySchema = z.object({
   courseId: z.string().max(40).optional(),
   homeworkId: z.string().max(40).optional(),
@@ -134,3 +147,6 @@ export class HomeworkStatisticsQueryDto extends createZodDto(homeworkStatisticsQ
 export class LoginSuggestionDto extends createZodDto(loginSuggestionSchema) {}
 export class LoginAvailableQueryDto extends createZodDto(loginAvailableQuerySchema) {}
 export class NamesakesQueryDto extends createZodDto(namesakesQuerySchema) {}
+export class SetStudentPasswordDto extends createZodDto(setStudentPasswordSchema) {}
+export class NeverLoggedInQueryDto extends createZodDto(neverLoggedInQuerySchema) {}
+export class IssuePasswordsDto extends createZodDto(issuePasswordsSchema) {}

@@ -14,6 +14,7 @@ import type { SessionUser } from "../../common/auth/session-user";
 import { toNoonUtc } from "../../common/date-only";
 import { accessibleWhere, type AppAbility } from "../../common/policies/abilities";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { generatePassword, openPassword, sealPassword } from "../../common/security/password-vault";
 import { withHasTelegram } from "../../common/telegram/with-has-telegram";
 import { BillingLedgerService } from "../billing/billing-ledger.service";
 import { SalaryService } from "../salary/salary.service";
@@ -131,6 +132,8 @@ export class UsersService {
           data: {
             login: data.login,
             passwordHash,
+            // Обратимо только у ученика (решение владельца, PLAN-STUDENT-PASSWORDS-2026-10-09.md)
+            passwordEnc: data.role === "STUDENT" ? sealPassword(data.password) : null,
             firstName: data.firstName,
             lastName: data.lastName,
             phone: data.phone,
@@ -318,6 +321,19 @@ export class UsersService {
     // разрыв всех текущих сессий, иначе чужой доступ пережил бы смену пароля
     const passwordHash = data.password ? await bcrypt.hash(data.password, 10) : undefined;
 
+    // Обратимый пароль только у учеников: новый пароль ученика запоминаем,
+    // уход с роли STUDENT обнуляет. Ученик, которому роль сменили на STUDENT
+    // без пароля, остаётся с «неизвестным» паролем (null).
+    const finalRole = data.role ?? existing.role;
+    const passwordEncChange: { passwordEnc?: string | null } =
+      finalRole !== "STUDENT"
+        ? existing.role === "STUDENT"
+          ? { passwordEnc: null }
+          : {}
+        : data.password
+          ? { passwordEnc: sealPassword(data.password) }
+          : {};
+
     // Ставка преподавателя — вход расчёта зарплаты (как цена курса в
     // биллинге). Меняем только вперёд: закрытые месяцы фиксируем ДО записи,
     // иначе ещё не открытый месяц заморозился бы уже по новой ставке
@@ -332,6 +348,7 @@ export class UsersService {
       data: {
         ...(data.login && { login: data.login }),
         ...(passwordHash && { passwordHash }),
+        ...passwordEncChange,
         ...(data.firstName !== undefined && { firstName: data.firstName }),
         ...(data.lastName !== undefined && { lastName: data.lastName }),
         ...(data.phone !== undefined && { phone: data.phone }),
@@ -675,7 +692,7 @@ export class UsersService {
   async changePassword(userId: string, data: { currentPassword: string; newPassword: string }) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { passwordHash: true },
+      select: { passwordHash: true, role: true },
     });
     if (!user) throw new NotFoundException("userNotFound");
 
@@ -687,8 +704,140 @@ export class UsersService {
 
     await this.prisma.user.update({
       where: { id: userId },
-      data: { passwordHash: await bcrypt.hash(data.newPassword, 10) },
+      data: {
+        passwordHash: await bcrypt.hash(data.newPassword, 10),
+        // Сменённый учеником пароль тоже запоминаем (решение владельца)
+        passwordEnc: user.role === "STUDENT" ? sealPassword(data.newPassword) : null,
+      },
     });
+  }
+
+  // ─── Доступ учеников (PLAN-STUDENT-PASSWORDS-2026-10-09.md) ──────────────
+  // Только администратор (политика на маршрутах). Пароль в аудит не пишем.
+
+  private async studentOrThrow(id: string) {
+    const student = await this.prisma.user.findFirst({
+      where: { id, role: "STUDENT" },
+      select: { id: true, login: true, passwordEnc: true },
+    });
+    // Не ученик — как несуществующий: пароли других ролей не хранятся
+    if (!student) throw new NotFoundException("userNotFound");
+    return student;
+  }
+
+  async credentials(id: string, actor: SessionUser) {
+    const student = await this.studentOrThrow(id);
+    const password = openPassword(student.passwordEnc);
+
+    await this.audit.record({
+      userId: actor.id,
+      entityType: "StudentCredentials",
+      entityId: id,
+      action: "CREATE",
+      metadata: { viewedPassword: true },
+    });
+    return { login: student.login, password, state: password === null ? ("unknown" as const) : ("known" as const) };
+  }
+
+  async setStudentPassword(id: string, requested: string | undefined, actor: SessionUser) {
+    const student = await this.studentOrThrow(id);
+    const password = requested || generatePassword();
+    // Сессии ученика не рвём: он мог уже работать на телефоне (план, раздел 3)
+    await this.prisma.user.update({
+      where: { id },
+      data: { passwordHash: await bcrypt.hash(password, 10), passwordEnc: sealPassword(password) },
+    });
+    this.sessionUsers.forget(id);
+
+    await this.audit.record({
+      userId: actor.id,
+      entityType: "StudentCredentials",
+      entityId: id,
+      action: "UPDATE",
+      metadata: { passwordSet: true, generated: !requested },
+    });
+    return { login: student.login, password };
+  }
+
+  /**
+   * «Ни разу не входил»: нет lastLoginAt и нет ни одной сессии. И пароль
+   * администратору ещё не известен (passwordEnc null): кому он уже выдан или
+   * задан, тому массовая выдача его не меняет — переданный ученику пароль
+   * перестал бы работать.
+   */
+  private neverLoggedInWhere(branchId?: string): Prisma.UserWhereInput {
+    return {
+      role: "STUDENT",
+      isActive: true,
+      lastLoginAt: null,
+      passwordEnc: null,
+      sessions: { none: {} },
+      ...(branchId && { branchId }),
+    };
+  }
+
+  async neverLoggedInStudents(branchId?: string) {
+    const students = await this.prisma.user.findMany({
+      where: this.neverLoggedInWhere(branchId),
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        login: true,
+        branch: { select: { id: true, name: true } },
+      },
+    });
+    return { count: students.length, students };
+  }
+
+  async issuePasswords(studentIds: string[], actor: SessionUser) {
+    // Повторная проверка на сервере: присланные id могут устареть или быть чужими
+    const eligible = await this.prisma.user.findMany({
+      where: { ...this.neverLoggedInWhere(), id: { in: [...new Set(studentIds)] } },
+      select: { id: true, firstName: true, lastName: true, login: true, branch: { select: { name: true } } },
+    });
+
+    // Каждому свой пароль; хэши считаем до транзакции — bcrypt долгий
+    const prepared = await Promise.all(
+      eligible.map(async (student) => {
+        const password = generatePassword();
+        return { student, password, hash: await bcrypt.hash(password, 10) };
+      })
+    );
+
+    const issued = await this.prisma.$transaction(async (tx) => {
+      const done: typeof prepared = [];
+      for (const item of prepared) {
+        // Условие «не входил» повторяется в самой записи: вошедший между
+        // выборкой и записью не потеряет свой пароль
+        const { count } = await tx.user.updateMany({
+          where: { ...this.neverLoggedInWhere(), id: item.student.id },
+          data: { passwordHash: item.hash, passwordEnc: sealPassword(item.password) },
+        });
+        if (count === 0) continue;
+        await this.audit.record(
+          {
+            userId: actor.id,
+            entityType: "StudentCredentials",
+            entityId: item.student.id,
+            action: "UPDATE",
+            metadata: { passwordSet: true, generated: true, bulk: true },
+          },
+          tx
+        );
+        done.push(item);
+      }
+      return done;
+    }, { timeout: 60_000 });
+
+    for (const { student } of issued) this.sessionUsers.forget(student.id);
+    return issued.map(({ student, password }) => ({
+      fullName: `${student.lastName} ${student.firstName}`,
+      login: student.login,
+      password,
+      branch: student.branch?.name ?? null,
+    }));
   }
 
   /** Уникальный индекс про deletedAt не знает: логин держит занятым любая строка, в том числе невидимая обычному клиенту. */

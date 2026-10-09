@@ -158,6 +158,14 @@ model User {
   // и «ivanov» — разные люди (регистр приводит DTO, не сервис).
   login        String    @unique
   passwordHash String?
+  // Только у учеников: пароль, зашифрованный обратимо (AES-256-GCM,
+  // api/src/common/security/password-vault.ts), чтобы администратор мог
+  // передать доступ. У остальных ролей всегда null. Наружу не отдаётся нигде,
+  // кроме GET /users/:id/credentials.
+  passwordEnc  String?
+  // Последний успешный вход (пароль или Telegram); null — не входил или вход
+  // был до появления поля и сессий уже нет.
+  lastLoginAt  DateTime?
   firstName    String
   lastName     String
   phone        String?

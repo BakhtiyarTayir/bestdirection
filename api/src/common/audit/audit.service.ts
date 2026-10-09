@@ -58,12 +58,16 @@ export class AuditService {
   }
 }
 
+// Секреты в журнал не попадают ни в каком виде: ни хэш, ни зашифрованный пароль
+const NEVER_AUDITED_KEYS = new Set(["passwordHash", "passwordEnc"]);
+
 export function computeChanges(
   oldData: Record<string, unknown>,
   newData: Record<string, unknown>
 ): Record<string, { old: unknown; new: unknown }> | undefined {
   const changes: Record<string, { old: unknown; new: unknown }> = {};
   for (const key of Object.keys(newData)) {
+    if (NEVER_AUDITED_KEYS.has(key)) continue;
     if (newData[key] !== undefined && oldData[key] !== newData[key]) {
       changes[key] = { old: oldData[key], new: newData[key] };
     }

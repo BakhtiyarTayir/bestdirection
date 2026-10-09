@@ -6,9 +6,12 @@ import { CheckPolicies } from "../../common/policies/check-policies.decorator";
 import {
   CreateUserDto,
   HomeworkStatisticsQueryDto,
+  IssuePasswordsDto,
   LoginAvailableQueryDto,
   LoginSuggestionDto,
   NamesakesQueryDto,
+  NeverLoggedInQueryDto,
+  SetStudentPasswordDto,
   UpdateUserDto,
   UsersQueryDto,
 } from "./dto/user.dto";
@@ -91,6 +94,32 @@ export class UsersController {
   @Get("statistics/homework")
   homeworkStatistics(@Query() query: HomeworkStatisticsQueryDto, @CurrentUser() user: SessionUser) {
     return this.statistics.build(query, user);
+  }
+
+  // Выдача доступов ученикам (PLAN-STUDENT-PASSWORDS-2026-10-09.md): только
+  // администратор. Статические пути «students/...» — до :id-маршрутов.
+  @CheckPolicies((ability) => ability.can("manage", "User"))
+  @Get("students/never-logged-in")
+  neverLoggedIn(@Query() query: NeverLoggedInQueryDto) {
+    return this.users.neverLoggedInStudents(query.branchId);
+  }
+
+  @CheckPolicies((ability) => ability.can("manage", "User"))
+  @Post("students/issue-passwords")
+  issuePasswords(@Body() body: IssuePasswordsDto, @CurrentUser() actor: SessionUser) {
+    return this.users.issuePasswords(body.studentIds, actor);
+  }
+
+  @CheckPolicies((ability) => ability.can("manage", "User"))
+  @Get(":id/credentials")
+  credentials(@Param("id") id: string, @CurrentUser() actor: SessionUser) {
+    return this.users.credentials(id, actor);
+  }
+
+  @CheckPolicies((ability) => ability.can("manage", "User"))
+  @Post(":id/password")
+  setStudentPassword(@Param("id") id: string, @Body() body: SetStudentPasswordDto, @CurrentUser() actor: SessionUser) {
+    return this.users.setStudentPassword(id, body.password, actor);
   }
 
   @CheckPolicies((ability) => ability.can("read", "User"))
