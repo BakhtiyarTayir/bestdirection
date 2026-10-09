@@ -912,14 +912,20 @@ export class SalaryService {
   }
 
   /**
-   * Перезаписывает закрытый месяц по актуальной базе (число учеников и их
-   * начисления могли измениться — например, пересчётом billing.recalculateMonth).
+   * Перезаписывает закрытый месяц ГРУППЫ (или курса без группы) по актуальной
+   * базе и журналу — сразу все строки месяца: владельцу и каждому, кто вёл.
+   *
+   * Раньше пересчитывалась одна строка того, на кого нажали. Замена,
+   * отмеченная в журнале после закрытия месяца, урезала долю владельца при
+   * его пересчёте, а строки у заменяющего не было и завести её было нечем
+   * (accrualNotFound) — часть суммы группы не доставалась никому. Месяц
+   * группы делится как единое целое, поэтому и пересчитывается целиком.
    *
    * Ставка, по которой считали (percentUsed), берётся ЗАФИКСИРОВАННАЯ, а не
    * текущая — ровно как priceUsed в billing.service.ts. Пересчёт исправляет
-   * базу, но не переписывает ставку задним числом: иначе кнопка стала бы
-   * обходом самой заморозки. Единственное исключение — месяц, замороженный
-   * вовсе без ставки (см. ниже).
+   * базу и раскладку, но не переписывает ставку задним числом: иначе кнопка
+   * стала бы обходом самой заморозки. Исключение — месяц, замороженный вовсе
+   * без ставки (см. ниже). Ручная сумма (manualAmount) не трогается.
    */
   async recalculateMonth(teacherId: string, query: RecalcQueryDto, actor: SessionUser) {
     const { month, groupId, courseId } = query;
@@ -934,10 +940,11 @@ export class SalaryService {
     const unit = units[0];
     if (!unit) throw new NotFoundException("unitNotFound");
 
-    const stored = await this.prisma.teacherSalaryAccrual.findFirst({
-      where: { teacherId: unit.teacherId, courseId: unit.courseId, groupId: unit.groupId, month },
+    // Все строки месяца этой группы — их и пересчитываем
+    const monthRows = await this.prisma.teacherSalaryAccrual.findMany({
+      where: { courseId: unit.courseId, groupId: unit.groupId, month },
     });
-    if (!stored) throw new NotFoundException("accrualNotFound");
+    if (monthRows.length === 0) throw new NotFoundException("accrualNotFound");
 
     // Биллинг нынешних учеников — до чтения снимка, как и в unitSchedule
     const enrollments = await this.loadUnitEnrollments(unit);
@@ -948,21 +955,23 @@ export class SalaryService {
     const { base, studentsCount } = (await this.snapshotBase(unit, month)).get(month) ?? { base: 0, studentsCount: 0 };
 
     // Ведущий группы в том месяце — не обязательно нынешний: педагога
-    // могли сменить. Ему засчитываются занятия без явного ведущего
-    const ownerRow = await this.prisma.teacherSalaryAccrual.findFirst({
-      where: { courseId: unit.courseId, groupId: unit.groupId, month, isOwner: true },
-      select: { teacherId: true },
-    });
-    // Своя пометка важнее найденной: после удаления группы её строки
-    // переходят к курсу без группы (SetNull), и строк-владельцев за месяц
-    // может оказаться две
-    const monthOwnerId = stored.isOwner ? unit.teacherId : (ownerRow?.teacherId ?? unit.ownerTeacherId);
+    // могли сменить. Ему засчитываются занятия без явного ведущего. Если
+    // строк-владельцев несколько (после удаления группы её строки переходят
+    // к курсу без группы через SetNull), своя пометка того, на кого нажали,
+    // важнее первой найденной
+    const ownerRows = monthRows.filter((row) => row.isOwner);
+    const monthOwnerId =
+      ownerRows.find((row) => row.teacherId === unit.teacherId)?.teacherId ??
+      ownerRows[0]?.teacherId ??
+      unit.ownerTeacherId;
 
-    // Ставка — зафиксированная (как priceUsed в billing.service.ts): пересчёт
-    // исправляет базу, но не переписывает ставку задним числом. Исключение —
-    // месяц, замороженный вовсе без ставки: её забыли задать, и без этого
-    // исправить такой месяц можно было бы только ручной суммой
-    let percentUsed = stored.percentUsed;
+    // Ставка — зафиксированная. Исключение — месяц, замороженный вовсе без
+    // ставки: её забыли задать, и без этого исправить такой месяц можно было
+    // бы только ручной суммой
+    let percentUsed =
+      ownerRows.find((row) => row.teacherId === monthOwnerId)?.percentUsed ??
+      monthRows.find((row) => row.percentUsed !== null)?.percentUsed ??
+      null;
     if (percentUsed === null) {
       const owner = await this.prismaService.prismaUnscoped.user.findUnique({
         where: { id: monthOwnerId },
@@ -975,70 +984,122 @@ export class SalaryService {
     }
 
     // Сумма группы целиком по формуле, а раскладка по занятиям — по СВЕЖИМ
-    // данным журнала: замена, отмеченная задним числом после закрытия
-    // месяца, сама зарплату не двигает — для этого и есть кнопка пересчёта
-    // (план, 4.8.2)
+    // данным журнала (план, 4.8.2)
     const potAmount = computeFormulaAmount(base, percentUsed);
-    let nextAmount = potAmount;
-    let lessonsPlanned: number | null = null;
-    let lessonsTaught: number | null = null;
+    const marks =
+      unit.groupId && unit.scheduleDays.length > 0
+        ? (await this.loadLessonMarks(unit.groupId, unit.scheduleDays, monthOwnerId, [month])).get(month)
+        : undefined;
+    const split = marks && !marks.fallback ? marks : null;
 
-    if (unit.groupId && unit.scheduleDays.length > 0) {
-      const marksByMonth = await this.loadLessonMarks(unit.groupId, unit.scheduleDays, monthOwnerId, [month]);
-      const marks = marksByMonth.get(month);
-      if (marks && !marks.fallback) {
-        const share = splitAccrualByTeacher(potAmount, marks.lessonsPlanned, marks.taughtByTeacher).find(
-          (item) => item.teacherId === unit.teacherId
-        );
-        lessonsPlanned = marks.lessonsPlanned;
-        lessonsTaught = share?.lessonsTaught ?? 0;
-        nextAmount = share?.amount ?? 0;
-      } else if (unit.teacherId !== monthOwnerId) {
-        // Запасной путь пересчитан для строки замены — оснований для неё
-        // больше нет (отметки исчезли или расписание сняли): строка
-        // обнуляется, чужая сумма ей не переходит
-        nextAmount = 0;
+    // Кому сколько положено в этом месяце. Запасной путь — всё владельцу;
+    // раскладка — по проведённым занятиям, владелец без занятий получает
+    // строку с нулём, как и при заморозке (freezeGroupClosedMonths)
+    const targets = new Map<string, { amount: number; lessonsTaught: number | null }>();
+    if (split) {
+      for (const share of splitAccrualByTeacher(potAmount, split.lessonsPlanned, split.taughtByTeacher)) {
+        targets.set(share.teacherId, { amount: share.amount, lessonsTaught: share.lessonsTaught });
       }
-    } else if (unit.teacherId !== monthOwnerId) {
-      nextAmount = 0;
+      if (!targets.has(monthOwnerId)) targets.set(monthOwnerId, { amount: 0, lessonsTaught: 0 });
+    } else {
+      targets.set(monthOwnerId, { amount: potAmount, lessonsTaught: null });
     }
+    const lessonsPlanned = split ? split.lessonsPlanned : null;
+    // Строка, которой больше не положено ничего (замены не было или отметки
+    // сняли), обнуляется, но остаётся — она уже могла попасть в выплату
+    const nothing = { amount: 0, lessonsTaught: split ? 0 : null };
 
-    const changed =
-      stored.percentUsed !== percentUsed ||
-      stored.base !== base ||
-      stored.studentsCount !== studentsCount ||
-      stored.amount !== nextAmount ||
-      stored.lessonsPlanned !== lessonsPlanned ||
-      stored.lessonsTaught !== lessonsTaught;
+    const updates = monthRows
+      .map((row) => {
+        const target = targets.get(row.teacherId) ?? nothing;
+        const changed =
+          row.percentUsed !== percentUsed ||
+          row.base !== base ||
+          row.studentsCount !== studentsCount ||
+          row.amount !== target.amount ||
+          row.lessonsPlanned !== lessonsPlanned ||
+          row.lessonsTaught !== target.lessonsTaught;
+        return { row, target, changed };
+      })
+      .filter((item) => item.changed);
 
-    if (!changed) return { amount: stored.manualAmount ?? stored.amount, changed: false };
+    const existingTeachers = new Set(monthRows.map((row) => row.teacherId));
+    const branchId = monthRows.find((row) => row.branchId !== null)?.branchId ?? unit.branchId;
+    const creates = [...targets.entries()]
+      .filter(([rowTeacherId]) => !existingTeachers.has(rowTeacherId))
+      .map(([rowTeacherId, target]) => ({ teacherId: rowTeacherId, ...target }));
 
+    const ownRow = monthRows.find((row) => row.teacherId === unit.teacherId);
+    const ownTarget = targets.get(unit.teacherId) ?? nothing;
+    const ownAmount = ownRow?.manualAmount ?? ownTarget.amount;
+
+    if (updates.length === 0 && creates.length === 0) return { amount: ownAmount, changed: false };
+
+    const now = new Date();
     await this.prisma.$transaction(async (tx) => {
-      await this.audit.record(
-        {
-          userId: actor.id,
-          entityType: "TeacherSalaryAccrual",
-          entityId: stored.id,
-          action: "UPDATE",
-          changes: {
-            percentUsed: { old: stored.percentUsed, new: percentUsed },
-            base: { old: stored.base, new: base },
-            studentsCount: { old: stored.studentsCount, new: studentsCount },
-            amount: { old: stored.amount, new: nextAmount },
-            lessonsPlanned: { old: stored.lessonsPlanned, new: lessonsPlanned },
-            lessonsTaught: { old: stored.lessonsTaught, new: lessonsTaught },
+      for (const { row, target } of updates) {
+        await this.audit.record(
+          {
+            userId: actor.id,
+            entityType: "TeacherSalaryAccrual",
+            entityId: row.id,
+            action: "UPDATE",
+            changes: {
+              percentUsed: { old: row.percentUsed, new: percentUsed },
+              base: { old: row.base, new: base },
+              studentsCount: { old: row.studentsCount, new: studentsCount },
+              amount: { old: row.amount, new: target.amount },
+              lessonsPlanned: { old: row.lessonsPlanned, new: lessonsPlanned },
+              lessonsTaught: { old: row.lessonsTaught, new: target.lessonsTaught },
+            },
+            metadata: { recalculated: true, teacherId: row.teacherId, month, groupId: unit.groupId, courseId: unit.courseId },
           },
-          metadata: { recalculated: true, teacherId, month, groupId: unit.groupId, courseId: unit.courseId },
-        },
-        tx
-      );
+          tx
+        );
+        await tx.teacherSalaryAccrual.update({
+          where: { id: row.id },
+          data: { percentUsed, base, studentsCount, amount: target.amount, lessonsPlanned, lessonsTaught: target.lessonsTaught, lockedAt: now },
+        });
+      }
 
-      await tx.teacherSalaryAccrual.update({
-        where: { id: stored.id },
-        data: { percentUsed, base, studentsCount, amount: nextAmount, lessonsPlanned, lessonsTaught, lockedAt: new Date() },
-      });
+      for (const create of creates) {
+        const created = await tx.teacherSalaryAccrual.create({
+          data: {
+            teacherId: create.teacherId,
+            courseId: unit.courseId,
+            groupId: unit.groupId,
+            branchId,
+            month,
+            base,
+            studentsCount,
+            percentUsed,
+            amount: create.amount,
+            isOwner: create.teacherId === monthOwnerId,
+            lessonsPlanned,
+            lessonsTaught: create.lessonsTaught,
+            lockedAt: now,
+          },
+        });
+        await this.audit.record(
+          {
+            userId: actor.id,
+            entityType: "TeacherSalaryAccrual",
+            entityId: created.id,
+            action: "CREATE",
+            metadata: {
+              recalculated: true,
+              teacherId: create.teacherId,
+              month,
+              groupId: unit.groupId,
+              courseId: unit.courseId,
+              amount: create.amount,
+            },
+          },
+          tx
+        );
+      }
     });
 
-    return { amount: stored.manualAmount ?? nextAmount, changed: true };
+    return { amount: ownAmount, changed: true };
   }
 }

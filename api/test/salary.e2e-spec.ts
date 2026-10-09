@@ -441,6 +441,40 @@ describe("модуль salary", () => {
       const pricePerLesson = Math.round(potAmount / mainAfter.lessonsPlanned!);
       expect(potAmount - mainAfter.amount).toBe(pricePerLesson);
     });
+
+    // Правка 2026-10-09: замену отметили уже после закрытия месяца — строки у
+    // заменяющего нет. Раньше пересчёт владельца урезал его долю, а строку
+    // заменяющему завести было нечем: часть суммы группы не получал никто
+    it("замена, отмеченная после закрытия, — пересчёт заводит строку заменяющему, сумма группы сходится", async () => {
+      // Месяц замёрз до отметки замены: строки заменяющего нет
+      await testDb().teacherSalaryAccrual.deleteMany({ where: { groupId, month: prevMonth, teacherId: ids.otherTeacher } });
+      await testDb().attendanceSession.updateMany({
+        where: { groupId, date: new Date(`${lessonDates.at(-1)}T00:00:00.000Z`) },
+        data: { teacherStatus: "PRESENT", teacherId: ids.otherTeacher },
+      });
+
+      // Пересчёт по владельцу пересчитывает месяц группы целиком
+      const recalc = await send("post", `/salary/${ids.TEACHER}/recalc?month=${prevMonth}&groupId=${groupId}`, "ADMIN");
+      expect(recalc.status).toBe(201);
+      expect(recalc.body.changed).toBe(true);
+
+      const rows = await testDb().teacherSalaryAccrual.findMany({ where: { groupId, month: prevMonth } });
+      expect(rows).toHaveLength(2);
+      const main = rows.find((r) => r.teacherId === ids.TEACHER)!;
+      const sub = rows.find((r) => r.teacherId === ids.otherTeacher)!;
+      expect(main.isOwner).toBe(true);
+      expect(sub.isOwner).toBe(false);
+      expect(sub.lessonsTaught).toBe(1);
+      expect(sub.percentUsed).toBe(4000);
+      expect(sub.amount).toBeGreaterThan(0);
+      expect(main.amount + sub.amount).toBe(Math.round((main.base * 4000) / 10_000));
+
+      // Повторный пересчёт ничего не меняет
+      const again = await send("post", `/salary/${ids.otherTeacher}/recalc?month=${prevMonth}&groupId=${groupId}`, "ADMIN");
+      expect(again.status).toBe(201);
+      expect(again.body.changed).toBe(false);
+      expect(again.body.amount).toBe(sub.amount);
+    });
   });
 
   // Правка «сводка зарплат задваивает базу при замене»: у группы с заменой
