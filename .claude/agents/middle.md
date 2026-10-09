@@ -16,7 +16,7 @@ tools: Bash, Read, Edit, Write, Grep, Glob
 
 ## Проверки перед сдачей (обязательно)
 
-1. `cd api && npx tsc --noEmit -p tsconfig.json`
+1. `cd api && npx tsc --noEmit -p tsconfig.json` и `cd api && npx eslint .` (CI падает на неиспользуемых импортах в api)
 2. `cd api && npm test` (Testcontainers Postgres, ~3 минуты) — всё зелёное.
 3. Если трогал web: `npx tsc --noEmit -p tsconfig.json` и `npx eslint <изменённые файлы>` в корне.
 
