@@ -15,7 +15,7 @@ export default async function NewGroupPage({ params }: NewGroupPageProps) {
   const t = await getTranslations("groups");
   const { courseSlug } = await params;
   const courseId = await resolveCourseSlug(courseSlug);
-  await requireAuth();
+  const session = await requireAuth();
 
   const [teacherResult, branchesResult] = await Promise.all([getTeacherOptions(), getBranches()]);
   const teachers = teacherResult.success ? teacherResult.data : [];
@@ -27,7 +27,7 @@ export default async function NewGroupPage({ params }: NewGroupPageProps) {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">{t("createGroup")}</h1>
-      <GroupForm courseId={courseId} courseSlug={courseSlug} teachers={teachers} branches={branches} />
+      <GroupForm courseId={courseId} courseSlug={courseSlug} teachers={teachers} branches={branches} canManageMoney={session.user.role === "ADMIN"} />
     </div>
   );
 }

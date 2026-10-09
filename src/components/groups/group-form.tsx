@@ -37,6 +37,12 @@ interface GroupFormProps {
   teachers?: { id: string; firstName: string; lastName: string }[];
   /** Филиалы — справочник; поле обязательно (решение владельца 2026-09-20) */
   branches: { id: string; name: string }[];
+  /**
+   * Ставка зарплаты — только у администратора (решение владельца
+   * 2026-10-09): сервер отклоняет её изменение преподавателем, поэтому ему
+   * поле не показывается и не отправляется. Дату окончания видят все
+   */
+  canManageMoney: boolean;
 }
 
 /** ISO: 1 = понедельник … 7 = воскресенье */
@@ -50,7 +56,7 @@ const WEEKDAYS = [
   { iso: 7, key: "sun" },
 ] as const;
 
-export function GroupForm({ courseId, courseSlug, group, teachers = [], branches }: GroupFormProps) {
+export function GroupForm({ courseId, courseSlug, group, teachers = [], branches, canManageMoney }: GroupFormProps) {
   const t = useTranslations("groups");
   const tWeekdays = useTranslations("weekdays");
   const tCommon = useTranslations("common");
@@ -92,13 +98,18 @@ export function GroupForm({ courseId, courseSlug, group, teachers = [], branches
       setError("price", { type: "required" });
       return;
     }
+    const payload = canManageMoney ? data : { ...data, salaryPercentBp: undefined };
     startTransition(async () => {
       const result = isEdit
-        ? await updateGroup(group.id, data)
-        : await createGroup(courseId, data);
+        ? await updateGroup(group.id, payload)
+        : await createGroup(courseId, payload);
 
       if (!result.success) {
-        toast({ title: tErrors("error"), description: result.error, variant: "destructive" });
+        toast({
+          title: tErrors("error"),
+          description: tErrors.has(result.error) ? tErrors(result.error as never) : result.error,
+          variant: "destructive",
+        });
         return;
       }
 
@@ -238,6 +249,7 @@ export function GroupForm({ courseId, courseSlug, group, teachers = [], branches
         <p className="text-sm text-muted-foreground">{t("priceHint")}</p>
       </div>
 
+      {canManageMoney && (
       <div className="space-y-2">
         <Label htmlFor="salaryPercentBp">{t("salaryPercent")}</Label>
         {/* Поле хранит базисные пункты (validators/group.ts), но вводится и
@@ -278,6 +290,7 @@ export function GroupForm({ courseId, courseSlug, group, teachers = [], branches
         )}
         <p className="text-sm text-muted-foreground">{t("salaryPercentHint")}</p>
       </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">

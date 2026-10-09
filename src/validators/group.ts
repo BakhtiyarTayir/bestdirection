@@ -55,8 +55,10 @@ export const createGroupSchema = z.object({
   // Ставка зарплаты группы в базисных пунктах (4000 = 40.00%). Важнее ставки
   // преподавателя (план зарплат, 5.2). Пустая строка — своей ставки нет, ноль
   // допускаем: 0% — осознанное решение админа, а не то же самое, что «пусто».
+  // "" — первым: z.coerce.number() превращает пустую строку в 0, и пустое
+  // поле уходило на сервер как 0 %
   salaryPercentBp: z
-    .union([z.coerce.number().int().min(0, "percentPositive").max(10_000, "percentTooLarge"), z.literal("")])
+    .union([z.literal(""), z.coerce.number().int().min(0, "percentPositive").max(10_000, "percentTooLarge")])
     .optional(),
 });
 

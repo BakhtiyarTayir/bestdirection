@@ -1198,6 +1198,8 @@
     "lessonNotInCourse": "Dars ko'rsatilgan kursga tegishli emas",
     "lessonAlreadyHasTest": "Bu darsda allaqachon test mavjud",
     "alreadyExists": "Allaqachon mavjud",
+    "salaryPercentAdminOnly": "Guruhning ish haqi stavkasini faqat administrator o'zgartiradi",
+    "groupCloseAdminOnly": "O'quvchilari yoki to'lovlari bor guruhni faqat administrator yopadi",
     "groupNameExists": "Bunday nomdagi guruh allaqachon mavjud",
     "groupRequired": "Kursda guruhlar bor — dars guruhini tanlang",
     "groupNotInCourse": "Guruh bu kursga tegishli emas",

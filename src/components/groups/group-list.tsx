@@ -76,7 +76,11 @@ export function GroupList({ groups, courseSlug }: GroupListProps) {
     startTransition(async () => {
       const result = await deleteGroup(groupId);
       if (!result.success) {
-        toast({ title: tErrors("error"), description: result.error, variant: "destructive" });
+        toast({
+          title: tErrors("error"),
+          description: tErrors.has(result.error) ? tErrors(result.error as never) : result.error,
+          variant: "destructive",
+        });
       } else {
         toast({ title: result.data.closed ? t("groupClosed") : t("groupDeleted") });
         router.refresh();

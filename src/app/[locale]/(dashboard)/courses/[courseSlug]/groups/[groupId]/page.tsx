@@ -22,7 +22,7 @@ export default async function GroupDetailPage({ params }: GroupDetailPageProps) 
   const t = await getTranslations("groups");
   const { courseSlug, groupId } = await params;
   const courseId = await resolveCourseSlug(courseSlug);
-  await requireAuth();
+  const session = await requireAuth();
 
   const result = await getGroupDetails(groupId);
   if (!result.success || !result.data) notFound();
@@ -53,7 +53,7 @@ export default async function GroupDetailPage({ params }: GroupDetailPageProps) 
           </Button>
         </Link>
       </div>
-      <GroupForm courseId={courseId} courseSlug={courseSlug} group={group} teachers={teachers} branches={branches} />
+      <GroupForm courseId={courseId} courseSlug={courseSlug} group={group} teachers={teachers} branches={branches} canManageMoney={session.user.role === "ADMIN"} />
       <BroadcastPanel groupId={groupId} templates={templates} />
     </div>
   );

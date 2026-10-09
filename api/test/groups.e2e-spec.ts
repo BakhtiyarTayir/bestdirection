@@ -175,6 +175,74 @@ describe("модуль groups", () => {
       expect((await send("delete", `/groups/${ids.foreignGroup}`, "TEACHER")).status).toBe(404);
     });
 
+    // Решение владельца 2026-10-09: группу, цену и педагога преподаватель
+    // меняет сам, дату окончания тоже, а ставку зарплаты — только администратор
+    it("преподаватель не задаёт ставку зарплаты, а цену и дату окончания — может", async () => {
+      const withPercent = await send("post", "/groups", "TEACHER", {
+        courseId: ids.own,
+        branchId: ids.branch,
+        name: `Pct-${run}`,
+        scheduleDays: [1, 3, 5],
+        price: 600000,
+        salaryPercentBp: 10000,
+      });
+      expect(withPercent.status).toBe(403);
+      expect(withPercent.body.message).toBe("salaryPercentAdminOnly");
+
+      const withEnd = await send("post", "/groups", "TEACHER", {
+        courseId: ids.own,
+        branchId: ids.branch,
+        name: `End-${run}`,
+        scheduleDays: [1, 3, 5],
+        price: 600000,
+        endDate: "2030-01-01",
+      });
+      expect(withEnd.status).toBe(201);
+      expect(new Date(withEnd.body.endDate).toISOString().slice(0, 10)).toBe("2030-01-01");
+
+      // Своя группа: ids.group с ценой 700000 нужна тестам ниже
+      const own = await send("post", "/groups", "TEACHER", {
+        courseId: ids.own,
+        branchId: ids.branch,
+        name: `Money-${run}`,
+        scheduleDays: [1, 3, 5],
+        price: 600000,
+        salaryPercentBp: "",
+        endDate: "",
+      });
+      expect(own.status).toBe(201);
+      expect(own.body.salaryPercentBp).toBeNull();
+      const groupId = own.body.id;
+
+      // Форма присылает поля как есть: та же ставка и пустая дата — не правка
+      const before = await testDb().group.findUniqueOrThrow({ where: { id: groupId } });
+      const same = await send("patch", `/groups/${groupId}`, "TEACHER", {
+        price: 650000,
+        salaryPercentBp: before.salaryPercentBp ?? "",
+        endDate: "",
+      });
+      expect(same.status).toBe(200);
+      expect(same.body.price).toBe(650000);
+
+      expect((await send("patch", `/groups/${groupId}`, "TEACHER", { salaryPercentBp: 9000 })).status).toBe(403);
+      const setEnd = await send("patch", `/groups/${groupId}`, "TEACHER", { endDate: "2030-01-01" });
+      expect(setEnd.status).toBe(200);
+      const after = await testDb().group.findUniqueOrThrow({ where: { id: groupId } });
+      expect(after.salaryPercentBp).toBe(before.salaryPercentBp);
+      expect(after.endDate?.toISOString().slice(0, 10)).toBe("2030-01-01");
+
+      // Администратору можно
+      const byAdmin = await send("patch", `/groups/${groupId}`, "ADMIN", { salaryPercentBp: 4000 });
+      expect(byAdmin.status).toBe(200);
+      expect(byAdmin.body.salaryPercentBp).toBe(4000);
+
+      // Пустое поле — «ставки нет», а не 0 %: z.coerce.number("") давал 0,
+      // и группа перебивала ставку преподавателя нулём
+      const cleared = await send("patch", `/groups/${groupId}`, "ADMIN", { salaryPercentBp: "" });
+      expect(cleared.status).toBe(200);
+      expect(cleared.body.salaryPercentBp).toBeNull();
+    });
+
     it("ученик не создаёт и не меняет группы", async () => {
       expect((await send("post", "/groups", "STUDENT", { courseId: ids.own, name: "X" })).status).toBe(403);
       expect((await send("patch", `/groups/${ids.group}`, "STUDENT", { name: "X" })).status).toBe(403);
@@ -259,7 +327,13 @@ describe("модуль groups", () => {
       const student = await createUser({ role: "STUDENT" });
       await send("post", `/groups/${ids.group}/students`, "TEACHER", { studentIds: [student.id] });
 
-      const res = await send("delete", `/groups/${ids.group}`, "TEACHER");
+      // Закрытие останавливает начисления — только администратор (решение
+      // владельца 2026-10-09); преподавателю — 403, группа не тронута
+      const byTeacher = await send("delete", `/groups/${ids.group}`, "TEACHER");
+      expect(byTeacher.status).toBe(403);
+      expect((await testDb().group.findUnique({ where: { id: ids.group } }))?.isActive).toBe(true);
+
+      const res = await send("delete", `/groups/${ids.group}`, "ADMIN");
       expect(res.status).toBe(200);
       expect(res.body.closed).toBe(true);
 

@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { AuditService, computeChanges } from "../../common/audit/audit.service";
 import type { SessionUser } from "../../common/auth/session-user";
 import { dateInputToDb, toNoonUtc } from "../../common/date-only";
@@ -8,6 +8,18 @@ import type { Prisma } from "../../../generated/prisma";
 import { BillingLedgerService } from "../billing/billing-ledger.service";
 import { SalaryService } from "../salary/salary.service";
 import type { CreateGroupDto, UpdateGroupDto } from "./dto/group.dto";
+
+/**
+ * Ставка зарплаты группы и закрытие группы с историей — только у
+ * администратора (решение владельца 2026-10-09). Преподаватель управляет
+ * своими группами (создаёт, ставит цену, меняет педагога и дату окончания),
+ * но ставка — это его собственная зарплата, а закрытие останавливает
+ * начисления ученикам. Дату окончания преподаватель ставит сам (владелец
+ * передумал в тот же день). Право то же, что у страницы зарплат.
+ */
+function canManageGroupMoney(ability: AppAbility): boolean {
+  return ability.can("manage", "Salary");
+}
 
 /** Перенесено из src/actions/group-actions.ts в web. */
 @Injectable()
@@ -116,6 +128,15 @@ export class GroupsService {
   async create(data: CreateGroupDto, ability: AppAbility, actor: SessionUser) {
     const course = await this.manageableCourse(ability, data.courseId);
 
+    // Ставку зарплаты задаёт только администратор (см.
+    // canManageGroupMoney), дату окончания — и преподаватель тоже; у новой группы ставки нет — берётся ставка
+    // преподавателя, которую тоже ставит администратор
+    if (!canManageGroupMoney(ability)) {
+      if (data.salaryPercentBp !== undefined && data.salaryPercentBp !== "") {
+        throw new ForbiddenException("salaryPercentAdminOnly");
+      }
+    }
+
     const branch = await this.prisma.branch.findUnique({ where: { id: data.branchId }, select: { id: true } });
     if (!branch) throw new NotFoundException("branchNotFound");
 
@@ -167,6 +188,16 @@ export class GroupsService {
 
   async update(groupId: string, data: UpdateGroupDto, ability: AppAbility, actor: SessionUser) {
     const group = await this.manageableGroup(ability, groupId);
+
+    // Форма присылает поля целиком, поэтому запрещено не само поле ставки, а её
+    // ИЗМЕНЕНИЕ: преподаватель, сохранивший группу как есть, ошибки не видит
+    if (!canManageGroupMoney(ability)) {
+      const nextPercent =
+        data.salaryPercentBp === undefined ? undefined : data.salaryPercentBp === "" ? null : data.salaryPercentBp;
+      if (nextPercent !== undefined && nextPercent !== group.salaryPercentBp) {
+        throw new ForbiddenException("salaryPercentAdminOnly");
+      }
+    }
 
     // Ключ уникальности — (courseId, branchId, name): «Python-1» разрешена в
     // каждом филиале. Проверяем, если меняется хоть одна часть ключа.
@@ -252,6 +283,9 @@ export class GroupsService {
     ]);
 
     if (enrollments + charges + payments + accruals > 0) {
+      // Закрытие ставит дату окончания и останавливает начисления ученикам —
+      // это решение администратора; пустую группу преподаватель удаляет сам
+      if (!canManageGroupMoney(ability)) throw new ForbiddenException("groupCloseAdminOnly");
       const today = toNoonUtc(new Date().toISOString().slice(0, 10));
       // Уже заданная более ранняя дата окончания остаётся — закрытие не
       // должно продлевать начисления
@@ -532,7 +566,7 @@ export class GroupsService {
   private async manageableGroup(ability: AppAbility, groupId: string) {
     const group = await this.prisma.group.findFirst({
       where: { AND: [accessibleWhere<Prisma.GroupWhereInput>(ability, "Group", "update"), { id: groupId }] },
-      select: { id: true, name: true, courseId: true, branchId: true, isActive: true, price: true, startDate: true, endDate: true, scheduleDays: true, teacherId: true, description: true, schedule: true, sortOrder: true },
+      select: { id: true, name: true, courseId: true, branchId: true, isActive: true, price: true, salaryPercentBp: true, startDate: true, endDate: true, scheduleDays: true, teacherId: true, description: true, schedule: true, sortOrder: true },
     });
     if (!group) throw new NotFoundException("groupNotFound");
     return group;
