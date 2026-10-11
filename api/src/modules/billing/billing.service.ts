@@ -110,18 +110,73 @@ export class BillingService {
     });
 
     const debtors = rows.filter((row) => row.debt > 0).sort((a, b) => b.debt - a.debt);
-    const prepaid = rows.filter((row) => row.debt < 0);
+    const prepaidRows = rows.filter((row) => row.debt < 0).sort((a, b) => a.debt - b.debt);
+    const prepaid = await this.withPrepaidPayments(prepaidRows, month);
 
     return {
       month,
       debtors,
       totalDebt: debtors.reduce((sum, row) => sum + row.debt, 0),
-      prepaidCount: prepaid.length,
-      prepaidTotal: prepaid.reduce((sum, row) => sum - row.debt, 0),
+      prepaidCount: prepaidRows.length,
+      prepaidTotal: prepaidRows.reduce((sum, row) => sum - row.debt, 0),
+      prepaid,
       // Неполный месяц у них считается по дням, а не по занятиям
       withoutGroup: rows.filter((row) => !row.hasGroup).length,
       groupWithoutSchedule: rows.filter((row) => row.hasGroup && !row.hasSchedule).length,
     };
+  }
+
+  /**
+   * Ученики с авансом + их оплаты с автором (кто принял). Оплаты грузим
+   * отдельным запросом и только для них — общий расчёт и debtorsCount() не
+   * тяжелеют. Берём те же оплаты, что вошли в долг: не удалённые и
+   * paymentMonth <= month.
+   */
+  private async withPrepaidPayments(
+    rows: Awaited<ReturnType<BillingService["computeBillingRows"]>>,
+    month: string
+  ) {
+    if (rows.length === 0) return [];
+
+    // Автор оплаты может быть в корзине: обычный prisma прячет удалённого
+    // User, и обязательная связь createdBy вернула бы ошибку — читаем без фильтра
+    const payments = await this.prismaService.prismaUnscoped.payment.findMany({
+      where: { deletedAt: null, studentId: { in: [...new Set(rows.map((row) => row.student.id))] } },
+      select: {
+        id: true,
+        studentId: true,
+        courseId: true,
+        amount: true,
+        method: true,
+        paidAt: true,
+        forMonth: true,
+        comment: true,
+        createdAt: true,
+        createdBy: { select: { id: true, firstName: true, lastName: true } },
+      },
+      orderBy: [{ paidAt: "desc" }, { createdAt: "desc" }],
+    });
+
+    const byEnrollment = new Map<string, typeof payments>();
+    for (const payment of payments) {
+      if (paymentMonth(payment) > month) continue;
+      const key = `${payment.studentId}:${payment.courseId}`;
+      byEnrollment.set(key, [...(byEnrollment.get(key) ?? []), payment]);
+    }
+
+    return rows.map((row) => ({
+      ...row,
+      advance: -row.debt,
+      payments: (byEnrollment.get(`${row.student.id}:${row.course.id}`) ?? []).map((payment) => ({
+        id: payment.id,
+        amount: payment.amount,
+        method: payment.method,
+        paidAt: payment.paidAt.toISOString(),
+        forMonth: payment.forMonth,
+        comment: payment.comment,
+        createdBy: payment.createdBy,
+      })),
+    }));
   }
 
   /** Для бейджа в сайдбаре; считает по текущему месяцу. */

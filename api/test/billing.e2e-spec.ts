@@ -573,4 +573,67 @@ describe("модуль billing", () => {
       expect(res.body.total).toBe(400000);
     });
   });
+  describe("должники: ученики с авансом (prepaid)", () => {
+    const own: Record<string, string> = {};
+
+    beforeAll(async () => {
+      const branch = await createBranch();
+      const staff = await createUser({ role: "ADMIN" });
+      own.staff = staff.id;
+      const course = await testDb().course.create({
+        data: { slug: `billing-prepaid-${run}`, title: "Курс аванса", teacherId: ids.TEACHER, price: 100000 },
+      });
+      const group = await testDb().group.create({
+        data: { price: 100000, name: `PP-${run}`, courseId: course.id, scheduleDays: [1, 3, 5], branchId: branch.id },
+      });
+      own.branch = branch.id;
+      const startsAt = new Date(`${addMonths(current, -1)}-01T12:00:00.000Z`);
+      for (const key of ["big", "small"]) {
+        const student = await createUser({ role: "STUDENT" });
+        own[key] = student.id;
+        await testDb().enrollment.create({
+          data: { studentId: student.id, courseId: course.id, groupId: group.id, startsAt },
+        });
+      }
+      const pay = (studentId: string, amount: number, forMonth?: string) =>
+        testDb().payment.create({
+          data: {
+            studentId,
+            courseId: course.id,
+            groupId: group.id,
+            branchId: branch.id,
+            amount,
+            method: "CASH",
+            paidAt: new Date(`${current}-05T12:00:00.000Z`),
+            ...(forMonth ? { forMonth } : {}),
+            createdById: staff.id,
+          },
+        });
+      await pay(own.big, 50000000);
+      await pay(own.small, 40000000);
+      // Оплата за будущий месяц в расчёт и в payments не входит
+      await pay(own.small, 123, addMonths(current, 2));
+      // Автора в корзину — имя не должно пропасть, запрос не должен падать
+      await testDb().user.update({ where: { id: staff.id }, data: { deletedAt: new Date() } });
+    });
+
+    it("prepaid: состав, сортировка по авансу, advance и оплаты с автором", async () => {
+      const res = await get(`/billing/debtors?branchId=${own.branch}`, "ADMIN");
+      expect(res.status).toBe(200);
+      const prepaid = res.body.prepaid as Array<{
+        student: { id: string };
+        debt: number;
+        advance: number;
+        payments: Array<{ amount: number; createdBy: { id: string } }>;
+      }>;
+      expect(prepaid.map((row) => row.student.id)).toEqual([own.big, own.small]);
+      expect(prepaid[0].advance).toBe(-prepaid[0].debt);
+      expect(prepaid[0].advance).toBeGreaterThan(prepaid[1].advance);
+      expect(res.body.prepaidCount).toBe(2);
+      expect(prepaid[0].payments).toHaveLength(1);
+      expect(prepaid[0].payments[0].createdBy.id).toBe(own.staff);
+      // 123 — аванс за месяц +2, в расчёт не вошёл
+      expect(prepaid[1].payments.map((p) => p.amount)).toEqual([40000000]);
+    });
+  });
 });
