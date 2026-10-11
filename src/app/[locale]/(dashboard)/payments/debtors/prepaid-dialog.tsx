@@ -3,6 +3,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import { intlLocale } from "@/i18n/config";
 import { Link } from "@/i18n/navigation";
+import { formatDate } from "@/lib/format-date";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { ApiPrepaidRow } from "@/lib/api/billing";
@@ -20,7 +21,6 @@ export function PrepaidDialog({ rows, total, open, onOpenChange }: PrepaidDialog
   const tPayments = useTranslations("payments");
   const locale = useLocale();
   const money = new Intl.NumberFormat(intlLocale(locale));
-  const date = new Intl.DateTimeFormat(intlLocale(locale), { timeZone: "Asia/Tashkent" });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -60,8 +60,8 @@ export function PrepaidDialog({ rows, total, open, onOpenChange }: PrepaidDialog
                   {row.payments.map((payment) => (
                     <div key={payment.id} className="flex flex-wrap justify-between gap-x-3 text-sm">
                       <span className="text-muted-foreground">
-                        {date.format(new Date(payment.paidAt))} · {tPayments(`method.${payment.method}`)}
-                        {payment.forMonth && ` · ${t("prepaidForMonth", { month: payment.forMonth })}`}
+                        {formatDate(payment.paidAt)} · {tPayments(`method.${payment.method}`)}
+                        {payment.forMonth && ` · ${t("prepaidForMonth", { month: payment.forMonth.split("-").reverse().join(".") })}`}
                         {" · "}
                         {t("prepaidAcceptedBy", {
                           name: `${payment.createdBy.lastName} ${payment.createdBy.firstName}`,
