@@ -1761,7 +1761,18 @@
     "allBranches": "Все филиалы",
     "filterTeacher": "Преподаватель",
     "allTeachers": "Все преподаватели",
-    "writeInTelegram": "Написать в Telegram"
+    "writeInTelegram": "Написать в Telegram",
+    "filterView": "Показать",
+    "viewDebtors": "Должники",
+    "viewPrepaid": "С авансом",
+    "colAdvance": "Аванс",
+    "emptyPrepaid": "Учеников с авансом нет",
+    "prepaidDialogTitle": "Ученики с авансом",
+    "prepaidDialogTotal": "Общая сумма аванса: {amount} UZS",
+    "prepaidForMonth": "за {month}",
+    "prepaidAcceptedBy": "Принял(а): {name}",
+    "prepaidNoPayments": "Оплат нет",
+    "prepaidOpenList": "Показать список учеников с авансом"
   },
   "parents": {
     "title": "Родители",

@@ -41,7 +41,8 @@ function currentMonth() {
 export interface PaymentPrefill {
   studentId: string;
   courseId: string;
-  amount: number;
+  /** Пусто — сумма не подставляется (например, у ученика с авансом долга нет) */
+  amount?: number;
   forMonth?: string;
 }
 
@@ -118,7 +119,7 @@ export function CreatePaymentDialog({
     appliedPrefill.current = prefillKey;
     setStudentId(prefill.studentId);
     setCourseId(prefill.courseId);
-    setAmount(String(prefill.amount));
+    setAmount(prefill.amount === undefined ? "" : String(prefill.amount));
     setForMonth(prefill.forMonth ?? currentMonth());
   }, [open, prefill, prefillKey]);
 

@@ -1761,7 +1761,18 @@
     "allBranches": "Barcha filiallar",
     "filterTeacher": "O'qituvchi",
     "allTeachers": "Barcha o'qituvchilar",
-    "writeInTelegram": "Telegramga yozish"
+    "writeInTelegram": "Telegramga yozish",
+    "filterView": "Ko'rsatish",
+    "viewDebtors": "Qarzdorlar",
+    "viewPrepaid": "Avans bilan",
+    "colAdvance": "Avans",
+    "emptyPrepaid": "Avansli talabalar yo'q",
+    "prepaidDialogTitle": "Avansli talabalar",
+    "prepaidDialogTotal": "Jami avans: {amount} UZS",
+    "prepaidForMonth": "{month} uchun",
+    "prepaidAcceptedBy": "Qabul qildi: {name}",
+    "prepaidNoPayments": "To'lovlar yo'q",
+    "prepaidOpenList": "Avansli talabalar ro'yxatini ko'rsatish"
   },
   "parents": {
     "title": "Ota-onalar",

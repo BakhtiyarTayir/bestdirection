@@ -21,9 +21,26 @@ export interface ApiBillingRow {
   breakdown: { month: string; amount: number; basis: string; unitsTotal: number; unitsBilled: number }[];
 }
 
+export interface ApiPrepaidPayment {
+  id: string;
+  amount: number;
+  method: PaymentMethodValue;
+  paidAt: string;
+  forMonth: string | null;
+  comment: string | null;
+  createdBy: { id: string; firstName: string; lastName: string };
+}
+
+/** Строка ученика с авансом: advance = -debt, payments — оплаты, вошедшие в расчёт. */
+export interface ApiPrepaidRow extends ApiBillingRow {
+  advance: number;
+  payments: ApiPrepaidPayment[];
+}
+
 export interface ApiDebtors {
   month: string;
   debtors: ApiBillingRow[];
+  prepaid: ApiPrepaidRow[];
   totalDebt: number;
   prepaidCount: number;
   prepaidTotal: number;

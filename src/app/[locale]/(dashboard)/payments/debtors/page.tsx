@@ -52,6 +52,8 @@ export default async function DebtorsPage({
       <DebtorsList
         month={data?.month ?? ""}
         debtors={data?.debtors ?? []}
+        prepaid={data?.prepaid ?? []}
+        view={single("view") === "prepaid" ? "prepaid" : "debtors"}
         students={students}
         totalDebt={data?.totalDebt ?? 0}
         prepaidCount={data?.prepaidCount ?? 0}

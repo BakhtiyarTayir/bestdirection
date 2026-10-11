@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/select";
 import { ChevronDown, ChevronRight, Send, SlidersHorizontal, TriangleAlert, Wallet } from "lucide-react";
 import { Link } from "@/i18n/navigation";
+import { PrepaidDialog } from "./prepaid-dialog";
+import type { ApiPrepaidRow } from "@/lib/api/billing";
 import { BillingDialog } from "./billing-dialog";
 import { CreatePaymentDialog } from "../create-payment-dialog";
 import type { PaymentStudentOption } from "../payments-list";
@@ -61,6 +63,8 @@ export interface DebtorRow {
 interface DebtorsListProps {
   month: string;
   debtors: DebtorRow[];
+  prepaid: ApiPrepaidRow[];
+  view: "debtors" | "prepaid";
   students: PaymentStudentOption[];
   totalDebt: number;
   prepaidCount: number;
@@ -80,6 +84,8 @@ const ALL = "all";
 export function DebtorsList({
   month,
   debtors,
+  prepaid,
+  view,
   students,
   totalDebt,
   prepaidCount,
@@ -101,18 +107,29 @@ export function DebtorsList({
   const [expanded, setExpanded] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [paying, setPaying] = useState<DebtorRow | null>(null);
+  const [prepaidOpen, setPrepaidOpen] = useState(false);
   const [, startTransition] = useTransition();
   // Фильтры — в адресе, список приходит с сервера: их смена открывает
   // первую страницу, а обновление после оплаты — нет
+  const showPrepaid = view === "prepaid";
+  const rows: (DebtorRow & { advance?: number })[] = showPrepaid ? prepaid : debtors;
   const { page, totalPages, pageItems, setPage } = usePagination(
-    debtors,
-    `${month}|${courseId ?? ""}|${branchId ?? ""}|${teacherId ?? ""}`
+    rows,
+    `${month}|${courseId ?? ""}|${branchId ?? ""}|${teacherId ?? ""}|${view}`
   );
 
   const money = new Intl.NumberFormat(intlLocale(locale));
 
   const setFilter = (key: string, value: string) => {
-    const next = { month, courseId, branchId, teacherId, [key]: value === ALL ? "" : value };
+    // view — чисто клиентское переключение, но живёт в адресе вместе с остальными
+    const next = {
+      month,
+      courseId,
+      branchId,
+      teacherId,
+      view: showPrepaid ? "prepaid" : "",
+      [key]: value === ALL ? "" : value,
+    };
     const params = new URLSearchParams();
     for (const [k, v] of Object.entries(next)) {
       if (v) params.set(k, v);
@@ -141,6 +158,18 @@ export function DebtorsList({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">{t("filterView")}</Label>
+          <Select value={view} onValueChange={(value) => setFilter("view", value === "prepaid" ? value : ALL)}>
+            <SelectTrigger className="w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="debtors">{t("viewDebtors")}</SelectItem>
+              <SelectItem value="prepaid">{t("viewPrepaid")}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div className="space-y-1">
           <Label htmlFor="debtors-month" className="text-xs text-muted-foreground">
             {t("filterMonth")}
@@ -218,9 +247,20 @@ export function DebtorsList({
         <div className="rounded-lg border px-4 py-3">
           <div className="text-sm text-muted-foreground">{t("prepaid")}</div>
           <div className="text-2xl font-bold">{money.format(prepaidTotal)} UZS</div>
-          <div className="text-sm text-muted-foreground">
-            {t("prepaidCount", { count: prepaidCount })}
-          </div>
+          {prepaidCount > 0 ? (
+            <button
+              type="button"
+              className="text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground"
+              title={t("prepaidOpenList")}
+              onClick={() => setPrepaidOpen(true)}
+            >
+              {t("prepaidCount", { count: prepaidCount })}
+            </button>
+          ) : (
+            <div className="text-sm text-muted-foreground">
+              {t("prepaidCount", { count: prepaidCount })}
+            </div>
+          )}
         </div>
         {/* Две причины расчёта по дням разведены: совет в каждом случае свой,
             а общий текст «задайте дни недели» сбивал с толку там, где дни у
@@ -245,9 +285,9 @@ export function DebtorsList({
         )}
       </div>
 
-      {debtors.length === 0 ? (
+      {rows.length === 0 ? (
         <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
-          {t("empty")}
+          {showPrepaid ? t("emptyPrepaid") : t("empty")}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border">
@@ -259,7 +299,7 @@ export function DebtorsList({
                 <TableHead>{t("colCourse")}</TableHead>
                 <TableHead className="text-right">{t("colCharged")}</TableHead>
                 <TableHead className="text-right">{t("colPaid")}</TableHead>
-                <TableHead className="text-right">{t("colDebt")}</TableHead>
+                <TableHead className="text-right">{showPrepaid ? t("colAdvance") : t("colDebt")}</TableHead>
                 <TableHead className="text-right">{t("colActions")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -316,7 +356,11 @@ export function DebtorsList({
                         {money.format(row.paid)}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-right">
-                        <Badge variant="destructive">{money.format(row.debt)}</Badge>
+                        {showPrepaid ? (
+                          <Badge variant="secondary">{money.format(row.advance ?? 0)}</Badge>
+                        ) : (
+                          <Badge variant="destructive">{money.format(row.debt)}</Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
@@ -392,6 +436,13 @@ export function DebtorsList({
         </div>
       )}
 
+      <PrepaidDialog
+        rows={prepaid}
+        total={prepaidTotal}
+        open={prepaidOpen}
+        onOpenChange={setPrepaidOpen}
+      />
+
       {editing && (
         <BillingDialog
           enrollmentId={editing}
@@ -415,7 +466,8 @@ export function DebtorsList({
             ? {
                 studentId: paying.student.id,
                 courseId: paying.course.id,
-                amount: paying.debt,
+                // У ученика с авансом долга нет — сумму не подставляем
+                amount: paying.debt > 0 ? paying.debt : undefined,
                 forMonth: month,
               }
             : null
