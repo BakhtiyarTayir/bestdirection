@@ -212,6 +212,40 @@ export function payoutMonth(payout: { forMonth: string | null; paidAt: Date }): 
   return payout.forMonth ?? monthKey(payout.paidAt);
 }
 
+// ─── Премии и штрафы ───
+
+/** Минимум полей корректировки, нужных расчёту; deletedAt проверяется отдельно */
+export interface AdjustmentLike {
+  kind: "BONUS" | "PENALTY";
+  amount: number;
+  month: string;
+}
+
+/** Сумма в базе всегда положительная, знак задаёт kind: премия +amount, штраф −amount. */
+export function adjustmentSigned(adjustment: Pick<AdjustmentLike, "kind" | "amount">): number {
+  return adjustment.kind === "BONUS" ? adjustment.amount : -adjustment.amount;
+}
+
+/**
+ * Сумма корректировок со знаком. upTo — месяцы ≤ upTo (для долга «по M
+ * включительно»), only — ровно один месяц (колонка месяца в сводке).
+ * Удалённые (deletedAt задан) не учитываются, даже если вызывающий забыл
+ * отфильтровать их в запросе.
+ */
+export function sumAdjustments(
+  list: (AdjustmentLike & { deletedAt?: Date | null })[],
+  filter: { upTo?: string; only?: string } = {}
+): number {
+  let total = 0;
+  for (const adjustment of list) {
+    if (adjustment.deletedAt) continue;
+    if (filter.upTo !== undefined && adjustment.month > filter.upTo) continue;
+    if (filter.only !== undefined && adjustment.month !== filter.only) continue;
+    total += adjustmentSigned(adjustment);
+  }
+  return total;
+}
+
 // ─── Поступления по ученикам (справочно, зарплату не меняют) ───
 
 /** Начисление ученика за месяц; у нуля тоже есть строка — состав единицы */

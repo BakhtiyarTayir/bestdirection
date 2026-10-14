@@ -589,6 +589,31 @@ describe("модуль users", () => {
       expect(await testDb().teacherPayout.findUnique({ where: { id: payout.id } })).not.toBeNull();
     });
 
+    it("преподавателя с премией или штрафом стереть нельзя — понятный отказ, запись остаётся", async () => {
+      const teacher = await createUser({ role: "TEACHER", isActive: false, deletedAt: new Date() });
+      const adjustment = await testDb().teacherSalaryAdjustment.create({
+        data: { teacherId: teacher.id, kind: "PENALTY", amount: 10000, month: "2026-09", reason: "Опоздание", createdById: ids.ADMIN },
+      });
+
+      const res = await send("delete", `/users/${teacher.id}`, "ADMIN");
+      expect(res.status).toBe(409);
+      expect(res.body.message).toBe("userHasProtectedRecords");
+      expect(res.body.details.blockers).toEqual([{ reason: "receivedAdjustments", count: 1 }]);
+      expect(await testDb().teacherSalaryAdjustment.findUnique({ where: { id: adjustment.id } })).not.toBeNull();
+    });
+
+    it("администратора, вносившего премии, стереть нельзя", async () => {
+      const admin = await createUser({ role: "ADMIN", isActive: false, deletedAt: new Date() });
+      const teacher = await createUser({ role: "TEACHER" });
+      await testDb().teacherSalaryAdjustment.create({
+        data: { teacherId: teacher.id, kind: "BONUS", amount: 10000, month: "2026-09", reason: "Премия", createdById: admin.id },
+      });
+
+      const res = await send("delete", `/users/${admin.id}`, "ADMIN");
+      expect(res.status).toBe(409);
+      expect(res.body.details.blockers).toEqual([{ reason: "issuedAdjustments", count: 1 }]);
+    });
+
     // Курс в Корзине — строка жива и держит FK: администратор видел общий
     // список возможных причин и не понимал, что мешает
     it("преподавателя с курсом в Корзине стереть нельзя — в ответе названия курсов", async () => {

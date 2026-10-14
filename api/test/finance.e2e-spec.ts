@@ -111,4 +111,31 @@ describe("модуль finance", () => {
     expect(res.body.current).toMatchObject({ received: 0, paidOut: 0, charged: 0, salaryAccrued: 0 });
     expect(res.body.teachers).toHaveLength(0);
   });
+
+  // Премии и штрафы входят в «Зарплату начислена» месяца, кассу не трогают
+  it("корректировки зарплаты: входят в salaryAccrued и accrued преподавателя, но не в paidOut", async () => {
+    const branch = await createBranch(`Финансы-премии-${run}`);
+    const teacher = await createUser({ role: "TEACHER" });
+    await testDb().user.update({ where: { id: teacher.id }, data: { branchId: branch.id } });
+    const post = (body: object) =>
+      request(app.getHttpServer())
+        .post("/api/v2/salary/adjustments")
+        .set("Cookie", cookies.ADMIN)
+        .set("Origin", TEST_APP_URL)
+        .send(body);
+
+    // Только корректировки, групп у преподавателя нет
+    expect((await post({ teacherId: teacher.id, kind: "BONUS", amount: 150_000, month: current, reason: "Премия" })).status).toBe(201);
+    expect((await post({ teacherId: teacher.id, kind: "PENALTY", amount: 40_000, month: current, reason: "Штраф" })).status).toBe(201);
+    const prev = addMonths(current, -1);
+    expect((await post({ teacherId: teacher.id, kind: "BONUS", amount: 10_000, month: prev, reason: "Прошлая" })).status).toBe(201);
+
+    const res = await get(`/finance?month=${current}&branchId=${branch.id}`, "ADMIN");
+    expect(res.status).toBe(200);
+    expect(res.body.current).toMatchObject({ salaryAccrued: 110_000, paidOut: 0, cashProfit: 0, received: 0 });
+    expect(res.body.months.find((m: { month: string }) => m.month === prev)).toMatchObject({ salaryAccrued: 10_000, paidOut: 0 });
+    const row = res.body.teachers.find((t: { teacherId: string }) => t.teacherId === teacher.id);
+    expect(row).toMatchObject({ accrued: 110_000, paidOut: 0 });
+    expect(row.teacherName).not.toBe("");
+  });
 });

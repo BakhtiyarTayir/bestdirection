@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  adjustmentSigned,
   computeAccrual,
   computeFormulaAmount,
   computeMonthLessonMarks,
@@ -11,6 +12,7 @@ import {
   resolveSalaryPercentBp,
   splitAccrualByTeacher,
   studentPaymentRows,
+  sumAdjustments,
   totalAccrued,
   type AccrualComputationInput,
   type StoredAccrual,
@@ -492,5 +494,33 @@ describe("studentPaymentRows — поступления по ученикам з
     expect(result.students).toEqual([
       { studentId: "a", firstName: "Имя", lastName: "Алиев", unenrolled: true, charged: 150, paid: 0, remaining: 150 },
     ]);
+  });
+});
+
+describe("премии и штрафы", () => {
+  const bonus = (amount: number, month: string, deletedAt: Date | null = null) => ({ kind: "BONUS" as const, amount, month, deletedAt });
+  const penalty = (amount: number, month: string, deletedAt: Date | null = null) => ({ kind: "PENALTY" as const, amount, month, deletedAt });
+
+  it("знак: премия плюс, штраф минус", () => {
+    expect(adjustmentSigned(bonus(100, "2026-09"))).toBe(100);
+    expect(adjustmentSigned(penalty(100, "2026-09"))).toBe(-100);
+  });
+
+  it("сумма со знаком по всем месяцам", () => {
+    expect(sumAdjustments([bonus(500, "2026-08"), penalty(200, "2026-09"), bonus(50, "2026-10")])).toBe(350);
+    expect(sumAdjustments([])).toBe(0);
+  });
+
+  it("upTo — месяцы включительно до границы, only — ровно один месяц", () => {
+    const list = [bonus(500, "2026-08"), penalty(200, "2026-09"), bonus(50, "2026-10")];
+    expect(sumAdjustments(list, { upTo: "2026-09" })).toBe(300);
+    expect(sumAdjustments(list, { only: "2026-09" })).toBe(-200);
+    expect(sumAdjustments(list, { only: "2026-07" })).toBe(0);
+  });
+
+  it("удалённые не учитываются", () => {
+    const list = [bonus(500, "2026-09"), penalty(200, "2026-09", new Date())];
+    expect(sumAdjustments(list)).toBe(500);
+    expect(sumAdjustments(list, { only: "2026-09" })).toBe(500);
   });
 });

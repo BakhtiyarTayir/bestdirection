@@ -4,6 +4,7 @@ import { PrismaService } from "../../common/prisma/prisma.service";
 import type { Prisma } from "../../../generated/prisma";
 import { currentDateKey, currentMonthKey, isoWeekday } from "../billing/domain/billing";
 import { SalaryService } from "../salary/salary.service";
+import { sumAdjustments } from "../salary/domain/salary";
 
 /**
  * «Мои группы» преподавателя: та же лестница, что и везде в проекте
@@ -308,10 +309,14 @@ export class TeacherDashboardService {
     // «за месяц». Выдано и долг честно берём накопленным итогом, как их и
     // считает teacherDetail: выплата и долг — по своей природе накопленные
     // величины, а не привязанные к одному месяцу.
-    const accruedThisMonth = salaryDetail.groups.reduce((sum, group) => {
-      const current = group.months.find((item) => item.month === month);
-      return sum + (current?.amount ?? 0);
-    }, 0);
+    // К сумме по группам добавлены премии и штрафы ИМЕННО этого месяца: долг
+    // уже с корректировками, и без них «начислено» и «долг» на карточке не
+    // сходились бы с тем, что администратор внёс преподавателю.
+    const accruedThisMonth =
+      salaryDetail.groups.reduce((sum, group) => {
+        const current = group.months.find((item) => item.month === month);
+        return sum + (current?.amount ?? 0);
+      }, 0) + sumAdjustments(salaryDetail.adjustments, { only: month });
 
     // Нынешние счётчики (мои курсы, ученики) — тот же расчёт, что в
     // DashboardService.forTeacher (dashboard.service.ts), продублирован

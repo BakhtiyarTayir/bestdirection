@@ -198,6 +198,8 @@ export interface ApiPurgeBlocker {
     | "salaryAccruals"
     | "receivedPayouts"
     | "issuedPayouts"
+    | "receivedAdjustments"
+    | "issuedAdjustments"
     | "smsBroadcasts";
   count: number;
   items?: { title: string; inTrash: boolean }[];

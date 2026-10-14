@@ -772,6 +772,178 @@ describe("модуль salary", () => {
     });
   });
 
+  // Премии и штрафы (план 2026-10-14): часть начисленного, привязаны к
+  // преподавателю и месяцу. Все данные свои — отдельные преподаватели и филиал.
+  describe("премии и штрафы", () => {
+    const adj: Record<string, string> = {};
+    const nextMonth = addMonths(current, 1);
+    const post = (role: string, body: object) => send("post", "/salary/adjustments", role, body);
+
+    beforeAll(async () => {
+      const branch = await createBranch("Премии");
+      adj.branch = branch.id;
+      const teacher = await createUser({ role: "TEACHER" });
+      adj.teacher = teacher.id;
+      adj.teacherCookie = await sessionCookie(teacher);
+      const bonusOnly = await createUser({ role: "TEACHER" });
+      adj.bonusOnly = bonusOnly.id;
+      // Филиал преподавателя — источник снимка branchId корректировки
+      await testDb().user.updateMany({ where: { id: { in: [teacher.id, bonusOnly.id] } }, data: { branchId: branch.id } });
+
+      const course = await testDb().course.create({
+        data: { slug: `salary-adj-${run}`, title: "Курс премий", teacherId: teacher.id, price: 400_000 },
+      });
+      const group = await testDb().group.create({
+        data: {
+          price: 400_000,
+          name: `ADJ-${run}`,
+          courseId: course.id,
+          branchId: branch.id,
+          scheduleDays: [1, 3, 5],
+          teacherId: teacher.id,
+          salaryPercentBp: 5000,
+          startDate: new Date(`${startMonth}-01T12:00:00.000Z`),
+        },
+      });
+      const student = await createUser({ role: "STUDENT" });
+      await testDb().enrollment.create({
+        data: { studentId: student.id, courseId: course.id, groupId: group.id, startsAt: new Date(`${startMonth}-01T12:00:00.000Z`) },
+      });
+    });
+
+    const detail = async (month = prevMonth) => (await get(`/salary/${adj.teacher}?month=${month}`, "ADMIN")).body;
+    const valid = () => ({ teacherId: adj.teacher, kind: "BONUS", amount: 100_000, month: prevMonth, reason: "Открытый урок" });
+
+    it("права: админ создаёт и удаляет, преподаватель — 403, аноним — 401", async () => {
+      const created = await post("ADMIN", valid());
+      expect(created.status).toBe(201);
+      expect(typeof created.body.id).toBe("string");
+
+      expect((await post("TEACHER", valid())).status).toBe(403);
+      expect((await send("delete", `/salary/adjustments/${created.body.id}`, "TEACHER")).status).toBe(403);
+      expect((await http().post("/api/v2/salary/adjustments").set("Origin", TEST_APP_URL).send(valid())).status).toBe(401);
+
+      const removed = await send("delete", `/salary/adjustments/${created.body.id}`, "ADMIN");
+      expect(removed.status).toBe(200);
+      // Повторное удаление и несуществующая запись — 404
+      expect((await send("delete", `/salary/adjustments/${created.body.id}`, "ADMIN")).status).toBe(404);
+      expect((await send("delete", "/salary/adjustments/no-such-id", "ADMIN")).status).toBe(404);
+
+      // Запись в журнале аудита и снимок филиала
+      const audit = await testDb().auditLog.findMany({ where: { entityType: "TeacherSalaryAdjustment", entityId: created.body.id } });
+      expect(audit.map((a) => a.action).sort()).toEqual(["CREATE", "DELETE"]);
+      const row = await testDb().teacherSalaryAdjustment.findUnique({ where: { id: created.body.id } });
+      expect(row?.branchId).toBe(adj.branch);
+    });
+
+    it("валидация: сумма ≤ 0, дробная, больше млрд, пустая причина, плохой месяц, неизвестный преподаватель", async () => {
+      expect((await post("ADMIN", { ...valid(), amount: 0 })).status).toBe(400);
+      expect((await post("ADMIN", { ...valid(), amount: -5 })).status).toBe(400);
+      expect((await post("ADMIN", { ...valid(), amount: 10.5 })).status).toBe(400);
+      expect((await post("ADMIN", { ...valid(), amount: 1_000_000_001 })).status).toBe(400);
+      expect((await post("ADMIN", { ...valid(), reason: "   " })).status).toBe(400);
+      expect((await post("ADMIN", { ...valid(), reason: "x".repeat(501) })).status).toBe(400);
+      expect((await post("ADMIN", { ...valid(), month: "2026-13" })).status).toBe(400);
+      expect((await post("ADMIN", { ...valid(), kind: "GIFT" })).status).toBe(400);
+      expect((await post("ADMIN", { ...valid(), teacherId: "no-such-user" })).status).toBe(404);
+    });
+
+    it("teacherDetail: премия и штраф меняют начислено и долг; будущий месяц и удалённая не входят", async () => {
+      const base = await detail();
+      expect(base.accruedFromGroups).toBeGreaterThan(0);
+      expect(base.adjustments).toEqual([]);
+      expect(base.adjustmentsTotal).toBe(0);
+
+      const bonus = await post("ADMIN", { ...valid(), amount: 70_000 });
+      const penalty = await post("ADMIN", { ...valid(), kind: "PENALTY", amount: 20_000, reason: "Опоздание" });
+      const future = await post("ADMIN", { ...valid(), amount: 999, month: nextMonth, reason: "Будущая" });
+      expect(future.status).toBe(201);
+
+      const after = await detail();
+      expect(after.adjustmentsTotal).toBe(50_000);
+      expect(after.accruedFromGroups).toBe(base.accruedFromGroups);
+      expect(after.accruedTotal).toBe(base.accruedTotal + 50_000);
+      expect(after.debt).toBe(base.debt + 50_000);
+      // В списке — все живые, по убыванию месяца, с автором «Фамилия Имя»
+      expect(after.adjustments).toHaveLength(3);
+      expect(after.adjustments[0]).toMatchObject({ month: nextMonth, kind: "BONUS", amount: 999, reason: "Будущая" });
+      expect(after.adjustments[0].createdBy).toContain(" ");
+
+      // Удалённая не входит ни в список, ни в итоги
+      await send("delete", `/salary/adjustments/${penalty.body.id}`, "ADMIN");
+      const afterDelete = await detail();
+      expect(afterDelete.adjustmentsTotal).toBe(70_000);
+      expect(afterDelete.adjustments).toHaveLength(2);
+      expect(afterDelete.debt).toBe(base.debt + 70_000);
+
+      // Будущая видна, если выбрать этот месяц
+      const inFuture = await detail(nextMonth);
+      expect(inFuture.adjustmentsTotal).toBe(70_000 + 999);
+
+      await send("delete", `/salary/adjustments/${bonus.body.id}`, "ADMIN");
+      await send("delete", `/salary/adjustments/${future.body.id}`, "ADMIN");
+    });
+
+    it("GET /salary/me: преподаватель видит свои корректировки с причиной и не видит чужие", async () => {
+      const mine = await post("ADMIN", { ...valid(), reason: "Своя премия" });
+      const foreign = await post("ADMIN", { ...valid(), teacherId: adj.bonusOnly, reason: "Чужая премия" });
+
+      const res = await http().get(`/api/v2/salary/me?month=${prevMonth}`).set("Cookie", adj.teacherCookie);
+      expect(res.status).toBe(200);
+      expect(res.body.adjustments.map((a: { reason: string }) => a.reason)).toEqual(["Своя премия"]);
+      expect(res.body.adjustmentsTotal).toBe(100_000);
+
+      await send("delete", `/salary/adjustments/${mine.body.id}`, "ADMIN");
+      await send("delete", `/salary/adjustments/${foreign.body.id}`, "ADMIN");
+    });
+
+    it("overview: колонка месяца и долг; преподаватель без групп, но с премией, есть в сводке", async () => {
+      const month = prevMonth;
+      const rowOf = async (teacherId: string) => {
+        const res = await get(`/salary?month=${month}&branchId=${adj.branch}`, "ADMIN");
+        expect(res.status).toBe(200);
+        return { row: res.body.rows.find((r: { teacherId: string }) => r.teacherId === teacherId), totals: res.body.totals };
+      };
+      const before = await rowOf(adj.teacher);
+
+      const inMonth = await post("ADMIN", { ...valid(), amount: 80_000 });
+      const earlier = await post("ADMIN", { ...valid(), kind: "PENALTY", amount: 10_000, month: addMonths(month, -1), reason: "Раньше" });
+      const later = await post("ADMIN", { ...valid(), amount: 5_000, month: addMonths(month, 1), reason: "Позже" });
+      const only = await post("ADMIN", { ...valid(), teacherId: adj.bonusOnly, amount: 30_000 });
+
+      const after = await rowOf(adj.teacher);
+      // Колонка — только месяц M; «начислено» включает её; долг — ещё и более ранний штраф
+      expect(after.row.adjustments).toBe(80_000);
+      expect(after.row.accrued).toBe(before.row.accrued + 80_000);
+      expect(after.row.debt).toBe(before.row.debt + 70_000);
+      expect(after.totals.adjustments).toBe(80_000 + 30_000);
+
+      const bonusRow = await rowOf(adj.bonusOnly);
+      expect(bonusRow.row).toMatchObject({ groupsCount: 0, adjustments: 30_000, accrued: 30_000, accruedTotal: 30_000, debt: 30_000 });
+      expect(bonusRow.row.teacherName).not.toBe("");
+
+      // Другой филиал (по снимку) их не видит
+      const otherBranch = await createBranch("Премии-другой");
+      const res = await get(`/salary?month=${month}&branchId=${otherBranch.id}`, "ADMIN");
+      expect(res.body.rows).toEqual([]);
+
+      for (const created of [inMonth, earlier, later, only]) {
+        await send("delete", `/salary/adjustments/${created.body.id}`, "ADMIN");
+      }
+    });
+
+    it("штраф больше начисленного: долг отрицательный, без ошибок", async () => {
+      const penalty = await post("ADMIN", { ...valid(), kind: "PENALTY", amount: 900_000_000, reason: "Огромный штраф" });
+      expect(penalty.status).toBe(201);
+      const body = await detail();
+      expect(body.debt).toBeLessThan(0);
+      const overview = await get(`/salary?month=${prevMonth}&branchId=${adj.branch}`, "ADMIN");
+      expect(overview.status).toBe(200);
+      expect(overview.body.rows.find((r: { teacherId: string }) => r.teacherId === adj.teacher).debt).toBeLessThan(0);
+      await send("delete", `/salary/adjustments/${penalty.body.id}`, "ADMIN");
+    });
+  });
+
   // Поступления по ученикам в месяце группы: справочная колонка рядом с базой
   // (план 2026-10-09). Числа обязаны сходиться с базой зарплаты.
   describe("ученики группы за месяц: начислено и поступило", () => {

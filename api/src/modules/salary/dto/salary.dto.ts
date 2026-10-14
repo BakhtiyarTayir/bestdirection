@@ -56,6 +56,15 @@ export const createPayoutSchema = z.object({
   comment: z.string().max(500, "maxChars500").optional(),
 });
 
+export const createAdjustmentSchema = z.object({
+  teacherId: z.string().min(1, "teacherRequired").max(40),
+  kind: z.enum(["BONUS", "PENALTY"]),
+  // Знак задаёт kind, сумма всегда положительная
+  amount: money.positive("amountPositive"),
+  month: monthString,
+  reason: z.string().trim().min(1, "reasonRequired").max(500, "maxChars500"),
+});
+
 export class SalaryOverviewQueryDto extends createZodDto(salaryOverviewQuerySchema) {}
 export class TeacherSalaryQueryDto extends createZodDto(teacherSalaryQuerySchema) {}
 export class SetManualAmountDto extends createZodDto(setManualAmountSchema) {}
@@ -63,3 +72,4 @@ export class RecalcQueryDto extends createZodDto(recalcQuerySchema) {}
 export class GroupStudentsQueryDto extends createZodDto(groupStudentsQuerySchema) {}
 export class PayoutFiltersDto extends createZodDto(payoutFiltersSchema) {}
 export class CreatePayoutDto extends createZodDto(createPayoutSchema) {}
+export class CreateAdjustmentDto extends createZodDto(createAdjustmentSchema) {}

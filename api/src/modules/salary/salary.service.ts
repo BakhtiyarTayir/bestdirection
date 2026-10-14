@@ -19,7 +19,9 @@ import {
   payoutMonth,
   resolveSalaryPercentBp,
   splitAccrualByTeacher,
+  sumAdjustments,
   studentPaymentRows,
+  adjustmentSigned,
   totalAccrued,
   type MarkedSession,
   type StudentCharge,
@@ -714,6 +716,11 @@ export class SalaryService {
    * Тот же расчёт, что в сводке (unitSchedule: закрытые месяцы из реестра,
    * открытый — по формуле), только без выплат и без свёртки в одну строку
    * на преподавателя: отчёту нужны суммы за каждый месяц.
+   *
+   * Премии и штрафы добавлены сюда, а не в FinanceService: «начислено» одно
+   * на сводку, карточку и отчёт, и чтобы три места не разошлись, корректировки
+   * считаются там же, где остальное начисленное. Строка корректировки — своя
+   * запись rows со знаком; кассу (выплаты) это не затрагивает.
    */
   async accrualsByMonth(filters: { branchId?: string }, upToMonth: string) {
     const units = await this.loadUnits({ branchId: filters.branchId });
@@ -725,6 +732,36 @@ export class SalaryService {
         rows.push({ teacherId: unit.teacherId, teacherName: unit.teacherName, month: item.month, amount: item.accrual.amount });
       }
     });
+
+    const adjustments = await this.prisma.teacherSalaryAdjustment.findMany({
+      where: {
+        deletedAt: null,
+        month: { lte: upToMonth },
+        // Снимок филиала корректировки — как у выплат: приблизительно
+        ...(filters.branchId ? { branchId: filters.branchId } : {}),
+      },
+      select: { teacherId: true, kind: true, amount: true, month: true },
+    });
+    if (adjustments.length > 0) {
+      const names = new Map(rows.map((row) => [row.teacherId, row.teacherName]));
+      const unnamed = [...new Set(adjustments.map((a) => a.teacherId))].filter((id) => !names.has(id));
+      if (unnamed.length > 0) {
+        // Мимо мягкого удаления: уволенный преподаватель не остаётся без имени
+        const users = await this.prismaService.prismaUnscoped.user.findMany({
+          where: { id: { in: unnamed } },
+          select: { id: true, firstName: true, lastName: true },
+        });
+        for (const user of users) names.set(user.id, `${user.lastName} ${user.firstName}`);
+      }
+      for (const adjustment of adjustments) {
+        rows.push({
+          teacherId: adjustment.teacherId,
+          teacherName: names.get(adjustment.teacherId) ?? "",
+          month: adjustment.month,
+          amount: adjustmentSigned(adjustment),
+        });
+      }
+    }
     return rows;
   }
 
@@ -745,7 +782,26 @@ export class SalaryService {
       })
     );
 
-    const teacherIds = [...new Set(units.map((unit) => unit.teacherId))];
+    // Премии и штрафы по M включительно (на долг) — фильтр по снимку филиала
+    // корректировки, с той же оговоркой, что у выплат ниже
+    const adjustments = await this.prisma.teacherSalaryAdjustment.findMany({
+      where: {
+        deletedAt: null,
+        month: { lte: month },
+        ...(teacherFilter ? { teacherId: teacherFilter } : {}),
+        ...(query.branchId ? { branchId: query.branchId } : {}),
+      },
+      select: { teacherId: true, kind: true, amount: true, month: true },
+    });
+    const adjustmentsByTeacher = new Map<string, typeof adjustments>();
+    for (const adjustment of adjustments) {
+      const list = adjustmentsByTeacher.get(adjustment.teacherId) ?? [];
+      list.push(adjustment);
+      adjustmentsByTeacher.set(adjustment.teacherId, list);
+    }
+
+    // Преподаватель без единиц, но с корректировкой, тоже попадает в сводку
+    const teacherIds = [...new Set([...units.map((unit) => unit.teacherId), ...adjustmentsByTeacher.keys()])];
     // С фильтром по филиалу начисленное считается ТОЛЬКО по единицам этого
     // филиала (units выше уже отфильтрованы) — значит, и выплаченное нужно
     // брать только по выплатам с тем же снимком branchId, иначе долг = начислено
@@ -779,6 +835,8 @@ export class SalaryService {
       fallbackGroupsCount: number;
       studentsCount: number;
       base: number;
+      /** Премии минус штрафы за месяц M, со знаком; уже входит в accrued */
+      adjustments: number;
       accrued: number;
       accruedTotal: number;
       paidTotal: number;
@@ -808,6 +866,7 @@ export class SalaryService {
         fallbackGroupsCount: 0,
         studentsCount: 0,
         base: 0,
+        adjustments: 0,
         accrued: 0,
         accruedTotal: 0,
         paidTotal: 0,
@@ -841,6 +900,40 @@ export class SalaryService {
       rows.set(unit.teacherId, row);
     }
 
+    // Корректировки добавляются один раз на преподавателя, не на единицу
+    // (у него может быть несколько групп). Без единиц — строка создаётся здесь
+    const missing = [...adjustmentsByTeacher.keys()].filter((id) => !rows.has(id));
+    const missingUsers =
+      missing.length > 0
+        ? await this.prismaService.prismaUnscoped.user.findMany({
+            where: { id: { in: missing } },
+            select: { id: true, firstName: true, lastName: true },
+          })
+        : [];
+    for (const user of missingUsers) {
+      rows.set(user.id, {
+        teacherId: user.id,
+        teacherName: `${user.lastName} ${user.firstName}`,
+        groupsCount: 0,
+        unratedGroupsCount: 0,
+        fallbackGroupsCount: 0,
+        studentsCount: 0,
+        base: 0,
+        adjustments: 0,
+        accrued: 0,
+        accruedTotal: 0,
+        paidTotal: 0,
+        debt: 0,
+      });
+    }
+    for (const [teacherId, list] of adjustmentsByTeacher) {
+      const row = rows.get(teacherId);
+      if (!row) continue;
+      row.adjustments = sumAdjustments(list, { only: month });
+      row.accrued += row.adjustments;
+      row.accruedTotal += sumAdjustments(list, { upTo: month });
+    }
+
     for (const row of rows.values()) {
       row.paidTotal = paidByTeacher.get(row.teacherId) ?? 0;
       row.debt = row.accruedTotal - row.paidTotal;
@@ -859,6 +952,7 @@ export class SalaryService {
         // поделён между владельцем и заменяющими (splitAccrualByTeacher),
         // повтора там нет, дедупликация не нужна
         accrued: result.reduce((sum, row) => sum + row.accrued, 0),
+        adjustments: result.reduce((sum, row) => sum + row.adjustments, 0),
         paid: result.reduce((sum, row) => sum + row.paidTotal, 0),
         debt: result.reduce((sum, row) => sum + row.debt, 0),
       },
@@ -945,10 +1039,20 @@ export class SalaryService {
     const paidTotal = payouts
       .filter((payout) => payoutMonth(payout) <= month)
       .reduce((sum, payout) => sum + payout.amount, 0);
-    const accruedTotal = groups.reduce(
+    const accruedFromGroups = groups.reduce(
       (sum, group) => sum + group.months.reduce((s, m) => s + m.amount, 0),
       0
     );
+
+    // Премии и штрафы: все живые в списке (в том числе будущих месяцев), в
+    // итоги идут только месяцы ≤ M — как выплаты и начисления по группам
+    const adjustments = await this.prisma.teacherSalaryAdjustment.findMany({
+      where: { teacherId, deletedAt: null },
+      orderBy: [{ month: "desc" }, { createdAt: "desc" }],
+      include: { createdBy: { select: { firstName: true, lastName: true } } },
+    });
+    const adjustmentsTotal = sumAdjustments(adjustments, { upTo: month });
+    const accruedTotal = accruedFromGroups + adjustmentsTotal;
 
     return {
       teacher: {
@@ -959,6 +1063,17 @@ export class SalaryService {
       },
       month,
       groups,
+      adjustments: adjustments.map((adjustment) => ({
+        id: adjustment.id,
+        kind: adjustment.kind,
+        amount: adjustment.amount,
+        month: adjustment.month,
+        reason: adjustment.reason,
+        createdAt: adjustment.createdAt.toISOString(),
+        createdBy: `${adjustment.createdBy.lastName} ${adjustment.createdBy.firstName}`,
+      })),
+      adjustmentsTotal,
+      accruedFromGroups,
       accruedTotal,
       paidTotal,
       debt: accruedTotal - paidTotal,

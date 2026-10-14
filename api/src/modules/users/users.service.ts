@@ -53,6 +53,8 @@ export interface PurgeBlocker {
     | "salaryAccruals"
     | "receivedPayouts"
     | "issuedPayouts"
+    | "receivedAdjustments"
+    | "issuedAdjustments"
     | "smsBroadcasts";
   count: number;
   /** Только для courses: какие именно курсы и лежат ли они в Корзине. */
@@ -587,6 +589,8 @@ export class UsersService {
       salaryAccruals,
       receivedPayouts,
       issuedPayouts,
+      receivedAdjustments,
+      issuedAdjustments,
       billedMonths,
     ] = await Promise.all([
       db.course.findMany({
@@ -600,6 +604,8 @@ export class UsersService {
       db.teacherSalaryAccrual.count({ where: { teacherId: id } }),
       db.teacherPayout.count({ where: { teacherId: id } }),
       db.teacherPayout.count({ where: { createdById: id } }),
+      db.teacherSalaryAdjustment.count({ where: { teacherId: id } }),
+      db.teacherSalaryAdjustment.count({ where: { createdById: id } }),
       db.monthlyCharge.count({ where: { enrollment: { studentId: id }, amount: { gt: 0 } } }),
     ]);
 
@@ -618,6 +624,8 @@ export class UsersService {
       ["salaryAccruals", salaryAccruals],
       ["receivedPayouts", receivedPayouts],
       ["issuedPayouts", issuedPayouts],
+      ["receivedAdjustments", receivedAdjustments],
+      ["issuedAdjustments", issuedAdjustments],
       ["smsBroadcasts", smsBroadcasts],
     ];
     for (const [reason, count] of counted) {

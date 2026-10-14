@@ -4,6 +4,7 @@ import type { SessionUser } from "../../common/auth/session-user";
 import { CheckPolicies } from "../../common/policies/check-policies.decorator";
 import type { AppAbility } from "../../common/policies/abilities";
 import {
+  CreateAdjustmentDto,
   CreatePayoutDto,
   GroupStudentsQueryDto,
   PayoutFiltersDto,
@@ -12,6 +13,7 @@ import {
   SetManualAmountDto,
   TeacherSalaryQueryDto,
 } from "./dto/salary.dto";
+import { AdjustmentsService } from "./adjustments.service";
 import { PayoutsService } from "./payouts.service";
 import { SalaryService } from "./salary.service";
 
@@ -25,7 +27,8 @@ const canReadOwn = (ability: AppAbility) => ability.can("read", "Salary");
 export class SalaryController {
   constructor(
     private readonly salary: SalaryService,
-    private readonly payouts: PayoutsService
+    private readonly payouts: PayoutsService,
+    private readonly adjustments: AdjustmentsService
   ) {}
 
   @CheckPolicies(adminOnly)
@@ -73,6 +76,20 @@ export class SalaryController {
   @Delete("payouts/:id")
   async deletePayout(@Param("id") id: string, @CurrentUser() actor: SessionUser) {
     await this.payouts.remove(id, actor);
+    return { ok: true };
+  }
+
+  // Премии и штрафы — ДО ":teacherId", как payouts
+  @CheckPolicies(adminOnly)
+  @Post("adjustments")
+  createAdjustment(@Body() body: CreateAdjustmentDto, @CurrentUser() actor: SessionUser) {
+    return this.adjustments.create(body, actor);
+  }
+
+  @CheckPolicies(adminOnly)
+  @Delete("adjustments/:id")
+  async deleteAdjustment(@Param("id") id: string, @CurrentUser() actor: SessionUser) {
+    await this.adjustments.remove(id, actor);
     return { ok: true };
   }
 

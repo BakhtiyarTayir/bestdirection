@@ -237,6 +237,31 @@ describe("панель преподавателя", () => {
     expect(dashboard.body.salary.accruedThisMonth).toBeGreaterThan(0);
   });
 
+  it("«начислено за месяц» включает премии и штрафы текущего месяца, но не чужих месяцев", async () => {
+    const before = await get("/dashboard/teacher", "TEACHER");
+    const nextMonth = new Date(monthStart);
+    nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
+    const nextKey = nextMonth.toISOString().slice(0, 7);
+
+    const base = { teacherId: ids.TEACHER, createdById: ids.ADMIN, reason: "тест панели" };
+    const created = await testDb().teacherSalaryAdjustment.createManyAndReturn({
+      data: [
+        { ...base, kind: "BONUS", amount: 70_000, month },
+        { ...base, kind: "PENALTY", amount: 20_000, month },
+        // будущий месяц в «начислено за месяц» не входит
+        { ...base, kind: "BONUS", amount: 900_000, month: nextKey },
+      ],
+    });
+    try {
+      const after = await get("/dashboard/teacher", "TEACHER");
+      expect(after.body.salary.accruedThisMonth).toBe(before.body.salary.accruedThisMonth + 50_000);
+      // долг тоже с корректировками месяца ≤ текущего
+      expect(after.body.salary.debt).toBe(before.body.salary.debt + 50_000);
+    } finally {
+      await testDb().teacherSalaryAdjustment.deleteMany({ where: { id: { in: created.map((a) => a.id) } } });
+    }
+  });
+
   it("нынешние счётчики курсов и учеников на месте", async () => {
     const res = await get("/dashboard/teacher", "TEACHER");
     expect(res.body.courses).toBeGreaterThanOrEqual(1);

@@ -140,11 +140,12 @@ model Branch {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  groups                Group[]
-  users                 User[]
-  payments              Payment[]
-  teacherSalaryAccruals TeacherSalaryAccrual[]
-  teacherPayouts        TeacherPayout[]
+  groups                   Group[]
+  users                    User[]
+  payments                 Payment[]
+  teacherSalaryAccruals    TeacherSalaryAccrual[]
+  teacherPayouts           TeacherPayout[]
+  teacherSalaryAdjustments TeacherSalaryAdjustment[]
 
   @@index([isActive])
 }
@@ -188,36 +189,38 @@ model User {
   branchId String?
   branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
 
-  courses                    Course[]
-  enrollments                Enrollment[]
-  assessmentAttempts         AssessmentAttempt[]
-  attendanceRecords          AttendanceRecord[]
-  lessonProgress             LessonProgress[]
-  auditLogs                  AuditLog[]
-  submissions                Submission[]
-  reviewedSubmissions        Submission[]        @relation("ReviewedSubmissions")
-  enrollmentRequests         EnrollmentRequest[] @relation("StudentEnrollmentRequests")
-  reviewedEnrollmentRequests EnrollmentRequest[] @relation("ReviewedEnrollmentRequests")
-  payments                   Payment[]           @relation("StudentPayments")
-  recordedPayments           Payment[]           @relation("RecordedPayments")
-  telegramChatId             String?             @unique
-  telegramUsername           String?
+  courses                     Course[]
+  enrollments                 Enrollment[]
+  assessmentAttempts          AssessmentAttempt[]
+  attendanceRecords           AttendanceRecord[]
+  lessonProgress              LessonProgress[]
+  auditLogs                   AuditLog[]
+  submissions                 Submission[]
+  reviewedSubmissions         Submission[]        @relation("ReviewedSubmissions")
+  enrollmentRequests          EnrollmentRequest[] @relation("StudentEnrollmentRequests")
+  reviewedEnrollmentRequests  EnrollmentRequest[] @relation("ReviewedEnrollmentRequests")
+  payments                    Payment[]           @relation("StudentPayments")
+  recordedPayments            Payment[]           @relation("RecordedPayments")
+  telegramChatId              String?             @unique
+  telegramUsername            String?
   // Родитель мог отключить уведомления об успеваемости ребёнка (пропуск,
   // проверенное задание, еженедельная сводка) командой /stop боту — сам
   // бот при этом остаётся привязан, /start снова включает. У остальных ролей
   // поле не используется, но оно на User, а не на ParentStudent: бот видит
   // только chatId, а не то, чьим родителем является собеседник.
-  parentProgressNotifications Boolean            @default(true)
+  parentProgressNotifications Boolean             @default(true)
 
   // Ставка преподавателя по умолчанию в базисных пунктах: 4000 = 40 %.
   // Сотые доли процента, а не целые проценты: в договорах встречаются
   // половины процента, а менять тип колонки задним числом дороже, чем сразу
   // взять базисные пункты (план зарплат, 5.2). Пусто — ставки у преподавателя
   // нет; отличается от 0 % (см. TeacherSalaryAccrual.percentUsed).
-  salaryPercentBp       Int?
-  teacherSalaryAccruals TeacherSalaryAccrual[] @relation("TeacherSalaryAccruals")
-  teacherPayouts        TeacherPayout[]        @relation("TeacherPayouts")
-  recordedPayouts       TeacherPayout[]        @relation("RecordedPayouts")
+  salaryPercentBp           Int?
+  teacherSalaryAccruals     TeacherSalaryAccrual[]    @relation("TeacherSalaryAccruals")
+  teacherPayouts            TeacherPayout[]           @relation("TeacherPayouts")
+  recordedPayouts           TeacherPayout[]           @relation("RecordedPayouts")
+  teacherSalaryAdjustments  TeacherSalaryAdjustment[] @relation("TeacherSalaryAdjustments")
+  recordedSalaryAdjustments TeacherSalaryAdjustment[] @relation("RecordedSalaryAdjustments")
 
   // Родитель ↔ ученик. Связь многие-ко-многим: у ученика может быть двое
   // родителей, у родителя — несколько детей в разных группах.
@@ -594,7 +597,7 @@ model TeacherSalaryAccrual {
 
   month String // "YYYY-MM" строкой, как MonthlyCharge.month и Payment.forMonth
 
-  base Int // сумма начислений учеников группы за месяц (MonthlyCharge)
+  base          Int // сумма начислений учеников группы за месяц (MonthlyCharge)
   // Базисные пункты, по которым посчитали (User/Group.salaryPercentBp).
   // NULL — ставки не было ни у группы, ни у преподавателя, и amount = 0 по
   // этой причине, а не потому что месяц пустой. План (5.3) описывал колонку
@@ -621,7 +624,7 @@ model TeacherSalaryAccrual {
   // lessonsPlanned — были отработки за пропущенные занятия прошлых месяцев
   // (план, 4.4). Заменяющий получает свою строку с этим же полем — платится
   // по ставке группы (percentUsed), а не по своей персональной.
-  lessonsTaught Int?
+  lessonsTaught  Int?
 
   // Строка ведущего группы в этом месяце (а не замены). Нужна пересчёту:
   // после смены педагога группы «владелец» закрытого месяца — прежний
@@ -676,6 +679,38 @@ model TeacherPayout {
   @@index([teacherId])
   @@index([paidAt])
   @@index([forMonth])
+  @@index([deletedAt])
+}
+
+enum SalaryAdjustmentKind {
+  BONUS
+  PENALTY
+}
+
+/// Премия (+) или штраф (−) преподавателю за месяц. Часть НАЧИСЛЕННОГО, а не
+/// выдачи денег: кассу двигает только TeacherPayout. Журнал, как выплаты:
+/// суммы не правятся, ошибочную запись помечают deletedAt и вносят заново.
+model TeacherSalaryAdjustment {
+  id        String               @id @default(cuid())
+  kind      SalaryAdjustmentKind
+  amount    Int // всегда > 0; знак задаёт kind
+  month     String // "YYYY-MM"
+  reason    String
+  deletedAt DateTime?
+  createdAt DateTime             @default(now())
+
+  // Restrict, как у TeacherPayout: денежная история
+  teacherId String
+  teacher   User   @relation("TeacherSalaryAdjustments", fields: [teacherId], references: [id], onDelete: Restrict)
+
+  // Снимок филиала преподавателя на момент записи — как у TeacherPayout
+  branchId String?
+  branch   Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  createdById String
+  createdBy   User   @relation("RecordedSalaryAdjustments", fields: [createdById], references: [id])
+
+  @@index([teacherId, month])
   @@index([deletedAt])
 }
 
