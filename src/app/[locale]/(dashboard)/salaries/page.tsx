@@ -37,7 +37,7 @@ export default async function SalariesPage({
       <SalariesList
         month={data?.month ?? ""}
         rows={data?.rows ?? []}
-        totals={data?.totals ?? { base: 0, accrued: 0, paid: 0, debt: 0 }}
+        totals={data?.totals ?? { base: 0, accrued: 0, adjustments: 0, paid: 0, debt: 0 }}
         branchId={single("branchId")}
         branches={branches}
       />

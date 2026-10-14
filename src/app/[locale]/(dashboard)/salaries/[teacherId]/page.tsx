@@ -21,7 +21,7 @@ export default async function TeacherSalaryPage({ params, searchParams }: Teache
 
   const result = await getTeacherSalary(teacherId, { month });
   if (!result.success || !result.data) notFound();
-  const { teacher, groups, accruedTotal, paidTotal, debt, payouts } = result.data;
+  const { teacher, groups, adjustments, accruedFromGroups, accruedTotal, paidTotal, debt, payouts } = result.data;
 
   return (
     <div className="space-y-6">
@@ -35,6 +35,8 @@ export default async function TeacherSalaryPage({ params, searchParams }: Teache
         teacherId={teacherId}
         month={result.data.month}
         groups={groups}
+        adjustments={adjustments}
+        accruedFromGroups={accruedFromGroups}
         accruedTotal={accruedTotal}
         paidTotal={paidTotal}
         debt={debt}

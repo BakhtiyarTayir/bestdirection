@@ -15,7 +15,10 @@ export interface ApiSalaryOverviewRow {
   fallbackGroupsCount: number;
   studentsCount: number;
   base: number;
+  // Начислено за месяц: группы + премии − штрафы месяца
   accrued: number;
+  // Премии минус штрафы месяца (со знаком); уже входят в accrued
+  adjustments: number;
   accruedTotal: number;
   paidTotal: number;
   debt: number;
@@ -27,7 +30,7 @@ export interface ApiSalaryOverview {
   // base/studentsCount/groupsCount считаются без повторов по группе за
   // месяц: у группы с заменой несколько строк в rows (владелец и
   // заменяющие), но это одна и та же группа — в totals она учтена один раз
-  totals: { base: number; studentsCount: number; groupsCount: number; accrued: number; paid: number; debt: number };
+  totals: { base: number; studentsCount: number; groupsCount: number; accrued: number; adjustments: number; paid: number; debt: number };
 }
 
 export interface ApiSalaryMonthSession {
@@ -80,10 +83,29 @@ export interface ApiSalaryPayout {
   createdBy: string;
 }
 
+export type SalaryAdjustmentKind = "BONUS" | "PENALTY";
+
+// Премия или штраф за месяц; сумма всегда положительная, знак задаёт kind
+export interface ApiSalaryAdjustment {
+  id: string;
+  kind: SalaryAdjustmentKind;
+  amount: number;
+  month: string;
+  reason: string;
+  createdAt: string;
+  createdBy: string;
+}
+
 export interface ApiTeacherSalary {
   teacher: { id: string; firstName: string; lastName: string; salaryPercentBp: number | null };
   month: string;
   groups: ApiSalaryGroup[];
+  // Все живые корректировки преподавателя (в том числе будущих месяцев)
+  adjustments: ApiSalaryAdjustment[];
+  // Премии минус штрафы за месяцы ≤ month; входит в accruedTotal и debt
+  adjustmentsTotal: number;
+  // Начислено по группам до month включительно, без корректировок
+  accruedFromGroups: number;
   accruedTotal: number;
   paidTotal: number;
   debt: number;
@@ -147,6 +169,17 @@ export const createPayout = (body: {
 }) => apiFetch<{ id: string }>("/salary/payouts", { method: "POST", body });
 
 export const deletePayout = (id: string) => apiFetch<{ ok: true }>(`/salary/payouts/${id}`, { method: "DELETE" });
+
+export const createSalaryAdjustment = (body: {
+  teacherId: string;
+  kind: SalaryAdjustmentKind;
+  amount: number;
+  month: string;
+  reason: string;
+}) => apiFetch<{ id: string }>("/salary/adjustments", { method: "POST", body });
+
+export const deleteSalaryAdjustment = (id: string) =>
+  apiFetch<{ ok: true }>(`/salary/adjustments/${id}`, { method: "DELETE" });
 
 export const getSalaryGroupStudents = (month: string, groupId: string | null, courseId: string) =>
   apiFetch<ApiSalaryGroupStudents>("/salary/group-students", {

@@ -38,14 +38,18 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { formatDate } from "@/lib/format-date";
 import { ChevronDown, ChevronRight, Pencil, RefreshCw, TriangleAlert, Trash2 } from "lucide-react";
-import type { ApiSalaryGroup, ApiSalaryGroupStudents, ApiSalaryPayout } from "@/lib/api/salary";
+import type { ApiSalaryAdjustment, ApiSalaryGroup, ApiSalaryGroupStudents, ApiSalaryPayout } from "@/lib/api/salary";
 import { deletePayout, getSalaryGroupStudents, recalculateSalaryMonth, setManualSalaryAmount } from "@/lib/api/salary";
 import { CreatePayoutDialog } from "./create-payout-dialog";
+import { CreateAdjustmentDialog } from "./create-adjustment-dialog";
+import { AccruedBreakdown, AdjustmentsSection } from "../adjustments-section";
 
 interface TeacherSalaryViewProps {
   teacherId: string;
   month: string;
   groups: ApiSalaryGroup[];
+  adjustments: ApiSalaryAdjustment[];
+  accruedFromGroups: number;
   accruedTotal: number;
   paidTotal: number;
   debt: number;
@@ -62,6 +66,8 @@ export function TeacherSalaryView({
   teacherId,
   month,
   groups,
+  adjustments,
+  accruedFromGroups,
   accruedTotal,
   paidTotal,
   debt,
@@ -140,13 +146,17 @@ export function TeacherSalaryView({
             onChange={(e) => setMonth(e.target.value)}
           />
         </div>
-        <CreatePayoutDialog teacherId={teacherId} defaultAmount={debt > 0 ? debt : undefined} defaultForMonth={month} />
+        <div className="flex flex-wrap gap-2">
+          <CreateAdjustmentDialog teacherId={teacherId} defaultMonth={month} />
+          <CreatePayoutDialog teacherId={teacherId} defaultAmount={debt > 0 ? debt : undefined} defaultForMonth={month} />
+        </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-lg border bg-muted/40 px-4 py-3">
           <div className="text-sm text-muted-foreground">{t("accruedToDate", { month })}</div>
           <div className="text-2xl font-bold">{money.format(accruedTotal)} UZS</div>
+          <AccruedBreakdown adjustments={adjustments} month={month} accruedFromGroups={accruedFromGroups} />
         </div>
         <div className="rounded-lg border px-4 py-3">
           <div className="text-sm text-muted-foreground">{t("paidToDate", { month })}</div>
@@ -326,6 +336,8 @@ export function TeacherSalaryView({
           ))
         )}
       </div>
+
+      <AdjustmentsSection adjustments={adjustments} canDelete />
 
       <div className="space-y-4">
         <h2 className="text-lg font-semibold">{t("payoutsJournal")}</h2>

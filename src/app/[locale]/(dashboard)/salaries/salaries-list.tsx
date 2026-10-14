@@ -29,7 +29,7 @@ import type { ApiSalaryOverviewRow } from "@/lib/api/salary";
 interface SalariesListProps {
   month: string;
   rows: ApiSalaryOverviewRow[];
-  totals: { base: number; accrued: number; paid: number; debt: number };
+  totals: { base: number; accrued: number; adjustments: number; paid: number; debt: number };
   branchId?: string;
   branches: { id: string; name: string }[];
 }
@@ -123,6 +123,7 @@ export function SalariesList({ month, rows, totals, branchId, branches }: Salari
                 <TableHead className="text-right">{t("colStudents")}</TableHead>
                 <TableHead className="text-right">{t("colBase")}</TableHead>
                 <TableHead className="text-right">{t("colAccrued")}</TableHead>
+                <TableHead className="text-right">{t("colAdjustments")}</TableHead>
                 <TableHead className="text-right">{t("colPaid")}</TableHead>
                 <TableHead className="text-right">{t("colDebt")}</TableHead>
               </TableRow>
@@ -151,6 +152,14 @@ export function SalariesList({ month, rows, totals, branchId, branches }: Salari
                   <TableCell className="whitespace-nowrap text-right">{row.studentsCount}</TableCell>
                   <TableCell className="whitespace-nowrap text-right">{money.format(row.base)}</TableCell>
                   <TableCell className="whitespace-nowrap text-right">{money.format(row.accrued)}</TableCell>
+                  <TableCell
+                    className={`whitespace-nowrap text-right ${row.adjustments > 0 ? "text-green-600" : "text-red-600"}`}
+                  >
+                    {/* Пусто при нуле; штраф уже со знаком минус из api */}
+                    {row.adjustments === 0
+                      ? ""
+                      : `${row.adjustments > 0 ? "+" : "−"}${money.format(Math.abs(row.adjustments))}`}
+                  </TableCell>
                   <TableCell className="whitespace-nowrap text-right">{money.format(row.paidTotal)}</TableCell>
                   <TableCell className="whitespace-nowrap text-right">
                     <Badge variant={row.debt > 0 ? "destructive" : "secondary"}>

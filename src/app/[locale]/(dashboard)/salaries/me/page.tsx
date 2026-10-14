@@ -28,7 +28,7 @@ export default async function MySalaryPage({
         <p className="mt-1 text-muted-foreground">{t("subtitleMe")}</p>
       </div>
       {data ? (
-        <MySalaryView month={data.month} groups={data.groups} accruedTotal={data.accruedTotal} paidTotal={data.paidTotal} debt={data.debt} payouts={data.payouts} />
+        <MySalaryView month={data.month} groups={data.groups} adjustments={data.adjustments} accruedFromGroups={data.accruedFromGroups} accruedTotal={data.accruedTotal} paidTotal={data.paidTotal} debt={data.debt} payouts={data.payouts} />
       ) : (
         <p className="text-muted-foreground">{t("empty")}</p>
       )}
