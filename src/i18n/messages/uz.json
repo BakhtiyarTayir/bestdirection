@@ -1765,6 +1765,8 @@
     "allBranches": "Barcha filiallar",
     "filterTeacher": "O'qituvchi",
     "allTeachers": "Barcha o'qituvchilar",
+    "downloadExcel": "Excel yuklab olish",
+    "downloadError": "Faylni yuklab olib bo'lmadi",
     "writeInTelegram": "Telegramga yozish",
     "filterView": "Ko'rsatish",
     "viewDebtors": "Qarzdorlar",

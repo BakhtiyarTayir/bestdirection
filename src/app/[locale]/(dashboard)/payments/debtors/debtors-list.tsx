@@ -4,6 +4,7 @@ import { Fragment, useState, useTransition } from "react";
 import { intlLocale } from "@/i18n/config";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
+import { useToast } from "@/components/ui/use-toast";
 import {
   Table,
   TableBody,
@@ -24,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronDown, ChevronRight, Send, SlidersHorizontal, TriangleAlert, Wallet } from "lucide-react";
+import { ChevronDown, ChevronRight, Download, Loader2, Send, SlidersHorizontal, TriangleAlert, Wallet } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { PrepaidDialog } from "./prepaid-dialog";
 import type { ApiPrepaidRow } from "@/lib/api/billing";
@@ -109,6 +110,8 @@ export function DebtorsList({
   const [paying, setPaying] = useState<DebtorRow | null>(null);
   const [prepaidOpen, setPrepaidOpen] = useState(false);
   const [, startTransition] = useTransition();
+  const [downloading, setDownloading] = useState(false);
+  const { toast } = useToast();
   // Фильтры — в адресе, список приходит с сервера: их смена открывает
   // первую страницу, а обновление после оплаты — нет
   const showPrepaid = view === "prepaid";
@@ -138,6 +141,36 @@ export function DebtorsList({
     startTransition(() => {
       router.replace(query ? `${pathname}?${query}` : pathname);
     });
+  };
+
+  // Выгрузка отдаёт те же фильтры, что видны на экране: файл совпадает со списком
+  const downloadExcel = async () => {
+    setDownloading(true);
+    try {
+      const params = new URLSearchParams();
+      for (const [key, value] of Object.entries({ month, branchId, courseId, teacherId })) {
+        if (value) params.set(key, value);
+      }
+      const res = await fetch(`/api/v2/billing/debtors/export?${params.toString()}`);
+      if (!res.ok) throw new Error(t("downloadError"));
+
+      const blob = await res.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `debtors-${month}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(a.href);
+    } catch (e) {
+      toast({
+        title: t("downloadError"),
+        description: e instanceof Error && e.message !== t("downloadError") ? e.message : undefined,
+        variant: "destructive",
+      });
+    } finally {
+      setDownloading(false);
+    }
   };
 
   const basisLabel = (item: DebtorBreakdown) => {
@@ -233,6 +266,16 @@ export function DebtorsList({
               </SelectContent>
             </Select>
           </div>
+        )}
+        {!showPrepaid && (
+          <Button variant="outline" disabled={downloading} onClick={downloadExcel}>
+            {downloading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            {t("downloadExcel")}
+          </Button>
         )}
       </div>
 

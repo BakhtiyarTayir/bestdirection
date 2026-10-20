@@ -1765,6 +1765,8 @@
     "allBranches": "Все филиалы",
     "filterTeacher": "Преподаватель",
     "allTeachers": "Все преподаватели",
+    "downloadExcel": "Скачать Excel",
+    "downloadError": "Не удалось скачать файл",
     "writeInTelegram": "Написать в Telegram",
     "filterView": "Показать",
     "viewDebtors": "Должники",
