@@ -76,6 +76,9 @@ interface DebtorsListProps {
   courses: { id: string; title: string }[];
   branchId?: string;
   branches: { id: string; name: string }[];
+  groupId?: string;
+  /** courseTitle нужен, чтобы различать одноимённые группы, когда курс не выбран */
+  groups: { id: string; name: string; courseTitle: string }[];
   teacherId?: string;
   teachers: { id: string; firstName: string; lastName: string }[];
 }
@@ -97,6 +100,8 @@ export function DebtorsList({
   courses,
   branchId,
   branches,
+  groupId,
+  groups,
   teacherId,
   teachers,
 }: DebtorsListProps) {
@@ -118,7 +123,7 @@ export function DebtorsList({
   const rows: (DebtorRow & { advance?: number })[] = showPrepaid ? prepaid : debtors;
   const { page, totalPages, pageItems, setPage } = usePagination(
     rows,
-    `${month}|${courseId ?? ""}|${branchId ?? ""}|${teacherId ?? ""}|${view}`
+    `${month}|${courseId ?? ""}|${groupId ?? ""}|${branchId ?? ""}|${teacherId ?? ""}|${view}`
   );
 
   const money = new Intl.NumberFormat(intlLocale(locale));
@@ -128,11 +133,15 @@ export function DebtorsList({
     const next = {
       month,
       courseId,
+      groupId,
       branchId,
       teacherId,
       view: showPrepaid ? "prepaid" : "",
       [key]: value === ALL ? "" : value,
     };
+    // Список групп зависит от курса и филиала: выбранная группа могла в него
+    // не попасть, поэтому при смене любого из них группу сбрасываем
+    if (key === "courseId" || key === "branchId") next.groupId = undefined;
     const params = new URLSearchParams();
     for (const [k, v] of Object.entries(next)) {
       if (v) params.set(k, v);
@@ -148,7 +157,7 @@ export function DebtorsList({
     setDownloading(true);
     try {
       const params = new URLSearchParams();
-      for (const [key, value] of Object.entries({ month, branchId, courseId, teacherId })) {
+      for (const [key, value] of Object.entries({ month, branchId, courseId, groupId, teacherId })) {
         if (value) params.set(key, value);
       }
       const res = await fetch(`/api/v2/billing/debtors/export?${params.toString()}`);
@@ -191,6 +200,24 @@ export function DebtorsList({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
+        {branches.length > 0 && (
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">{t("filterBranch")}</Label>
+            <Select value={branchId ?? ALL} onValueChange={(value) => setFilter("branchId", value)}>
+              <SelectTrigger className="w-56">
+                <SelectValue placeholder={t("allBranches")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>{t("allBranches")}</SelectItem>
+                {branches.map((branch) => (
+                  <SelectItem key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground">{t("filterView")}</Label>
           <Select value={view} onValueChange={(value) => setFilter("view", value === "prepaid" ? value : ALL)}>
@@ -231,18 +258,18 @@ export function DebtorsList({
             </SelectContent>
           </Select>
         </div>
-        {branches.length > 0 && (
+        {groups.length > 0 && (
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">{t("filterBranch")}</Label>
-            <Select value={branchId ?? ALL} onValueChange={(value) => setFilter("branchId", value)}>
+            <Label className="text-xs text-muted-foreground">{t("filterGroup")}</Label>
+            <Select value={groupId ?? ALL} onValueChange={(value) => setFilter("groupId", value)}>
               <SelectTrigger className="w-56">
-                <SelectValue placeholder={t("allBranches")} />
+                <SelectValue placeholder={t("allGroups")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL}>{t("allBranches")}</SelectItem>
-                {branches.map((branch) => (
-                  <SelectItem key={branch.id} value={branch.id}>
-                    {branch.name}
+                <SelectItem value={ALL}>{t("allGroups")}</SelectItem>
+                {groups.map((group) => (
+                  <SelectItem key={group.id} value={group.id}>
+                    {courseId ? group.name : `${group.courseTitle} — ${group.name}`}
                   </SelectItem>
                 ))}
               </SelectContent>

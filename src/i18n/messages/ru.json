@@ -1718,6 +1718,8 @@
     "filterMonth": "По конец месяца",
     "filterCourse": "Курс",
     "allCourses": "Все курсы",
+    "filterGroup": "Группа",
+    "allGroups": "Все группы",
     "totalDebt": "Общий долг",
     "debtorsCount": "{count, plural, one {# должник} few {# должника} other {# должников}}",
     "prepaid": "Переплата",

@@ -1718,6 +1718,8 @@
     "filterMonth": "Oy oxirigacha",
     "filterCourse": "Kurs",
     "allCourses": "Barcha kurslar",
+    "filterGroup": "Guruh",
+    "allGroups": "Barcha guruhlar",
     "totalDebt": "Umumiy qarz",
     "debtorsCount": "{count, plural, other {# qarzdor}}",
     "prepaid": "Ortiqcha to'lov",

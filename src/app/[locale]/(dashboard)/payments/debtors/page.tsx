@@ -2,7 +2,7 @@ import { requireRole } from "@/lib/auth-guard";
 import { getTranslations } from "next-intl/server";
 import { getDebtors, getPaymentFormOptions } from "@/lib/api/billing.server";
 import { getBranches } from "@/lib/api/branches.server";
-import { getTeacherOptions } from "@/lib/api/groups.server";
+import { getAllGroups, getTeacherOptions } from "@/lib/api/groups.server";
 import { DebtorsList } from "./debtors-list";
 
 export const dynamic = "force-dynamic";
@@ -21,16 +21,18 @@ export default async function DebtorsPage({
     return typeof value === "string" && value ? value : undefined;
   };
 
-  const [debtorsResult, optionsResult, branchesResult, teachersResult] = await Promise.all([
+  const [debtorsResult, optionsResult, branchesResult, teachersResult, groupsResult] = await Promise.all([
     getDebtors({
       month: single("month"),
       courseId: single("courseId"),
+      groupId: single("groupId"),
       branchId: single("branchId"),
       teacherId: single("teacherId"),
     }),
     getPaymentFormOptions(),
     getBranches(),
     getTeacherOptions(),
+    getAllGroups(single("branchId")),
   ]);
 
   const data = debtorsResult.success && debtorsResult.data ? debtorsResult.data : null;
@@ -42,6 +44,13 @@ export default async function DebtorsPage({
     optionsResult.success && optionsResult.data ? optionsResult.data.students : [];
   const branches = branchesResult.success && branchesResult.data ? branchesResult.data : [];
   const teachers = teachersResult.success && teachersResult.data ? teachersResult.data : [];
+
+  // Список групп сужаем по филиалу (запрос) и по курсу, как на странице учеников
+  const allGroups = groupsResult.success && groupsResult.data ? groupsResult.data : [];
+  const courseId = single("courseId");
+  const groups = (courseId ? allGroups.filter((group) => group.course.id === courseId) : allGroups).map(
+    (group) => ({ id: group.id, name: group.name, courseTitle: group.course.title })
+  );
 
   return (
     <div>
@@ -64,6 +73,8 @@ export default async function DebtorsPage({
         courses={courses}
         branchId={single("branchId")}
         branches={branches}
+        groupId={single("groupId")}
+        groups={groups}
         teacherId={single("teacherId")}
         teachers={teachers}
       />
