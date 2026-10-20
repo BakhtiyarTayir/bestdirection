@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res } from "@nestjs/common";
+import type { Response } from "express";
 import { CurrentUser } from "../../common/auth/decorators";
 import type { SessionUser } from "../../common/auth/session-user";
 import { CheckPolicies } from "../../common/policies/check-policies.decorator";
@@ -28,6 +29,19 @@ export class BillingController {
   @Get("debtors")
   debtors(@Query() query: DebtorsQueryDto) {
     return this.billing.debtors(query);
+  }
+
+  /** Excel со списком должников; фильтры те же, что у экрана. До debtors/:param. */
+  @CheckPolicies(adminOnly)
+  @Get("debtors/export")
+  async exportDebtors(@Query() query: DebtorsQueryDto, @Res() res: Response) {
+    const file = await this.billing.exportDebtors(query);
+    // Имя файла по RFC 5987, как в выгрузках тестов
+    res
+      .status(200)
+      .setHeader("Content-Type", file.contentType)
+      .setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(file.filename)}`)
+      .send(file.body);
   }
 
   /** Бейдж в сайдбаре. */

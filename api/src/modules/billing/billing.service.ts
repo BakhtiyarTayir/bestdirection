@@ -1,3 +1,4 @@
+import * as XLSX from "@e965/xlsx";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { AuditService } from "../../common/audit/audit.service";
 import type { SessionUser } from "../../common/auth/session-user";
@@ -20,6 +21,7 @@ import {
   priceFor,
   type BillingEnrollment,
 } from "./domain/billing";
+import { buildDebtorsWorkbook } from "./domain/debtors-export";
 import type { UpdateEnrollmentBillingDto } from "./dto/billing.dto";
 
 /**
@@ -75,6 +77,9 @@ export class BillingService {
         course: { id: enrollment.course.id, title: enrollment.course.title },
         group: enrollment.group ? { id: enrollment.group.id, name: enrollment.group.name } : null,
         monthlyPrice: priceFor(this.ledger.toBillingEnrollment(enrollment)) ?? 0,
+        // Учитель записи — как в enrollmentTeacherFilter: учитель группы, а
+        // если у группы его нет (или группы нет) — учитель курса
+        teacher: enrollment.group?.teacher ?? enrollment.course.teacher ?? null,
         hasSchedule: (enrollment.group?.scheduleDays.length ?? 0) > 0,
         // Две разные причины расчёта по дням: студента нет в группе или у
         // группы не заданы дни занятий. Совет админу в каждом случае свой.
@@ -123,6 +128,21 @@ export class BillingService {
       // Неполный месяц у них считается по дням, а не по занятиям
       withoutGroup: rows.filter((row) => !row.hasGroup).length,
       groupWithoutSchedule: rows.filter((row) => row.hasGroup && !row.hasSchedule).length,
+    };
+  }
+
+  /**
+   * Excel-выгрузка должников. Строки берутся из debtors() — тот же расчёт и
+   * те же фильтры, что на экране, поэтому файл с ним не расходится. Ученики
+   * с авансом сюда не входят.
+   */
+  async exportDebtors(params: Parameters<BillingService["debtors"]>[0]) {
+    const { month, debtors } = await this.debtors(params);
+    const workbook = buildDebtorsWorkbook(debtors, month);
+    return {
+      body: XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer,
+      contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      filename: `debtors-${month}.xlsx`,
     };
   }
 

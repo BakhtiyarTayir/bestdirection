@@ -1,3 +1,4 @@
+import * as XLSX from "@e965/xlsx";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { addMonths, currentMonthKey } from "../src/modules/billing/domain/billing";
@@ -58,6 +59,7 @@ describe("модуль billing", () => {
     const paths = [
       "/billing/debtors",
       "/billing/debtors/count",
+      "/billing/debtors/export",
       "/billing/students",
       "/billing/payments",
       "/billing/payments/form-options",
@@ -77,6 +79,30 @@ describe("модуль billing", () => {
 
     it("аноним — 401", async () => {
       expect((await get("/billing/debtors")).status).toBe(401);
+    });
+
+    it("у должника без учителя группы учитель — учитель курса", async () => {
+      const res = await get(`/billing/debtors?courseId=${ids.course}`, "ADMIN");
+      const row = res.body.debtors.find((r: { enrollmentId: string }) => r.enrollmentId === ids.enrollment);
+      expect(row.teacher.id).toBe(ids.TEACHER);
+    });
+
+    it("выгрузка должников: xlsx с тремя листами и именем по месяцу", async () => {
+      const res = await get(`/billing/debtors/export?courseId=${ids.course}&month=${current}`, "ADMIN")
+        .buffer(true)
+        .parse((response, done) => {
+          const chunks: Buffer[] = [];
+          response.on("data", (chunk: Buffer) => chunks.push(chunk));
+          response.on("end", () => done(null, Buffer.concat(chunks)));
+        });
+      expect(res.status).toBe(200);
+      expect(res.headers["content-disposition"]).toContain(`filename*=UTF-8''debtors-${current}.xlsx`);
+      const workbook = XLSX.read(res.body, { type: "buffer" });
+      expect(workbook.SheetNames).toEqual(["По группам", "По учителям", "Все должники"]);
+      const flat = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets["Все должники"], { header: 1 });
+      // заголовок, шапка и минимум одна строка должника с числовым долгом
+      expect(flat.length).toBeGreaterThanOrEqual(3);
+      expect(typeof flat[2][9]).toBe("number");
     });
 
     it("ученик не может завести оплату себе", async () => {

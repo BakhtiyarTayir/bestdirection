@@ -185,9 +185,27 @@ export class BillingLedgerService {
         student: {
           select: { id: true, firstName: true, lastName: true, phone: true, telegramUsername: true },
         },
-        course: { select: { id: true, title: true, deletedAt: true } },
+        course: {
+          select: {
+            id: true,
+            title: true,
+            deletedAt: true,
+            teacher: { select: { id: true, firstName: true, lastName: true } },
+          },
+        },
         group: {
-          select: { id: true, name: true, price: true, scheduleDays: true, startDate: true, endDate: true },
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            scheduleDays: true,
+            startDate: true,
+            endDate: true,
+            // Вложенный select обходит фильтр мягкого удаления (он действует
+            // только на верхний уровень запроса), поэтому педагог из Корзины
+            // здесь всё равно приходит — долг ученика не остаётся без учителя
+            teacher: { select: { id: true, firstName: true, lastName: true } },
+          },
         },
       },
     });
