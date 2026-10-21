@@ -36,7 +36,7 @@ export default async function DebtorsPage({
   ]);
 
   const data = debtorsResult.success && debtorsResult.data ? debtorsResult.data : null;
-  const courses =
+  const allCourses =
     optionsResult.success && optionsResult.data ? optionsResult.data.courses : [];
   // Студенты с их записями нужны диалогу оплаты: он открывается прямо из строки
   // должника с подставленными студентом, курсом и суммой долга.
@@ -48,6 +48,14 @@ export default async function DebtorsPage({
   // Список групп сужаем по филиалу (запрос) и по курсу, как на странице учеников
   const allGroups = groupsResult.success && groupsResult.data ? groupsResult.data : [];
   const courseId = single("courseId");
+  const branchId = single("branchId");
+  // У курса нет филиала, он есть только у группы: при выбранном филиале оставляем
+  // курсы, у которых в нём есть группы (закрытые тоже — у них бывают должники).
+  // Курс из адреса оставляем всегда, чтобы старая ссылка не давала пустой Select.
+  const branchCourseIds = new Set(allGroups.map((group) => group.course.id));
+  const courses = branchId
+    ? allCourses.filter((course) => branchCourseIds.has(course.id) || course.id === courseId)
+    : allCourses;
   const groups = (courseId ? allGroups.filter((group) => group.course.id === courseId) : allGroups).map(
     (group) => ({ id: group.id, name: group.name, courseTitle: group.course.title })
   );
@@ -71,7 +79,7 @@ export default async function DebtorsPage({
         groupWithoutSchedule={data?.groupWithoutSchedule ?? 0}
         courseId={single("courseId")}
         courses={courses}
-        branchId={single("branchId")}
+        branchId={branchId}
         branches={branches}
         groupId={single("groupId")}
         groups={groups}

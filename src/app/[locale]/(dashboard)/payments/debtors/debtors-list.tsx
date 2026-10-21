@@ -139,9 +139,11 @@ export function DebtorsList({
       view: showPrepaid ? "prepaid" : "",
       [key]: value === ALL ? "" : value,
     };
-    // Список групп зависит от курса и филиала: выбранная группа могла в него
-    // не попасть, поэтому при смене любого из них группу сбрасываем
+    // Список групп зависит от курса и филиала, а список курсов — от филиала:
+    // выбранные группа или курс могли в него не попасть. Поэтому при смене
+    // курса или филиала группу сбрасываем, а при смене филиала — ещё и курс
     if (key === "courseId" || key === "branchId") next.groupId = undefined;
+    if (key === "branchId") next.courseId = undefined;
     const params = new URLSearchParams();
     for (const [k, v] of Object.entries(next)) {
       if (v) params.set(k, v);
