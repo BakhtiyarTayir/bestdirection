@@ -451,11 +451,21 @@ model Enrollment {
   groupId String?
   group   Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
 
+  // Группа, из которой ученика отчислили (removeStudent с alsoUnenroll):
+  // groupId при этом обнуляется, и без этой памяти начисление отчисленного
+  // за текущий (открытый) месяц не попадало бы ни в группу, ни в «курс без
+  // группы» зарплаты. По ней же снимок MonthlyCharge.groupId закрытого месяца
+  // отчисленного уходит в базу его прежней группы. Сбрасывается при любом
+  // возврате в группу/на курс. SetNull — при удалении группы.
+  unenrolledFromGroupId String?
+  unenrolledFromGroup   Group?  @relation("EnrollmentUnenrolledFromGroup", fields: [unenrolledFromGroupId], references: [id], onDelete: SetNull)
+
   monthlyCharges MonthlyCharge[]
 
   @@unique([studentId, courseId])
   @@index([courseId])
   @@index([groupId])
+  @@index([unenrolledFromGroupId])
 }
 
 // Зафиксированное начисление за календарный месяц.
@@ -549,11 +559,13 @@ model Group {
   teacherId String?
   teacher   User?   @relation("GroupTeacher", fields: [teacherId], references: [id], onDelete: SetNull)
 
-  enrollments        Enrollment[]
-  attendanceSessions AttendanceSession[]
-  payments           Payment[]
-  smsBroadcasts      SmsBroadcast[]
-  salaryAccruals     TeacherSalaryAccrual[]
+  enrollments           Enrollment[]
+  // Отчисленные из этой группы: их запись уже без groupId (см. Enrollment.unenrolledFromGroupId)
+  unenrolledEnrollments Enrollment[]           @relation("EnrollmentUnenrolledFromGroup")
+  attendanceSessions    AttendanceSession[]
+  payments              Payment[]
+  smsBroadcasts         SmsBroadcast[]
+  salaryAccruals        TeacherSalaryAccrual[]
 
   // Имя уникально внутри филиала, а не на весь центр: «Python-1» есть в
   // каждом филиале, и это нормально. Работает только потому, что branchId

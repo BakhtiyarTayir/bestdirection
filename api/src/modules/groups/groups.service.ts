@@ -342,7 +342,7 @@ export class GroupsService {
     for (const { id: studentId } of eligible) {
       const existing = await this.prisma.enrollment.findUnique({
         where: { studentId_courseId: { studentId, courseId: group.courseId } },
-        select: { id: true, groupId: true, unenrolledAt: true },
+        select: { id: true, groupId: true, unenrolledAt: true, unenrolledFromGroupId: true },
       });
 
       if (existing) {
@@ -354,11 +354,18 @@ export class GroupsService {
         // База ПРЕЖНЕЙ группы (или записей без группы, если existing.groupId
         // пуст) теряет этого студента — фиксируем её зарплату ДО перевода,
         // иначе закрытый месяц пересчитается уже без его начислений
-        await this.salary.freezeClosedMonths({ groupId: existing.groupId, courseId: group.courseId });
+        // Отчисленный без groupId лежит в базе своей прежней группы
+        // (unenrolledFromGroupId), а не «курса без группы» — фиксируем её
+        await this.salary.freezeClosedMonths({
+          groupId: existing.groupId ?? existing.unenrolledFromGroupId,
+          courseId: group.courseId,
+        });
         await this.prisma.enrollment.update({
           where: { studentId_courseId: { studentId, courseId: group.courseId } },
           data: {
             groupId,
+            // Вернули в группу — память о группе отчисления больше не нужна
+            unenrolledFromGroupId: null,
             // Возвращаем в группу отчисленного — начисления и доступ
             // возобновляются с сегодня; разрыв уже заморожен строкой выше.
             // startsAt тоже переносим на сегодня: иначе старая дата начала
@@ -435,7 +442,10 @@ export class GroupsService {
         const now = toNoonUtc(new Date().toISOString().slice(0, 10));
         await this.prisma.enrollment.update({
           where: { id: enrollment.id },
-          data: { groupId: null, billingEndsAt: now, unenrolledAt: now },
+          // unenrolledFromGroupId — чтобы начисление отчисленного за текущий
+          // (открытый) месяц осталось в базе зарплаты этой группы, а не
+          // выпало из всех единиц: groupId теперь пуст
+          data: { groupId: null, unenrolledFromGroupId: groupId, billingEndsAt: now, unenrolledAt: now },
         });
       }
     } else {
@@ -468,7 +478,7 @@ export class GroupsService {
     // хранит только текущий groupId, после update() старую уже не узнать
     const current = await this.prisma.enrollment.findUnique({
       where: { studentId_courseId: { studentId, courseId } },
-      select: { groupId: true },
+      select: { groupId: true, unenrolledFromGroupId: true },
     });
 
     // Новая группа — новая цена и расписание: сначала фиксируем закрытые
@@ -476,11 +486,11 @@ export class GroupsService {
     await this.ledger.freezeClosedMonths({ studentId, courseId });
     // База ПРЕЖНЕЙ группы теряет этого студента — фиксируем её зарплату тоже,
     // строго после биллинговой заморозки (план зарплат, 5.4)
-    await this.salary.freezeClosedMonths({ groupId: current?.groupId ?? null, courseId });
+    await this.salary.freezeClosedMonths({ groupId: current?.groupId ?? current?.unenrolledFromGroupId ?? null, courseId });
 
     await this.prisma.enrollment.update({
       where: { studentId_courseId: { studentId, courseId } },
-      data: { groupId: toGroupId },
+      data: { groupId: toGroupId, unenrolledFromGroupId: null },
     });
     return { studentId, toGroupId };
   }

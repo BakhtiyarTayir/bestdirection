@@ -183,15 +183,14 @@ export class SalaryService {
         : await this.prisma.course.findMany({
             where: {
               deletedAt: null,
-              // Отчисленная (unenrolledAt) запись сюда не считается: её
-              // вклад в базу уже заморожен под тем юнитом, где она реально
-              // была (freezeClosedMonths вызывается ДО отчисления), а
-              // дальше начисление всё равно ноль. Без этого условия
-              // отчисление порождало бы «призрачный» безгрупповой юнит с
-              // нулевой суммой, который потом сталкивается с настоящим
-              // безгрупповым юнитом на уникальном индексе при удалении
-              // группы (SetNull каскадит groupId у TeacherSalaryAccrual).
-              enrollments: { some: { groupId: null, unenrolledAt: null } },
+              // Записи без группы и без прежней группы — и активные, и
+              // отчисленные. Отчисленный без прежней группы (был «на курсе»)
+              // — настоящий вклад этой единицы в месяц отчисления: его
+              // начисление за открытый месяц до даты отчисления иначе не
+              // попало бы никуда. Отчисленный ИЗ группы сюда не относится —
+              // он уходит в свою группу через unenrolledFromGroupId, а
+              // замороженные месяцы у него и так лежат под снимком этой группы.
+              enrollments: { some: { groupId: null, unenrolledFromGroupId: null } },
               ...(filters.courseId ? { id: filters.courseId } : {}),
             },
             select: { id: true, title: true, teacherId: true },
@@ -282,13 +281,17 @@ export class SalaryService {
   /** Записи на курс, входящие в единицу: по группе или (для groupId=null) по курсу без группы. */
   private async loadUnitEnrollments(unit: Pick<Unit, "groupId" | "courseId">): Promise<LoadedEnrollment[]> {
     if (unit.groupId) {
-      return this.ledger.loadBillableEnrollments({ groupId: unit.groupId });
+      // salaryGroupId: вместе с отчисленными из этой группы — их начисление
+      // за месяц отчисления остаётся в её базе (см. LedgerFilters)
+      return this.ledger.loadBillableEnrollments({ salaryGroupId: unit.groupId });
     }
     const enrollments = await this.ledger.loadBillableEnrollments({ courseId: unit.courseId });
-    // Отчисленная (unenrolledAt) сюда тоже не входит — см. комментарий у
-    // ungroupedCourses выше: её база уже зафиксирована под прежним юнитом,
-    // а дальше она всё равно не растёт.
-    return enrollments.filter((enrollment) => enrollment.group === null && enrollment.unenrolledAt === null);
+    // Курс без группы: записи без группы и без прежней группы — и активные, и
+    // отчисленные. Отчисленный из группы (unenrolledFromGroupId) принадлежит
+    // базе своей группы, иначе он попал бы в две единицы сразу.
+    return enrollments.filter(
+      (enrollment) => enrollment.group === null && enrollment.unenrolledFromGroupId === null
+    );
   }
 
   /**

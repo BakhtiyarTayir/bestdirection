@@ -29,6 +29,22 @@ export function activeEnrollmentFilter(): Prisma.EnrollmentWhereInput {
   return { unenrolledAt: null };
 }
 
+/**
+ * Условия группы для формулы начисления. У отчисленного группы уже нет —
+ * берётся та, из которой отчислили: иначе без личной цены его месяц
+ * отчисления начислился бы нулём, и до дня отчисления он учился бы даром.
+ */
+function groupTerms(
+  group: { price: number | null; scheduleDays: number[]; startDate: Date | null; endDate: Date | null } | null
+) {
+  return {
+    groupPrice: group?.price ?? null,
+    scheduleDays: group?.scheduleDays ?? [],
+    groupEndDate: group?.endDate ?? null,
+    groupStartDate: group?.startDate ?? null,
+  };
+}
+
 /** Более ранняя из двух дат; null — даты нет */
 function earliestDate(a: Date | null, b: Date | null): Date | null {
   if (!a) return b;
@@ -110,6 +126,11 @@ export interface LedgerFilters {
   branchId?: string;
   // Педагог записи — enrollmentTeacherFilter выше
   teacherId?: string;
+  // База зарплаты группы: кроме учеников группы (groupId) берёт и отчисленных
+  // из неё (groupId=null, unenrolledFromGroupId=эта группа) — их начисление
+  // за месяц отчисления остаётся в группе. Для списков и должников НЕ
+  // использовать: там отчисленный в составе группы показываться не должен.
+  salaryGroupId?: string;
 }
 
 /**
@@ -159,6 +180,8 @@ export class BillingLedgerService {
                 {
                   OR: [
                     { group: { price: { not: null } } },
+                    // Отчисленный из платной группы платен до дня отчисления
+                    { unenrolledFromGroup: { price: { not: null } } },
                     { priceOverride: { not: null } },
                     { monthlyCharges: { some: { amount: { gt: 0 } } } },
                   ],
@@ -167,6 +190,20 @@ export class BillingLedgerService {
           ...(filters.enrollmentId ? [{ id: filters.enrollmentId }] : []),
           ...(filters.courseId ? [{ courseId: filters.courseId }] : []),
           ...(filters.groupId ? [{ groupId: filters.groupId }] : []),
+          ...(filters.salaryGroupId
+            ? [
+                {
+                  OR: [
+                    { groupId: filters.salaryGroupId },
+                    {
+                      groupId: null,
+                      unenrolledFromGroupId: filters.salaryGroupId,
+                      unenrolledAt: { not: null },
+                    },
+                  ],
+                },
+              ]
+            : []),
           ...(filters.studentId ? [{ studentId: filters.studentId }] : []),
           ...(filters.branchId ? [{ group: { is: { branchId: filters.branchId } } }] : []),
           ...(filters.teacherId ? [enrollmentTeacherFilter(filters.teacherId)] : []),
@@ -178,6 +215,7 @@ export class BillingLedgerService {
         startsAt: true,
         billingEndsAt: true,
         unenrolledAt: true,
+        unenrolledFromGroupId: true,
         priceOverride: true,
         firstMonthCharge: true,
         studentId: true,
@@ -207,6 +245,11 @@ export class BillingLedgerService {
             teacher: { select: { id: true, firstName: true, lastName: true } },
           },
         },
+        // Группа, из которой отчислили: её цена и расписание считают месяц
+        // отчисления (groupId к этому моменту уже пуст)
+        unenrolledFromGroup: {
+          select: { price: true, scheduleDays: true, startDate: true, endDate: true },
+        },
       },
     });
   }
@@ -219,10 +262,7 @@ export class BillingLedgerService {
       billingEndsAt: earliestDate(enrollment.billingEndsAt, enrollment.course.deletedAt),
       priceOverride: enrollment.priceOverride,
       firstMonthCharge: enrollment.firstMonthCharge,
-      groupPrice: enrollment.group?.price ?? null,
-      scheduleDays: enrollment.group?.scheduleDays ?? [],
-      groupEndDate: enrollment.group?.endDate ?? null,
-      groupStartDate: enrollment.group?.startDate ?? null,
+      ...groupTerms(enrollment.group ?? enrollment.unenrolledFromGroup),
     };
   }
 
@@ -293,8 +333,10 @@ export class BillingLedgerService {
           priceUsed: priceFor(billing) ?? 0,
           // Снимок группы для базы зарплаты. Текущая группа здесь и есть
           // группа закрытого месяца: каждый перевод сначала замораживает
-          // закрытые месяцы (freezeClosedMonths) и только потом меняет groupId
-          groupId: enrollment.group?.id ?? null,
+          // закрытые месяцы (freezeClosedMonths) и только потом меняет groupId.
+          // У отчисленного groupId уже пуст — берём группу, из которой его
+          // отчислили, иначе его месяц ушёл бы в «курс без группы»
+          groupId: enrollment.group?.id ?? enrollment.unenrolledFromGroupId ?? null,
           lockedAt: now,
         });
       }

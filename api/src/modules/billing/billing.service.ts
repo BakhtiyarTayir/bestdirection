@@ -84,6 +84,9 @@ export class BillingService {
         // Две разные причины расчёта по дням: студента нет в группе или у
         // группы не заданы дни занятий. Совет админу в каждом случае свой.
         hasGroup: enrollment.group !== null,
+        // Отчисленный без группы — не «забытый» ученик: добавлять его некуда,
+        // в предупреждениях страницы он не нужен
+        unenrolled: enrollment.unenrolledAt !== null,
         charged,
         paid,
         debt: charged - paid,
@@ -126,17 +129,18 @@ export class BillingService {
       prepaidTotal: prepaidRows.reduce((sum, row) => sum - row.debt, 0),
       prepaid,
       // Неполный месяц у них считается по дням, а не по занятиям
-      withoutGroup: rows.filter((row) => !row.hasGroup).length,
+      // Отчисленные в предупреждения не входят: у них группы нет намеренно
+      withoutGroup: rows.filter((row) => !row.hasGroup && !row.unenrolled).length,
       // Кого именно добавить в группу: в предупреждении — ссылки на учеников
       withoutGroupStudents: rows
-        .filter((row) => !row.hasGroup)
+        .filter((row) => !row.hasGroup && !row.unenrolled)
         .map((row) => ({
           enrollmentId: row.enrollmentId,
           studentId: row.student.id,
           name: `${row.student.lastName} ${row.student.firstName}`.trim(),
           courseTitle: row.course.title,
         })),
-      groupWithoutSchedule: rows.filter((row) => row.hasGroup && !row.hasSchedule).length,
+      groupWithoutSchedule: rows.filter((row) => row.hasGroup && !row.hasSchedule && !row.unenrolled).length,
     };
   }
 
@@ -427,6 +431,8 @@ export class BillingService {
         billingEndsAt: enrollment.billingEndsAt?.toISOString() ?? null,
         // Отчислен (а не на паузе): группу ему в карточке ученика не меняют
         unenrolled: enrollment.unenrolledAt !== null,
+        // Дата отчисления — для пометки «отчислен» в карточках ученика
+        unenrolledAt: enrollment.unenrolledAt?.toISOString() ?? null,
         totalCharged,
         totalPaid,
         balance: totalPaid - totalCharged,

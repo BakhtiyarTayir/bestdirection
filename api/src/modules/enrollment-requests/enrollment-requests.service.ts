@@ -6,6 +6,7 @@ import { PrismaService } from "../../common/prisma/prisma.service";
 import { botMessages } from "../../common/telegram/messages";
 import { TelegramNotifyService } from "../../common/telegram/telegram-notify.service";
 import { activeEnrollmentFilter, BillingLedgerService } from "../billing/billing-ledger.service";
+import { SalaryService } from "../salary/salary.service";
 
 /**
  * Каталог курсов для ученика, самозапись и заявки на платные курсы.
@@ -17,7 +18,8 @@ export class EnrollmentRequestsService {
     private readonly prismaService: PrismaService,
     private readonly audit: AuditService,
     private readonly telegram: TelegramNotifyService,
-    private readonly ledger: BillingLedgerService
+    private readonly ledger: BillingLedgerService,
+    private readonly salary: SalaryService
   ) {}
 
   private get prisma() {
@@ -83,7 +85,7 @@ export class EnrollmentRequestsService {
 
     const existing = await this.prisma.enrollment.findUnique({
       where: { studentId_courseId: { studentId: student.id, courseId } },
-      select: { id: true, unenrolledAt: true },
+      select: { id: true, unenrolledAt: true, unenrolledFromGroupId: true },
     });
     // Отчисленная запись (unenrolledAt) — не «уже записан»: уникальность
     // (studentId, courseId) не даст завести вторую строку, поэтому
@@ -94,6 +96,10 @@ export class EnrollmentRequestsService {
       // Разрыв между отчислением и сегодня уже закрыт (заморожен на момент
       // отчисления) — фиксируем на всякий случай ДО снятия даты
       await this.ledger.freezeClosedMonths({ enrollmentId: finishedId });
+      // Зарплата прежней группы отчисленного — после биллинговой заморозки и
+      // до сброса unenrolledFromGroupId: иначе база её закрытых месяцев
+      // потеряла бы этого ученика задним числом
+      await this.salary.freezeClosedMonths({ groupId: existing?.unenrolledFromGroupId ?? null, courseId });
     }
 
     try {
@@ -113,6 +119,7 @@ export class EnrollmentRequestsService {
             data: {
               billingEndsAt: null,
               unenrolledAt: null,
+              unenrolledFromGroupId: null,
               startsAt: toNoonUtc(new Date().toISOString().slice(0, 10)),
               firstMonthCharge: null,
             },
@@ -251,7 +258,7 @@ export class EnrollmentRequestsService {
     // courseId) create() не пропустит
     const existingEnrollment = await this.prisma.enrollment.findUnique({
       where: { studentId_courseId: { studentId: request.studentId, courseId: request.courseId } },
-      select: { id: true, unenrolledAt: true },
+      select: { id: true, unenrolledAt: true, unenrolledFromGroupId: true },
     });
     const finishedId =
       existingEnrollment && existingEnrollment.unenrolledAt !== null ? existingEnrollment.id : null;
@@ -259,6 +266,13 @@ export class EnrollmentRequestsService {
       // Разрыв уже закрыт на момент отчисления — фиксируем на всякий случай
       // ДО снятия даты
       await this.ledger.freezeClosedMonths({ enrollmentId: finishedId });
+      // Зарплата прежней группы отчисленного — после биллинговой заморозки и
+      // до сброса unenrolledFromGroupId: иначе база её закрытых месяцев
+      // потеряла бы этого ученика задним числом
+      await this.salary.freezeClosedMonths({
+        groupId: existingEnrollment?.unenrolledFromGroupId ?? null,
+        courseId: request.courseId,
+      });
     }
 
     try {
@@ -276,6 +290,7 @@ export class EnrollmentRequestsService {
             data: {
               billingEndsAt: null,
               unenrolledAt: null,
+              unenrolledFromGroupId: null,
               startsAt: toNoonUtc(new Date().toISOString().slice(0, 10)),
               firstMonthCharge: null,
             },
