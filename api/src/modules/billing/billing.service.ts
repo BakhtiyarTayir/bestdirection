@@ -127,6 +127,15 @@ export class BillingService {
       prepaid,
       // Неполный месяц у них считается по дням, а не по занятиям
       withoutGroup: rows.filter((row) => !row.hasGroup).length,
+      // Кого именно добавить в группу: в предупреждении — ссылки на учеников
+      withoutGroupStudents: rows
+        .filter((row) => !row.hasGroup)
+        .map((row) => ({
+          enrollmentId: row.enrollmentId,
+          studentId: row.student.id,
+          name: `${row.student.lastName} ${row.student.firstName}`.trim(),
+          courseTitle: row.course.title,
+        })),
       groupWithoutSchedule: rows.filter((row) => row.hasGroup && !row.hasSchedule).length,
     };
   }
@@ -416,6 +425,8 @@ export class BillingService {
         hasSchedule: (enrollment.group?.scheduleDays.length ?? 0) > 0,
         startsAt: billingStart(billing).toISOString(),
         billingEndsAt: enrollment.billingEndsAt?.toISOString() ?? null,
+        // Отчислен (а не на паузе): группу ему в карточке ученика не меняют
+        unenrolled: enrollment.unenrolledAt !== null,
         totalCharged,
         totalPaid,
         balance: totalPaid - totalCharged,
