@@ -158,7 +158,8 @@ export function DebtorsList({
   const downloadExcel = async () => {
     setDownloading(true);
     try {
-      const params = new URLSearchParams();
+      // Файл подписывается на языке, на котором сейчас открыт сайт
+      const params = new URLSearchParams({ locale });
       for (const [key, value] of Object.entries({ month, branchId, courseId, groupId, teacherId })) {
         if (value) params.set(key, value);
       }
