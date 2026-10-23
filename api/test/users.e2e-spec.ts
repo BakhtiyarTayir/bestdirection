@@ -429,6 +429,21 @@ describe("модуль users", () => {
       });
     });
 
+    it("запись на курс без группы — 400 groupRequired", async () => {
+      const { branch, course } = await branchCourseGroup();
+      const res = await send("post", "/users", "ADMIN", {
+        login: uniqueLogin("bez-gruppy"),
+        password: "12345678",
+        firstName: "Без",
+        lastName: "Группы",
+        role: "STUDENT",
+        branchId: branch.id,
+        enrollment: { courseId: course.id },
+      });
+      expect(res.status).toBe(400);
+      expect(res.body.details.map((d: { message: string }) => d.message)).toContain("groupRequired");
+    });
+
     it("блок необязателен: ученика можно завести без записи на курс", async () => {
       const branch = await testDb().branch.create({ data: { name: uniqueName("Branch") } });
       const res = await send("post", "/users", "ADMIN", {
@@ -444,7 +459,7 @@ describe("модуль users", () => {
     });
 
     it("enrollment у роли, отличной от STUDENT, — 400", async () => {
-      const { branch, course } = await branchCourseGroup();
+      const { branch, course, group } = await branchCourseGroup();
       const res = await send("post", "/users", "ADMIN", {
         login: uniqueLogin("prepod-s-obucheniem"),
         password: "12345678",
@@ -452,7 +467,7 @@ describe("модуль users", () => {
         lastName: "Ученик",
         role: "TEACHER",
         branchId: branch.id,
-        enrollment: { courseId: course.id },
+        enrollment: { courseId: course.id, groupId: group.id },
       });
       expect(res.status).toBe(400);
       expect(res.body.details.map((d: { path: string[] }) => d.path)).toContainEqual(["enrollment"]);
@@ -468,7 +483,7 @@ describe("модуль users", () => {
         lastName: "B",
         role: "STUDENT",
         branchId: branch.id,
-        enrollment: { courseId: "no-such-course" },
+        enrollment: { courseId: "no-such-course", groupId: "any-group" },
       });
       expect(res.status).toBe(404);
       expect(res.body.message).toBe("courseNotFound");

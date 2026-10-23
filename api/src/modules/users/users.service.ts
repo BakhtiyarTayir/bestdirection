@@ -155,7 +155,7 @@ export class UsersService {
             data: {
               studentId: user.id,
               courseId: data.enrollment.courseId,
-              groupId: data.enrollment.groupId || null,
+              groupId: data.enrollment.groupId,
               priceOverride: data.enrollment.priceOverride ?? null,
               startsAt: data.enrollment.startsAt ? toNoonUtc(data.enrollment.startsAt) : null,
               firstMonthCharge: data.enrollment.firstMonthCharge ?? null,
@@ -262,7 +262,7 @@ export class UsersService {
   }
 
   /**
-   * Курс — не в Корзине, группа (если выбрана) принадлежит этому курсу и
+   * Курс — не в Корзине, группа (обязательна) принадлежит этому курсу и
    * заведена в том же филиале, что и ученик — иначе он окажется в группе
    * «Python-1» чужого филиала (ловушка 3.8.1 плана филиалов: имя группы
    * уникально внутри филиала, поэтому groupId сам по себе не гарантирует
@@ -278,14 +278,13 @@ export class UsersService {
     });
     if (!course) throw new NotFoundException("courseNotFound");
 
-    if (enrollment.groupId) {
-      const group = await this.prisma.group.findFirst({
-        where: { id: enrollment.groupId, courseId: enrollment.courseId },
-        select: { id: true, branchId: true },
-      });
-      if (!group) throw new NotFoundException("groupNotFound");
-      if (group.branchId !== branchId) throw new BadRequestException("groupWrongBranch");
-    }
+    // groupId обязателен уже в схеме (user.dto.ts, groupRequired)
+    const group = await this.prisma.group.findFirst({
+      where: { id: enrollment.groupId, courseId: enrollment.courseId },
+      select: { id: true, branchId: true },
+    });
+    if (!group) throw new NotFoundException("groupNotFound");
+    if (group.branchId !== branchId) throw new BadRequestException("groupWrongBranch");
   }
 
   async update(id: string, data: UpdateUserDto, actor: SessionUser) {

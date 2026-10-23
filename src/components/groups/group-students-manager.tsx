@@ -124,21 +124,20 @@ export function GroupStudentsManager({
     });
   };
 
-  // Два исхода вместо одного: снять группу или отчислить с курса. Разница
-  // существенная — в первом случае начисления продолжаются, но уже по дням.
-  const handleRemoveStudent = (alsoUnenroll: boolean) => {
+  // Только отчисление (решение владельца): ученик без группы выпадает из
+  // зарплаты и расписания. Остаться на курсе можно, лишь перейдя в другую
+  // группу — для этого есть перевод.
+  const handleRemoveStudent = () => {
     const student = removeTarget;
     if (!student) return;
     setRemoveTarget(null);
 
     startTransition(async () => {
-      const result = await removeStudentFromGroup(groupId, student.id, alsoUnenroll);
+      const result = await removeStudentFromGroup(groupId, student.id, true);
       if (!result.success) {
         toast({ title: tErrors("error"), description: result.error, variant: "destructive" });
       } else {
-        toast({
-          title: alsoUnenroll ? t("studentUnenrolled") : t("studentRemovedFromGroup"),
-        });
+        toast({ title: t("studentUnenrolled") });
         router.refresh();
       }
     });
@@ -329,8 +328,7 @@ export function GroupStudentsManager({
         </DialogContent>
       </Dialog>
 
-      {/* Убрать из группы или отчислить — исходы разные, поэтому две кнопки,
-          а не подтверждение одного действия. */}
+      {/* Подтверждение отчисления */}
       <Dialog open={removeTarget !== null} onOpenChange={(open) => !open && setRemoveTarget(null)}>
         <DialogContent>
           <DialogHeader>
@@ -340,18 +338,14 @@ export function GroupStudentsManager({
             <p className="font-medium">
               {removeTarget ? `${removeTarget.firstName} ${removeTarget.lastName}` : ""}
             </p>
-            <p className="text-muted-foreground">{t("removeOnlyGroupHint")}</p>
             <p className="text-muted-foreground">{t("removeUnenrollHint")}</p>
           </div>
           <DialogFooter className="flex-col gap-2 sm:flex-row">
             <Button variant="outline" onClick={() => setRemoveTarget(null)} disabled={isPending}>
               {tCommon("cancel")}
             </Button>
-            <Button variant="outline" onClick={() => handleRemoveStudent(false)} disabled={isPending}>
-              {t("removeOnlyGroup")}
-            </Button>
             <Button
-              onClick={() => handleRemoveStudent(true)}
+              onClick={() => handleRemoveStudent()}
               disabled={isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >

@@ -203,6 +203,10 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
     );
   }, [formOptions, enrollmentCourseId, branchId]);
 
+  // Выбран курс, у которого нет групп: сохранить с курсом нельзя
+  const enrollmentBlocked =
+    !isEditing && enrollmentEnabled && Boolean(enrollmentCourseId) && groupsForCourse.length === 0;
+
   // ─── Тёзки: предупреждение о дубликате (только создание) ────────────────
   // Без него преподаватель завёл одного ученика трижды: логин молча получал
   // суффикс 2, 3, а форма ничем не намекала, что такой человек уже есть
@@ -703,13 +707,25 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                         disabled={!enrollmentCourseId}
                       >
-                        <option value="">{t("enrollmentNoGroup")}</option>
+                        <option value="">{t("enrollmentGroupPlaceholder")}</option>
                         {groupsForCourse.map((group) => (
                           <option key={group.id} value={group.id}>
                             {group.name}
                           </option>
                         ))}
                       </select>
+                      {/* Группа обязательна: у курса без групп (в этом филиале)
+                          ученика с курсом не сохранить — сначала создают группу */}
+                      {enrollmentCourseId && groupsForCourse.length === 0 && (
+                        <p className="text-sm text-destructive">{t("enrollmentNoGroupsHint")}</p>
+                      )}
+                      {(form.formState.errors as { enrollment?: { groupId?: { message?: string } } }).enrollment?.groupId && (
+                        <p className="text-sm text-destructive">
+                          {fieldError(
+                            (form.formState.errors as { enrollment?: { groupId?: { message?: string } } }).enrollment?.groupId?.message
+                          )}
+                        </p>
+                      )}
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-2">
@@ -760,7 +776,7 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
           )}
 
           <div className="flex gap-4 pt-4">
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading || enrollmentBlocked}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEditing ? tCommon("saveChanges") : t("createUser")}
             </Button>

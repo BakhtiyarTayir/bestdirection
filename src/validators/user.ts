@@ -30,7 +30,8 @@ const optionalDateString = z.preprocess(
 // блок вообще заполнен, остальное уточняет цену и дату начала
 const enrollmentSchema = z.object({
   courseId: z.string().min(1, "courseRequired"),
-  groupId: z.string().optional(),
+  // Группа обязательна: ученик без группы выпадает из зарплаты и расписания
+  groupId: z.string({ required_error: "groupRequired" }).min(1, "groupRequired"),
   priceOverride: optionalPositiveMoney,
   startsAt: optionalDateString,
   firstMonthCharge: optionalNonNegativeMoney,

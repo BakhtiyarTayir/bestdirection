@@ -26,7 +26,10 @@ const branchIdSchema = z.string().max(40).optional();
 // блок вообще заполнен, остальное — необязательные уточнения цены и даты.
 const enrollmentSchema = z.object({
   courseId: z.string().min(1, "courseRequired").max(40),
-  groupId: z.string().max(40).optional(),
+  // Группа обязательна (решение владельца): ученик без группы выпадает из
+  // зарплаты и расписания. Запись на курс без группы остаётся только у
+  // заявок и самозаписи.
+  groupId: z.string({ required_error: "groupRequired" }).min(1, "groupRequired").max(40),
   // Личная цена ученика — перебивает цену группы навсегда (ловушка 3).
   // Пусто = «как у группы».
   priceOverride: z.number().int().positive("amountPositive").max(1_000_000_000).optional(),
