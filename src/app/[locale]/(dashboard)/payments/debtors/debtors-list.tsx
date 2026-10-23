@@ -71,6 +71,7 @@ interface DebtorsListProps {
   prepaidCount: number;
   prepaidTotal: number;
   withoutGroup: number;
+  withoutGroupStudents: { enrollmentId: string; studentId: string; name: string; courseTitle: string }[];
   groupWithoutSchedule: number;
   courseId?: string;
   courses: { id: string; title: string }[];
@@ -95,6 +96,7 @@ export function DebtorsList({
   prepaidCount,
   prepaidTotal,
   withoutGroup,
+  withoutGroupStudents,
   groupWithoutSchedule,
   courseId,
   courses,
@@ -348,6 +350,19 @@ export function DebtorsList({
               <p className="mt-1 text-sm text-muted-foreground">
                 {t("withoutGroupHint", { count: withoutGroup })}
               </p>
+            )}
+            {withoutGroupStudents.length > 0 && (
+              <ul className="mt-1 space-y-0.5 text-sm">
+                {withoutGroupStudents.map((item) => (
+                  <li key={item.enrollmentId}>
+                    {/* В карточку редактирования: там ученика добавляют в группу */}
+                    <Link href={`/users/${item.studentId}/edit`} className="text-primary hover:underline">
+                      {item.name}
+                    </Link>
+                    <span className="text-muted-foreground"> · {item.courseTitle}</span>
+                  </li>
+                ))}
+              </ul>
             )}
             {groupWithoutSchedule > 0 && (
               <p className="mt-1 text-sm text-muted-foreground">

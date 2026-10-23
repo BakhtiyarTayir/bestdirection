@@ -45,6 +45,7 @@ export interface ApiDebtors {
   prepaidCount: number;
   prepaidTotal: number;
   withoutGroup: number;
+  withoutGroupStudents: { enrollmentId: string; studentId: string; name: string; courseTitle: string }[];
   groupWithoutSchedule: number;
 }
 
@@ -86,6 +87,7 @@ export interface ApiStudentBilling {
     hasSchedule: boolean;
     startsAt: string;
     billingEndsAt: string | null;
+    unenrolled: boolean;
     totalCharged: number;
     totalPaid: number;
     balance: number;

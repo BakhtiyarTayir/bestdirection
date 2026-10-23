@@ -2,10 +2,12 @@ import { requireRole } from "@/lib/auth-guard";
 import { getUserById } from "@/lib/api/users.server";
 import { getBranches } from "@/lib/api/branches.server";
 import { getStudentBilling } from "@/lib/api/billing.server";
+import { getCourseGroups } from "@/lib/api/groups.server";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { EditUserForm } from "./edit-user-form";
+import { EnrollmentGroupSelect } from "./enrollment-group-select";
 import { ParentsPanel } from "@/components/parents-panel";
 import { StudentAccessCard } from "@/components/student-access-card";
 import { TelegramInviteDialog } from "@/components/telegram-invite-dialog";
@@ -43,10 +45,23 @@ async function EditUserPageContent({ user, branches }: { user: any; branches: { 
   const t = await getTranslations("users");
 
   // Курс/группа/цена уже полностью показаны на карточке биллинга — здесь
-  // достаточно короткой сводки со ссылкой (ловушка 4.7.5 плана: дублировать
-  // условия обучения в двух формах — верный способ развести две правды)
+  // короткая сводка со ссылкой (ловушка 4.7.5 плана: дублировать условия
+  // обучения в двух формах — верный способ развести две правды). Исключение —
+  // группа: её меняют тем же вызовом, что и на странице группы
   const billing = user.role === "STUDENT" ? await getStudentBilling(user.id) : null;
   const enrollments = billing?.success && billing.data ? billing.data.courses : [];
+  // Группы курса для выбора: открытые и та, где ученик уже сейчас
+  const courseGroups = new Map(
+    await Promise.all(
+      enrollments.map(async (enrollment) => {
+        const result = await getCourseGroups(enrollment.course.id);
+        const groups = (result.success && result.data ? result.data : [])
+          .filter((group) => group.isActive || group.id === enrollment.group?.id)
+          .map((group) => ({ id: group.id, name: group.name, branchName: group.branch?.name ?? null }));
+        return [enrollment.course.id, groups] as const;
+      })
+    )
+  );
 
   return (
     <div className="space-y-6">
@@ -69,13 +84,26 @@ async function EditUserPageContent({ user, branches }: { user: any; branches: { 
           </CardHeader>
           <CardContent className="space-y-2">
             {enrollments.map((enrollment: (typeof enrollments)[number]) => (
-              <div key={enrollment.enrollmentId} className="flex items-center justify-between text-sm">
-                <span>
-                  {enrollment.course.title}
-                  {enrollment.group ? ` — ${enrollment.group.name}` : ` (${t("enrollmentNoGroup")})`}
-                  {" · "}
-                  {enrollment.monthlyPrice.toLocaleString("ru-RU")}
-                </span>
+              <div
+                key={enrollment.enrollmentId}
+                className="flex flex-wrap items-center justify-between gap-2 text-sm"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">{enrollment.course.title}</span>
+                  {/* Отчисленного обратно в группу здесь не возвращаем — это делается на странице группы */}
+                  {enrollment.unenrolled ? (
+                    <span className="text-muted-foreground">
+                      {enrollment.group ? enrollment.group.name : t("enrollmentNoGroup")}
+                    </span>
+                  ) : (
+                    <EnrollmentGroupSelect
+                      studentId={user.id}
+                      currentGroupId={enrollment.group?.id ?? null}
+                      groups={courseGroups.get(enrollment.course.id) ?? []}
+                    />
+                  )}
+                  <span className="text-muted-foreground">{enrollment.monthlyPrice.toLocaleString("ru-RU")}</span>
+                </div>
                 <Link
                   href={`/payments/students/${user.id}`}
                   className="text-primary hover:underline"
