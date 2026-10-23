@@ -13,6 +13,8 @@ import { StudentAccessCard } from "@/components/student-access-card";
 import { TelegramInviteDialog } from "@/components/telegram-invite-dialog";
 import { TelegramWriteButton } from "@/components/telegram-write-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { formatDate } from "@/lib/format-date";
 
 export const dynamic = "force-dynamic";
 
@@ -91,10 +93,10 @@ async function EditUserPageContent({ user, branches }: { user: any; branches: { 
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium">{enrollment.course.title}</span>
                   {/* Отчисленного обратно в группу здесь не возвращаем — это делается на странице группы */}
-                  {enrollment.unenrolled ? (
-                    <span className="text-muted-foreground">
-                      {enrollment.group ? enrollment.group.name : t("enrollmentNoGroup")}
-                    </span>
+                  {enrollment.unenrolledAt ? (
+                    <Badge variant="destructive">
+                      {t("enrollmentUnenrolled", { date: formatDate(new Date(enrollment.unenrolledAt)) })}
+                    </Badge>
                   ) : (
                     <EnrollmentGroupSelect
                       studentId={user.id}

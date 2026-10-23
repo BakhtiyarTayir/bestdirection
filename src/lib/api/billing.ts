@@ -88,6 +88,7 @@ export interface ApiStudentBilling {
     startsAt: string;
     billingEndsAt: string | null;
     unenrolled: boolean;
+    unenrolledAt: string | null;
     totalCharged: number;
     totalPaid: number;
     balance: number;

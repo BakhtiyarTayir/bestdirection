@@ -49,6 +49,8 @@ interface CourseBilling {
   hasSchedule: boolean;
   startsAt: string;
   billingEndsAt: string | null;
+  /** Дата отчисления; null — учится или на паузе (пауза — только billingEndsAt) */
+  unenrolledAt: string | null;
   totalCharged: number;
   totalPaid: number;
   balance: number;
@@ -209,8 +211,16 @@ export default async function StudentBillingPage({ params }: StudentBillingPageP
                         date: formatDate(new Date(course.billingEndsAt)),
                       })}`}
                   </p>
-                  {/* Без расписания неполный месяц считается по календарным дням */}
-                  {!course.hasSchedule && (
+                  {/* Отчисление и пауза выглядят одинаково («… gacha») — отчисление
+                      подписываем явно */}
+                  {course.unenrolledAt && (
+                    <Badge variant="destructive" className="mt-2">
+                      {t("unenrolledBadge", { date: formatDate(new Date(course.unenrolledAt)) })}
+                    </Badge>
+                  )}
+                  {/* Без расписания неполный месяц считается по календарным дням.
+                      У отчисленного группы уже нет — там это не про расписание */}
+                  {!course.hasSchedule && !course.unenrolledAt && (
                     <Badge variant="outline" className="mt-2">
                       {t("noScheduleBadge")}
                     </Badge>
