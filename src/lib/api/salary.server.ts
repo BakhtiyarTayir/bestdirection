@@ -1,5 +1,5 @@
 import "server-only";
-import type { ApiPayoutsPage, ApiSalaryOverview, ApiTeacherSalary } from "./salary";
+import type { ApiPayoutsPage, ApiSalaryGroupStudents, ApiSalaryOverview, ApiTeacherSalary } from "./salary";
 import { apiServerFetch } from "./server";
 
 // Те же маршруты salary для серверных компонентов, см. billing.server.
@@ -17,3 +17,9 @@ export const getSalaryPayouts = (query: { month?: string; teacherId?: string; br
 
 export const getPayoutTeacherOptions = () =>
   apiServerFetch<{ id: string; firstName: string; lastName: string }[]>("/salary/payouts/teachers");
+
+export const getSalaryGroupStudentsServer = (month: string, groupId: string | null, courseId: string) =>
+  apiServerFetch<ApiSalaryGroupStudents>("/salary/group-students", {
+    // Курс без группы: groupId не передаётся, единицу определяет курс
+    query: groupId ? { month, groupId } : { month, courseId },
+  });

@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState, useTransition } from "react";
+import { Fragment, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { intlLocale } from "@/i18n/config";
 import { Link, useRouter, usePathname } from "@/i18n/navigation";
@@ -17,14 +17,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -37,9 +29,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { formatDate } from "@/lib/format-date";
-import { ChevronDown, ChevronRight, Pencil, RefreshCw, TriangleAlert, Trash2 } from "lucide-react";
-import type { ApiSalaryAdjustment, ApiSalaryGroup, ApiSalaryGroupStudents, ApiSalaryPayout } from "@/lib/api/salary";
-import { deletePayout, getSalaryGroupStudents, recalculateSalaryMonth, setManualSalaryAmount } from "@/lib/api/salary";
+import { Trash2 } from "lucide-react";
+import type { ApiSalaryAdjustment, ApiSalaryMonthStudent, ApiSalaryPayout } from "@/lib/api/salary";
+import { deletePayout } from "@/lib/api/salary";
 import { CreatePayoutDialog } from "./create-payout-dialog";
 import { CreateAdjustmentDialog } from "./create-adjustment-dialog";
 import { AccruedBreakdown, AdjustmentsSection } from "../adjustments-section";
@@ -47,7 +39,8 @@ import { AccruedBreakdown, AdjustmentsSection } from "../adjustments-section";
 interface TeacherSalaryViewProps {
   teacherId: string;
   month: string;
-  groups: ApiSalaryGroup[];
+  students: ApiSalaryMonthStudent[];
+  studentsIncomplete: boolean;
   adjustments: ApiSalaryAdjustment[];
   accruedFromGroups: number;
   accruedTotal: number;
@@ -56,16 +49,11 @@ interface TeacherSalaryViewProps {
   payouts: ApiSalaryPayout[];
 }
 
-/** Процент из базисных пунктов строкой с одним знаком после запятой */
-function percentText(bp: number | null): string {
-  if (bp === null) return "";
-  return (bp / 100).toFixed(1).replace(/\.0$/, "");
-}
-
 export function TeacherSalaryView({
   teacherId,
   month,
-  groups,
+  students,
+  studentsIncomplete,
   adjustments,
   accruedFromGroups,
   accruedTotal,
@@ -83,47 +71,6 @@ export function TeacherSalaryView({
   const { toast } = useToast();
   const [, startTransition] = useTransition();
   const money = new Intl.NumberFormat(intlLocale(locale));
-
-  // Список учеников месяца группы: грузится при первом раскрытии и дальше
-  // берётся из состояния (ключ — группа или курс без группы + месяц). Зарплата
-  // от этих чисел не считается — справочно (решение владельца 2026-10-09)
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [studentsByKey, setStudentsByKey] = useState<Record<string, ApiSalaryGroupStudents>>({});
-  const [studentsErrors, setStudentsErrors] = useState<Record<string, string>>({});
-  const [loadingKeys, setLoadingKeys] = useState<Set<string>>(new Set());
-
-  const toggleStudents = async (key: string, rowMonth: string, groupId: string | null, courseId: string) => {
-    const open = expanded.has(key);
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (open) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-    if (open || studentsByKey[key] || loadingKeys.has(key)) return;
-
-    setLoadingKeys((prev) => new Set(prev).add(key));
-    setStudentsErrors((prev) => {
-      const next = { ...prev };
-      delete next[key];
-      return next;
-    });
-    try {
-      const result = await getSalaryGroupStudents(rowMonth, groupId, courseId);
-      if (result.success) {
-        setStudentsByKey((prev) => ({ ...prev, [key]: result.data }));
-      } else {
-        const message = tErrors.has(result.error) ? tErrors(result.error as never) : result.error;
-        setStudentsErrors((prev) => ({ ...prev, [key]: message }));
-      }
-    } finally {
-      setLoadingKeys((prev) => {
-        const next = new Set(prev);
-        next.delete(key);
-        return next;
-      });
-    }
-  };
 
   const setMonth = (value: string) => {
     startTransition(() => {
@@ -168,174 +115,7 @@ export function TeacherSalaryView({
         </div>
       </div>
 
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold">{t("byGroups")}</h2>
-        {groups.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("noGroups")}</p>
-        ) : (
-          groups.map((group) => (
-            <div key={`${group.courseId}:${group.groupId ?? "none"}`} className="rounded-lg border">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/30 px-4 py-2">
-                <div>
-                  <div className="font-medium">
-                    {group.courseTitle}
-                    {group.groupName ? ` — ${group.groupName}` : ` (${t("withoutGroup")})`}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {group.groupPercentBp !== null
-                      ? t("groupOwnRate", { percent: percentText(group.groupPercentBp) })
-                      : t("groupNoOwnRate")}
-                  </div>
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t("colMonth")}</TableHead>
-                      <TableHead className="text-right">{t("colStudents")}</TableHead>
-                      <TableHead className="text-right">{t("colBase")}</TableHead>
-                      <TableHead className="text-right">{t("colRate")}</TableHead>
-                      {/* Раскладка по занятиям — этап 3 плана. У группы без раскладки
-                          (курс без группы) колонка пуста для всех строк курса */}
-                      {group.groupId !== null && <TableHead>{t("colLessons")}</TableHead>}
-                      <TableHead className="text-right">{t("colAccrued")}</TableHead>
-                      <TableHead className="text-right">{t("colActions")}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {group.months.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={group.groupId !== null ? 7 : 6} className="text-center text-sm text-muted-foreground">
-                          {t("noMonths")}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      group.months.map((row) => {
-                        const studentsKey = `${group.groupId ?? `course:${group.courseId}`}:${row.month}`;
-                        const isOpen = expanded.has(studentsKey);
-                        const students = studentsByKey[studentsKey];
-                        return (
-                        <Fragment key={row.month}>
-                        <TableRow>
-                          <TableCell className="whitespace-nowrap">
-                            {row.month}
-                            {row.locked && (
-                              <Badge variant="outline" className="ml-2 text-xs">
-                                {t("locked")}
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap text-right">
-                            {row.studentsCount > 0 ? (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 gap-1 px-2"
-                                aria-expanded={isOpen}
-                                onClick={() => toggleStudents(studentsKey, row.month, group.groupId, group.courseId)}
-                              >
-                                {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                                {t("studentsToggle", { count: row.studentsCount })}
-                              </Button>
-                            ) : (
-                              row.studentsCount
-                            )}
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap text-right">{money.format(row.base)}</TableCell>
-                          <TableCell className="whitespace-nowrap text-right">
-                            {row.percentUsed === null ? (
-                              <span className="text-amber-600">{t("noRate")}</span>
-                            ) : (
-                              `${percentText(row.percentUsed)}%`
-                            )}
-                          </TableCell>
-                          {group.groupId !== null && (
-                            <TableCell className="min-w-[160px]">
-                              {row.fallback ? (
-                                <div className="flex items-start gap-1 text-xs text-amber-600">
-                                  <TriangleAlert className="mt-0.5 h-3 w-3 shrink-0" />
-                                  <span>
-                                    {t("lessonsNotMarked", {
-                                      marked: row.sessionsMarked ?? 0,
-                                      planned: row.lessonsScheduled ?? 0,
-                                    })}
-                                  </span>
-                                </div>
-                              ) : (
-                                <div className="space-y-1">
-                                  <span className="text-sm">
-                                    {t("lessonsMarkedOf", { taught: row.lessonsTaught ?? 0, planned: row.lessonsPlanned ?? 0 })}
-                                  </span>
-                                  {row.sessions.length > 0 && (
-                                    <div className="flex flex-wrap gap-1">
-                                      {row.sessions.map((session) => (
-                                        <Badge
-                                          key={session.date}
-                                          variant={session.isMakeup ? "default" : "outline"}
-                                          className="text-[10px] font-normal"
-                                        >
-                                          {formatDate(new Date(session.date))}
-                                          {session.isMakeup ? ` · ${t("makeup")}` : ""}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </TableCell>
-                          )}
-                          <TableCell className="whitespace-nowrap text-right font-medium">
-                            {money.format(row.amount)}
-                            {!row.isFormula && (
-                              <span className="ml-1 text-xs text-muted-foreground">{t("manual")}</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-1">
-                              {row.locked && row.id && (
-                                <ManualAmountButton
-                                  accrualId={row.id}
-                                  currentAmount={row.amount}
-                                  onDone={() => router.refresh()}
-                                />
-                              )}
-                              {row.locked && (
-                                <RecalcButton
-                                  teacherId={teacherId}
-                                  month={row.month}
-                                  groupId={group.groupId}
-                                  courseId={group.courseId}
-                                  onDone={() => router.refresh()}
-                                />
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                        {isOpen && (
-                          <TableRow>
-                            <TableCell colSpan={group.groupId !== null ? 7 : 6} className="bg-muted/20 p-3">
-                              {loadingKeys.has(studentsKey) ? (
-                                <p className="text-sm text-muted-foreground">{t("studentsLoading")}</p>
-                              ) : studentsErrors[studentsKey] ? (
-                                <p className="text-sm text-destructive">{studentsErrors[studentsKey]}</p>
-                              ) : students ? (
-                                <GroupStudentsTable data={students} money={money} />
-                              ) : null}
-                            </TableCell>
-                          </TableRow>
-                        )}
-                        </Fragment>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+      <MonthStudentsTable month={month} students={students} incomplete={studentsIncomplete} money={money} />
 
       <AdjustmentsSection adjustments={adjustments} canDelete />
 
@@ -410,209 +190,95 @@ export function TeacherSalaryView({
   );
 }
 
-/** Подтаблица учеников месяца группы: начислено, поступило, осталось. */
-function GroupStudentsTable({ data, money }: { data: ApiSalaryGroupStudents; money: Intl.NumberFormat }) {
+/**
+ * Один общий список учеников преподавателя за месяц: группа — просто
+ * столбец. Справочно — зарплата от этих чисел не считается.
+ */
+function MonthStudentsTable({
+  month,
+  students,
+  incomplete,
+  money,
+}: {
+  month: string;
+  students: ApiSalaryMonthStudent[];
+  incomplete: boolean;
+  money: Intl.NumberFormat;
+}) {
   const t = useTranslations("salaries");
-  const { totals } = data;
+  const locale = useLocale();
+  const collator = new Intl.Collator(intlLocale(locale));
+  const sorted = [...students].sort(
+    (a, b) =>
+      collator.compare(`${a.lastName} ${a.firstName}`, `${b.lastName} ${b.firstName}`) ||
+      collator.compare(a.groupLabel, b.groupLabel)
+  );
+  const totals = students.reduce(
+    (sum, student) => ({ charged: sum.charged + student.charged, paid: sum.paid + student.paid }),
+    { charged: 0, paid: 0 }
+  );
   const percent = totals.charged > 0 ? Math.round((totals.paid / totals.charged) * 100) : null;
-  const mismatch = data.locked && data.frozenBase !== null && data.frozenBase !== totals.charged;
 
   return (
-    <div className="space-y-2">
-      {/* На узком экране таблица прокручивается внутри блока, а не ломает страницу */}
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t("studentsColName")}</TableHead>
-              <TableHead className="text-right">{t("studentsColCharged")}</TableHead>
-              <TableHead className="text-right">{t("studentsColPaid")}</TableHead>
-              <TableHead className="text-right">{t("studentsColRemaining")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.students.map((student) => (
-              <TableRow key={student.studentId}>
-                <TableCell className="min-w-[160px]">
-                  <Link href={`/payments/students/${student.studentId}`} className="font-medium hover:underline">
-                    {student.lastName} {student.firstName}
-                  </Link>
-                  {student.unenrolled && (
-                    <Badge variant="outline" className="ml-2 text-xs">
-                      {t("studentUnenrolled")}
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell className="whitespace-nowrap text-right">{money.format(student.charged)}</TableCell>
-                <TableCell className="whitespace-nowrap text-right">{money.format(student.paid)}</TableCell>
-                <TableCell
-                  className={`whitespace-nowrap text-right ${
-                    student.remaining > 0 ? "text-red-600" : student.remaining < 0 ? "text-green-600" : ""
-                  }`}
-                >
-                  {student.remaining < 0
-                    ? `${money.format(-student.remaining)} (${t("studentOverpaid")})`
-                    : money.format(student.remaining)}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-      <p className="text-sm font-medium">
-        {percent === null
-          ? t("studentsPaidOf", { paid: money.format(totals.paid), charged: money.format(totals.charged) })
-          : t("studentsPaidOfPercent", {
-              paid: money.format(totals.paid),
-              charged: money.format(totals.charged),
-              percent,
-            })}
-      </p>
-      {mismatch && (
-        <div className="flex items-start gap-1 text-xs text-amber-600">
-          <TriangleAlert className="mt-0.5 h-3 w-3 shrink-0" />
-          <span>{t("studentsFrozenMismatch", { base: money.format(data.frozenBase ?? 0) })}</span>
-        </div>
+    <div className="space-y-3">
+      <h2 className="text-lg font-semibold">{t("monthStudentsTitle", { month })}</h2>
+      {incomplete && <p className="text-sm text-destructive">{t("monthStudentsIncomplete")}</p>}
+      {sorted.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{t("monthStudentsEmpty")}</p>
+      ) : (
+        <>
+          <div className="overflow-x-auto rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("studentsColName")}</TableHead>
+                  <TableHead>{t("studentsColGroup")}</TableHead>
+                  <TableHead className="text-right">{t("studentsColCharged")}</TableHead>
+                  <TableHead className="text-right">{t("studentsColPaid")}</TableHead>
+                  <TableHead className="text-right">{t("studentsColRemaining")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sorted.map((student) => (
+                  <TableRow key={`${student.groupLabel}:${student.studentId}`}>
+                    <TableCell className="min-w-[160px]">
+                      <Link href={`/payments/students/${student.studentId}`} className="font-medium hover:underline">
+                        {student.lastName} {student.firstName}
+                      </Link>
+                      {student.unenrolled && (
+                        <Badge variant="outline" className="ml-2 text-xs">
+                          {t("studentUnenrolled")}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="min-w-[160px] text-sm text-muted-foreground">{student.groupLabel}</TableCell>
+                    <TableCell className="whitespace-nowrap text-right">{money.format(student.charged)}</TableCell>
+                    <TableCell className="whitespace-nowrap text-right">{money.format(student.paid)}</TableCell>
+                    <TableCell
+                      className={`whitespace-nowrap text-right ${
+                        student.remaining > 0 ? "text-red-600" : student.remaining < 0 ? "text-green-600" : ""
+                      }`}
+                    >
+                      {student.remaining < 0
+                        ? `${money.format(-student.remaining)} (${t("studentOverpaid")})`
+                        : money.format(student.remaining)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <p className="text-sm font-medium">
+            {percent === null
+              ? t("studentsPaidOf", { paid: money.format(totals.paid), charged: money.format(totals.charged) })
+              : t("studentsPaidOfPercent", {
+                  paid: money.format(totals.paid),
+                  charged: money.format(totals.charged),
+                  percent,
+                })}
+          </p>
+        </>
       )}
     </div>
-  );
-}
-
-/** Зафиксировать сумму месяца руками вместо формулы — или снять фиксацию. */
-function ManualAmountButton({
-  accrualId,
-  currentAmount,
-  onDone,
-}: {
-  accrualId: string;
-  currentAmount: number;
-  onDone: () => void;
-}) {
-  const t = useTranslations("salaries");
-  const tCommon = useTranslations("common");
-  const tErrors = useTranslations("errors");
-  const { toast } = useToast();
-  const [open, setOpen] = useState(false);
-  const [value, setValue] = useState(String(currentAmount));
-  const [isSaving, setIsSaving] = useState(false);
-
-  const save = async (amount: number | null) => {
-    setIsSaving(true);
-    try {
-      const result = await setManualSalaryAmount(accrualId, amount);
-      if (result.success) {
-        toast({ title: t("manualAmountSaved") });
-        setOpen(false);
-        onDone();
-      } else {
-        toast({ title: tErrors("error"), description: tErrors("unexpected"), variant: "destructive" });
-      }
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={(next) => { setOpen(next); if (next) setValue(String(currentAmount)); }}>
-      <Button variant="ghost" size="icon" aria-label={t("fixAmount")} title={t("fixAmount")} onClick={() => setOpen(true)}>
-        <Pencil className="h-4 w-4" />
-      </Button>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t("fixAmount")}</DialogTitle>
-          <DialogDescription>{t("fixAmountDescription")}</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-2">
-          <Label htmlFor="manual-amount">{t("colAmount")} (UZS)</Label>
-          <Input
-            id="manual-amount"
-            type="number"
-            min={0}
-            step={1}
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-          />
-        </div>
-        <DialogFooter className="gap-2 sm:justify-between">
-          <Button variant="outline" onClick={() => save(null)} disabled={isSaving}>
-            {t("resetToFormula")}
-          </Button>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setOpen(false)} disabled={isSaving}>
-              {tCommon("cancel")}
-            </Button>
-            <Button
-              onClick={() => {
-                const amount = Number(value);
-                if (Number.isInteger(amount) && amount >= 0) save(amount);
-              }}
-              disabled={isSaving}
-            >
-              {isSaving ? tCommon("saving") : tCommon("save")}
-            </Button>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-/** Пересчёт закрытого месяца по актуальной базе — ставка остаётся зафиксированной. */
-function RecalcButton({
-  teacherId,
-  month,
-  groupId,
-  courseId,
-  onDone,
-}: {
-  teacherId: string;
-  month: string;
-  groupId: string | null;
-  courseId: string;
-  onDone: () => void;
-}) {
-  const t = useTranslations("salaries");
-  const tCommon = useTranslations("common");
-  const tErrors = useTranslations("errors");
-  const { toast } = useToast();
-  const [isSaving, setIsSaving] = useState(false);
-
-  return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label={t("recalc")} title={t("recalc")}>
-          <RefreshCw className="h-4 w-4" />
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{t("recalcTitle", { month })}</AlertDialogTitle>
-          <AlertDialogDescription>{t("recalcDescription")}</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
-          <AlertDialogAction
-            disabled={isSaving}
-            onClick={async (event) => {
-              event.preventDefault();
-              setIsSaving(true);
-              try {
-                const result = await recalculateSalaryMonth(teacherId, month, groupId, courseId);
-                if (result.success) {
-                  toast({ title: result.data.changed ? t("recalcDone") : t("recalcNoChange") });
-                  onDone();
-                } else {
-                  toast({ title: tErrors("error"), description: tErrors("unexpected"), variant: "destructive" });
-                }
-              } finally {
-                setIsSaving(false);
-              }
-            }}
-          >
-            {isSaving ? tCommon("saving") : tCommon("confirm")}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   );
 }

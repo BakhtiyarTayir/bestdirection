@@ -123,6 +123,11 @@ export interface ApiSalaryGroupStudent {
   remaining: number;
 }
 
+/** Строка общего списка учеников преподавателя за месяц: ученик + его группа */
+export interface ApiSalaryMonthStudent extends ApiSalaryGroupStudent {
+  groupLabel: string;
+}
+
 export interface ApiSalaryGroupStudents {
   month: string;
   locked: boolean;

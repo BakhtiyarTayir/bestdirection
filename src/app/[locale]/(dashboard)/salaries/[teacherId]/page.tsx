@@ -1,7 +1,8 @@
 import { requireRole } from "@/lib/auth-guard";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
-import { getTeacherSalary } from "@/lib/api/salary.server";
+import { getSalaryGroupStudentsServer, getTeacherSalary } from "@/lib/api/salary.server";
+import type { ApiSalaryMonthStudent } from "@/lib/api/salary";
 import { TeacherSalaryView } from "./teacher-salary-view";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,28 @@ export default async function TeacherSalaryPage({ params, searchParams }: Teache
   if (!result.success || !result.data) notFound();
   const { teacher, groups, adjustments, accruedFromGroups, accruedTotal, paidTotal, debt, payouts } = result.data;
 
+  // Один общий список учеников месяца вместо карточек по группам (решение
+  // владельца 2026-10-23): собираем учеников всех групп, у которых этот месяц есть
+  const monthGroups = groups.filter((group) =>
+    group.months.some((row) => row.month === result.data.month && row.studentsCount > 0)
+  );
+  const studentResults = await Promise.all(
+    monthGroups.map((group) => getSalaryGroupStudentsServer(result.data.month, group.groupId, group.courseId))
+  );
+  const students: ApiSalaryMonthStudent[] = [];
+  let studentsIncomplete = false;
+  studentResults.forEach((studentsResult, index) => {
+    if (!studentsResult.success || !studentsResult.data) {
+      studentsIncomplete = true;
+      return;
+    }
+    const group = monthGroups[index];
+    const groupLabel = group.groupName
+      ? `${group.courseTitle} — ${group.groupName}`
+      : `${group.courseTitle} (${t("withoutGroup")})`;
+    for (const student of studentsResult.data.students) students.push({ ...student, groupLabel });
+  });
+
   return (
     <div className="space-y-6">
       <div>
@@ -34,7 +57,8 @@ export default async function TeacherSalaryPage({ params, searchParams }: Teache
       <TeacherSalaryView
         teacherId={teacherId}
         month={result.data.month}
-        groups={groups}
+        students={students}
+        studentsIncomplete={studentsIncomplete}
         adjustments={adjustments}
         accruedFromGroups={accruedFromGroups}
         accruedTotal={accruedTotal}
