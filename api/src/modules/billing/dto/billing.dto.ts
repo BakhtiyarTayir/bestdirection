@@ -56,6 +56,11 @@ export const debtorsQuerySchema = z.object({
   teacherId: z.string().max(40).optional(),
 });
 
+// Выгрузка: те же фильтры плюс язык сайта, на котором подписать файл
+export const debtorsExportQuerySchema = debtorsQuerySchema.extend({
+  locale: z.enum(["uz", "ru"]).default("uz"),
+});
+
 export const monthQuerySchema = z.object({ month: monthString });
 
 export const studentsQuerySchema = z.object({
@@ -69,5 +74,6 @@ export class UpdateEnrollmentBillingDto extends createZodDto(updateEnrollmentBil
 export class CreatePaymentDto extends createZodDto(createPaymentSchema) {}
 export class PaymentFiltersDto extends createZodDto(paymentFiltersSchema) {}
 export class DebtorsQueryDto extends createZodDto(debtorsQuerySchema) {}
+export class DebtorsExportQueryDto extends createZodDto(debtorsExportQuerySchema) {}
 export class MonthQueryDto extends createZodDto(monthQuerySchema) {}
 export class StudentsQueryDto extends createZodDto(studentsQuerySchema) {}

@@ -12,38 +12,96 @@ export interface DebtorExportRow {
   debt: number;
 }
 
-const MONTHS = [
-  "январь", "февраль", "март", "апрель", "май", "июнь",
-  "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь",
-];
+export type ExportLocale = "uz" | "ru";
 
-const NO_TEACHER = "Без учителя";
-const NO_GROUP = "Без группы";
+/** Надписи файла на языке сайта: администратор качает файл с того языка, на котором открыт сайт. */
+const TEXTS = {
+  ru: {
+    tag: "ru-RU",
+    months: [
+      "январь", "февраль", "март", "апрель", "май", "июнь",
+      "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь",
+    ],
+    title: (month: string) => `Должники на ${month}`,
+    sheets: ["По группам", "По учителям", "Все должники"],
+    noTeacher: "Без учителя",
+    noGroup: "Без группы",
+    student: "Ученик",
+    phone: "Телефон",
+    price: "Цена в месяц",
+    charged: "Начислено",
+    paid: "Оплачено",
+    debt: "Долг",
+    teacher: "Учитель",
+    group: "Группа",
+    course: "Курс",
+    groupsWithDebtors: "Групп с должниками",
+    debtors: "Должников",
+    count: (n: number) => `${n} уч.`,
+    groupTotal: (count: string) => `Итого по группе (${count})`,
+    noGroupTotal: (count: string) => `Итого, без группы (${count})`,
+    total: "ИТОГО",
+  },
+  uz: {
+    tag: "uz-UZ",
+    months: [
+      "yanvar", "fevral", "mart", "aprel", "may", "iyun",
+      "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr",
+    ],
+    title: (month: string) => `Qarzdorlar: ${month}`,
+    sheets: ["Guruhlar bo'yicha", "O'qituvchilar bo'yicha", "Barcha qarzdorlar"],
+    noTeacher: "O'qituvchisiz",
+    noGroup: "Guruhsiz",
+    student: "Talaba",
+    phone: "Telefon",
+    price: "Oylik narx",
+    charged: "Hisoblangan",
+    paid: "To'langan",
+    debt: "Qarz",
+    teacher: "O'qituvchi",
+    group: "Guruh",
+    course: "Kurs",
+    groupsWithDebtors: "Qarzdorli guruhlar",
+    debtors: "Qarzdorlar",
+    count: (n: number) => `${n} ta talaba`,
+    groupTotal: (count: string) => `Guruh bo'yicha jami (${count})`,
+    noGroupTotal: (count: string) => `Guruhsiz jami (${count})`,
+    total: "JAMI",
+  },
+};
+
+type Texts = (typeof TEXTS)[ExportLocale];
 
 /** «2026-10» → «октябрь 2026». Нераспознанное значение отдаём как есть. */
-function monthTitle(month: string) {
+function monthTitle(month: string, t: Texts) {
   const match = /^(\d{4})-(\d{2})$/.exec(month);
-  const name = match ? MONTHS[Number(match[2]) - 1] : undefined;
+  const name = match ? t.months[Number(match[2]) - 1] : undefined;
   return name ? `${name} ${match![1]}` : month;
 }
 
-const collator = new Intl.Collator("ru");
-const byText = (a: string, b: string) => collator.compare(a, b);
-
-const teacherName = (row: DebtorExportRow) =>
-  row.teacher ? `${row.teacher.lastName} ${row.teacher.firstName}`.trim() : NO_TEACHER;
-const studentName = (row: DebtorExportRow) => `${row.student.lastName} ${row.student.firstName}`.trim();
-const telegram = (row: DebtorExportRow) => (row.student.telegramUsername ? `@${row.student.telegramUsername}` : "");
 const sum = (rows: DebtorExportRow[], key: "charged" | "paid" | "debt") =>
   rows.reduce((total, row) => total + row[key], 0);
+const studentName = (row: DebtorExportRow) => `${row.student.lastName} ${row.student.firstName}`.trim();
+const telegram = (row: DebtorExportRow) => (row.student.telegramUsername ? `@${row.student.telegramUsername}` : "");
 
-// Учитель «Без учителя» всегда в конце, остальные по алфавиту
-function compareTeachers(a: string, b: string) {
-  if (a === b) return 0;
-  if (a === NO_TEACHER) return 1;
-  if (b === NO_TEACHER) return -1;
-  return byText(a, b);
+/** Всё, что зависит от языка: надписи, сортировка и имя учителя с подстановкой «без учителя». */
+function makeContext(locale: ExportLocale) {
+  const t = TEXTS[locale];
+  const collator = new Intl.Collator(t.tag);
+  const byText = (a: string, b: string) => collator.compare(a, b);
+  const teacherName = (row: DebtorExportRow) =>
+    row.teacher ? `${row.teacher.lastName} ${row.teacher.firstName}`.trim() : t.noTeacher;
+  // Учитель «Без учителя» всегда в конце, остальные по алфавиту
+  const compareTeachers = (a: string, b: string) => {
+    if (a === b) return 0;
+    if (a === t.noTeacher) return 1;
+    if (b === t.noTeacher) return -1;
+    return byText(a, b);
+  };
+  return { t, byText, teacherName, compareTeachers };
 }
+
+type Context = ReturnType<typeof makeContext>;
 
 type Cell = string | number;
 
@@ -54,10 +112,10 @@ function finishSheet(rows: Cell[][], cols: number[], extra: Partial<XLSX.WorkShe
   return sheet;
 }
 
-function groupsSheet(rows: DebtorExportRow[], title: string) {
+function groupsSheet(rows: DebtorExportRow[], title: string, { t, byText, teacherName, compareTeachers }: Context) {
   const out: Cell[][] = [[title], []];
   const merges: XLSX.Range[] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } }];
-  const header = ["№", "Ученик", "Телефон", "Telegram", "Цена в месяц", "Начислено", "Оплачено", "Долг"];
+  const header = ["№", t.student, t.phone, "Telegram", t.price, t.charged, t.paid, t.debt];
 
   const withGroup = new Map<string, DebtorExportRow[]>();
   const withoutGroup: DebtorExportRow[] = [];
@@ -100,7 +158,7 @@ function groupsSheet(rows: DebtorExportRow[], title: string) {
       });
     out.push([
       "",
-      withOwner ? `Итого, без группы (${list.length} уч.)` : `Итого по группе (${list.length} уч.)`,
+      withOwner ? t.noGroupTotal(t.count(list.length)) : t.groupTotal(t.count(list.length)),
       "",
       "",
       "",
@@ -114,18 +172,18 @@ function groupsSheet(rows: DebtorExportRow[], title: string) {
   for (const list of blocks) {
     const first = list[0];
     pushBlock(
-      `Группа: ${first.group!.name} | Курс: ${first.course.title} | Учитель: ${teacherName(first)}`,
+      `${t.group}: ${first.group!.name} | ${t.course}: ${first.course.title} | ${t.teacher}: ${teacherName(first)}`,
       list,
       false
     );
   }
-  if (withoutGroup.length > 0) pushBlock(NO_GROUP, withoutGroup, true);
+  if (withoutGroup.length > 0) pushBlock(t.noGroup, withoutGroup, true);
 
-  out.push(["", `ИТОГО (${rows.length} уч.)`, "", "", "", sum(rows, "charged"), sum(rows, "paid"), sum(rows, "debt")]);
+  out.push(["", `${t.total} (${t.count(rows.length)})`, "", "", "", sum(rows, "charged"), sum(rows, "paid"), sum(rows, "debt")]);
   return finishSheet(out, [5, 42, 18, 18, 14, 14, 14, 14], { "!merges": merges });
 }
 
-function teachersSheet(rows: DebtorExportRow[], title: string) {
+function teachersSheet(rows: DebtorExportRow[], title: string, { t, byText, teacherName }: Context) {
   const byTeacher = new Map<string, DebtorExportRow[]>();
   for (const row of rows) {
     const key = teacherName(row);
@@ -147,10 +205,10 @@ function teachersSheet(rows: DebtorExportRow[], title: string) {
   const out: Cell[][] = [
     [title],
     [],
-    ["Учитель", "Групп с должниками", "Должников", "Начислено", "Оплачено", "Долг"],
+    [t.teacher, t.groupsWithDebtors, t.debtors, t.charged, t.paid, t.debt],
     ...lines.map((l) => [l.name, l.groups, l.count, l.charged, l.paid, l.debt]),
     [
-      "ИТОГО",
+      t.total,
       lines.reduce((t, l) => t + l.groups, 0),
       rows.length,
       sum(rows, "charged"),
@@ -163,15 +221,15 @@ function teachersSheet(rows: DebtorExportRow[], title: string) {
   });
 }
 
-function flatSheet(rows: DebtorExportRow[], title: string) {
+function flatSheet(rows: DebtorExportRow[], title: string, { t, teacherName }: Context) {
   const out: Cell[][] = [
     [title],
-    ["Учитель", "Группа", "Курс", "Ученик", "Телефон", "Telegram", "Цена в месяц", "Начислено", "Оплачено", "Долг"],
+    [t.teacher, t.group, t.course, t.student, t.phone, "Telegram", t.price, t.charged, t.paid, t.debt],
     ...[...rows]
       .sort((a, b) => b.debt - a.debt)
       .map((row) => [
         teacherName(row),
-        row.group?.name ?? NO_GROUP,
+        row.group?.name ?? t.noGroup,
         row.course.title,
         studentName(row),
         row.student.phone ?? "",
@@ -192,12 +250,15 @@ function flatSheet(rows: DebtorExportRow[], title: string) {
  * Книга «Должники на <месяц>»: три листа от одних и тех же строк. Чистая
  * функция — данные приходят из BillingService.debtors(), поэтому файл
  * совпадает с экраном. Суммы пишутся числами, чтобы Excel мог их считать.
+ * Надписи на языке сайта (locale), данные — как есть.
  */
-export function buildDebtorsWorkbook(rows: DebtorExportRow[], month: string): XLSX.WorkBook {
-  const title = `Должники на ${monthTitle(month)}`;
+export function buildDebtorsWorkbook(rows: DebtorExportRow[], month: string, locale: ExportLocale): XLSX.WorkBook {
+  const ctx = makeContext(locale);
+  const title = ctx.t.title(monthTitle(month, ctx.t));
+  const [groupsName, teachersName, flatName] = ctx.t.sheets;
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, groupsSheet(rows, title), "По группам");
-  XLSX.utils.book_append_sheet(workbook, teachersSheet(rows, title), "По учителям");
-  XLSX.utils.book_append_sheet(workbook, flatSheet(rows, title), "Все должники");
+  XLSX.utils.book_append_sheet(workbook, groupsSheet(rows, title, ctx), groupsName);
+  XLSX.utils.book_append_sheet(workbook, teachersSheet(rows, title, ctx), teachersName);
+  XLSX.utils.book_append_sheet(workbook, flatSheet(rows, title, ctx), flatName);
   return workbook;
 }

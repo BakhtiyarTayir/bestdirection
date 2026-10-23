@@ -6,6 +6,7 @@ import { CheckPolicies } from "../../common/policies/check-policies.decorator";
 import { BillingService } from "./billing.service";
 import {
   CreatePaymentDto,
+  DebtorsExportQueryDto,
   DebtorsQueryDto,
   MonthQueryDto,
   PaymentFiltersDto,
@@ -34,7 +35,7 @@ export class BillingController {
   /** Excel со списком должников; фильтры те же, что у экрана. До debtors/:param. */
   @CheckPolicies(adminOnly)
   @Get("debtors/export")
-  async exportDebtors(@Query() query: DebtorsQueryDto, @Res() res: Response) {
+  async exportDebtors(@Query() query: DebtorsExportQueryDto, @Res() res: Response) {
     const file = await this.billing.exportDebtors(query);
     // Имя файла по RFC 5987, как в выгрузках тестов
     res

@@ -88,7 +88,7 @@ describe("модуль billing", () => {
     });
 
     it("выгрузка должников: xlsx с тремя листами и именем по месяцу", async () => {
-      const res = await get(`/billing/debtors/export?courseId=${ids.course}&month=${current}`, "ADMIN")
+      const res = await get(`/billing/debtors/export?courseId=${ids.course}&month=${current}&locale=ru`, "ADMIN")
         .buffer(true)
         .parse((response, done) => {
           const chunks: Buffer[] = [];

@@ -21,7 +21,7 @@ import {
   priceFor,
   type BillingEnrollment,
 } from "./domain/billing";
-import { buildDebtorsWorkbook } from "./domain/debtors-export";
+import { buildDebtorsWorkbook, type ExportLocale } from "./domain/debtors-export";
 import type { UpdateEnrollmentBillingDto } from "./dto/billing.dto";
 
 /**
@@ -136,9 +136,9 @@ export class BillingService {
    * те же фильтры, что на экране, поэтому файл с ним не расходится. Ученики
    * с авансом сюда не входят.
    */
-  async exportDebtors(params: Parameters<BillingService["debtors"]>[0]) {
+  async exportDebtors({ locale, ...params }: Parameters<BillingService["debtors"]>[0] & { locale: ExportLocale }) {
     const { month, debtors } = await this.debtors(params);
-    const workbook = buildDebtorsWorkbook(debtors, month);
+    const workbook = buildDebtorsWorkbook(debtors, month, locale);
     return {
       body: XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer,
       contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

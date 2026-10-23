@@ -30,7 +30,7 @@ const aoa = (wb: XLSX.WorkBook, name: string) =>
   XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[name], { header: 1, blankrows: true });
 
 describe("выгрузка должников", () => {
-  const wb = buildDebtorsWorkbook(rows, "2026-10");
+  const wb = buildDebtorsWorkbook(rows, "2026-10", "ru");
 
   it("три листа с русскими названиями", () => {
     expect(wb.SheetNames).toEqual(["По группам", "По учителям", "Все должники"]);
@@ -70,5 +70,27 @@ describe("выгрузка должников", () => {
     const data = aoa(wb, "Все должники");
     expect(data.slice(2).map((r) => r[9])).toEqual([300000, 200000, 100000, 50000]);
     expect(data[2][5]).toBe("@big");
+  });
+});
+
+describe("выгрузка должников на узбекском", () => {
+  const wb = buildDebtorsWorkbook(rows, "2026-10", "uz");
+
+  it("листы, заголовок, шапки и итоги на узбекском", () => {
+    expect(wb.SheetNames).toEqual(["Guruhlar bo'yicha", "O'qituvchilar bo'yicha", "Barcha qarzdorlar"]);
+    const groups = aoa(wb, "Guruhlar bo'yicha");
+    expect(groups[0][0]).toBe("Qarzdorlar: oktabr 2026");
+    expect(groups[2][0]).toBe("Guruh: Группа А | Kurs: Python | O'qituvchi: Алиев Анвар");
+    expect(groups[3]).toEqual(["№", "Talaba", "Telefon", "Telegram", "Oylik narx", "Hisoblangan", "To'langan", "Qarz"]);
+    expect(groups.some((r) => r[0] === "Guruhsiz")).toBe(true);
+    expect(groups[groups.length - 1][1]).toBe("JAMI (4 ta talaba)");
+
+    const teachers = aoa(wb, "O'qituvchilar bo'yicha");
+    // «O'qituvchisiz» по-прежнему в конце, перед итогом
+    expect(teachers.map((r) => r[0]).slice(3)).toEqual(["Алиев Анвар", "Беков Бобур", "O'qituvchisiz", "JAMI"]);
+
+    const flat = aoa(wb, "Barcha qarzdorlar");
+    expect(flat[1][0]).toBe("O'qituvchi");
+    expect(flat.slice(2).map((r) => r[9])).toEqual([300000, 200000, 100000, 50000]);
   });
 });
