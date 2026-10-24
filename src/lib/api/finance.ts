@@ -1,3 +1,5 @@
+import { apiFetch } from "./client";
+
 // Отчёт «Финансы» (GET /finance): прибыль центра по кассе и по начислениям
 
 export interface ApiFinanceMonth {
@@ -7,6 +9,10 @@ export interface ApiFinanceMonth {
   /** Касса: выплаты преподавателям, выданные в этом месяце */
   paidOut: number;
   cashProfit: number;
+  /** Сдано владельцу из прибыли этого месяца */
+  handedOver: number;
+  /** Осталось на руках: кассовая прибыль минус сданное */
+  onHand: number;
   /** Начисления: сколько ученики должны были заплатить за месяц */
   charged: number;
   /** Начисления: зарплата преподавателей за месяц */
@@ -30,3 +36,31 @@ export interface ApiFinance {
   months: ApiFinanceMonth[];
   teachers: ApiFinanceTeacher[];
 }
+
+export interface ApiProfitHandover {
+  id: string;
+  amount: number;
+  handedAt: string;
+  forMonth: string;
+  receivedBy: string | null;
+  comment: string | null;
+  branch: { id: string; name: string };
+  createdBy: { firstName: string; lastName: string };
+}
+
+export interface ApiProfitHandovers {
+  handovers: ApiProfitHandover[];
+  total: number;
+  count: number;
+}
+
+export const createHandover = (body: {
+  branchId: string;
+  amount: number;
+  handedAt: string;
+  forMonth: string;
+  receivedBy?: string;
+  comment?: string;
+}) => apiFetch<{ id: string }>("/finance/handovers", { method: "POST", body });
+
+export const deleteHandover = (id: string) => apiFetch<{ ok: true }>(`/finance/handovers/${id}`, { method: "DELETE" });

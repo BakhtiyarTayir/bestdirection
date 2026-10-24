@@ -588,6 +588,7 @@ export class UsersService {
       salaryAccruals,
       receivedPayouts,
       issuedPayouts,
+      issuedHandovers,
       receivedAdjustments,
       issuedAdjustments,
       billedMonths,
@@ -603,6 +604,9 @@ export class UsersService {
       db.teacherSalaryAccrual.count({ where: { teacherId: id } }),
       db.teacherPayout.count({ where: { teacherId: id } }),
       db.teacherPayout.count({ where: { createdById: id } }),
+      // Сдачи прибыли записывает тот же администратор и тот же FK Restrict —
+      // отдельной причины не заводим, считаем вместе с выданными выплатами
+      db.profitHandover.count({ where: { createdById: id } }),
       db.teacherSalaryAdjustment.count({ where: { teacherId: id } }),
       db.teacherSalaryAdjustment.count({ where: { createdById: id } }),
       db.monthlyCharge.count({ where: { enrollment: { studentId: id }, amount: { gt: 0 } } }),
@@ -622,7 +626,7 @@ export class UsersService {
       ["acceptedPayments", acceptedPayments],
       ["salaryAccruals", salaryAccruals],
       ["receivedPayouts", receivedPayouts],
-      ["issuedPayouts", issuedPayouts],
+      ["issuedPayouts", issuedPayouts + issuedHandovers],
       ["receivedAdjustments", receivedAdjustments],
       ["issuedAdjustments", issuedAdjustments],
       ["smsBroadcasts", smsBroadcasts],

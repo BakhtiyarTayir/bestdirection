@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -46,6 +47,11 @@ export function SalariesList({ month, rows, totals, branchId, branches }: Salari
   const { page, totalPages, pageItems, setPage } = usePagination(rows, `${month}|${branchId ?? ""}`);
 
   const money = new Intl.NumberFormat(intlLocale(locale));
+  // Прибыль центра — от начисленного (премии и штрафы уже внутри accrued).
+  // Процент от базы; при нулевой базе процента нет. Убыток — красным
+  const totalProfit = totals.base - totals.accrued;
+  const percentOf = (profit: number, base: number) => (base > 0 ? `${Math.round((profit / base) * 100)}%` : "—");
+  const profitClass = (value: number) => (value < 0 ? "text-destructive" : undefined);
 
   const setFilter = (key: string, value: string) => {
     const next = { month, branchId, [key]: value === ALL ? "" : value };
@@ -94,7 +100,7 @@ export function SalariesList({ month, rows, totals, branchId, branches }: Salari
         )}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-lg border bg-muted/40 px-4 py-3">
           <div className="text-sm text-muted-foreground">{t("totalAccrued")}</div>
           <div className="text-2xl font-bold">{money.format(totals.accrued)} UZS</div>
@@ -106,6 +112,13 @@ export function SalariesList({ month, rows, totals, branchId, branches }: Salari
         <div className="rounded-lg border px-4 py-3">
           <div className="text-sm text-muted-foreground">{t("totalDebt")}</div>
           <div className="text-2xl font-bold">{money.format(totals.debt)} UZS</div>
+        </div>
+        <div className="rounded-lg border px-4 py-3">
+          <div className="text-sm text-muted-foreground">{t("totalProfit")}</div>
+          <div className={cn("text-2xl font-bold", profitClass(totalProfit))}>
+            {money.format(totalProfit)} UZS
+            <span className="ml-2 text-base font-medium">{percentOf(totalProfit, totals.base)}</span>
+          </div>
         </div>
       </div>
 
@@ -123,6 +136,8 @@ export function SalariesList({ month, rows, totals, branchId, branches }: Salari
                 <TableHead className="text-right">{t("colStudents")}</TableHead>
                 <TableHead className="text-right">{t("colBase")}</TableHead>
                 <TableHead className="text-right">{t("colAccrued")}</TableHead>
+                <TableHead className="text-right">{t("colProfit")}</TableHead>
+                <TableHead className="text-right">{t("colProfitPercent")}</TableHead>
                 <TableHead className="text-right">{t("colAdjustments")}</TableHead>
                 <TableHead className="text-right">{t("colPaid")}</TableHead>
                 <TableHead className="text-right">{t("colDebt")}</TableHead>
@@ -152,6 +167,12 @@ export function SalariesList({ month, rows, totals, branchId, branches }: Salari
                   <TableCell className="whitespace-nowrap text-right">{row.studentsCount}</TableCell>
                   <TableCell className="whitespace-nowrap text-right">{money.format(row.base)}</TableCell>
                   <TableCell className="whitespace-nowrap text-right">{money.format(row.accrued)}</TableCell>
+                  <TableCell className={cn("whitespace-nowrap text-right", profitClass(row.profit))}>
+                    {money.format(row.profit)}
+                  </TableCell>
+                  <TableCell className={cn("whitespace-nowrap text-right", profitClass(row.profit))}>
+                    {percentOf(row.profit, row.base)}
+                  </TableCell>
                   <TableCell
                     className={`whitespace-nowrap text-right ${row.adjustments > 0 ? "text-green-600" : "text-red-600"}`}
                   >

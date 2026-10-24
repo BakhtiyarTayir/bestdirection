@@ -609,6 +609,14 @@ describe("модуль salary", () => {
       );
       expect(mainRowInOverview.base).toBe(mainRow.base);
       expect(subRowInOverview.base).toBe(mainRow.base);
+
+      // Прибыль центра: база группы делится между строками, а не
+      // повторяется — сумма profit по строкам равна totals.base − totals.accrued
+      // (по-строчное base − accrued завысило бы прибыль на долю замены)
+      const profitSum = overview.body.rows.reduce((sum: number, r: { profit: number }) => sum + r.profit, 0);
+      expect(profitSum).toBe(overview.body.totals.base - overview.body.totals.accrued);
+      expect(mainRowInOverview.profit + subRowInOverview.profit).toBe(mainRow.base - mainRow.amount - subRow.amount);
+      expect(subRowInOverview.profit).toBeLessThan(subRowInOverview.base - subRowInOverview.accrued);
     });
   });
 

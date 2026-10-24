@@ -1253,7 +1253,8 @@
     "telegramUnknown": "Bu Telegram hech qanday akkauntga ulanmagan",
     "botNotConfigured": "Telegram bot sozlanmagan",
     "noPhone": "Foydalanuvchida telefon raqami yo'q",
-    "invalidDate": "Sana noto‘g‘ri"
+    "invalidDate": "Sana noto‘g‘ri",
+    "handoverNotFound": "Foyda topshirish yozuvi topilmadi"
   },
   "success": {
     "saved": "Saqlandi",
@@ -2057,7 +2058,10 @@
     "studentOverpaid": "avans",
     "studentsPaidOf": "{charged} dan {paid} tushdi",
     "studentsPaidOfPercent": "{charged} dan {paid} tushdi ({percent} %)",
-    "studentsFrozenMismatch": "Ish haqi bazasi {base} deb qotirilgan; o'quvchilar hisoblari shundan keyin o'zgargan — «Qayta hisoblash» tugmasini bosing."
+    "studentsFrozenMismatch": "Ish haqi bazasi {base} deb qotirilgan; o'quvchilar hisoblari shundan keyin o'zgargan — «Qayta hisoblash» tugmasini bosing.",
+    "totalProfit": "Markaz foydasi",
+    "colProfit": "Markaz foydasi",
+    "colProfitPercent": "%"
   },
   "finance": {
     "title": "Moliya",
@@ -2098,7 +2102,32 @@
       "m10": "Oktabr",
       "m11": "Noyabr",
       "m12": "Dekabr"
-    }
+    },
+    "handedOver": "Topshirildi",
+    "onHand": "Qo'lda qoldi",
+    "colOnHand": "Qoldi",
+    "handoversTitle": "Foyda topshirish jurnali",
+    "handoverAdd": "Foyda topshirildi",
+    "handoverNewTitle": "Foyda topshirish",
+    "handoverDescription": "Filial foydasidan egasiga qancha topshirilganini yozing",
+    "colDate": "Sana",
+    "colBranch": "Filial",
+    "colAmount": "Summa",
+    "colReceivedBy": "Kimga",
+    "colComment": "Izoh",
+    "colRecordedBy": "Kim yozdi",
+    "handoversEmpty": "Bu oy uchun foyda topshirish yo'q",
+    "handoverCreated": "Foyda topshirish yozildi",
+    "handoverFailed": "Topshirishni yozib bo'lmadi",
+    "handoverSave": "Yozish",
+    "selectBranch": "Filialni tanlang",
+    "handoverDeleteTitle": "Topshirish yozuvi o'chirilsinmi?",
+    "handoverDeleteConfirm": "{amount} UZS topshirish o'chirilsinmi? Yozuv jurnaldan yashiriladi, ammo auditda qoladi.",
+    "handoverDeleted": "Yozuv o'chirildi",
+    "handoverDeleteFailed": "Yozuvni o'chirib bo'lmadi",
+    "cancelDelete": "Bekor qilish",
+    "confirmDelete": "O'chirish",
+    "colForMonth": "Oy"
   },
   "dashboardTeacher": {
     "scheduleTitle": "Dars jadvali",

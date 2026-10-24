@@ -1253,7 +1253,8 @@
     "telegramUnknown": "Этот Telegram не привязан ни к одному аккаунту",
     "botNotConfigured": "Telegram-бот не настроен",
     "noPhone": "У пользователя не указан телефон",
-    "invalidDate": "Неверная дата"
+    "invalidDate": "Неверная дата",
+    "handoverNotFound": "Запись о сдаче прибыли не найдена"
   },
   "success": {
     "saved": "Сохранено",
@@ -2057,7 +2058,10 @@
     "studentOverpaid": "аванс",
     "studentsPaidOf": "Поступило {paid} из {charged}",
     "studentsPaidOfPercent": "Поступило {paid} из {charged} ({percent} %)",
-    "studentsFrozenMismatch": "База зарплаты зафиксирована как {base}; начисления учеников с тех пор изменились — нажмите «Пересчитать»."
+    "studentsFrozenMismatch": "База зарплаты зафиксирована как {base}; начисления учеников с тех пор изменились — нажмите «Пересчитать».",
+    "totalProfit": "Прибыль центра",
+    "colProfit": "Прибыль центра",
+    "colProfitPercent": "%"
   },
   "finance": {
     "title": "Финансы",
@@ -2098,7 +2102,32 @@
       "m10": "Октябрь",
       "m11": "Ноябрь",
       "m12": "Декабрь"
-    }
+    },
+    "handedOver": "Сдано",
+    "onHand": "Осталось на руках",
+    "colOnHand": "Осталось",
+    "handoversTitle": "Журнал сдачи прибыли",
+    "handoverAdd": "Сдать прибыль",
+    "handoverNewTitle": "Сдача прибыли",
+    "handoverDescription": "Запишите, сколько прибыли филиала передано владельцу",
+    "colDate": "Дата",
+    "colBranch": "Филиал",
+    "colAmount": "Сумма",
+    "colReceivedBy": "Кому",
+    "colComment": "Комментарий",
+    "colRecordedBy": "Кто записал",
+    "handoversEmpty": "За этот месяц сдач прибыли нет",
+    "handoverCreated": "Сдача прибыли записана",
+    "handoverFailed": "Не удалось записать сдачу",
+    "handoverSave": "Записать",
+    "selectBranch": "Выберите филиал",
+    "handoverDeleteTitle": "Удалить запись о сдаче?",
+    "handoverDeleteConfirm": "Удалить сдачу {amount} UZS? Запись скроется из журнала, но останется в аудите.",
+    "handoverDeleted": "Запись удалена",
+    "handoverDeleteFailed": "Не удалось удалить запись",
+    "cancelDelete": "Отмена",
+    "confirmDelete": "Удалить",
+    "colForMonth": "Месяц"
   },
   "dashboardTeacher": {
     "scheduleTitle": "Расписание",

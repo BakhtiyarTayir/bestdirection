@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { intlLocale } from "@/i18n/config";
 import { Link, useRouter, usePathname } from "@/i18n/navigation";
@@ -9,19 +9,39 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ListPagination, usePagination } from "@/components/ui/list-pagination";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/components/ui/use-toast";
+import { Loader2, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ApiFinance } from "@/lib/api/finance";
+import { deleteHandover, type ApiFinance, type ApiProfitHandover } from "@/lib/api/finance";
+import { CreateHandoverDialog } from "./create-handover-dialog";
 
 interface FinanceViewProps {
   data: ApiFinance;
   branchId?: string;
   branches: { id: string; name: string }[];
+  /** Журнал сдач прибыли за месяц отчёта */
+  handovers: ApiProfitHandover[];
 }
 
 const ALL = "all";
 
-export function FinanceView({ data, branchId, branches }: FinanceViewProps) {
+export function FinanceView({ data, branchId, branches, handovers }: FinanceViewProps) {
   const t = useTranslations("finance");
+  const tErrors = useTranslations("errors");
+  const { toast } = useToast();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
@@ -52,6 +72,21 @@ export function FinanceView({ data, branchId, branches }: FinanceViewProps) {
   };
 
   const { current } = data;
+  const onHandByMonth = Object.fromEntries(data.months.map((row) => [row.month, row.onHand]));
+
+  const handleDelete = (id: string) => {
+    setDeletingId(id);
+    startTransition(async () => {
+      const result = await deleteHandover(id);
+      if (result.success) {
+        toast({ title: t("handoverDeleted") });
+        router.refresh();
+      } else {
+        toast({ title: tErrors("error"), description: t("handoverDeleteFailed"), variant: "destructive" });
+      }
+      setDeletingId(null);
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -107,6 +142,16 @@ export function FinanceView({ data, branchId, branches }: FinanceViewProps) {
             <div className={cn("text-2xl font-bold tabular-nums", profitClass(current.cashProfit))}>
               {money.format(current.cashProfit)} UZS
             </div>
+            <dl className="mt-2 space-y-1 text-sm">
+              <div className="flex justify-between gap-4">
+                <dt>{t("handedOver")}</dt>
+                <dd className="tabular-nums">− {money.format(current.handedOver)} UZS</dd>
+              </div>
+              <div className="flex justify-between gap-4 font-bold">
+                <dt>{t("onHand")}</dt>
+                <dd className={cn("tabular-nums", profitClass(current.onHand))}>{money.format(current.onHand)} UZS</dd>
+              </div>
+            </dl>
           </div>
         </div>
 
@@ -175,6 +220,89 @@ export function FinanceView({ data, branchId, branches }: FinanceViewProps) {
       </section>
 
       <section className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">
+            {t("handoversTitle")}: {formatMonth(data.month)}
+          </h2>
+          <CreateHandoverDialog
+            branches={branches}
+            branchId={branchId}
+            month={data.month}
+            onHandByMonth={onHandByMonth}
+          />
+        </div>
+        {handovers.length === 0 ? (
+          <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+            {t("handoversEmpty")}
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("colDate")}</TableHead>
+                  <TableHead>{t("colBranch")}</TableHead>
+                  <TableHead className="text-right">{t("colAmount")}</TableHead>
+                  <TableHead>{t("colReceivedBy")}</TableHead>
+                  <TableHead>{t("colComment")}</TableHead>
+                  <TableHead>{t("colRecordedBy")}</TableHead>
+                  <TableHead />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {handovers.map((handover) => (
+                  <TableRow key={handover.id}>
+                    <TableCell className="whitespace-nowrap">{handover.handedAt.slice(0, 10)}</TableCell>
+                    <TableCell>{handover.branch.name}</TableCell>
+                    <TableCell className="whitespace-nowrap text-right tabular-nums">
+                      {money.format(handover.amount)}
+                    </TableCell>
+                    <TableCell>{handover.receivedBy}</TableCell>
+                    <TableCell className="text-sm italic">{handover.comment}</TableCell>
+                    <TableCell>
+                      {handover.createdBy.lastName} {handover.createdBy.firstName}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            disabled={deletingId === handover.id}
+                            aria-label={t("handoverDeleteTitle")}
+                          >
+                            {deletingId === handover.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            )}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>{t("handoverDeleteTitle")}</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {t("handoverDeleteConfirm", { amount: money.format(handover.amount) })}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>{t("cancelDelete")}</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(handover.id)}>
+                              {t("confirmDelete")}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-2">
         <h2 className="text-lg font-semibold">{t("historyTitle")}</h2>
         <div className="overflow-x-auto rounded-lg border">
           <Table>
@@ -184,6 +312,8 @@ export function FinanceView({ data, branchId, branches }: FinanceViewProps) {
                 <TableHead className="text-right">{t("received")}</TableHead>
                 <TableHead className="text-right">{t("paidOut")}</TableHead>
                 <TableHead className="text-right">{t("colCashProfit")}</TableHead>
+                <TableHead className="text-right">{t("handedOver")}</TableHead>
+                <TableHead className="text-right">{t("colOnHand")}</TableHead>
                 <TableHead className="text-right">{t("charged")}</TableHead>
                 <TableHead className="text-right">{t("salaryAccrued")}</TableHead>
                 <TableHead className="text-right">{t("colAccrualProfit")}</TableHead>
@@ -197,6 +327,10 @@ export function FinanceView({ data, branchId, branches }: FinanceViewProps) {
                   <TableCell className="whitespace-nowrap text-right tabular-nums">{money.format(row.paidOut)}</TableCell>
                   <TableCell className={cn("whitespace-nowrap text-right font-medium tabular-nums", profitClass(row.cashProfit))}>
                     {money.format(row.cashProfit)}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-right tabular-nums">{money.format(row.handedOver)}</TableCell>
+                  <TableCell className={cn("whitespace-nowrap text-right font-medium tabular-nums", profitClass(row.onHand))}>
+                    {money.format(row.onHand)}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-right tabular-nums">{money.format(row.charged)}</TableCell>
                   <TableCell className="whitespace-nowrap text-right tabular-nums">

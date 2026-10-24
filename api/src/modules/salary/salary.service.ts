@@ -841,6 +841,13 @@ export class SalaryService {
       /** Премии минус штрафы за месяц M, со знаком; уже входит в accrued */
       adjustments: number;
       accrued: number;
+      /**
+       * Прибыль центра по строке: доля базы группы минус accrued. База группы
+       * делится между строками пропорционально их amount, поэтому сумма
+       * profit по всем строкам равна totals.base − totals.accrued (в отличие
+       * от base − accrued по строке: base у заменяющего — полная база группы)
+       */
+      profit: number;
       accruedTotal: number;
       paidTotal: number;
       debt: number;
@@ -859,6 +866,9 @@ export class SalaryService {
     // месяц» — ключ ниже не включает месяц явно, потому что вся сводка уже
     // строится для одного month.
     const groupMonthTotals = new Map<string, { base: number; studentsCount: number; isGroup: boolean }>();
+    // Для прибыли по строкам: кто из единиц делит базу группы (владелец
+    // забирает остаток от округления доль)
+    const groupShares = new Map<string, { base: number; parts: { row: Row; amount: number; isOwner: boolean }[] }>();
 
     for (const { unit, months, marks } of schedules) {
       const row = rows.get(unit.teacherId) ?? {
@@ -871,6 +881,7 @@ export class SalaryService {
         base: 0,
         adjustments: 0,
         accrued: 0,
+        profit: 0,
         accruedTotal: 0,
         paidTotal: 0,
         debt: 0,
@@ -891,6 +902,9 @@ export class SalaryService {
         if (unit.groupId && (!marks || marks.fallback)) row.fallbackGroupsCount += 1;
 
         const dedupKey = unit.groupId ?? `course:${unit.courseId}`;
+        const shares = groupShares.get(dedupKey) ?? { base: current.accrual.base, parts: [] };
+        shares.parts.push({ row, amount: current.accrual.amount, isOwner: unit.teacherId === unit.ownerTeacherId });
+        groupShares.set(dedupKey, shares);
         if (!groupMonthTotals.has(dedupKey)) {
           groupMonthTotals.set(dedupKey, {
             base: current.accrual.base,
@@ -901,6 +915,22 @@ export class SalaryService {
       }
       row.accruedTotal += totalAccrued(months);
       rows.set(unit.teacherId, row);
+    }
+
+    // Прибыль центра по строкам: база группы делится между единицами в
+    // пропорции их amount (целые суммы, остаток — владельцу), из доли
+    // вычитается amount. Нулевая выплата всей группе — вся база владельцу
+    for (const { base, parts } of groupShares.values()) {
+      const sum = parts.reduce((acc, part) => acc + part.amount, 0);
+      const holder = parts.find((part) => part.isOwner) ?? parts[0];
+      let allocated = 0;
+      for (const part of parts) {
+        if (part === holder) continue;
+        const share = sum > 0 ? Math.floor((base * part.amount) / sum) : 0;
+        part.row.profit += share - part.amount;
+        allocated += share;
+      }
+      holder.row.profit += base - allocated - holder.amount;
     }
 
     // Корректировки добавляются один раз на преподавателя, не на единицу
@@ -924,6 +954,7 @@ export class SalaryService {
         base: 0,
         adjustments: 0,
         accrued: 0,
+        profit: 0,
         accruedTotal: 0,
         paidTotal: 0,
         debt: 0,
@@ -934,6 +965,8 @@ export class SalaryService {
       if (!row) continue;
       row.adjustments = sumAdjustments(list, { only: month });
       row.accrued += row.adjustments;
+      // Премия — расход центра, штраф — доход: прибыль строки считается от accrued
+      row.profit -= row.adjustments;
       row.accruedTotal += sumAdjustments(list, { upTo: month });
     }
 

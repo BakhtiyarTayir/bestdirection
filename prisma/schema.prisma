@@ -146,6 +146,7 @@ model Branch {
   teacherSalaryAccruals    TeacherSalaryAccrual[]
   teacherPayouts           TeacherPayout[]
   teacherSalaryAdjustments TeacherSalaryAdjustment[]
+  profitHandovers          ProfitHandover[]
 
   @@index([isActive])
 }
@@ -219,6 +220,7 @@ model User {
   teacherSalaryAccruals     TeacherSalaryAccrual[]    @relation("TeacherSalaryAccruals")
   teacherPayouts            TeacherPayout[]           @relation("TeacherPayouts")
   recordedPayouts           TeacherPayout[]           @relation("RecordedPayouts")
+  recordedProfitHandovers   ProfitHandover[]          @relation("RecordedProfitHandovers")
   teacherSalaryAdjustments  TeacherSalaryAdjustment[] @relation("TeacherSalaryAdjustments")
   recordedSalaryAdjustments TeacherSalaryAdjustment[] @relation("RecordedSalaryAdjustments")
 
@@ -695,6 +697,33 @@ model TeacherPayout {
   @@index([paidAt])
   @@index([forMonth])
   @@index([deletedAt])
+}
+
+/// Сдача прибыли филиала владельцу. Журнал, как TeacherPayout: правок суммы
+/// нет, ошибочную запись помечают deletedAt и вносят заново. На кассу и
+/// начисления не влияет — только уменьшает «осталось на руках» за forMonth.
+model ProfitHandover {
+  id         String    @id @default(cuid())
+  amount     Int
+  // Дата сдачи, полдень UTC — как Payment.paidAt
+  handedAt   DateTime
+  // За прибыль какого месяца сдали, "YYYY-MM"
+  forMonth   String
+  // Кому сдала — свободный текст
+  receivedBy String?
+  comment    String?
+  deletedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  // Restrict: журнал денег не должен исчезать вместе с филиалом
+  branchId String
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  createdById String
+  createdBy   User   @relation("RecordedProfitHandovers", fields: [createdById], references: [id])
+
+  @@index([branchId, forMonth])
 }
 
 enum PayoutKind {

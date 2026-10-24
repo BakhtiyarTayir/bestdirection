@@ -19,6 +19,9 @@ export interface ApiSalaryOverviewRow {
   accrued: number;
   // Премии минус штрафы месяца (со знаком); уже входят в accrued
   adjustments: number;
+  // Прибыль центра по строке: доля базы группы минус accrued. Не base − accrued:
+  // у заменяющего base — полная база группы. Сумма по строкам = totals.base − totals.accrued
+  profit: number;
   accruedTotal: number;
   paidTotal: number;
   debt: number;
