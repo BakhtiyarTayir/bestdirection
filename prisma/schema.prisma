@@ -672,6 +672,9 @@ model TeacherPayout {
   method    PaymentMethod @default(CASH)
   paidAt    DateTime
   forMonth  String? // за какой месяц платят, "YYYY-MM"
+  // Аванс или зарплата — только подпись в журнале: на долг центра не влияет,
+  // любая выплата уменьшает его одинаково
+  kind      PayoutKind    @default(SALARY)
   comment   String?
   deletedAt DateTime?
   createdAt DateTime      @default(now())
@@ -692,6 +695,11 @@ model TeacherPayout {
   @@index([paidAt])
   @@index([forMonth])
   @@index([deletedAt])
+}
+
+enum PayoutKind {
+  SALARY
+  ADVANCE
 }
 
 enum SalaryAdjustmentKind {

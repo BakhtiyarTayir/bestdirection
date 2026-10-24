@@ -255,6 +255,42 @@ describe("модуль salary", () => {
     it("несуществующая выплата — 404", async () => {
       expect((await send("delete", "/salary/payouts/no-such-id", "ADMIN")).status).toBe(404);
     });
+
+    it("аванс подписан в журнале и уменьшает долг так же, как зарплата", async () => {
+      const res = await send("post", "/salary/payouts", "ADMIN", {
+        teacherId: ids.TEACHER,
+        amount: 1000,
+        method: "CASH",
+        paidAt: `${current}-05`,
+        forMonth: prevMonth,
+        kind: "ADVANCE",
+      });
+      expect(res.status).toBe(201);
+
+      const after = await get(`/salary/${ids.TEACHER}?month=${prevMonth}`, "ADMIN");
+      expect(after.body.debt).toBe(Number(ids.debtBefore) - 1000);
+      const kinds = Object.fromEntries(
+        after.body.payouts.map((payout: { id: string; kind: string }) => [payout.id, payout.kind])
+      );
+      expect(kinds[res.body.id]).toBe("ADVANCE");
+
+      // Без kind — зарплата
+      const plain = await send("post", "/salary/payouts", "ADMIN", {
+        teacherId: ids.TEACHER,
+        amount: 500,
+        method: "CASH",
+        paidAt: `${current}-05`,
+        forMonth: prevMonth,
+      });
+      const withPlain = await get(`/salary/${ids.TEACHER}?month=${prevMonth}`, "ADMIN");
+      expect(
+        withPlain.body.payouts.find((payout: { id: string }) => payout.id === plain.body.id).kind
+      ).toBe("SALARY");
+
+      // Вернуть долг как был — следующие тесты от него считают
+      await send("delete", `/salary/payouts/${res.body.id}`, "ADMIN");
+      await send("delete", `/salary/payouts/${plain.body.id}`, "ADMIN");
+    });
   });
 
   describe("ручная фиксация и пересчёт закрытого месяца", () => {

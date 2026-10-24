@@ -130,6 +130,7 @@ export function TeacherSalaryView({
                 <TableRow>
                   <TableHead>{tPayments("colPaidAt")}</TableHead>
                   <TableHead>{tPayments("colForMonth")}</TableHead>
+                  <TableHead>{t("payoutKind")}</TableHead>
                   <TableHead className="text-right">{t("colAmount")}</TableHead>
                   <TableHead>{tPayments("colMethod")}</TableHead>
                   <TableHead>{t("colComment")}</TableHead>
@@ -143,6 +144,11 @@ export function TeacherSalaryView({
                     <TableRow>
                       <TableCell className="whitespace-nowrap">{formatDate(payout.paidAt)}</TableCell>
                       <TableCell className="whitespace-nowrap">{payout.forMonth ?? "—"}</TableCell>
+                      <TableCell>
+                        <Badge variant={payout.kind === "ADVANCE" ? "secondary" : "outline"}>
+                          {t(`payoutKind${payout.kind}`)}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="whitespace-nowrap text-right">{money.format(payout.amount)}</TableCell>
                       <TableCell>{tPayments(`method.${payout.method}`)}</TableCell>
                       <TableCell className="max-w-[200px] truncate">{payout.comment ?? "—"}</TableCell>

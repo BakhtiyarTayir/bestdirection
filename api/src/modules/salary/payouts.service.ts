@@ -78,6 +78,7 @@ export class PayoutsService {
         method: data.method,
         paidAt: toNoonUtc(data.paidAt),
         forMonth: data.forMonth,
+        kind: data.kind,
         comment: data.comment?.trim() || null,
         // Приписка преподавателя справочная (как у пользователя), но для
         // выплаты это единственный источник филиала — своей группы у неё нет
@@ -96,6 +97,7 @@ export class PayoutsService {
         amount: data.amount,
         method: data.method,
         forMonth: data.forMonth ?? null,
+        kind: data.kind,
       },
     });
 

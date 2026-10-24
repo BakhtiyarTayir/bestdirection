@@ -53,6 +53,8 @@ export const createPayoutSchema = z.object({
   method: z.enum(paymentMethods),
   paidAt: dateString,
   forMonth: monthString.optional(),
+  // Подпись в журнале; на расчёт долга не влияет
+  kind: z.enum(["SALARY", "ADVANCE"]).default("SALARY"),
   comment: z.string().max(500, "maxChars500").optional(),
 });
 

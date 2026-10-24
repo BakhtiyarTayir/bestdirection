@@ -164,6 +164,7 @@ export function MySalaryView({ month, groups, adjustments, accruedFromGroups, ac
                 <TableRow>
                   <TableHead>{tPayments("colPaidAt")}</TableHead>
                   <TableHead>{tPayments("colForMonth")}</TableHead>
+                  <TableHead>{t("payoutKind")}</TableHead>
                   <TableHead className="text-right">{t("colAmount")}</TableHead>
                   <TableHead>{tPayments("colMethod")}</TableHead>
                 </TableRow>
@@ -173,6 +174,11 @@ export function MySalaryView({ month, groups, adjustments, accruedFromGroups, ac
                   <TableRow key={payout.id}>
                     <TableCell className="whitespace-nowrap">{formatDate(payout.paidAt)}</TableCell>
                     <TableCell className="whitespace-nowrap">{payout.forMonth ?? "—"}</TableCell>
+                    <TableCell>
+                      <Badge variant={payout.kind === "ADVANCE" ? "secondary" : "outline"}>
+                        {t(`payoutKind${payout.kind}`)}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="whitespace-nowrap text-right">{money.format(payout.amount)}</TableCell>
                     <TableCell>{tPayments(`method.${payout.method}`)}</TableCell>
                   </TableRow>

@@ -20,7 +20,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { createPayout } from "@/lib/api/salary";
+import { createPayout, type PayoutKind } from "@/lib/api/salary";
 import { paymentMethods, type PaymentMethodValue } from "@/validators/payment";
 import { Plus } from "lucide-react";
 
@@ -49,6 +49,7 @@ export function CreatePayoutDialog({ teacherId, defaultAmount, defaultForMonth }
   const [method, setMethod] = useState<PaymentMethodValue>("CASH");
   const [paidAt, setPaidAt] = useState<Date | undefined>(new Date());
   const [forMonth, setForMonth] = useState(defaultForMonth ?? currentMonth());
+  const [kind, setKind] = useState<PayoutKind>("SALARY");
   const [comment, setComment] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -56,8 +57,18 @@ export function CreatePayoutDialog({ teacherId, defaultAmount, defaultForMonth }
     if (next) {
       setAmount(defaultAmount ? String(defaultAmount) : "");
       setForMonth(defaultForMonth ?? currentMonth());
+      setKind("SALARY");
     }
     setOpen(next);
+  };
+
+  // Подставленный долг центра — это сумма зарплаты, а не аванса: для аванса
+  // поле очищаем, при возврате к зарплате подставляем снова
+  const changeKind = (next: PayoutKind) => {
+    setKind(next);
+    const defaultText = defaultAmount ? String(defaultAmount) : "";
+    if (next === "ADVANCE" && amount === defaultText) setAmount("");
+    if (next === "SALARY" && amount === "") setAmount(defaultText);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -73,6 +84,7 @@ export function CreatePayoutDialog({ teacherId, defaultAmount, defaultForMonth }
         method,
         paidAt: format(paidAt, "yyyy-MM-dd"),
         forMonth: forMonth || undefined,
+        kind,
         comment: comment.trim() || undefined,
       });
       if (result.success) {
@@ -104,6 +116,19 @@ export function CreatePayoutDialog({ teacherId, defaultAmount, defaultForMonth }
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label>{t("payoutKind")}</Label>
+            <Select value={kind} onValueChange={(value) => changeKind(value as PayoutKind)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="SALARY">{t("payoutKindSALARY")}</SelectItem>
+                <SelectItem value="ADVANCE">{t("payoutKindADVANCE")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="payout-amount">{t("colAmount")} (UZS)</Label>

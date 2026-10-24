@@ -79,9 +79,13 @@ export interface ApiSalaryPayout {
   method: PaymentMethodValue;
   paidAt: string;
   forMonth: string | null;
+  kind: PayoutKind;
   comment: string | null;
   createdBy: string;
 }
+
+/** Аванс или зарплата — подпись в журнале, на долг центра не влияет */
+export type PayoutKind = "SALARY" | "ADVANCE";
 
 export type SalaryAdjustmentKind = "BONUS" | "PENALTY";
 
@@ -170,6 +174,7 @@ export const createPayout = (body: {
   method: PaymentMethodValue;
   paidAt: string;
   forMonth?: string;
+  kind: PayoutKind;
   comment?: string;
 }) => apiFetch<{ id: string }>("/salary/payouts", { method: "POST", body });
 

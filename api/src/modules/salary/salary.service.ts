@@ -1086,6 +1086,7 @@ export class SalaryService {
         method: payout.method,
         paidAt: payout.paidAt.toISOString(),
         forMonth: payout.forMonth,
+        kind: payout.kind,
         comment: payout.comment,
         createdBy: `${payout.createdBy.lastName} ${payout.createdBy.firstName}`,
       })),
