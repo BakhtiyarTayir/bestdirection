@@ -247,7 +247,12 @@ export class AdminDashboardService {
     const groupIds = withSchedule.map((group) => group.id);
 
     const sessions = await this.prisma.attendanceSession.findMany({
-      where: { groupId: { in: groupIds }, date: { gte: monthFrom, lte: today } },
+      // Нижняя граница — полночь 1-го числа: date у занятия @db.Date, полдень
+      // monthFrom отрезал бы занятия самого 1-го числа ещё в запросе
+      where: {
+        groupId: { in: groupIds },
+        date: { gte: new Date(`${currentMonthKey()}-01T00:00:00.000Z`), lte: today },
+      },
       select: { groupId: true, date: true },
     });
     const sessionDatesByGroup = new Map<string, Date[]>();
@@ -266,8 +271,13 @@ export class AdminDashboardService {
       if (from.getTime() > today.getTime()) continue;
 
       const planned = countLessons(group.scheduleDays, from, today);
+      // Даты занятий — @db.Date (из базы приходят ПОЛНОЧЬЮ UTC), а from — полдень
+      // UTC. Сравниваем по календарному дню, как в attendance.service.ts →
+      // groupsOverview: иначе занятие 1-го числа или в день старта группы
+      // выпадало из «отмечено», и группа с полным журналом числилась неполной.
+      const fromDay = Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate());
       const actual = (sessionDatesByGroup.get(group.id) ?? []).filter(
-        (date) => date.getTime() >= from.getTime()
+        (date) => Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) >= fromDay
       ).length;
       if (planned > actual) count++;
     }

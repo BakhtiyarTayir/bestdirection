@@ -141,4 +141,41 @@ describe("модуль dashboard/admin", () => {
     expect(after.studentsWithoutGroup).toBeGreaterThanOrEqual(before.studentsWithoutGroup + 1);
     expect(after.groupsWithoutRate).toBe(before.groupsWithoutRate + 1);
   });
+
+  it("«требует внимания»: журнал, отмеченный с 1-го числа по сегодня, — полный", async () => {
+    // Регресс: занятие 1-го числа (полночь UTC из @db.Date) не доживало до
+    // сравнения с monthFrom (полдень UTC), и полный журнал считался неполным
+    const before = (await get(`/dashboard/admin?branchId=${ids.branch}`, "ADMIN")).body.attention;
+
+    const group = await testDb().group.create({
+      data: {
+        name: `Журнал-${run}`,
+        courseId: ids.course,
+        branchId: ids.branch,
+        scheduleDays: [1, 2, 3, 4, 5, 6, 7],
+        teacherId: ids.TEACHER,
+        salaryPercentBp: 4000,
+        startDate: new Date(`${current}-01T12:00:00.000Z`),
+      },
+    });
+    const days = Number(todayKey.slice(8, 10));
+    for (let day = 1; day <= days; day++) {
+      await testDb().attendanceSession.create({
+        data: {
+          courseId: ids.course,
+          groupId: group.id,
+          date: toNoonUtc(`${current}-${String(day).padStart(2, "0")}`),
+        },
+      });
+    }
+
+    const full = (await get(`/dashboard/admin?branchId=${ids.branch}`, "ADMIN")).body.attention;
+    expect(full.groupsWithIncompleteJournal).toBe(before.groupsWithIncompleteJournal);
+
+    await testDb().attendanceSession.deleteMany({
+      where: { groupId: group.id, date: toNoonUtc(`${current}-01`) },
+    });
+    const gap = (await get(`/dashboard/admin?branchId=${ids.branch}`, "ADMIN")).body.attention;
+    expect(gap.groupsWithIncompleteJournal).toBe(before.groupsWithIncompleteJournal + 1);
+  });
 });
