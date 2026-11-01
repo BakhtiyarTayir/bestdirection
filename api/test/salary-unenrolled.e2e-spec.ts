@@ -40,8 +40,10 @@ describe("зарплата и отчисленные", () => {
 
   it("начисление отчисленного входит в base и studentsCount группы", async () => {
     const c = await course("group2");
+    // Занятия каждый день: 1-го числа в воскресенье при [1, 3, 5] занятий
+    // в текущем месяце ещё нет, начисление 0 — и тест падал по дате
     const group = await testDb().group.create({
-      data: { name: `G2-${run}`, courseId: c.id, branchId, price: 300_000, scheduleDays: [1, 3, 5], teacherId, salaryPercentBp: 4000, startDate: start },
+      data: { name: `G2-${run}`, courseId: c.id, branchId, price: 300_000, scheduleDays: [1, 2, 3, 4, 5, 6, 7], teacherId, salaryPercentBp: 4000, startDate: start },
     });
     const student = await createUser({ role: "STUDENT" });
     const enrollment = await testDb().enrollment.create({
@@ -79,9 +81,10 @@ describe("зарплата и отчисленные", () => {
 
   it("без личной цены: месяц отчисления считается по цене и расписанию прежней группы", async () => {
     const c = await course("noprice");
-    // Занятия каждый день — чтобы до дня отчисления всегда было хоть одно
+    // Занятия каждый день — чтобы до дня отчисления всегда было хоть одно.
+    // Дни недели ISO (isoWeekday): воскресенье — 7, а не 0
     const group = await testDb().group.create({
-      data: { name: `GN-${run}`, courseId: c.id, branchId, price: 300_000, scheduleDays: [0, 1, 2, 3, 4, 5, 6], teacherId, startDate: start },
+      data: { name: `GN-${run}`, courseId: c.id, branchId, price: 300_000, scheduleDays: [1, 2, 3, 4, 5, 6, 7], teacherId, startDate: start },
     });
     const student = await createUser({ role: "STUDENT" });
     await testDb().enrollment.create({
