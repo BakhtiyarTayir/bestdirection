@@ -34,6 +34,7 @@ import type { ApiSalaryAdjustment, ApiSalaryMonthStudent, ApiSalaryPayout } from
 import { deletePayout } from "@/lib/api/salary";
 import { CreatePayoutDialog } from "./create-payout-dialog";
 import { CreateAdjustmentDialog } from "./create-adjustment-dialog";
+import { RecalcMonthButton, type RecalcGroup } from "./recalc-month-button";
 import { AccruedBreakdown, AdjustmentsSection } from "../adjustments-section";
 
 interface TeacherSalaryViewProps {
@@ -47,6 +48,8 @@ interface TeacherSalaryViewProps {
   paidTotal: number;
   debt: number;
   payouts: ApiSalaryPayout[];
+  /** Группы месяца для пересчёта; пусто — месяц открыт, кнопки нет */
+  recalcGroups: RecalcGroup[];
 }
 
 export function TeacherSalaryView({
@@ -60,6 +63,7 @@ export function TeacherSalaryView({
   paidTotal,
   debt,
   payouts,
+  recalcGroups,
 }: TeacherSalaryViewProps) {
   const t = useTranslations("salaries");
   const tCommon = useTranslations("common");
@@ -94,6 +98,9 @@ export function TeacherSalaryView({
           />
         </div>
         <div className="flex flex-wrap gap-2">
+          {recalcGroups.length > 0 && (
+            <RecalcMonthButton teacherId={teacherId} month={month} groups={recalcGroups} />
+          )}
           <CreateAdjustmentDialog teacherId={teacherId} defaultMonth={month} />
           <CreatePayoutDialog teacherId={teacherId} defaultAmount={debt > 0 ? debt : undefined} defaultForMonth={month} />
         </div>

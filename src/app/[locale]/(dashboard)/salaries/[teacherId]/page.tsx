@@ -46,6 +46,30 @@ export default async function TeacherSalaryPage({ params, searchParams }: Teache
     for (const student of studentsResult.data.students) students.push({ ...student, groupLabel });
   });
 
+  // Закрыт ли месяц — как isClosedMonth в api (месяц по Ташкенту, UTC+5):
+  // пересчёт имеет смысл только для закрытого, открытый и так считается по свежим данным
+  const tashkentNow = new Date(new Date().getTime() + 5 * 3_600_000).toISOString().slice(0, 7);
+  const monthClosed = result.data.month < tashkentNow;
+  // Группы, у которых есть строка за выбранный месяц — их и пересчитывает кнопка
+  const recalcGroups = monthClosed
+    ? groups.flatMap((group) => {
+        const row = group.months.find((m) => m.month === result.data.month);
+        if (!row) return [];
+        return [
+          {
+            groupId: group.groupId,
+            courseId: group.courseId,
+            label: group.groupName
+              ? `${group.courseTitle} — ${group.groupName}`
+              : `${group.courseTitle} (${t("withoutGroup")})`,
+            lessonsPlanned: row.lessonsPlanned,
+            lessonsTaught: row.lessonsTaught,
+            amount: row.amount,
+          },
+        ];
+      })
+    : [];
+
   return (
     <div className="space-y-6">
       <div>
@@ -65,6 +89,7 @@ export default async function TeacherSalaryPage({ params, searchParams }: Teache
         paidTotal={paidTotal}
         debt={debt}
         payouts={payouts}
+        recalcGroups={recalcGroups}
       />
     </div>
   );
