@@ -75,6 +75,7 @@ interface PaymentsListProps {
   count: number;
   filters: {
     month?: string;
+    monthBy?: "paid" | "for";
     courseId?: string;
     method?: PaymentMethodValue;
     branchId?: string;
@@ -157,6 +158,22 @@ export function PaymentsList({
               value={filters.month ?? ""}
               onChange={(e) => setFilter("month", e.target.value)}
             />
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">{t("filterMonthBy")}</Label>
+            <Select
+              value={filters.monthBy ?? "paid"}
+              onValueChange={(value) => setFilter("monthBy", value === "paid" ? ALL : value)}
+            >
+              <SelectTrigger className="w-52">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="paid">{t("monthByPaid")}</SelectItem>
+                <SelectItem value="for">{t("monthByFor")}</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-1">
@@ -248,7 +265,9 @@ export function PaymentsList({
       </div>
 
       <div className="rounded-lg border bg-muted/40 px-4 py-3">
-        <div className="text-sm text-muted-foreground">{t("totalLabel")}</div>
+        <div className="text-sm text-muted-foreground">
+          {filters.month && filters.monthBy === "for" ? t("totalLabelFor") : t("totalLabel")}
+        </div>
         <div className="text-2xl font-bold">{amountFormatter.format(total)} UZS</div>
         <div className="text-sm text-muted-foreground">
           {t("paymentsCount", { count })}

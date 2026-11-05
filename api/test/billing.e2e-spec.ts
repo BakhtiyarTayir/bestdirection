@@ -189,6 +189,55 @@ describe("модуль billing", () => {
       expect(outOfBranch.body.payments.map((p: { id: string }) => p.id)).not.toContain(ids.payment);
     });
 
+    it("журнал: month по умолчанию — по дате приёма, monthBy=for — по месяцу оплаты", async () => {
+      // A принят в прошлом месяце, но оплачивает текущий; B — без forMonth
+      const payA = await send("post", "/billing/payments", "ADMIN", {
+        studentId: ids.STUDENT,
+        courseId: ids.course,
+        amount: 1111,
+        method: "CASH",
+        paidAt: `${prevMonth}-20`,
+        forMonth: current,
+      });
+      const payB = await send("post", "/billing/payments", "ADMIN", {
+        studentId: ids.STUDENT,
+        courseId: ids.course,
+        amount: 2222,
+        method: "CASH",
+        paidAt: `${prevMonth}-21`,
+      });
+      expect(payA.status).toBe(201);
+      expect(payB.status).toBe(201);
+      const idsOf = async (query: string) =>
+        ((await get(`/billing/payments?${query}`, "ADMIN")).body.payments as { id: string }[]).map(
+          (p) => p.id
+        );
+
+      // По умолчанию и при monthBy=paid — касса: оба принято в прошлом месяце
+      const byPaid = await idsOf(`month=${prevMonth}`);
+      expect(byPaid).toContain(payA.body.id);
+      expect(byPaid).toContain(payB.body.id);
+      expect(await idsOf(`month=${prevMonth}&monthBy=paid`)).toContain(payA.body.id);
+
+      // По месяцу оплаты A уехал в текущий, B (без forMonth) остался по paidAt
+      const forPrev = await idsOf(`month=${prevMonth}&monthBy=for`);
+      expect(forPrev).not.toContain(payA.body.id);
+      expect(forPrev).toContain(payB.body.id);
+      const forCurrent = await idsOf(`month=${current}&monthBy=for`);
+      expect(forCurrent).toContain(payA.body.id);
+      expect(forCurrent).not.toContain(payB.body.id);
+
+      // Итог считается с тем же where
+      const totals = await get(`/billing/payments?month=${current}&monthBy=for&studentId=${ids.STUDENT}`, "ADMIN");
+      expect(totals.body.total).toBe(
+        (totals.body.payments as { amount: number }[]).reduce((sum, p) => sum + p.amount, 0)
+      );
+      expect(totals.body.count).toBe(totals.body.payments.length);
+
+      await send("delete", `/billing/payments/${payA.body.id}`, "ADMIN");
+      await send("delete", `/billing/payments/${payB.body.id}`, "ADMIN");
+    });
+
     it("должники фильтруются по филиалу через группу", async () => {
       // Новая запись с долгом в ids.branch: старая (ids.enrollment) уже
       // полностью оплачена предыдущим тестом и в debtors больше не попадает

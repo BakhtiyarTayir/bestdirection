@@ -36,6 +36,7 @@ export const getStudentBilling = (studentId: string) =>
 export const getPayments = (
   query: {
     month?: string;
+    monthBy?: "paid" | "for";
     courseId?: string;
     groupId?: string;
     studentId?: string;

@@ -37,6 +37,8 @@ export const createPaymentSchema = z.object({
 
 export const paymentFiltersSchema = z.object({
   month: monthString.optional(),
+  // По чему считать month: дата приёма денег (по умолчанию) или период оплаты
+  monthBy: z.enum(["paid", "for"]).optional(),
   courseId: z.string().max(40).optional(),
   groupId: z.string().max(40).optional(),
   studentId: z.string().max(40).optional(),

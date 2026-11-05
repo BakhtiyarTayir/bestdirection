@@ -26,14 +26,21 @@ export class PaymentsService {
   }
 
   /**
-   * Журнал оплат с фильтрами. month фильтрует по дате приёма денег (касса за
-   * месяц), а не по периоду forMonth.
+   * Журнал оплат с фильтрами. month по умолчанию (monthBy=paid) фильтрует по
+   * дате приёма денег (касса за месяц), а не по периоду forMonth. При
+   * monthBy=for — по периоду платежа, как paymentMonth() в domain/billing.ts:
+   * forMonth = month ИЛИ (forMonth не задан И paidAt в этом месяце). Итог
+   * (total, count) считается с тем же where.
    */
   async list(filters: PaymentFiltersDto) {
-    const { month, courseId, groupId, studentId, method, branchId, teacherId } = filters;
+    const { month, monthBy, courseId, groupId, studentId, method, branchId, teacherId } = filters;
     const where = {
       deletedAt: null,
-      ...(month ? { paidAt: monthRange(month) } : {}),
+      ...(month && monthBy !== "for" ? { paidAt: monthRange(month) } : {}),
+      // В AND, а не OR верхнего уровня: teacherId ниже тоже кладёт туда OR
+      ...(month && monthBy === "for"
+        ? { AND: [{ OR: [{ forMonth: month }, { forMonth: null, paidAt: monthRange(month) }] }] }
+        : {}),
       ...(courseId ? { courseId } : {}),
       ...(groupId ? { groupId } : {}),
       ...(studentId ? { studentId } : {}),

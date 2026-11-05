@@ -38,6 +38,7 @@ export const paymentFiltersSchema = z.object({
     .string()
     .regex(/^\d{4}-(0[1-9]|1[0-2])$/, "invalidMonth")
     .optional(),
+  monthBy: z.enum(["paid", "for"]).optional(),
   courseId: z.string().optional(),
   groupId: z.string().optional(),
   studentId: z.string().optional(),

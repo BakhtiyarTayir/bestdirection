@@ -25,6 +25,7 @@ export default async function PaymentsPage({
   // Невалидные значения из URL просто игнорируем — показываем весь журнал
   const parsedFilters = paymentFiltersSchema.safeParse({
     month: single("month"),
+    monthBy: single("monthBy"),
     courseId: single("courseId"),
     method: single("method"),
     branchId: single("branchId"),
