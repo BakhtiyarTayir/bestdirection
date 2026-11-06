@@ -11,6 +11,7 @@ import {
   payoutMonth,
   resolveSalaryPercentBp,
   splitAccrualByTeacher,
+  splitTeacherBalance,
   studentPaymentRows,
   sumAdjustments,
   totalAccrued,
@@ -522,5 +523,111 @@ describe("премии и штрафы", () => {
     const list = [bonus(500, "2026-09"), penalty(200, "2026-09", new Date())];
     expect(sumAdjustments(list)).toBe(500);
     expect(sumAdjustments(list, { only: "2026-09" })).toBe(500);
+  });
+});
+
+describe("splitTeacherBalance — остаток прошлых месяцев отдельно от месяца M", () => {
+  const at = (iso: string) => new Date(`${iso}T12:00:00.000Z`);
+
+  it("пустая история — всё нули", () => {
+    expect(splitTeacherBalance({ accruedByMonth: [], adjustments: [], payouts: [] }, "2026-11")).toEqual({
+      carriedOver: 0,
+      accrued: 0,
+      paidMonth: 0,
+      paidTotal: 0,
+      accruedTotal: 0,
+      debt: 0,
+    });
+  });
+
+  it("долг октября + ноябрь: остаток отдельно, итог тот же", () => {
+    const r = splitTeacherBalance(
+      {
+        accruedByMonth: [
+          { month: "2026-10", amount: 2_582_769 },
+          { month: "2026-11", amount: 2_719_200 },
+        ],
+        adjustments: [],
+        payouts: [{ amount: 2_394_000, forMonth: "2026-10", paidAt: at("2026-11-03") }],
+      },
+      "2026-11"
+    );
+    expect(r.carriedOver).toBe(188_769);
+    expect(r.accrued).toBe(2_719_200);
+    expect(r.paidMonth).toBe(0);
+    expect(r.debt).toBe(2_907_969);
+    expect(r.debt).toBe(r.accruedTotal - r.paidTotal);
+  });
+
+  it("выплата за октябрь, сделанная в ноябре (forMonth=2026-10), уменьшает остаток, а не paidMonth", () => {
+    const r = splitTeacherBalance(
+      {
+        accruedByMonth: [{ month: "2026-10", amount: 500 }],
+        adjustments: [],
+        payouts: [{ amount: 200, forMonth: "2026-10", paidAt: at("2026-11-20") }],
+      },
+      "2026-11"
+    );
+    expect(r).toMatchObject({ carriedOver: 300, paidMonth: 0, debt: 300 });
+  });
+
+  it("выплата без forMonth считается по дате выдачи", () => {
+    const r = splitTeacherBalance(
+      {
+        accruedByMonth: [{ month: "2026-10", amount: 500 }, { month: "2026-11", amount: 100 }],
+        adjustments: [],
+        payouts: [
+          { amount: 100, forMonth: null, paidAt: at("2026-10-25") },
+          { amount: 50, forMonth: null, paidAt: at("2026-11-02") },
+        ],
+      },
+      "2026-11"
+    );
+    expect(r).toMatchObject({ carriedOver: 400, accrued: 100, paidMonth: 50, debt: 450 });
+  });
+
+  it("переплата — остаток отрицательный", () => {
+    const r = splitTeacherBalance(
+      {
+        accruedByMonth: [{ month: "2026-10", amount: 100 }, { month: "2026-11", amount: 300 }],
+        adjustments: [],
+        payouts: [{ amount: 250, forMonth: "2026-10", paidAt: at("2026-10-30") }],
+      },
+      "2026-11"
+    );
+    expect(r.carriedOver).toBe(-150);
+    expect(r.debt).toBe(150);
+  });
+
+  it("выплата и начисление за будущий месяц не участвуют", () => {
+    const r = splitTeacherBalance(
+      {
+        accruedByMonth: [{ month: "2026-11", amount: 300 }, { month: "2026-12", amount: 999 }],
+        adjustments: [{ kind: "BONUS", amount: 77, month: "2026-12" }],
+        payouts: [{ amount: 500, forMonth: "2026-12", paidAt: at("2026-11-10") }],
+      },
+      "2026-11"
+    );
+    expect(r).toMatchObject({ carriedOver: 0, accrued: 300, paidMonth: 0, paidTotal: 0, debt: 300 });
+  });
+
+  it("премия и штраф прошлого месяца — в остатке, текущего — в начислено; удалённые не считаются", () => {
+    const r = splitTeacherBalance(
+      {
+        accruedByMonth: [{ month: "2026-10", amount: 1000 }, { month: "2026-11", amount: 2000 }],
+        adjustments: [
+          { kind: "BONUS", amount: 100, month: "2026-10" },
+          { kind: "PENALTY", amount: 30, month: "2026-10" },
+          { kind: "BONUS", amount: 50, month: "2026-11" },
+          { kind: "PENALTY", amount: 20, month: "2026-11" },
+          { kind: "BONUS", amount: 9999, month: "2026-10", deletedAt: at("2026-11-01") },
+        ],
+        payouts: [],
+      },
+      "2026-11"
+    );
+    expect(r.carriedOver).toBe(1070);
+    expect(r.accrued).toBe(2030);
+    expect(r.debt).toBe(3100);
   });
 });

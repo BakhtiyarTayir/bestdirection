@@ -30,7 +30,7 @@ import type { ApiSalaryOverviewRow } from "@/lib/api/salary";
 interface SalariesListProps {
   month: string;
   rows: ApiSalaryOverviewRow[];
-  totals: { base: number; accrued: number; adjustments: number; paid: number; debt: number };
+  totals: { base: number; accrued: number; adjustments: number; paid: number; carriedOver: number; paidMonth: number; debt: number };
   branchId?: string;
   branches: { id: string; name: string }[];
 }
@@ -100,14 +100,20 @@ export function SalariesList({ month, rows, totals, branchId, branches }: Salari
         )}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <div className="rounded-lg border bg-muted/40 px-4 py-3">
           <div className="text-sm text-muted-foreground">{t("totalAccrued")}</div>
           <div className="text-2xl font-bold">{money.format(totals.accrued)} UZS</div>
         </div>
         <div className="rounded-lg border px-4 py-3">
+          <div className="text-sm text-muted-foreground">{t("totalCarriedOver")}</div>
+          <div className={cn("text-2xl font-bold", totals.carriedOver < 0 && "text-green-600")}>
+            {money.format(totals.carriedOver)} UZS
+          </div>
+        </div>
+        <div className="rounded-lg border px-4 py-3">
           <div className="text-sm text-muted-foreground">{t("totalPaid")}</div>
-          <div className="text-2xl font-bold">{money.format(totals.paid)} UZS</div>
+          <div className="text-2xl font-bold">{money.format(totals.paidMonth)} UZS</div>
         </div>
         <div className="rounded-lg border px-4 py-3">
           <div className="text-sm text-muted-foreground">{t("totalDebt")}</div>
@@ -135,6 +141,7 @@ export function SalariesList({ month, rows, totals, branchId, branches }: Salari
                 <TableHead className="text-right">{t("colGroups")}</TableHead>
                 <TableHead className="text-right">{t("colStudents")}</TableHead>
                 <TableHead className="text-right">{t("colBase")}</TableHead>
+                <TableHead className="text-right">{t("colCarriedOver")}</TableHead>
                 <TableHead className="text-right">{t("colAccrued")}</TableHead>
                 <TableHead className="text-right">{t("colProfit")}</TableHead>
                 <TableHead className="text-right">{t("colProfitPercent")}</TableHead>
@@ -166,6 +173,13 @@ export function SalariesList({ month, rows, totals, branchId, branches }: Salari
                   <TableCell className="whitespace-nowrap text-right">{row.groupsCount}</TableCell>
                   <TableCell className="whitespace-nowrap text-right">{row.studentsCount}</TableCell>
                   <TableCell className="whitespace-nowrap text-right">{money.format(row.base)}</TableCell>
+                  {/* Остаток < 0 — переплата (аванс), зелёным */}
+                  <TableCell
+                    className={cn("whitespace-nowrap text-right", row.carriedOver < 0 && "text-green-600")}
+                    title={row.carriedOver < 0 ? t("carriedOverAdvance") : undefined}
+                  >
+                    {money.format(row.carriedOver)}
+                  </TableCell>
                   <TableCell className="whitespace-nowrap text-right">{money.format(row.accrued)}</TableCell>
                   <TableCell className={cn("whitespace-nowrap text-right", profitClass(row.profit))}>
                     {money.format(row.profit)}
@@ -181,7 +195,7 @@ export function SalariesList({ month, rows, totals, branchId, branches }: Salari
                       ? ""
                       : `${row.adjustments > 0 ? "+" : "−"}${money.format(Math.abs(row.adjustments))}`}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap text-right">{money.format(row.paidTotal)}</TableCell>
+                  <TableCell className="whitespace-nowrap text-right">{money.format(row.paidMonth)}</TableCell>
                   <TableCell className="whitespace-nowrap text-right">
                     <Badge variant={row.debt > 0 ? "destructive" : "secondary"}>
                       {money.format(row.debt)}

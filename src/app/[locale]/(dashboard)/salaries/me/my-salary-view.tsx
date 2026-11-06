@@ -16,16 +16,17 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatDate } from "@/lib/format-date";
-import { AccruedBreakdown, AdjustmentsSection } from "../adjustments-section";
+import { AdjustmentsSection } from "../adjustments-section";
+import { BalanceCards } from "../balance-cards";
 import type { ApiSalaryAdjustment, ApiSalaryGroup, ApiSalaryPayout } from "@/lib/api/salary";
 
 interface MySalaryViewProps {
   month: string;
   groups: ApiSalaryGroup[];
   adjustments: ApiSalaryAdjustment[];
-  accruedFromGroups: number;
-  accruedTotal: number;
-  paidTotal: number;
+  carriedOver: number;
+  accruedMonth: number;
+  paidMonth: number;
   debt: number;
   payouts: ApiSalaryPayout[];
 }
@@ -42,7 +43,7 @@ function percentText(bp: number | null): string {
  * (план зарплат, открытый вопрос 3) — если это окажется лишним, компонент
  * достаточно сузить, схему трогать не придётся.
  */
-export function MySalaryView({ month, groups, adjustments, accruedFromGroups, accruedTotal, paidTotal, debt, payouts }: MySalaryViewProps) {
+export function MySalaryView({ month, groups, adjustments, carriedOver, accruedMonth, paidMonth, debt, payouts }: MySalaryViewProps) {
   const t = useTranslations("salaries");
   const tPayments = useTranslations("payments");
   const locale = useLocale();
@@ -72,21 +73,14 @@ export function MySalaryView({ month, groups, adjustments, accruedFromGroups, ac
         />
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-lg border bg-muted/40 px-4 py-3">
-          <div className="text-sm text-muted-foreground">{t("accruedToDate", { month })}</div>
-          <div className="text-2xl font-bold">{money.format(accruedTotal)} UZS</div>
-          <AccruedBreakdown adjustments={adjustments} month={month} accruedFromGroups={accruedFromGroups} />
-        </div>
-        <div className="rounded-lg border px-4 py-3">
-          <div className="text-sm text-muted-foreground">{t("paidToDate", { month })}</div>
-          <div className="text-2xl font-bold">{money.format(paidTotal)} UZS</div>
-        </div>
-        <div className="rounded-lg border px-4 py-3">
-          <div className="text-sm text-muted-foreground">{t("debtToDate", { month })}</div>
-          <div className="text-2xl font-bold">{money.format(debt)} UZS</div>
-        </div>
-      </div>
+      <BalanceCards
+        month={month}
+        carriedOver={carriedOver}
+        accruedMonth={accruedMonth}
+        paidMonth={paidMonth}
+        debt={debt}
+        adjustments={adjustments}
+      />
 
       <div className="space-y-4">
         <h2 className="text-lg font-semibold">{t("byGroups")}</h2>

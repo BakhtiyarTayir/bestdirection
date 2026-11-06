@@ -816,6 +816,116 @@ describe("модуль salary", () => {
     });
   });
 
+  // Остаток прошлых месяцев отдельной колонкой (план 2026-11-06): итоговый
+  // долг прежний, меняется только раскладка. Свой преподаватель/курс/группа.
+  describe("раскладка долга: остаток прошлых месяцев / месяц / выплачено в месяце", () => {
+    const own: Record<string, string> = {};
+    const detail = async (month: string) => (await get(`/salary/${own.teacher}?month=${month}`, "ADMIN")).body;
+    const overviewRow = async (month: string) => {
+      const res = await get(`/salary?month=${month}`, "ADMIN");
+      return res.body.rows.find((r: { teacherId: string }) => r.teacherId === own.teacher);
+    };
+    const pay = (amount: number, forMonth: string) =>
+      send("post", "/salary/payouts", "ADMIN", {
+        teacherId: own.teacher,
+        amount,
+        method: "CASH",
+        paidAt: `${current}-05`,
+        forMonth,
+      });
+
+    beforeAll(async () => {
+      const teacher = await createUser({ role: "TEACHER" });
+      own.teacher = teacher.id;
+      const branch = await createBranch("Остаток-филиал");
+      const course = await testDb().course.create({
+        data: { slug: `salary-carry-${run}`, title: "Курс остатка", teacherId: teacher.id, price: 400_000 },
+      });
+      const group = await testDb().group.create({
+        data: {
+          price: 400_000,
+          name: `CO-${run}`,
+          courseId: course.id,
+          branchId: branch.id,
+          scheduleDays: [1, 3, 5],
+          teacherId: teacher.id,
+          salaryPercentBp: 5000,
+          startDate: new Date(`${startMonth}-01T12:00:00.000Z`),
+        },
+      });
+      const student = await createUser({ role: "STUDENT" });
+      await testDb().enrollment.create({
+        data: {
+          studentId: student.id,
+          courseId: course.id,
+          groupId: group.id,
+          startsAt: new Date(`${startMonth}-01T12:00:00.000Z`),
+        },
+      });
+    });
+
+    it("текущий месяц: остаток = долг на конец прошлого, paidMonth = 0, долг прежний", async () => {
+      const prev = await detail(prevMonth);
+      expect(prev.debt).toBeGreaterThan(0);
+      const cur = await detail(current);
+      expect(cur.carriedOver).toBe(prev.debt);
+      expect(cur.paidMonth).toBe(0);
+      expect(cur.accruedMonth).toBeGreaterThan(0);
+      expect(cur.debt).toBe(cur.accruedTotal - cur.paidTotal);
+      expect(cur.debt).toBe(cur.carriedOver + cur.accruedMonth - cur.paidMonth);
+      ids.carryDebt = String(cur.debt);
+      ids.carryPrevDebt = String(prev.debt);
+
+      const row = await overviewRow(current);
+      expect(row.carriedOver).toBe(cur.carriedOver);
+      expect(row.paidMonth).toBe(0);
+      expect(row.debt).toBe(cur.debt);
+    });
+
+    it("частичная выплата за прошлый месяц уменьшает остаток, а не paidMonth; долг тот же, что при старом расчёте", async () => {
+      const debtBefore = Number(ids.carryDebt);
+      const prevDebt = Number(ids.carryPrevDebt);
+      expect((await pay(1000, prevMonth)).status).toBe(201);
+
+      const cur = await detail(current);
+      expect(cur.carriedOver).toBe(prevDebt - 1000);
+      expect(cur.paidMonth).toBe(0);
+      expect(cur.debt).toBe(debtBefore - 1000);
+      const row = await overviewRow(current);
+      expect(row.carriedOver).toBe(prevDebt - 1000);
+      expect(row.paidMonth).toBe(0);
+      expect(row.debt).toBe(debtBefore - 1000);
+    });
+
+    it("выплата за текущий месяц попадает в paidMonth, остаток не меняется", async () => {
+      const before = await detail(current);
+      expect((await pay(2000, current)).status).toBe(201);
+
+      const cur = await detail(current);
+      expect(cur.carriedOver).toBe(before.carriedOver);
+      expect(cur.paidMonth).toBe(2000);
+      expect(cur.debt).toBe(before.debt - 2000);
+      const row = await overviewRow(current);
+      expect(row.paidMonth).toBe(2000);
+      expect(row.carriedOver).toBe(before.carriedOver);
+      expect(row.debt).toBe(cur.debt);
+
+      // Сводные итоги содержат те же поля
+      const totals = (await get(`/salary?month=${current}`, "ADMIN")).body.totals;
+      expect(typeof totals.carriedOver).toBe("number");
+      expect(totals.paidMonth).toBeGreaterThanOrEqual(2000);
+    });
+
+    it("переплата прошлого месяца даёт отрицательный остаток", async () => {
+      const cur = await detail(current);
+      const over = cur.carriedOver + 5000;
+      expect((await pay(over, prevMonth)).status).toBe(201);
+      const after = await detail(current);
+      expect(after.carriedOver).toBe(-5000);
+      expect(after.debt).toBe(after.accruedTotal - after.paidTotal);
+    });
+  });
+
   // Премии и штрафы (план 2026-10-14): часть начисленного, привязаны к
   // преподавателю и месяцу. Все данные свои — отдельные преподаватели и филиал.
   describe("премии и штрафы", () => {

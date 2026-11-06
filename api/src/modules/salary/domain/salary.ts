@@ -246,6 +246,70 @@ export function sumAdjustments(
   return total;
 }
 
+// ─── Раскладка долга: остаток прошлых месяцев / месяц M ───
+
+export interface TeacherBalanceSplit {
+  /** Начислено до M минус выплачено по месяцам до M. Отрицательное — переплата (аванс) */
+  carriedOver: number;
+  /** Начислено за сам M: группы + премии − штрафы */
+  accrued: number;
+  /** Выплаты, засчитанные в M (payoutMonth = M) */
+  paidMonth: number;
+  /** Выплаты по M включительно (накопительно) — прежнее поле API */
+  paidTotal: number;
+  /** Начислено по M включительно (накопительно) — прежнее поле API */
+  accruedTotal: number;
+  /** accruedTotal − paidTotal = carriedOver + accrued − paidMonth */
+  debt: number;
+}
+
+/**
+ * Раскладывает итоговый долг преподавателя на месяц M. Сам долг от раскладки
+ * не зависит: это та же разность «начислено по M включительно − выплачено по
+ * M включительно», просто с выделенным остатком прошлых месяцев. Месяцы и
+ * выплаты позже M в расчёте не участвуют (как и раньше).
+ */
+export function splitTeacherBalance(
+  input: {
+    accruedByMonth: { month: string; amount: number }[];
+    adjustments: (AdjustmentLike & { deletedAt?: Date | null })[];
+    payouts: { amount: number; forMonth: string | null; paidAt: Date }[];
+  },
+  month: string
+): TeacherBalanceSplit {
+  let accruedBefore = 0;
+  let accruedMonth = 0;
+  for (const item of input.accruedByMonth) {
+    if (item.month < month) accruedBefore += item.amount;
+    else if (item.month === month) accruedMonth += item.amount;
+  }
+  let adjustmentsBefore = 0;
+  for (const adjustment of input.adjustments) {
+    if (adjustment.deletedAt || adjustment.month >= month) continue;
+    adjustmentsBefore += adjustmentSigned(adjustment);
+  }
+  const adjustmentsMonth = sumAdjustments(input.adjustments, { only: month });
+
+  let paidBefore = 0;
+  let paidMonth = 0;
+  for (const payout of input.payouts) {
+    const key = payoutMonth(payout);
+    if (key < month) paidBefore += payout.amount;
+    else if (key === month) paidMonth += payout.amount;
+  }
+
+  const carriedOver = accruedBefore + adjustmentsBefore - paidBefore;
+  const accrued = accruedMonth + adjustmentsMonth;
+  return {
+    carriedOver,
+    accrued,
+    paidMonth,
+    paidTotal: paidBefore + paidMonth,
+    accruedTotal: accruedBefore + adjustmentsBefore + accrued,
+    debt: carriedOver + accrued - paidMonth,
+  };
+}
+
 // ─── Поступления по ученикам (справочно, зарплату не меняют) ───
 
 /** Начисление ученика за месяц; у нуля тоже есть строка — состав единицы */

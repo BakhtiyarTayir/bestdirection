@@ -173,6 +173,7 @@ export function CreatePayoutDialog({ teacherId, defaultAmount, defaultForMonth }
                 value={forMonth}
                 onChange={(e) => setForMonth(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">{t("payoutMonthHint")}</p>
             </div>
           </div>
 

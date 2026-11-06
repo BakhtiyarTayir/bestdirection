@@ -22,6 +22,11 @@ export interface ApiSalaryOverviewRow {
   // Прибыль центра по строке: доля базы группы минус accrued. Не base − accrued:
   // у заменяющего base — полная база группы. Сумма по строкам = totals.base − totals.accrued
   profit: number;
+  // Остаток прошлых месяцев: начислено до месяца минус выплачено по месяцам до него; < 0 — переплата
+  carriedOver: number;
+  // Выплаты, засчитанные в сам месяц (forMonth или месяц paidAt)
+  paidMonth: number;
+  // Накопительно по месяц включительно; debt = carriedOver + accrued − paidMonth
   accruedTotal: number;
   paidTotal: number;
   debt: number;
@@ -33,7 +38,7 @@ export interface ApiSalaryOverview {
   // base/studentsCount/groupsCount считаются без повторов по группе за
   // месяц: у группы с заменой несколько строк в rows (владелец и
   // заменяющие), но это одна и та же группа — в totals она учтена один раз
-  totals: { base: number; studentsCount: number; groupsCount: number; accrued: number; adjustments: number; paid: number; debt: number };
+  totals: { base: number; studentsCount: number; groupsCount: number; accrued: number; adjustments: number; paid: number; carriedOver: number; paidMonth: number; debt: number };
 }
 
 export interface ApiSalaryMonthSession {
@@ -116,6 +121,11 @@ export interface ApiTeacherSalary {
   accruedTotal: number;
   paidTotal: number;
   debt: number;
+  // Раскладка долга на месяц: остаток прошлых месяцев (< 0 — переплата),
+  // начислено за сам месяц (группы + премии/штрафы) и выплачено в месяце
+  carriedOver: number;
+  accruedMonth: number;
+  paidMonth: number;
   payouts: ApiSalaryPayout[];
 }
 

@@ -35,7 +35,8 @@ import { deletePayout } from "@/lib/api/salary";
 import { CreatePayoutDialog } from "./create-payout-dialog";
 import { CreateAdjustmentDialog } from "./create-adjustment-dialog";
 import { RecalcMonthButton, type RecalcGroup } from "./recalc-month-button";
-import { AccruedBreakdown, AdjustmentsSection } from "../adjustments-section";
+import { AdjustmentsSection } from "../adjustments-section";
+import { BalanceCards } from "../balance-cards";
 
 interface TeacherSalaryViewProps {
   teacherId: string;
@@ -43,9 +44,9 @@ interface TeacherSalaryViewProps {
   students: ApiSalaryMonthStudent[];
   studentsIncomplete: boolean;
   adjustments: ApiSalaryAdjustment[];
-  accruedFromGroups: number;
-  accruedTotal: number;
-  paidTotal: number;
+  carriedOver: number;
+  accruedMonth: number;
+  paidMonth: number;
   debt: number;
   payouts: ApiSalaryPayout[];
   /** Группы месяца для пересчёта; пусто — месяц открыт, кнопки нет */
@@ -58,9 +59,9 @@ export function TeacherSalaryView({
   students,
   studentsIncomplete,
   adjustments,
-  accruedFromGroups,
-  accruedTotal,
-  paidTotal,
+  carriedOver,
+  accruedMonth,
+  paidMonth,
   debt,
   payouts,
   recalcGroups,
@@ -106,21 +107,14 @@ export function TeacherSalaryView({
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-lg border bg-muted/40 px-4 py-3">
-          <div className="text-sm text-muted-foreground">{t("accruedToDate", { month })}</div>
-          <div className="text-2xl font-bold">{money.format(accruedTotal)} UZS</div>
-          <AccruedBreakdown adjustments={adjustments} month={month} accruedFromGroups={accruedFromGroups} />
-        </div>
-        <div className="rounded-lg border px-4 py-3">
-          <div className="text-sm text-muted-foreground">{t("paidToDate", { month })}</div>
-          <div className="text-2xl font-bold">{money.format(paidTotal)} UZS</div>
-        </div>
-        <div className="rounded-lg border px-4 py-3">
-          <div className="text-sm text-muted-foreground">{t("debtToDate", { month })}</div>
-          <div className="text-2xl font-bold">{money.format(debt)} UZS</div>
-        </div>
-      </div>
+      <BalanceCards
+        month={month}
+        carriedOver={carriedOver}
+        accruedMonth={accruedMonth}
+        paidMonth={paidMonth}
+        debt={debt}
+        adjustments={adjustments}
+      />
 
       <MonthStudentsTable month={month} students={students} incomplete={studentsIncomplete} money={money} />
 

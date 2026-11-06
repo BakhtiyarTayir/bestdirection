@@ -22,41 +22,44 @@ import type { ApiSalaryAdjustment } from "@/lib/api/salary";
 import { deleteSalaryAdjustment } from "@/lib/api/salary";
 
 /**
- * Премии и штрафы по месяцам ≤ month отдельно: в итоги «Начислено» идут только
- * они (корректировка будущего месяца в итог не входит, но в списке видна).
+ * Премии и штрафы ровно за month: карточка «начислено за месяц» раскрывается
+ * в «группы + премии − штрафы» этого же месяца (остаток прошлых месяцев — в
+ * своей карточке; корректировки других месяцев в списке видны, но сюда не входят).
  */
 export function adjustmentTotals(adjustments: ApiSalaryAdjustment[], month: string) {
   let bonus = 0;
   let penalty = 0;
   for (const item of adjustments) {
-    if (item.month > month) continue;
+    if (item.month !== month) continue;
     if (item.kind === "BONUS") bonus += item.amount;
     else penalty += item.amount;
   }
   return { bonus, penalty, any: bonus > 0 || penalty > 0 };
 }
 
-/** Мелкая строка под итогом «Начислено»: «по группам X · премии +Y · штрафы −Z» */
+/** Мелкая строка под карточкой «начислено за месяц»: «по группам X · премии +Y · штрафы −Z» */
 export function AccruedBreakdown({
   adjustments,
   month,
-  accruedFromGroups,
+  accruedMonth,
 }: {
   adjustments: ApiSalaryAdjustment[];
   month: string;
-  accruedFromGroups: number;
+  /** Начислено за месяц целиком (группы + премии − штрафы) */
+  accruedMonth: number;
 }) {
   const t = useTranslations("salaries");
   const locale = useLocale();
   const money = new Intl.NumberFormat(intlLocale(locale));
   const totals = adjustmentTotals(adjustments, month);
-  // Нет корректировок ≤ M — строка только повторяла бы итог
+  // Нет корректировок M — строка только повторяла бы итог
   if (!totals.any) return null;
 
   return (
     <div className="mt-1 text-xs text-muted-foreground">
       {t("accruedBreakdown", {
-        groups: money.format(accruedFromGroups),
+        // По группам — остаток после вычета корректировок месяца из итога
+        groups: money.format(accruedMonth - totals.bonus + totals.penalty),
         bonus: money.format(totals.bonus),
         penalty: money.format(totals.penalty),
       })}

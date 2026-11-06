@@ -22,7 +22,7 @@ export default async function TeacherSalaryPage({ params, searchParams }: Teache
 
   const result = await getTeacherSalary(teacherId, { month });
   if (!result.success || !result.data) notFound();
-  const { teacher, groups, adjustments, accruedFromGroups, accruedTotal, paidTotal, debt, payouts } = result.data;
+  const { teacher, groups, adjustments, carriedOver, accruedMonth, paidMonth, debt, payouts } = result.data;
 
   // Один общий список учеников месяца вместо карточек по группам (решение
   // владельца 2026-10-23): собираем учеников всех групп, у которых этот месяц есть
@@ -84,9 +84,9 @@ export default async function TeacherSalaryPage({ params, searchParams }: Teache
         students={students}
         studentsIncomplete={studentsIncomplete}
         adjustments={adjustments}
-        accruedFromGroups={accruedFromGroups}
-        accruedTotal={accruedTotal}
-        paidTotal={paidTotal}
+        carriedOver={carriedOver}
+        accruedMonth={accruedMonth}
+        paidMonth={paidMonth}
         debt={debt}
         payouts={payouts}
         recalcGroups={recalcGroups}

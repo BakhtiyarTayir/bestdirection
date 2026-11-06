@@ -19,6 +19,7 @@ import {
   payoutMonth,
   resolveSalaryPercentBp,
   splitAccrualByTeacher,
+  splitTeacherBalance,
   sumAdjustments,
   studentPaymentRows,
   adjustmentSigned,
@@ -823,11 +824,15 @@ export class SalaryService {
             select: { teacherId: true, amount: true, forMonth: true, paidAt: true },
           })
         : [];
-    const paidByTeacher = new Map<string, number>();
+    const payoutsByTeacher = new Map<string, typeof payouts>();
     for (const payout of payouts) {
-      if (payoutMonth(payout) > month) continue;
-      paidByTeacher.set(payout.teacherId, (paidByTeacher.get(payout.teacherId) ?? 0) + payout.amount);
+      const list = payoutsByTeacher.get(payout.teacherId) ?? [];
+      list.push(payout);
+      payoutsByTeacher.set(payout.teacherId, list);
     }
+    // Начисления по группам помесячно — из них splitTeacherBalance выделяет
+    // остаток прошлых месяцев (карта отдельно от Row, чтобы не утекать в ответ)
+    const accruedMonthsByTeacher = new Map<string, { month: string; amount: number }[]>();
 
     interface Row {
       teacherId: string;
@@ -841,6 +846,10 @@ export class SalaryService {
       /** Премии минус штрафы за месяц M, со знаком; уже входит в accrued */
       adjustments: number;
       accrued: number;
+      /** Остаток прошлых месяцев: начислено до M минус выплачено по месяцам до M; < 0 — переплата */
+      carriedOver: number;
+      /** Выплаты, засчитанные в сам M (payoutMonth = M) */
+      paidMonth: number;
       /**
        * Прибыль центра по строке: доля базы группы минус accrued. База группы
        * делится между строками пропорционально их amount, поэтому сумма
@@ -881,6 +890,8 @@ export class SalaryService {
         base: 0,
         adjustments: 0,
         accrued: 0,
+        carriedOver: 0,
+        paidMonth: 0,
         profit: 0,
         accruedTotal: 0,
         paidTotal: 0,
@@ -914,6 +925,9 @@ export class SalaryService {
         }
       }
       row.accruedTotal += totalAccrued(months);
+      const monthsList = accruedMonthsByTeacher.get(unit.teacherId) ?? [];
+      for (const item of months) monthsList.push({ month: item.month, amount: item.accrual.amount });
+      accruedMonthsByTeacher.set(unit.teacherId, monthsList);
       rows.set(unit.teacherId, row);
     }
 
@@ -954,6 +968,8 @@ export class SalaryService {
         base: 0,
         adjustments: 0,
         accrued: 0,
+        carriedOver: 0,
+        paidMonth: 0,
         profit: 0,
         accruedTotal: 0,
         paidTotal: 0,
@@ -971,8 +987,21 @@ export class SalaryService {
     }
 
     for (const row of rows.values()) {
-      row.paidTotal = paidByTeacher.get(row.teacherId) ?? 0;
-      row.debt = row.accruedTotal - row.paidTotal;
+      // Раскладка на остаток / месяц / выплачено в месяце; accrued здесь уже
+      // включает премии и штрафы M, а accruedTotal/paidTotal/debt совпадают
+      // с прежними — меняется только то, как долг разложен по колонкам
+      const split = splitTeacherBalance(
+        {
+          accruedByMonth: accruedMonthsByTeacher.get(row.teacherId) ?? [],
+          adjustments: adjustmentsByTeacher.get(row.teacherId) ?? [],
+          payouts: payoutsByTeacher.get(row.teacherId) ?? [],
+        },
+        month
+      );
+      row.carriedOver = split.carriedOver;
+      row.paidMonth = split.paidMonth;
+      row.paidTotal = split.paidTotal;
+      row.debt = split.debt;
     }
 
     const result = [...rows.values()].sort((a, b) => b.debt - a.debt);
@@ -990,6 +1019,8 @@ export class SalaryService {
         accrued: result.reduce((sum, row) => sum + row.accrued, 0),
         adjustments: result.reduce((sum, row) => sum + row.adjustments, 0),
         paid: result.reduce((sum, row) => sum + row.paidTotal, 0),
+        carriedOver: result.reduce((sum, row) => sum + row.carriedOver, 0),
+        paidMonth: result.reduce((sum, row) => sum + row.paidMonth, 0),
         debt: result.reduce((sum, row) => sum + row.debt, 0),
       },
     };
@@ -1089,6 +1120,14 @@ export class SalaryService {
     });
     const adjustmentsTotal = sumAdjustments(adjustments, { upTo: month });
     const accruedTotal = accruedFromGroups + adjustmentsTotal;
+    const split = splitTeacherBalance(
+      {
+        accruedByMonth: groups.flatMap((group) => group.months.map((m) => ({ month: m.month, amount: m.amount }))),
+        adjustments,
+        payouts,
+      },
+      month
+    );
 
     return {
       teacher: {
@@ -1113,6 +1152,11 @@ export class SalaryService {
       accruedTotal,
       paidTotal,
       debt: accruedTotal - paidTotal,
+      // Раскладка долга на месяц M: остаток прошлых месяцев (< 0 — переплата),
+      // начислено за M (группы + премии/штрафы M) и выплачено в M
+      carriedOver: split.carriedOver,
+      accruedMonth: split.accrued,
+      paidMonth: split.paidMonth,
       payouts: payouts.map((payout) => ({
         id: payout.id,
         amount: payout.amount,
