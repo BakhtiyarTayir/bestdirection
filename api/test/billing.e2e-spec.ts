@@ -711,4 +711,130 @@ describe("модуль billing", () => {
       expect(prepaid[1].payments.map((p) => p.amount)).toEqual([40000000]);
     });
   });
+
+  describe("поиск ученика по q (журнал оплат и должники)", () => {
+    const own: Record<string, string> = {};
+    // Уникальный хвост: в общей базе есть и другие ученики с похожими именами
+    const tag = `Zq${run}`;
+    const phone = `+99890${Math.floor(1000000 + Math.random() * 8999999)}`;
+
+    beforeAll(async () => {
+      const branch = await createBranch();
+      const staff = await createUser({ role: "ADMIN" });
+      const course = await testDb().course.create({
+        data: { slug: `billing-q-${run}`, title: "Курс поиска", teacherId: ids.TEACHER, price: 100000 },
+      });
+      const group = await testDb().group.create({
+        data: { price: 100000, name: `Q-${run}`, courseId: course.id, scheduleDays: [1, 3, 5], branchId: branch.id },
+      });
+      own.branch = branch.id;
+      own.course = course.id;
+      const startsAt = new Date(`${prevMonth}-01T12:00:00.000Z`);
+      const people = [
+        { key: "target", firstName: "Muhammad", lastName: `Ibragimov${tag}`, phone },
+        { key: "other", firstName: "Aziza", lastName: `Karimova${tag}`, phone: null },
+      ];
+      for (const person of people) {
+        const student = await createUser({ role: "STUDENT" });
+        await testDb().user.update({
+          where: { id: student.id },
+          data: { firstName: person.firstName, lastName: person.lastName, phone: person.phone },
+        });
+        own[person.key] = student.id;
+        await testDb().enrollment.create({
+          data: { studentId: student.id, courseId: course.id, groupId: group.id, startsAt },
+        });
+        await testDb().payment.create({
+          data: {
+            studentId: student.id,
+            courseId: course.id,
+            groupId: group.id,
+            branchId: branch.id,
+            amount: person.key === "target" ? 1000 : 2000,
+            method: "CASH",
+            paidAt: new Date(`${current}-05T12:00:00.000Z`),
+            createdById: staff.id,
+          },
+        });
+      }
+    });
+
+    const paymentStudents = async (q: string, extra = "") => {
+      const res = await get(`/billing/payments?courseId=${own.course}&q=${encodeURIComponent(q)}${extra}`, "ADMIN");
+      expect(res.status).toBe(200);
+      return res.body as { payments: Array<{ student: { id: string } }>; total: number; count: number };
+    };
+
+    it("журнал: по фамилии; чужой ученик не попадает, итог по тому же фильтру", async () => {
+      const body = await paymentStudents(`Ibragimov${tag}`);
+      expect(body.payments.map((p) => p.student.id)).toEqual([own.target]);
+      expect(body.count).toBe(1);
+      expect(body.total).toBe(1000);
+    });
+
+    it("журнал: часть имени в другом регистре", async () => {
+      const body = await paymentStudents("  MUHAMM ");
+      expect(body.payments.map((p) => p.student.id)).toEqual([own.target]);
+    });
+
+    it("журнал: два слова в обратном порядке", async () => {
+      const body = await paymentStudents(`Ibragimov${tag} Muhammad`);
+      expect(body.payments.map((p) => p.student.id)).toEqual([own.target]);
+      const reversed = await paymentStudents(`Muhammad Ibragimov${tag}`);
+      expect(reversed.payments.map((p) => p.student.id)).toEqual([own.target]);
+      // слово от одного ученика, слово от другого — никто не подходит
+      expect((await paymentStudents(`Muhammad Karimova${tag}`)).payments).toEqual([]);
+    });
+
+    it("журнал: по телефону и вместе с другими фильтрами (месяц по периоду, педагог)", async () => {
+      const body = await paymentStudents(phone.slice(4));
+      expect(body.payments.map((p) => p.student.id)).toEqual([own.target]);
+      const withFilters = await paymentStudents(tag, `&month=${current}&monthBy=for&teacherId=${ids.TEACHER}`);
+      expect(withFilters.payments.map((p) => p.student.id).sort()).toEqual([own.target, own.other].sort());
+      expect(withFilters.total).toBe(3000);
+    });
+
+    it("журнал: слишком длинная строка — 400", async () => {
+      expect((await get(`/billing/payments?q=${"a".repeat(101)}`, "ADMIN")).status).toBe(400);
+    });
+
+    it("должники: q сужает список и суммы, пустой q — не фильтр", async () => {
+      const base = `/billing/debtors?courseId=${own.course}`;
+      const all = await get(base, "ADMIN");
+      const ids_ = (res: { body: { debtors: Array<{ student: { id: string } }> } }) =>
+        res.body.debtors.map((row) => row.student.id).sort();
+      expect(ids_(all)).toEqual([own.target, own.other].sort());
+
+      const found = await get(`${base}&q=${encodeURIComponent(`muhammad Ibragimov${tag}`)}`, "ADMIN");
+      expect(ids_(found)).toEqual([own.target]);
+      const row = found.body.debtors[0];
+      expect(found.body.totalDebt).toBe(row.debt);
+
+      const byPhone = await get(`${base}&q=${encodeURIComponent(phone.slice(4))}`, "ADMIN");
+      expect(ids_(byPhone)).toEqual([own.target]);
+
+      expect(ids_(await get(`${base}&q=`, "ADMIN"))).toEqual([own.target, own.other].sort());
+    });
+
+    it("выгрузка должников учитывает q", async () => {
+      const file = async (q: string) => {
+        const res = await get(
+          `/billing/debtors/export?courseId=${own.course}&month=${current}&locale=ru&q=${encodeURIComponent(q)}`,
+          "ADMIN"
+        )
+          .buffer(true)
+          .parse((r, cb) => {
+            const chunks: Buffer[] = [];
+            r.on("data", (c: Buffer) => chunks.push(c));
+            r.on("end", () => cb(null, Buffer.concat(chunks)));
+          });
+        const workbook = XLSX.read(res.body, { type: "buffer" });
+        return JSON.stringify(workbook.SheetNames.map((name) => XLSX.utils.sheet_to_json(workbook.Sheets[name], { header: 1 })));
+      };
+      const filtered = await file(`Ibragimov${tag}`);
+      expect(filtered).toContain(`Ibragimov${tag}`);
+      expect(filtered).not.toContain(`Karimova${tag}`);
+      expect(await file("")).toContain(`Karimova${tag}`);
+    });
+  });
 });

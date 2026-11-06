@@ -28,6 +28,7 @@ export default async function DebtorsPage({
       groupId: single("groupId"),
       branchId: single("branchId"),
       teacherId: single("teacherId"),
+      q: single("q")?.trim().slice(0, 100),
     }),
     getPaymentFormOptions(),
     getBranches(),
@@ -85,6 +86,7 @@ export default async function DebtorsPage({
         groupId={single("groupId")}
         groups={groups}
         teacherId={single("teacherId")}
+        q={single("q")?.trim().slice(0, 100) ?? ""}
         teachers={teachers}
       />
     </div>

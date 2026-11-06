@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { ChevronDown, ChevronRight, Download, Loader2, Send, SlidersHorizontal, TriangleAlert, Wallet } from "lucide-react";
 import { Link } from "@/i18n/navigation";
+import { SearchFilterInput } from "@/components/ui/search-filter-input";
 import { PrepaidDialog } from "./prepaid-dialog";
 import type { ApiPrepaidRow } from "@/lib/api/billing";
 import { BillingDialog } from "./billing-dialog";
@@ -82,6 +83,8 @@ interface DebtorsListProps {
   groups: { id: string; name: string; courseTitle: string }[];
   teacherId?: string;
   teachers: { id: string; firstName: string; lastName: string }[];
+  /** Поиск ученика по имени, фамилии или телефону */
+  q: string;
 }
 
 const ALL = "all";
@@ -106,6 +109,7 @@ export function DebtorsList({
   groups,
   teacherId,
   teachers,
+  q,
 }: DebtorsListProps) {
   const t = useTranslations("debtors");
   const tPayments = useTranslations("payments");
@@ -125,7 +129,7 @@ export function DebtorsList({
   const rows: (DebtorRow & { advance?: number })[] = showPrepaid ? prepaid : debtors;
   const { page, totalPages, pageItems, setPage } = usePagination(
     rows,
-    `${month}|${courseId ?? ""}|${groupId ?? ""}|${branchId ?? ""}|${teacherId ?? ""}|${view}`
+    `${month}|${courseId ?? ""}|${groupId ?? ""}|${branchId ?? ""}|${teacherId ?? ""}|${q}|${view}`
   );
 
   const money = new Intl.NumberFormat(intlLocale(locale));
@@ -138,6 +142,7 @@ export function DebtorsList({
       groupId,
       branchId,
       teacherId,
+      q,
       view: showPrepaid ? "prepaid" : "",
       [key]: value === ALL ? "" : value,
     };
@@ -162,7 +167,7 @@ export function DebtorsList({
     try {
       // Файл подписывается на языке, на котором сейчас открыт сайт
       const params = new URLSearchParams({ locale });
-      for (const [key, value] of Object.entries({ month, branchId, courseId, groupId, teacherId })) {
+      for (const [key, value] of Object.entries({ month, branchId, courseId, groupId, teacherId, q })) {
         if (value) params.set(key, value);
       }
       const res = await fetch(`/api/v2/billing/debtors/export?${params.toString()}`);
@@ -205,6 +210,18 @@ export function DebtorsList({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
+        <div className="space-y-1">
+          <Label htmlFor="filter-search" className="text-xs text-muted-foreground">
+            {tPayments("filterSearch")}
+          </Label>
+          <SearchFilterInput
+            id="filter-search"
+            className="w-64"
+            value={q}
+            onSearch={(value) => setFilter("q", value)}
+            placeholder={tPayments("searchPlaceholder")}
+          />
+        </div>
         {branches.length > 0 && (
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">{t("filterBranch")}</Label>

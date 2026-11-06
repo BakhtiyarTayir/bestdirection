@@ -5,6 +5,7 @@ import { toNoonUtc } from "../../common/date-only";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { paymentTeacherFilter } from "./billing-ledger.service";
 import { priceFor } from "./domain/billing";
+import { studentSearchWhere } from "./domain/student-search";
 import type { CreatePaymentDto, PaymentFiltersDto } from "./dto/billing.dto";
 
 /** Границы календарного месяца "YYYY-MM" в UTC: [начало, начало следующего) */
@@ -33,14 +34,18 @@ export class PaymentsService {
    * (total, count) считается с тем же where.
    */
   async list(filters: PaymentFiltersDto) {
-    const { month, monthBy, courseId, groupId, studentId, method, branchId, teacherId } = filters;
+    const { month, monthBy, courseId, groupId, studentId, method, branchId, teacherId, q } = filters;
     const where = {
       deletedAt: null,
       ...(month && monthBy !== "for" ? { paidAt: monthRange(month) } : {}),
       // В AND, а не OR верхнего уровня: teacherId ниже тоже кладёт туда OR
-      ...(month && monthBy === "for"
-        ? { AND: [{ OR: [{ forMonth: month }, { forMonth: null, paidAt: monthRange(month) }] }] }
-        : {}),
+      // Поиск ученика кладём туда же: слова — отдельные условия AND
+      AND: [
+        ...(month && monthBy === "for"
+          ? [{ OR: [{ forMonth: month }, { forMonth: null, paidAt: monthRange(month) }] }]
+          : []),
+        ...studentSearchWhere(q).map((condition) => ({ student: condition })),
+      ],
       ...(courseId ? { courseId } : {}),
       ...(groupId ? { groupId } : {}),
       ...(studentId ? { studentId } : {}),

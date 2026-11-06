@@ -45,6 +45,8 @@ export const paymentFiltersSchema = z.object({
   method: z.enum(paymentMethods).optional(),
   branchId: z.string().max(40).optional(),
   teacherId: z.string().max(40).optional(),
+  // Поиск ученика по имени, фамилии или телефону; пустая строка — без фильтра
+  q: z.string().trim().max(100).optional(),
 });
 
 export const debtorsQuerySchema = z.object({
@@ -56,6 +58,8 @@ export const debtorsQuerySchema = z.object({
   // withoutGroup в ответе не даёт этому потеряться незаметно
   branchId: z.string().max(40).optional(),
   teacherId: z.string().max(40).optional(),
+  // Поиск ученика по имени, фамилии или телефону; пустая строка — без фильтра
+  q: z.string().trim().max(100).optional(),
 });
 
 // Выгрузка: те же фильтры плюс язык сайта, на котором подписать файл

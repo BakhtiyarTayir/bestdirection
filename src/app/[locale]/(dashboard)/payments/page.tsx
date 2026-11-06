@@ -30,6 +30,7 @@ export default async function PaymentsPage({
     method: single("method"),
     branchId: single("branchId"),
     teacherId: single("teacherId"),
+    q: single("q"),
   });
   const filters = parsedFilters.success ? parsedFilters.data : {};
 

@@ -37,6 +37,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { formatDate } from "@/lib/format-date";
 import { Trash2, Loader2 } from "lucide-react";
+import { SearchFilterInput } from "@/components/ui/search-filter-input";
 import { deletePayment } from "@/lib/api/billing";
 import { refreshBadges } from "@/lib/badge-refresh";
 import { paymentMethods, type PaymentMethodValue } from "@/validators/payment";
@@ -80,6 +81,7 @@ interface PaymentsListProps {
     method?: PaymentMethodValue;
     branchId?: string;
     teacherId?: string;
+    q?: string;
   };
   students: PaymentStudentOption[];
   courses: { id: string; title: string }[];
@@ -147,6 +149,19 @@ export function PaymentsList({
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-wrap items-end gap-3">
+          <div className="space-y-1">
+            <Label htmlFor="filter-search" className="text-xs text-muted-foreground">
+              {t("filterSearch")}
+            </Label>
+            <SearchFilterInput
+              id="filter-search"
+              className="w-64"
+              value={filters.q ?? ""}
+              onSearch={(value) => setFilter("q", value)}
+              placeholder={t("searchPlaceholder")}
+            />
+          </div>
+
           <div className="space-y-1">
             <Label htmlFor="filter-month" className="text-xs text-muted-foreground">
               {t("filterMonth")}

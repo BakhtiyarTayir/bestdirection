@@ -1690,6 +1690,8 @@
     "deletedToast": "Оплата удалена",
     "deleteFailed": "Не удалось удалить оплату",
     "filterMonth": "Месяц",
+    "filterSearch": "Поиск",
+    "searchPlaceholder": "Имя, фамилия или телефон",
     "filterMonthBy": "Месяц считать",
     "monthByPaid": "По дате приёма",
     "monthByFor": "По месяцу оплаты",

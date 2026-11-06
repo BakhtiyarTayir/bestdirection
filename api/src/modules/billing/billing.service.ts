@@ -21,6 +21,7 @@ import {
   priceFor,
   type BillingEnrollment,
 } from "./domain/billing";
+import { matchesStudentSearch } from "./domain/student-search";
 import { buildDebtorsWorkbook, type ExportLocale } from "./domain/debtors-export";
 import type { UpdateEnrollmentBillingDto } from "./dto/billing.dto";
 
@@ -108,14 +109,18 @@ export class BillingService {
     groupId?: string;
     branchId?: string;
     teacherId?: string;
+    q?: string;
   }) {
     const month = params.month && isValidMonth(params.month) ? params.month : currentMonthKey();
-    const rows = await this.computeBillingRows(month, {
+    const allRows = await this.computeBillingRows(month, {
       courseId: params.courseId,
       groupId: params.groupId,
       branchId: params.branchId,
       teacherId: params.teacherId,
     });
+    // Поиск по ученику — после расчёта, в памяти: суммы и предупреждения
+    // ниже считаются от уже отфильтрованных строк
+    const rows = params.q ? allRows.filter((row) => matchesStudentSearch(row.student, params.q)) : allRows;
 
     const debtors = rows.filter((row) => row.debt > 0).sort((a, b) => b.debt - a.debt);
     const prepaidRows = rows.filter((row) => row.debt < 0).sort((a, b) => a.debt - b.debt);

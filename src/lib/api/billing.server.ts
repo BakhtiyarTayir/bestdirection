@@ -18,6 +18,7 @@ export const getDebtors = (
     groupId?: string;
     branchId?: string;
     teacherId?: string;
+    q?: string;
   } = {}
 ) => apiServerFetch<ApiDebtors>("/billing/debtors", { query });
 
@@ -43,6 +44,7 @@ export const getPayments = (
     method?: PaymentMethodValue;
     branchId?: string;
     teacherId?: string;
+    q?: string;
   } = {}
 ) => apiServerFetch<ApiPaymentsPage>("/billing/payments", { query });
 

@@ -1690,6 +1690,8 @@
     "deletedToast": "To'lov o'chirildi",
     "deleteFailed": "To'lovni o'chirib bo'lmadi",
     "filterMonth": "Oy",
+    "filterSearch": "Qidirish",
+    "searchPlaceholder": "Ism, familiya yoki telefon",
     "filterMonthBy": "Oy hisobi",
     "monthByPaid": "Qabul sanasi bo'yicha",
     "monthByFor": "To'lov oyi bo'yicha",
