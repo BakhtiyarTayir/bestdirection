@@ -5,6 +5,9 @@ import { toNoonUtc } from "../../common/date-only";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import type { CreatePayoutDto, PayoutFiltersDto } from "./dto/salary.dto";
 
+/** Потолок строк в журнале: итог (total, count) считается по всем, список обрезается — клиент показывает предупреждение */
+export const PAYOUTS_LIST_LIMIT = 500;
+
 /**
  * Журнал выплат преподавателям. Тот же приём, что PaymentsService у оплат
  * учеников: правок суммы нет, ошибочную запись помечают deletedAt и вносят
@@ -47,12 +50,12 @@ export class PayoutsService {
           createdBy: { select: { firstName: true, lastName: true } },
         },
         orderBy: [{ paidAt: "desc" }, { createdAt: "desc" }],
-        take: 500,
+        take: PAYOUTS_LIST_LIMIT,
       }),
       this.prisma.teacherPayout.aggregate({ where, _sum: { amount: true }, _count: true }),
     ]);
 
-    return { payouts, total: totals._sum.amount ?? 0, count: totals._count };
+    return { payouts, total: totals._sum.amount ?? 0, count: totals._count, limit: PAYOUTS_LIST_LIMIT };
   }
 
   /** Преподаватели для выбора в форме выплаты. */

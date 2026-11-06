@@ -287,6 +287,11 @@ export function PaymentsList({
         <div className="text-sm text-muted-foreground">
           {t("paymentsCount", { count })}
         </div>
+        {count > payments.length && (
+          <div className="mt-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900">
+            {t("truncatedNotice", { shown: payments.length, count })}
+          </div>
+        )}
       </div>
 
       {payments.length === 0 ? (

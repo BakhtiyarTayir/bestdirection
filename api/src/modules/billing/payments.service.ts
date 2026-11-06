@@ -14,6 +14,9 @@ function monthRange(month: string) {
   return { gte: new Date(Date.UTC(year, monthNumber - 1, 1)), lt: new Date(Date.UTC(year, monthNumber, 1)) };
 }
 
+/** Потолок строк в журнале: итог (total, count) считается по всем, список обрезается — клиент показывает предупреждение */
+export const PAYMENTS_LIST_LIMIT = 500;
+
 /** Журнал оплат. Перенесено из src/actions/payment-actions.ts в web. */
 @Injectable()
 export class PaymentsService {
@@ -67,12 +70,12 @@ export class PaymentsService {
           createdBy: { select: { firstName: true, lastName: true } },
         },
         orderBy: [{ paidAt: "desc" }, { createdAt: "desc" }],
-        take: 500,
+        take: PAYMENTS_LIST_LIMIT,
       }),
       this.prisma.payment.aggregate({ where, _sum: { amount: true }, _count: true }),
     ]);
 
-    return { payments, total: totals._sum.amount ?? 0, count: totals._count };
+    return { payments, total: totals._sum.amount ?? 0, count: totals._count, limit: PAYMENTS_LIST_LIMIT };
   }
 
   /**
@@ -146,21 +149,12 @@ export class PaymentsService {
     });
     if (!enrollment) throw new NotFoundException("notEnrolled");
 
-    // Группа из формы — справочная, но не доверенная: клиент может прислать
-    // groupId чужой группы (другого курса), и тогда у платежа зафиксируется
-    // чужой филиал (branchId ниже берётся именно из группы). Проверяем
-    // только когда она расходится с группой записи — тот случай, когда
-    // клиент вообще что-то прислал сам, а не подставил то, что уже пришло.
-    if (data.groupId && data.groupId !== enrollment.groupId) {
-      const group = await this.prisma.group.findUnique({
-        where: { id: data.groupId },
-        select: { courseId: true },
-      });
-      if (!group || group.courseId !== data.courseId) throw new BadRequestException("groupMismatch");
-    }
-
-    // Группу берём из записи студента: в форме она справочная
-    const groupId = data.groupId || enrollment.groupId;
+    // Группа платежа — всегда группа записи студента. Клиент может прислать
+    // groupId только для сверки; любая другая группа (даже того же курса)
+    // записала бы платёж на чужую группу и чужой филиал (branchId ниже
+    // берётся из группы) — отказ.
+    if (data.groupId && data.groupId !== enrollment.groupId) throw new BadRequestException("groupMismatch");
+    const groupId = enrollment.groupId;
     // Филиал — снимок на момент приёма денег (раздел 3.3 плана филиалов):
     // группу могут потом перевести или удалить, а касса за закрытый месяц
     // меняться не должна. Группа есть — берём её филиал, иначе филиал ученика.

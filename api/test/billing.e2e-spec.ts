@@ -484,6 +484,42 @@ describe("модуль billing", () => {
       expect(res.body.message).toBe("groupMismatch");
     });
 
+    it("другая группа ТОГО ЖЕ курса — 400 groupMismatch", async () => {
+      const sibling = await testDb().group.create({
+        data: { price: 200000, name: `SG-${run}`, courseId: ids.course, scheduleDays: [2], branchId: ids.branch },
+      });
+      const res = await send("post", "/billing/payments", "ADMIN", {
+        studentId: ids.STUDENT,
+        courseId: ids.course,
+        groupId: sibling.id,
+        amount: 100000,
+        method: "CASH",
+        paidAt: `${current}-05`,
+      });
+      expect(res.status).toBe(400);
+      expect(res.body.message).toBe("groupMismatch");
+    });
+
+    it("без groupId платёж ложится на группу записи", async () => {
+      const res = await send("post", "/billing/payments", "ADMIN", {
+        studentId: ids.STUDENT,
+        courseId: ids.course,
+        amount: 100000,
+        method: "CASH",
+        paidAt: `${current}-05`,
+      });
+      expect(res.status).toBe(201);
+      const payment = await testDb().payment.findUniqueOrThrow({ where: { id: res.body.id } });
+      expect(payment.groupId).toBe(ids.group);
+      await send("delete", `/billing/payments/${res.body.id}`, "ADMIN");
+    });
+
+    it("журнал оплат отдаёт limit", async () => {
+      const res = await get("/billing/payments", "ADMIN");
+      expect(res.status).toBe(200);
+      expect(res.body.limit).toBe(500);
+    });
+
     it("groupId, совпадающий с группой записи — по-прежнему принимается", async () => {
       const res = await send("post", "/billing/payments", "ADMIN", {
         studentId: ids.STUDENT,

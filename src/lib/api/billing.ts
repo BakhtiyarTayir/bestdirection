@@ -150,6 +150,8 @@ export interface ApiPaymentsPage {
   }[];
   total: number;
   count: number;
+  /** Потолок строк списка: если count больше — список обрезан */
+  limit: number;
 }
 
 export interface ApiPaymentFormOptions {

@@ -1702,6 +1702,7 @@
     "totalLabel": "Итого за период",
     "totalLabelFor": "Итого за месяц оплаты",
     "paymentsCount": "{count, plural, one {# оплата} few {# оплаты} other {# оплат}}",
+    "truncatedNotice": "Показаны первые {shown} из {count} платежей — сузьте фильтры",
     "empty": "Оплат пока нет",
     "colPaidAt": "Дата",
     "colStudent": "Студент",

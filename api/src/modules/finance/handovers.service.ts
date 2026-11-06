@@ -5,6 +5,9 @@ import { toNoonUtc } from "../../common/date-only";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import type { CreateHandoverDto, HandoverFiltersDto } from "./dto/finance.dto";
 
+/** Потолок строк в журнале: итог (total, count) считается по всем, список обрезается — клиент показывает предупреждение */
+export const HANDOVERS_LIST_LIMIT = 500;
+
 /**
  * Журнал сдачи прибыли филиала владельцу. Тот же приём, что PayoutsService:
  * правок суммы нет, ошибочную запись помечают deletedAt и вносят заново.
@@ -39,11 +42,11 @@ export class HandoversService {
           createdBy: { select: { firstName: true, lastName: true } },
         },
         orderBy: [{ handedAt: "desc" }, { createdAt: "desc" }],
-        take: 500,
+        take: HANDOVERS_LIST_LIMIT,
       }),
       this.prisma.profitHandover.aggregate({ where, _sum: { amount: true }, _count: true }),
     ]);
-    return { handovers, total: totals._sum.amount ?? 0, count: totals._count };
+    return { handovers, total: totals._sum.amount ?? 0, count: totals._count, limit: HANDOVERS_LIST_LIMIT };
   }
 
   async create(data: CreateHandoverDto, actor: SessionUser) {

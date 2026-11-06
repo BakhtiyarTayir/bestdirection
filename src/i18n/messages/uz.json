@@ -1702,6 +1702,7 @@
     "totalLabel": "Davr uchun jami",
     "totalLabelFor": "To'lov oyi uchun jami",
     "paymentsCount": "{count, plural, other {# ta to'lov}}",
+    "truncatedNotice": "Ro'yxatda dastlabki {shown} ta to'lov ko'rsatilgan, jami {count} ta — filtrlarni toraytiring",
     "empty": "Hozircha to'lovlar yo'q",
     "colPaidAt": "Sana",
     "colStudent": "Talaba",

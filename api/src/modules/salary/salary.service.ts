@@ -824,6 +824,28 @@ export class SalaryService {
             select: { teacherId: true, amount: true, forMonth: true, paidAt: true },
           })
         : [];
+    // Преподаватель только с выплатами (нет ни групп, ни корректировок) тоже
+    // должен быть в сводке: иначе его выплаты не вычтутся и totals.debt
+    // окажется выше, чем по его карточке. Берём выплаты месяцев ≤ M с теми же
+    // фильтрами (педагог для роли TEACHER, снимок филиала).
+    // Учитель (роль TEACHER) уже в teacherIds — доп. запрос не нужен
+    const extraPayouts =
+      teacherFilter && teacherIds.includes(teacherFilter)
+        ? []
+        : await this.prisma.teacherPayout.findMany({
+            where: {
+              deletedAt: null,
+              teacherId: teacherFilter ?? { notIn: teacherIds },
+              ...(query.branchId ? { branchId: query.branchId } : {}),
+            },
+            select: { teacherId: true, amount: true, forMonth: true, paidAt: true },
+          });
+    const payoutOnlyTeacherIds = new Set<string>();
+    for (const payout of extraPayouts) {
+      if (payoutMonth(payout) > month) continue;
+      payouts.push(payout);
+      payoutOnlyTeacherIds.add(payout.teacherId);
+    }
     const payoutsByTeacher = new Map<string, typeof payouts>();
     for (const payout of payouts) {
       const list = payoutsByTeacher.get(payout.teacherId) ?? [];
@@ -949,7 +971,7 @@ export class SalaryService {
 
     // Корректировки добавляются один раз на преподавателя, не на единицу
     // (у него может быть несколько групп). Без единиц — строка создаётся здесь
-    const missing = [...adjustmentsByTeacher.keys()].filter((id) => !rows.has(id));
+    const missing = [...new Set([...adjustmentsByTeacher.keys(), ...payoutOnlyTeacherIds])].filter((id) => !rows.has(id));
     const missingUsers =
       missing.length > 0
         ? await this.prismaService.prismaUnscoped.user.findMany({

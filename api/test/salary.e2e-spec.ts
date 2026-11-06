@@ -816,6 +816,33 @@ describe("модуль salary", () => {
     });
   });
 
+  describe("сводка зарплат: учитель только с выплатами", () => {
+    it("попадает в сводку с отрицательным долгом, totals.debt его включает", async () => {
+      const teacher = await createUser({ role: "TEACHER" });
+      const before = await get(`/salary?month=${prevMonth}`, "ADMIN");
+      expect(before.status).toBe(200);
+      expect(before.body.rows.find((r: { teacherId: string }) => r.teacherId === teacher.id)).toBeUndefined();
+
+      await testDb().teacherPayout.create({
+        data: {
+          teacherId: teacher.id,
+          amount: 123_000,
+          method: "CASH",
+          paidAt: new Date(`${current}-05T12:00:00.000Z`),
+          forMonth: prevMonth,
+          createdById: ids.ADMIN,
+        },
+      });
+
+      const after = await get(`/salary?month=${prevMonth}`, "ADMIN");
+      const row = after.body.rows.find((r: { teacherId: string }) => r.teacherId === teacher.id);
+      expect(row).toBeDefined();
+      expect(row.groupsCount).toBe(0);
+      expect(row.debt).toBe(-123_000);
+      expect(after.body.totals.debt).toBe(before.body.totals.debt - 123_000);
+    });
+  });
+
   // Остаток прошлых месяцев отдельной колонкой (план 2026-11-06): итоговый
   // долг прежний, меняется только раскладка. Свой преподаватель/курс/группа.
   describe("раскладка долга: остаток прошлых месяцев / месяц / выплачено в месяце", () => {
