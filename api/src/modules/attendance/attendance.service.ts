@@ -12,9 +12,10 @@ import type { SessionUser } from "../../common/auth/session-user";
 import { toNoonUtc } from "../../common/date-only";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { activeEnrollmentFilter } from "../billing/billing-ledger.service";
-import { countLessons, currentDateKey, currentMonthKey, monthEnd, monthStart } from "../billing/domain/billing";
+import { countLessons, currentDateKey, currentMonthKey, monthEnd, monthKey, monthStart } from "../billing/domain/billing";
 import { dateKeyOf, toDdMm } from "../dashboard/teacher-dashboard.service";
 import { ParentNotifyService } from "../parent-notifications/parent-notify.service";
+import { regularLessonsOverPlan } from "../salary/domain/salary";
 import { SalaryService } from "../salary/salary.service";
 import { canManageCourseAttendance, canManageSession, responsibleTeacherId } from "./domain/attendance-access";
 import type { AttendanceGroupsQueryDto, CreateSessionDto, UpdateRecordsDto } from "./dto/attendance.dto";
@@ -145,7 +146,10 @@ export class AttendanceService {
         action: "CREATE",
         metadata: { courseId: data.courseId, date: data.date },
       });
-      return session;
+
+      // Предупреждение видят и админ, и учитель (решение владельца 2026-11-08)
+      const overPlan = await this.overPlanFor(session);
+      return { ...session, overPlan };
     } catch (error) {
       // P2002 — и обычная уникальность (курс, дата, группа), и частичный индекс
       // для занятий без группы. Сверяем код ошибки, а не текст: он не зависит
@@ -172,6 +176,9 @@ export class AttendanceService {
     if (data.teacher) {
       if (data.teacher.status !== undefined) teacherData.teacherStatus = data.teacher.status;
       if (data.teacher.note !== undefined) teacherData.teacherNote = data.teacher.note;
+      // Только если поле передано: иначе повторное сохранение журнала
+      // (без галочки в теле) стирало бы её
+      if (data.teacher.isMakeup !== undefined) teacherData.isMakeup = data.teacher.isMakeup;
       if (data.teacher.startedAt !== undefined) {
         teacherData.startedAt = data.teacher.startedAt ? new Date(data.teacher.startedAt) : null;
       }
@@ -238,6 +245,10 @@ export class AttendanceService {
       metadata: {
         courseId: session.course.id,
         teacher: data.teacher ? { teacherId: data.teacher.teacherId, status: data.teacher.status } : undefined,
+        // Галочка «Отработка» меняет деньги — изменение попадает в аудит
+        ...(data.teacher?.isMakeup !== undefined && data.teacher.isMakeup !== session.isMakeup
+          ? { isMakeup: { old: session.isMakeup, new: data.teacher.isMakeup } }
+          : {}),
         records: data.records.map((record) => ({ studentId: record.studentId, status: record.status })),
       },
     });
@@ -254,6 +265,31 @@ export class AttendanceService {
         this.logger.warn(`Не удалось разослать уведомления о пропуске: ${String(error)}`)
       );
     }
+  }
+
+  /**
+   * Новое обычное занятие станет сверх расписания месяца? Тогда автору занятия
+   * показывается предупреждение (сохранение не блокируется). Считает та же
+   * regularLessonsOverPlan, что и пункт «Требует внимания» на главной.
+   */
+  private async overPlanFor(session: { id: string; date: Date; groupId: string | null }) {
+    if (!session.groupId) return null;
+    const group = await this.prisma.group.findUnique({
+      where: { id: session.groupId },
+      select: { scheduleDays: true },
+    });
+    if (!group || group.scheduleDays.length === 0) return null;
+
+    const month = monthKey(session.date);
+    const planned = countLessons(group.scheduleDays, monthStart(month), monthEnd(month));
+    const sessions = await this.prisma.attendanceSession.findMany({
+      // Нижняя граница — полночь 1-го числа: date у занятия @db.Date, полдень
+      // monthStart отрезал бы занятия самого 1-го числа
+      where: { groupId: session.groupId, date: { gte: new Date(`${month}-01T00:00:00.000Z`), lte: monthEnd(month) } },
+      select: { isMakeup: true, teacherStatus: true },
+    });
+    const { over } = regularLessonsOverPlan(planned, sessions);
+    return over ? { month, planned } : null;
   }
 
   private async notifyAbsences(

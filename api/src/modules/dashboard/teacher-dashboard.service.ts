@@ -73,7 +73,7 @@ export interface TeacherScheduleLesson {
   schedule: string | null;
   /** true/false — занятие в прошлом или сегодня; null — в будущем, отмечать ещё нечего */
   marked: boolean | null;
-  /** Занятие в журнале на день вне расписания группы — отработка */
+  /** Галочка «Отработка» на занятии в журнале (AttendanceSession.isMakeup); день вне расписания сам по себе отработкой не считается */
   isMakeup: boolean;
 }
 
@@ -94,7 +94,7 @@ export interface TeacherScheduleDay {
  */
 export function buildSchedule(
   groups: GroupInfo[],
-  sessionDateKeysByGroup: Map<string, Set<string>>,
+  sessionsByGroup: Map<string, Map<string, boolean>>,
   rangeStart: string,
   rangeEnd: string,
   todayKey: string
@@ -113,7 +113,9 @@ export function buildSchedule(
         group.scheduleDays.includes(weekday) &&
         (!group.startDateKey || group.startDateKey <= dateKey) &&
         (!group.endDateKey || group.endDateKey >= dateKey);
-      const hasSession = sessionDateKeysByGroup.get(group.groupId)?.has(dateKey) ?? false;
+      // dateKey → isMakeup занятия: null, если занятия в этот день нет
+      const sessionMakeup = sessionsByGroup.get(group.groupId)?.get(dateKey) ?? null;
+      const hasSession = sessionMakeup !== null;
 
       if (inSchedule) {
         lessons.push({
@@ -126,14 +128,12 @@ export function buildSchedule(
           branchName: group.branchName,
           schedule: group.schedule,
           marked: dateKey <= todayKey ? hasSession : null,
-          isMakeup: false,
+          isMakeup: sessionMakeup === true,
         });
       } else if (hasSession) {
-        // Занятие в журнале на день вне расписания группы — отработка
-        // (описание в плане, понятие рядом с markMakeupSessions в
-        // salary/domain/salary.ts, но там отработки считаются по превышению
-        // числа занятий, а не по дню недели — для расписания дашборда
-        // честнее и проще признак «есть отметка не в плановый день»)
+        // Занятие в журнале на день вне расписания группы: из списка не
+        // пропадает, но отработкой его делает только явная галочка
+        // (AttendanceSession.isMakeup, оплата — salary/domain/salary.ts)
         lessons.push({
           groupId: group.groupId,
           groupName: group.groupName,
@@ -144,7 +144,7 @@ export function buildSchedule(
           branchName: group.branchName,
           schedule: group.schedule,
           marked: true,
-          isMakeup: true,
+          isMakeup: sessionMakeup === true,
         });
       }
     }
@@ -276,21 +276,21 @@ export class TeacherDashboardService {
               groupId: { in: groupIds },
               date: { gte: rangeStart, lte: rangeEnd },
             },
-            select: { groupId: true, date: true },
+            select: { groupId: true, date: true, isMakeup: true },
           })
         : [];
 
-    const sessionDateKeysByGroup = new Map<string, Set<string>>();
+    const sessionsByGroup = new Map<string, Map<string, boolean>>();
     for (const session of sessions) {
       if (!session.groupId) continue;
-      const set = sessionDateKeysByGroup.get(session.groupId) ?? new Set<string>();
-      set.add(dateKeyOf(session.date));
-      sessionDateKeysByGroup.set(session.groupId, set);
+      const byDate = sessionsByGroup.get(session.groupId) ?? new Map<string, boolean>();
+      byDate.set(dateKeyOf(session.date), session.isMakeup);
+      sessionsByGroup.set(session.groupId, byDate);
     }
 
     const days = buildSchedule(
       groupInfos,
-      sessionDateKeysByGroup,
+      sessionsByGroup,
       dateKeyOf(rangeStart),
       dateKeyOf(rangeEnd),
       todayKey

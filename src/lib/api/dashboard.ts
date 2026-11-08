@@ -47,6 +47,15 @@ export interface ApiAdminDashboardAttention {
   studentsWithoutGroup: number;
   groupsWithoutRate: number;
   groupsWithIncompleteJournal: number;
+  /** Группы, где обычных занятий в месяце больше, чем по расписанию */
+  groupsOverPlan: {
+    groupId: string;
+    groupName: string;
+    courseSlug: string;
+    teacherName: string;
+    marked: number;
+    planned: number;
+  }[];
 }
 
 /** Срок оплаты хостинга (VPS на аккаунте разработчика) */

@@ -23,6 +23,7 @@ export interface RecalcGroup {
   label: string;
   lessonsPlanned: number | null;
   lessonsTaught: number | null;
+  lessonsMakeup: number;
   amount: number;
 }
 
@@ -125,6 +126,11 @@ export function RecalcMonthButton({
                     <td className="px-3 py-2">{group.label}</td>
                     <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">
                       {group.lessonsPlanned ?? "—"} / {group.lessonsTaught ?? "—"}
+                      {group.lessonsMakeup > 0 && (
+                        <div className="text-xs text-muted-foreground">
+                          {t("recalcMakeup", { count: group.lessonsMakeup })}
+                        </div>
+                      )}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">
                       {money.format(group.amount)}

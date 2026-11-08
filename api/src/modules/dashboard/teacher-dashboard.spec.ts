@@ -33,14 +33,23 @@ describe("buildSchedule", () => {
     expect(dates.some((d) => d.startsWith("2026-10"))).toBe(true);
   });
 
-  it("отработка: отметка в журнале на день вне расписания группы помечена isMakeup", () => {
-    // Группа занимается по пн/ср (scheduleDays [1,3]); отметка на вторник —
-    // явно вне расписания, значит отработка
-    const sessions = new Map([["g1", new Set(["2026-09-29"])]]); // вторник
+  it("занятие вне расписания остаётся в списке, но без галочки это не отработка", () => {
+    // Группа занимается по пн/ср (scheduleDays [1,3]); занятие на вторник
+    // вне расписания, но флаг isMakeup не стоит — оплаты за отработку нет
+    const sessions = new Map([["g1", new Map([["2026-09-29", false]])]]); // вторник
     const days = buildSchedule([group()], sessions, "2026-09-28", "2026-09-30", "2026-09-30");
     const tuesday = days.find((d) => d.date === "2026-09-29")!;
     expect(tuesday.lessons).toHaveLength(1);
-    expect(tuesday.lessons[0]).toMatchObject({ marked: true, isMakeup: true });
+    expect(tuesday.lessons[0]).toMatchObject({ marked: true, isMakeup: false });
+  });
+
+  it("отработка — это галочка на занятии: и вне расписания, и в плановый день", () => {
+    const sessions = new Map([
+      ["g1", new Map([["2026-09-29", true], ["2026-09-30", true]])], // вторник вне плана, среда плановая
+    ]);
+    const days = buildSchedule([group()], sessions, "2026-09-28", "2026-09-30", "2026-09-30");
+    expect(days.find((d) => d.date === "2026-09-29")!.lessons[0]).toMatchObject({ marked: true, isMakeup: true });
+    expect(days.find((d) => d.date === "2026-09-30")!.lessons[0]).toMatchObject({ marked: true, isMakeup: true });
   });
 
   it("прошедшее плановое занятие без отметки в журнале — «не отмечено», будущее — без пометки", () => {

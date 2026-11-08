@@ -29,6 +29,15 @@ export function formatFullDate(date: Date | string, locale?: string): string {
   });
 }
 
+/** Название месяца по ключу "YYYY-MM" («сентябрь» / «sentabr»), без года. */
+export function formatMonthName(month: string, locale?: string): string {
+  const [year, monthNumber] = month.split("-").map(Number);
+  return new Date(Date.UTC(year, monthNumber - 1, 1, 12)).toLocaleDateString(intlLocale(locale ?? ""), {
+    month: "long",
+    timeZone: "UTC",
+  });
+}
+
 /** Компактные дата и время без года: DD.MM, HH:MM. Вне локали, см. formatDate. */
 export function formatShortDateTime(date: Date | string): string {
   const d = new Date(date);

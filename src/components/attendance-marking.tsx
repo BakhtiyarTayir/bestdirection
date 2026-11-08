@@ -4,6 +4,9 @@ import { useState, useRef } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { formatMonthName } from "@/lib/format-date";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -23,7 +26,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { updateAttendanceRecords } from "@/lib/api/attendance";
 import { Check } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { AttendanceStatus } from "@/validators/attendance";
 
 interface Student {
@@ -48,6 +51,13 @@ interface AttendanceMarkingProps {
   teacher?: { id: string; firstName: string; lastName: string } | null;
   teacherStatus?: AttendanceStatus | null;
   teacherNote?: string | null;
+  /** Галочка «Отработка» на занятии */
+  isMakeup?: boolean;
+  /**
+   * Занятие сверх расписания месяца (api отдаёт при создании): показывается
+   * предупреждение, пока галочка «Отработка» не стоит. Не блокирует сохранение.
+   */
+  overPlan?: { planned: number; month: string } | null;
   /** Менять ведущего занятия вправе только администратор */
   canChangeTeacher?: boolean;
   teacherOptions?: { id: string; firstName: string; lastName: string }[];
@@ -66,12 +76,15 @@ export function AttendanceMarking({
   teacher,
   teacherStatus,
   teacherNote,
+  isMakeup = false,
+  overPlan = null,
   canChangeTeacher = false,
   teacherOptions = [],
 }: AttendanceMarkingProps) {
   const t = useTranslations("attendance");
   const tCommon = useTranslations("common");
   const tErrors = useTranslations("errors");
+  const locale = useLocale();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -91,6 +104,7 @@ export function AttendanceMarking({
   );
   const [tNote, setTNote] = useState(teacherNote ?? "");
   const [tId, setTId] = useState(teacher?.id ?? "");
+  const [tMakeup, setTMakeup] = useState(isMakeup);
 
   // Build initial records from existing data or defaults
   const existingMap = new Map(
@@ -112,6 +126,7 @@ export function AttendanceMarking({
     id: teacher?.id ?? "",
     status: (teacherStatus ?? "PRESENT") as AttendanceStatus,
     note: teacherNote ?? "",
+    makeup: isMakeup,
   });
 
   /**
@@ -122,7 +137,7 @@ export function AttendanceMarking({
    */
   const syncSaveStatus = (
     nextRecords: StudentRecord[],
-    nextTeacher: { id: string; status: AttendanceStatus; note: string }
+    nextTeacher: { id: string; status: AttendanceStatus; note: string; makeup: boolean }
   ) => {
     const changed =
       JSON.stringify(nextRecords) !== JSON.stringify(savedRecordsRef.current) ||
@@ -130,10 +145,11 @@ export function AttendanceMarking({
     setSaveStatus(changed ? "unsaved" : "saved");
   };
 
-  const teacherState = (patch?: Partial<{ id: string; status: AttendanceStatus; note: string }>) => ({
+  const teacherState = (patch?: Partial<{ id: string; status: AttendanceStatus; note: string; makeup: boolean }>) => ({
     id: tId,
     status: tStatus,
     note: tNote,
+    makeup: tMakeup,
     ...patch,
   });
 
@@ -176,6 +192,7 @@ export function AttendanceMarking({
                 status: tStatus,
                 // null стирает заметку; undefined оставил бы прежнюю
                 note: tNote.trim() || null,
+                isMakeup: tMakeup,
                 // Ведущего отправляем, только если его вправе менять
                 ...(canChangeTeacher && tId !== (teacher?.id ?? "")
                   ? { teacherId: tId || null }
@@ -245,6 +262,12 @@ export function AttendanceMarking({
         ))}
       </div>
 
+      {overPlan && !tMakeup && (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-50 p-3 text-sm text-amber-900">
+          {t("overPlanWarning", { planned: overPlan.planned, month: formatMonthName(overPlan.month, locale) })}
+        </div>
+      )}
+
       {teacher && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
           <div className="min-w-[180px] flex-1">
@@ -303,6 +326,19 @@ export function AttendanceMarking({
             placeholder={t("teacherNotePlaceholder")}
             className="w-[220px]"
           />
+          <div className="flex items-center gap-2" title={t("makeupHint")}>
+            <Checkbox
+              id="session-makeup"
+              checked={tMakeup}
+              onCheckedChange={(checked) => {
+                setTMakeup(checked === true);
+                syncSaveStatus(records, teacherState({ makeup: checked === true }));
+              }}
+            />
+            <Label htmlFor="session-makeup" className="cursor-pointer">
+              {t("makeupLabel")}
+            </Label>
+          </div>
         </div>
       )}
 

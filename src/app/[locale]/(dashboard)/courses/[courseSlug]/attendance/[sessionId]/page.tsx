@@ -16,15 +16,23 @@ export const dynamic = "force-dynamic";
 
 interface SessionPageProps {
   params: Promise<{ courseSlug: string; sessionId: string }>;
+  // overPlan/month ставит диалог создания занятия, когда оно сверх расписания
+  searchParams: Promise<{ overPlan?: string; month?: string }>;
 }
 
-export default async function SessionPage({ params }: SessionPageProps) {
+export default async function SessionPage({ params, searchParams }: SessionPageProps) {
   const t = await getTranslations("attendance");
   const locale = await getLocale();
   const authSession = await getSession();
   if (!authSession?.user) redirect("/login");
 
   const { courseSlug, sessionId } = await params;
+  const query = await searchParams;
+  const plannedCount = Number(query.overPlan);
+  const overPlan =
+    Number.isInteger(plannedCount) && plannedCount > 0 && /^\d{4}-\d{2}$/.test(query.month ?? "")
+      ? { planned: plannedCount, month: query.month as string }
+      : null;
   const courseId = await resolveCourseSlug(courseSlug);
 
   const role = authSession.user.role;
@@ -116,6 +124,8 @@ export default async function SessionPage({ params }: SessionPageProps) {
             teacher={currentSession.teacher}
             teacherStatus={currentSession.teacherStatus}
             teacherNote={currentSession.teacherNote}
+            isMakeup={currentSession.isMakeup}
+            overPlan={overPlan}
             canChangeTeacher={canChangeTeacher}
             teacherOptions={teacherOptions}
           />

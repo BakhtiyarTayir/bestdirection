@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   adjustmentSigned,
+  allocateMonth,
   computeAccrual,
   computeFormulaAmount,
   computeMonthLessonMarks,
   countLessons,
   isClosedMonth,
-  markMakeupSessions,
+  makeupAmountFor,
+  regularLessonsOverPlan,
+  type AttendanceSessionForSplit,
   mergeAccrualMonths,
   payoutMonth,
   resolveSalaryPercentBp,
@@ -70,6 +73,7 @@ describe("computeAccrual — начисление за месяц", () => {
       isFormula: true,
       lessonsPlanned: null,
       lessonsTaught: null,
+      lessonsMakeup: 0,
     });
   });
 
@@ -106,7 +110,7 @@ describe("computeAccrual — начисление за месяц", () => {
     const result = computeAccrual({
       ...baseInput,
       groupPercentBp: 4000,
-      lessons: { planned: 13, taught: 12, amountOverride: 443_077 },
+      lessons: { planned: 13, taught: 12, makeup: 0, amountOverride: 443_077 },
     });
     expect(result.amount).toBe(443_077);
     // Ставка группы всё равно видна в отчёте — она не про раскладку, а про то,
@@ -140,6 +144,7 @@ describe("mergeAccrualMonths — закон закрытого месяца", ()
         manualAmount: null,
         lessonsPlanned: null,
         lessonsTaught: null,
+        lessonsMakeup: 0,
       },
     ];
     // Сейчас (в открытом ноябре) у группы уже 50% — но сентябрь заморожен
@@ -157,6 +162,7 @@ describe("mergeAccrualMonths — закон закрытого месяца", ()
           isFormula: true,
           lessonsPlanned: null,
           lessonsTaught: null,
+          lessonsMakeup: 0,
         },
         locked: true,
       },
@@ -174,6 +180,7 @@ describe("mergeAccrualMonths — закон закрытого месяца", ()
         manualAmount: null,
         lessonsPlanned: null,
         lessonsTaught: null,
+        lessonsMakeup: 0,
       },
     ];
     const computed = [{ month: "2026-11", input: computedInput(4000, 1_000_000) }];
@@ -190,6 +197,7 @@ describe("mergeAccrualMonths — закон закрытого месяца", ()
           isFormula: true,
           lessonsPlanned: null,
           lessonsTaught: null,
+          lessonsMakeup: 0,
         },
         locked: false,
       },
@@ -207,6 +215,7 @@ describe("mergeAccrualMonths — закон закрытого месяца", ()
         manualAmount: null,
         lessonsPlanned: null,
         lessonsTaught: null,
+        lessonsMakeup: 0,
       },
     ];
     const result = mergeAccrualMonths([], stored, now);
@@ -226,6 +235,7 @@ describe("mergeAccrualMonths — закон закрытого месяца", ()
         manualAmount: 250_000,
         lessonsPlanned: null,
         lessonsTaught: null,
+        lessonsMakeup: 0,
       },
     ];
     const result = mergeAccrualMonths([{ month: "2026-09", input: computedInput(3000) }], stored, now);
@@ -249,12 +259,12 @@ describe("totalAccrued", () => {
     const months = [
       {
         month: "2026-08",
-        accrual: { base: 0, studentsCount: 0, percentUsed: null, amount: 100, isFormula: false, lessonsPlanned: null, lessonsTaught: null },
+        accrual: { base: 0, studentsCount: 0, percentUsed: null, amount: 100, isFormula: false, lessonsPlanned: null, lessonsTaught: null, lessonsMakeup: 0 },
         locked: true,
       },
       {
         month: "2026-09",
-        accrual: { base: 0, studentsCount: 0, percentUsed: null, amount: 200, isFormula: false, lessonsPlanned: null, lessonsTaught: null },
+        accrual: { base: 0, studentsCount: 0, percentUsed: null, amount: 200, isFormula: false, lessonsPlanned: null, lessonsTaught: null, lessonsMakeup: 0 },
         locked: true,
       },
     ];
@@ -291,7 +301,7 @@ describe("computeMonthLessonMarks — когда раскладка вообще
 
   it("нет расписания — запасной путь, даже если в журнале есть записи", () => {
     const marks = computeMonthLessonMarks([], from, to, [
-      { date: new Date("2026-09-02T00:00:00.000Z"), teacherStatus: "PRESENT", responsibleTeacherId: "t1" },
+      { date: new Date("2026-09-02T00:00:00.000Z"), teacherStatus: "PRESENT", responsibleTeacherId: "t1", isMakeup: false },
     ]);
     expect(marks.fallback).toBe(true);
     expect(marks.lessonsPlanned).toBe(0);
@@ -312,7 +322,7 @@ describe("computeMonthLessonMarks — когда раскладка вообще
       const iso = date.getUTCDay() === 0 ? 7 : date.getUTCDay();
       if (scheduleDays.includes(iso)) dates.push(date);
     }
-    return dates.map((date, index) => ({ date, teacherStatus: status(index), responsibleTeacherId: "t1" }));
+    return dates.map((date, index) => ({ date, teacherStatus: status(index), responsibleTeacherId: "t1", isMakeup: false }));
   };
 
   it("отмечено меньше занятий, чем по расписанию, — запасной путь (вариант А)", () => {
@@ -380,10 +390,28 @@ describe("splitAccrualByTeacher — раскладка суммы по заня�
     expect(groupMonthAmount - total).toBe(pricePerLesson);
   });
 
-  it("сценарий 4: отработка — провели на одно занятие больше плана, сумма больше месячной ровно на цену занятия", () => {
+  it("сценарий 4: обычные занятия сверх плана денег не добавляют — одно лишнее, сумма ровно месячная", () => {
     const shares = splitAccrualByTeacher(groupMonthAmount, lessonsPlanned, new Map([["main", lessonsPlanned + 1]]));
-    const total = shares.reduce((sum, share) => sum + share.amount, 0);
-    expect(total - groupMonthAmount).toBe(pricePerLesson);
+    expect(shares).toEqual([{ teacherId: "main", lessonsTaught: lessonsPlanned + 1, amount: groupMonthAmount }]);
+  });
+
+  it("16 занятий при плане 14 — ровно 1 200 000, а не 1 371 429", () => {
+    const shares = splitAccrualByTeacher(1_200_000, 14, new Map([["main", 16]]));
+    expect(shares).toEqual([{ teacherId: "main", lessonsTaught: 16, amount: 1_200_000 }]);
+  });
+
+  it("основной 12 + замена 4 при плане 14: делится на 16, сумма ровно групповая (900 000 и 300 000)", () => {
+    const shares = splitAccrualByTeacher(
+      1_200_000,
+      14,
+      new Map([
+        ["main", 12],
+        ["sub", 4],
+      ])
+    );
+    expect(shares.find((s) => s.teacherId === "main")?.amount).toBe(900_000);
+    expect(shares.find((s) => s.teacherId === "sub")?.amount).toBe(300_000);
+    expect(shares.reduce((sum, s) => sum + s.amount, 0)).toBe(1_200_000);
   });
 
   it("сценарий 5: округление — при полном месяце сумма долей в точности равна целому (остаток по наибольшей дробной части)", () => {
@@ -420,27 +448,194 @@ describe("сценарий 6: запасной путь — нет распис�
   });
 });
 
-describe("markMakeupSessions — отработка это самые поздние по дате занятия сверх плана (4.4)", () => {
-  it("занятий больше, чем по плану — лишние по дате помечены отработкой, кто бы их ни провёл", () => {
-    const sessions = [
-      { date: new Date("2026-09-17T00:00:00.000Z"), teacherId: "b" },
-      { date: new Date("2026-09-03T00:00:00.000Z"), teacherId: "a" },
-      { date: new Date("2026-09-10T00:00:00.000Z"), teacherId: "a" },
-    ];
-    const marked = markMakeupSessions(sessions, 2);
-    // Порядок в ответе — по дате (сортировка внутри функции)
-    expect(marked.map((session) => session.date.toISOString().slice(0, 10))).toEqual([
-      "2026-09-03",
-      "2026-09-10",
-      "2026-09-17",
-    ]);
-    expect(marked.map((session) => session.isMakeup)).toEqual([false, false, true]);
+// ─── Отработки: явная галочка, оплата сверх суммы группы ───
+
+describe("отработки (isMakeup)", () => {
+  const scheduleDays = [2, 4, 6]; // сентябрь 2026: 13 занятий
+  const from = new Date("2026-09-01T00:00:00.000Z");
+  const to = new Date("2026-09-30T00:00:00.000Z");
+  const planned = countLessons(scheduleDays, from, to);
+
+  const regularDates = () => {
+    const out: Date[] = [];
+    for (let day = 1; day <= 30; day++) {
+      const date = new Date(Date.UTC(2026, 8, day));
+      const iso = date.getUTCDay() === 0 ? 7 : date.getUTCDay();
+      if (scheduleDays.includes(iso)) out.push(date);
+    }
+    return out;
+  };
+  const session = (
+    date: Date,
+    teacherId: string,
+    extra: Partial<AttendanceSessionForSplit> = {}
+  ): AttendanceSessionForSplit => ({
+    date,
+    teacherStatus: "PRESENT",
+    responsibleTeacherId: teacherId,
+    isMakeup: false,
+    ...extra,
+  });
+  const fullMonth = (teacherId = "main") => regularDates().map((d) => session(d, teacherId));
+  const makeupDay = (day: number, teacherId = "main", extra: Partial<AttendanceSessionForSplit> = {}) =>
+    session(new Date(Date.UTC(2026, 8, day)), teacherId, { isMakeup: true, ...extra });
+
+  it("цена одного занятия округляется, потом умножается: 1 200 000 / 14 → 2 × 85 714 = 171 428", () => {
+    expect(makeupAmountFor(1_200_000, 14, 2)).toBe(171_428);
+    // BestCRM округляет сумму целиком (round(1 200 000 × 2 / 14) = 171 429); у нас — цену занятия
+    expect(Math.round((1_200_000 * 2) / 14)).toBe(171_429);
+    expect(makeupAmountFor(1_200_000, 0, 2)).toBe(0);
+    expect(makeupAmountFor(1_200_000, 14, 0)).toBe(0);
   });
 
-  it("занятий не больше плана — отработок нет", () => {
-    const sessions = [{ date: new Date("2026-09-03T00:00:00.000Z"), teacherId: "a" }];
-    const marked = markMakeupSessions(sessions, 5);
-    expect(marked.every((session) => !session.isMakeup)).toBe(true);
+  it("14 обычных + 2 отработки: 1 200 000 + 171 428 = 1 371 428", () => {
+    const fake = {
+      lessonsPlanned: 14,
+      sessionsMarked: 14,
+      fallback: false,
+      taughtByTeacher: new Map([["main", 14]]),
+      makeupByTeacher: new Map([["main", 2]]),
+      countedSessions: [],
+    };
+    const { rows, lessonsPlanned } = allocateMonth(1_200_000, fake, "main");
+    expect(lessonsPlanned).toBe(14);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ shareAmount: 1_200_000, makeupAmount: 171_428, amount: 1_371_428, lessonsMakeup: 2 });
+  });
+
+  it("обычные занятия сверх плана денег не добавляют (отметили на два больше, без галочки)", () => {
+    const sessions = [...fullMonth(), session(new Date("2026-09-07T00:00:00.000Z"), "main"), session(new Date("2026-09-08T00:00:00.000Z"), "main")];
+    const marks = computeMonthLessonMarks(scheduleDays, from, to, sessions);
+    expect(marks.taughtByTeacher.get("main")).toBe(planned + 2);
+    const { rows } = allocateMonth(1_300_000, marks, "main");
+    expect(rows).toHaveLength(1);
+    expect(rows[0].amount).toBe(1_300_000);
+  });
+
+  it("отработка не входит ни в обычные проведённые, ни в sessionsMarked", () => {
+    const marks = computeMonthLessonMarks(scheduleDays, from, to, [...fullMonth(), makeupDay(7)]);
+    expect(marks.sessionsMarked).toBe(planned);
+    expect(marks.taughtByTeacher.get("main")).toBe(planned);
+    expect(marks.makeupByTeacher.get("main")).toBe(1);
+    expect(marks.countedSessions.filter((s) => s.isMakeup)).toHaveLength(1);
+  });
+
+  it("отработка с ABSENT не оплачивается", () => {
+    const marks = computeMonthLessonMarks(scheduleDays, from, to, [...fullMonth(), makeupDay(7, "main", { teacherStatus: "ABSENT" })]);
+    expect(marks.makeupByTeacher.size).toBe(0);
+    expect(allocateMonth(1_300_000, marks, "main").rows[0].amount).toBe(1_300_000);
+  });
+
+  it("отработка без ведущего не оплачивается", () => {
+    const marks = computeMonthLessonMarks(scheduleDays, from, to, [...fullMonth(), makeupDay(7, "main", { responsibleTeacherId: null })]);
+    expect(marks.makeupByTeacher.size).toBe(0);
+  });
+
+  it("отработка замены идёт замене; строка владельца остаётся", () => {
+    const marks = computeMonthLessonMarks(scheduleDays, from, to, [...fullMonth("main"), makeupDay(7, "sub")]);
+    const { rows } = allocateMonth(1_300_000, marks, "main");
+    const main = rows.find((r) => r.teacherId === "main")!;
+    const sub = rows.find((r) => r.teacherId === "sub")!;
+    expect(main.amount).toBe(1_300_000);
+    expect(sub).toMatchObject({ lessonsTaught: 0, lessonsMakeup: 1, shareAmount: 0, amount: 100_000 });
+  });
+
+  it("нет расписания (lessonsPlanned = 0) — отработка не оплачивается", () => {
+    const marks = computeMonthLessonMarks([], from, to, [makeupDay(7)]);
+    expect(marks.makeupByTeacher.size).toBe(0);
+    expect(allocateMonth(500_000, marks, "main").rows[0].amount).toBe(500_000);
+  });
+
+  it("отработка не закрывает неполный журнал (fallback остаётся) и оплачивается в нём сверх суммы", () => {
+    const sessions = [...fullMonth().slice(0, 3), makeupDay(7, "main"), makeupDay(9, "sub")];
+    const marks = computeMonthLessonMarks(scheduleDays, from, to, sessions);
+    expect(marks.fallback).toBe(true);
+    expect(marks.sessionsMarked).toBe(3);
+    const { rows, lessonsPlanned } = allocateMonth(1_300_000, marks, "main");
+    expect(lessonsPlanned).toBeNull();
+    const main = rows.find((r) => r.teacherId === "main")!;
+    const sub = rows.find((r) => r.teacherId === "sub")!;
+    expect(main).toMatchObject({ lessonsTaught: null, lessonsMakeup: 1, amount: 1_300_000 + 100_000 });
+    expect(sub).toMatchObject({ lessonsTaught: null, lessonsMakeup: 1, amount: 100_000 });
+  });
+
+  it("владелец без доли получает строку с нулём, даже если отработку провёл только другой", () => {
+    const marks = computeMonthLessonMarks(scheduleDays, from, to, [...fullMonth("sub"), makeupDay(7, "sub")]);
+    const { rows } = allocateMonth(1_300_000, marks, "main");
+    expect(rows.find((r) => r.teacherId === "main")).toMatchObject({ amount: 0, lessonsTaught: 0 });
+    expect(rows.find((r) => r.teacherId === "sub")?.amount).toBe(1_300_000 + 100_000);
+  });
+
+  it("живой расчёт и заморозка дают одну сумму: computeAccrual по allocateMonth == строка, которую пишет заморозка", () => {
+    const marks = computeMonthLessonMarks(scheduleDays, from, to, [...fullMonth("main"), makeupDay(7, "sub"), makeupDay(9, "main")]);
+    const { rows, lessonsPlanned } = allocateMonth(1_300_000, marks, "main");
+    for (const row of rows) {
+      const live = computeAccrual({
+        base: 3_250_000,
+        studentsCount: 10,
+        groupPercentBp: 4000,
+        teacherPercentBp: null,
+        manualAmount: null,
+        lessons: { planned: lessonsPlanned, taught: row.lessonsTaught, makeup: row.lessonsMakeup, amountOverride: row.amount },
+      });
+      const frozen: StoredAccrual = {
+        month: "2026-09",
+        base: 3_250_000,
+        studentsCount: 10,
+        percentUsed: 4000,
+        amount: row.amount,
+        manualAmount: null,
+        lessonsPlanned,
+        lessonsTaught: row.lessonsTaught,
+        lessonsMakeup: row.lessonsMakeup,
+      };
+      const [merged] = mergeAccrualMonths([], [frozen], new Date("2026-11-08T12:00:00.000Z"));
+      expect(merged.accrual.amount).toBe(live.amount);
+      expect(merged.accrual.lessonsMakeup).toBe(live.lessonsMakeup);
+    }
+  });
+
+  it("manualAmount перебивает всё, включая отработки", () => {
+    const result = computeAccrual({
+      base: 1,
+      studentsCount: 1,
+      groupPercentBp: 4000,
+      teacherPercentBp: null,
+      manualAmount: 777,
+      lessons: { planned: 14, taught: 14, makeup: 2, amountOverride: 1_371_428 },
+    });
+    expect(result.amount).toBe(777);
+    expect(result.lessonsMakeup).toBe(2);
+  });
+
+  it("старая замороженная строка (lessonsMakeup NULL) читается как 0", () => {
+    const [merged] = mergeAccrualMonths(
+      [],
+      [{ month: "2026-08", base: 1, studentsCount: 1, percentUsed: 4000, amount: 5, manualAmount: null, lessonsPlanned: null, lessonsTaught: null, lessonsMakeup: null }],
+      new Date("2026-11-08T12:00:00.000Z")
+    );
+    expect(merged.accrual.lessonsMakeup).toBe(0);
+  });
+});
+
+describe("regularLessonsOverPlan — порог предупреждения о занятии сверх расписания", () => {
+  const regular = (n: number, extra: { isMakeup?: boolean; teacherStatus?: string | null } = {}) =>
+    Array.from({ length: n }, () => ({ isMakeup: false, teacherStatus: null as string | null, ...extra }));
+
+  it("ровно по плану — предупреждения нет", () => {
+    expect(regularLessonsOverPlan(14, regular(14))).toEqual({ regular: 14, over: false });
+  });
+  it("план + 1 — предупреждение есть", () => {
+    expect(regularLessonsOverPlan(14, regular(15))).toEqual({ regular: 15, over: true });
+  });
+  it("отработки не считаются", () => {
+    expect(regularLessonsOverPlan(14, [...regular(14), ...regular(3, { isMakeup: true })]).over).toBe(false);
+  });
+  it("ABSENT не считается", () => {
+    expect(regularLessonsOverPlan(14, [...regular(14), ...regular(2, { teacherStatus: "ABSENT" })]).over).toBe(false);
+  });
+  it("группа без расписания — предупреждения нет", () => {
+    expect(regularLessonsOverPlan(0, regular(5)).over).toBe(false);
   });
 });
 

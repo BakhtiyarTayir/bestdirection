@@ -21,6 +21,8 @@ export interface ApiAttendanceSession {
   teacherId: string | null;
   teacherStatus: AttendanceStatus | null;
   teacherNote: string | null;
+  /** Галочка «Отработка»: оплачивается сверх суммы группы */
+  isMakeup: boolean;
   startedAt: string | null;
   endedAt: string | null;
   courseId: string;
@@ -138,7 +140,14 @@ export const createAttendanceSession = (body: {
   date: string;
   note?: string;
   groupId?: string;
-}) => apiFetch<ApiAttendanceSession>("/attendance/sessions", { method: "POST", body });
+}) =>
+  apiFetch<ApiAttendanceSession & { overPlan: ApiOverPlan | null }>("/attendance/sessions", { method: "POST", body });
+
+/** Обычных занятий в месяце уже не меньше, чем по расписанию: лишнее не оплачивается без галочки «Отработка» */
+export interface ApiOverPlan {
+  month: string;
+  planned: number;
+}
 
 export const updateAttendanceRecords = (
   sessionId: string,
@@ -148,6 +157,7 @@ export const updateAttendanceRecords = (
       teacherId?: string | null;
       status?: AttendanceStatus | null;
       note?: string | null;
+      isMakeup?: boolean;
       startedAt?: string | null;
       endedAt?: string | null;
     };
@@ -159,7 +169,7 @@ export const deleteAttendanceSession = (sessionId: string) =>
 
 export const setTeacherAttendance = (
   sessionId: string,
-  body: { status?: AttendanceStatus | null; note?: string | null }
+  body: { status?: AttendanceStatus | null; note?: string | null; isMakeup?: boolean }
 ) => apiFetch<{ ok: true }>(`/attendance/sessions/${sessionId}/teacher`, { method: "POST", body });
 
 export const getStudentParents = (studentId: string) =>

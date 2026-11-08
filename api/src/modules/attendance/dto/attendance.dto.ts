@@ -27,6 +27,9 @@ export const updateRecordsSchema = z.object({
       teacherId: id.nullable().optional(),
       status: status.nullable().optional(),
       note: z.string().max(500).nullable().optional(),
+      // Галочка «Отработка»: не передана — не менять (повторное сохранение
+      // журнала без поля её не сбрасывает)
+      isMakeup: z.boolean().optional(),
       startedAt: z.string().datetime().nullable().optional(),
       endedAt: z.string().datetime().nullable().optional(),
     })
@@ -36,6 +39,7 @@ export const updateRecordsSchema = z.object({
 export const teacherAttendanceSchema = z.object({
   status: status.nullable().optional(),
   note: z.string().max(500).nullable().optional(),
+  isMakeup: z.boolean().optional(),
 });
 
 // groupId сужает занятия/отчёт до одной группы курса (план «Журнал

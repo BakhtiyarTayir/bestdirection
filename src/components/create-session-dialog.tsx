@@ -26,7 +26,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { createAttendanceSession } from "@/lib/api/attendance";
 import { getCourseGroups } from "@/lib/api/groups";
 import { Plus } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { formatMonthName } from "@/lib/format-date";
 
 interface Group {
   id: string;
@@ -63,6 +64,8 @@ export function CreateSessionDialog({
   const t = useTranslations("attendance");
   const tCommon = useTranslations("common");
   const tErrors = useTranslations("errors");
+  const locale = useLocale();
+  const monthName = (month: string) => formatMonthName(month, locale);
   const requireGroup = fixedGroup !== undefined || defaultGroupId !== undefined;
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState<Date | undefined>();
@@ -125,12 +128,23 @@ export function CreateSessionDialog({
           title: t("sessionCreated"),
           description: t("sessionCreatedSuccess"),
         });
+        // Занятие создано, но оно сверх расписания месяца — не блокируем,
+        // а предупреждаем и несём признак на страницу отметки, где рядом
+        // стоит галочка «Отработка»
+        const overPlan = result.data.overPlan;
+        if (overPlan) {
+          toast({
+            title: t("overPlanTitle"),
+            description: t("overPlanWarning", { planned: overPlan.planned, month: monthName(overPlan.month) }),
+          });
+        }
         setDate(undefined);
         setNote("");
         setGroupId(fixedGroup?.id ?? defaultGroupId ?? ALL_GROUPS);
         setOpen(false);
         onSuccess?.();
-        router.push(`/courses/${courseSlug}/attendance/${result.data.id}`);
+        const overPlanQuery = overPlan ? `?overPlan=${overPlan.planned}&month=${overPlan.month}` : "";
+        router.push(`/courses/${courseSlug}/attendance/${result.data.id}${overPlanQuery}`);
       } else {
         toast({
           title: tErrors("error"),

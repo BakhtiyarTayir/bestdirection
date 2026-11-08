@@ -43,7 +43,7 @@ export interface ApiSalaryOverview {
 
 export interface ApiSalaryMonthSession {
   date: string;
-  /** Занятие сверх плана месяца — отработка (план, 4.4) */
+  /** Отработка — явная галочка на занятии */
   isMakeup: boolean;
 }
 
@@ -60,6 +60,9 @@ export interface ApiSalaryMonth {
   // или курс без группы)
   lessonsPlanned: number | null;
   lessonsTaught: number | null;
+  // Отработки (галочка на занятии), оплаченные сверх суммы группы; у старых
+  // замороженных строк 0
+  lessonsMakeup: number;
   // Сколько занятий вообще отмечено в журнале группы за месяц, независимо
   // от того, кто их вёл. null — раскладка неприменима (курс без группы)
   sessionsMarked: number | null;

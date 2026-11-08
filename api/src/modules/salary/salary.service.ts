@@ -6,25 +6,23 @@ import type { Prisma } from "../../../generated/prisma";
 import { BillingLedgerService, type LoadedEnrollment } from "../billing/billing-ledger.service";
 import {
   addMonths,
+  allocateMonth,
   computeFormulaAmount,
   computeMonthLessonMarks,
   currentMonthKey,
   isClosedMonth,
   isValidMonth,
-  markMakeupSessions,
   mergeAccrualMonths,
   monthEnd,
   monthKey,
   monthStart,
   payoutMonth,
   resolveSalaryPercentBp,
-  splitAccrualByTeacher,
   splitTeacherBalance,
   sumAdjustments,
   studentPaymentRows,
   adjustmentSigned,
   totalAccrued,
-  type MarkedSession,
   type StudentCharge,
   type MonthAccrual,
   type MonthLessonMarks,
@@ -322,7 +320,7 @@ export class SalaryService {
     const sortedMonths = [...months].sort();
     const sessions = await this.prisma.attendanceSession.findMany({
       where: { groupId, date: { gte: monthStart(sortedMonths[0]), lte: monthEnd(sortedMonths[sortedMonths.length - 1]) } },
-      select: { date: true, teacherId: true, teacherStatus: true },
+      select: { date: true, teacherId: true, teacherStatus: true, isMakeup: true },
     });
 
     const byMonth = new Map<string, typeof sessions>();
@@ -348,6 +346,7 @@ export class SalaryService {
             // же лестница, что в attendance-access.ts, упрощённая: у группы
             // ведущий уже известен на уровне unit.ownerTeacherId)
             responsibleTeacherId: session.teacherId ?? ownerTeacherId,
+            isMakeup: session.isMakeup,
           }))
         )
       );
@@ -460,42 +459,20 @@ export class SalaryService {
         lockedAt: now,
       };
 
-      const marks = marksByMonth.get(month);
-      if (!marks || marks.fallback) {
-        // Запасной путь (4.5): отметок нет — вся сумма владельцу
+      // Раскладка и отработки — одна функция с живым расчётом и пересчётом.
+      // Запасной путь (4.5) даёт строку владельца без раскладки, отработки
+      // оплачиваются сверх суммы и в нём; владелец без занятий получает
+      // строку с нулём — видно, что месяц его и что он пропущен, а не забыт
+      const { lessonsPlanned, rows } = allocateMonth(potAmount, marksByMonth.get(month), unit.ownerTeacherId);
+      for (const row of rows) {
         data.push({
           ...shared,
-          teacherId: unit.ownerTeacherId,
-          isOwner: true,
-          amount: potAmount,
-          lessonsPlanned: null,
-          lessonsTaught: null,
-        });
-        continue;
-      }
-
-      const shares = splitAccrualByTeacher(potAmount, marks.lessonsPlanned, marks.taughtByTeacher);
-      for (const share of shares) {
-        data.push({
-          ...shared,
-          teacherId: share.teacherId,
-          isOwner: share.teacherId === unit.ownerTeacherId,
-          amount: share.amount,
-          lessonsPlanned: marks.lessonsPlanned,
-          lessonsTaught: share.lessonsTaught,
-        });
-      }
-      // Владелец, не проведший в месяце ни одного занятия, всё равно
-      // получает строку с нулём — как и раньше: видно, что месяц его и
-      // что он пропущен, а не забыт
-      if (!shares.some((share) => share.teacherId === unit.ownerTeacherId)) {
-        data.push({
-          ...shared,
-          teacherId: unit.ownerTeacherId,
-          isOwner: true,
-          amount: 0,
-          lessonsPlanned: marks.lessonsPlanned,
-          lessonsTaught: 0,
+          teacherId: row.teacherId,
+          isOwner: row.teacherId === unit.ownerTeacherId,
+          amount: row.amount,
+          lessonsPlanned,
+          lessonsTaught: row.lessonsTaught,
+          lessonsMakeup: row.lessonsMakeup,
         });
       }
     }
@@ -553,6 +530,7 @@ export class SalaryService {
         manualAmount: true,
         lessonsPlanned: true,
         lessonsTaught: true,
+        lessonsMakeup: true,
       },
     });
 
@@ -576,32 +554,27 @@ export class SalaryService {
           manualAmount: null,
         };
 
+        // Те же allocateMonth и потолок суммы, что у заморозки: открытый месяц
+        // и он же после закрытия обязаны дать одну сумму. Единица-замена
+        // получает строку, только если у неё есть доля или отработка:
+        // обнаружить подмену можно лишь по отметкам, а строка с нулём на
+        // каждый месяц группы раздула бы список
         const marks = marksByMonth.get(month);
-        if (!marks || marks.fallback) {
-          // Запасной путь (4.5): нет расписания или ни одной отметки за
-          // месяц — вся сумма достаётся владельцу, замены не выделяются.
-          // Единица-замена в этот месяц ничего не получает: обнаружить, кто
-          // подменял, можно только по отметкам, а их и нет.
-          return unit.teacherId === unit.ownerTeacherId ? { month, input: baseInput } : null;
-        }
-
-        const potPercentUsed = resolveSalaryPercentBp(baseInput);
-        const potAmount = computeFormulaAmount(totals.base, potPercentUsed);
-        const share = splitAccrualByTeacher(potAmount, marks.lessonsPlanned, marks.taughtByTeacher).find(
-          (item) => item.teacherId === unit.teacherId
-        );
-
-        // Замена, ни разу не проводившая занятие в этом конкретном месяце
-        // (обнаружена по другому месяцу той же группы) — строки за этот
-        // месяц у неё нет вовсе, а не строка с нулём: иначе список месяцев
-        // замены раздулся бы пустыми записями на каждый месяц группы
-        if (!share && unit.teacherId !== unit.ownerTeacherId) return null;
+        const potAmount = computeFormulaAmount(totals.base, resolveSalaryPercentBp(baseInput));
+        const { lessonsPlanned, rows } = allocateMonth(potAmount, marks, unit.ownerTeacherId);
+        const own = rows.find((row) => row.teacherId === unit.teacherId);
+        if (!own) return null;
 
         return {
           month,
           input: {
             ...baseInput,
-            lessons: { planned: marks.lessonsPlanned, taught: share?.lessonsTaught ?? 0, amountOverride: share?.amount ?? 0 },
+            lessons: {
+              planned: lessonsPlanned,
+              taught: own.lessonsTaught,
+              makeup: own.lessonsMakeup,
+              amountOverride: own.amount,
+            },
           },
         };
       })
@@ -1080,14 +1053,11 @@ export class SalaryService {
           groupPercentBp: unit.groupPercentBp,
           months: monthAccruals.map((item) => {
             const marks = marksByMonth.get(item.month);
-            // Отработки — понятие уровня группы (план, 4.4): считаем по ВСЕМ
-            // засчитанным занятиям группы за месяц, а не только по своим, и
-            // уже потом оставляем только свою часть списка
+            // Отработка — явная галочка на занятии (isMakeup), в списке
+            // остаются только свои занятия
             const sessions = marks
-              ? markMakeupSessions(marks.countedSessions, marks.lessonsPlanned).filter(
-                  (session) => session.teacherId === unit.teacherId
-                )
-              : ([] as MarkedSession[]);
+              ? marks.countedSessions.filter((session) => session.teacherId === unit.teacherId)
+              : [];
 
             return {
               id: idByMonth.get(item.month) ?? null,
@@ -1100,6 +1070,7 @@ export class SalaryService {
               locked: item.locked,
               lessonsPlanned: item.accrual.lessonsPlanned,
               lessonsTaught: item.accrual.lessonsTaught,
+              lessonsMakeup: item.accrual.lessonsMakeup,
               // «Отмечено N из M» (этап 2) — сколько занятий вообще есть в
               // журнале группы за месяц, независимо от того, кто их вёл.
               // null — раскладка неприменима (курс без группы)
@@ -1110,7 +1081,9 @@ export class SalaryService {
               // Раскладка недоступна — нет расписания или ни одной отметки
               // за месяц (4.5); у курса без группы это неприменимо, не пометка
               fallback: unit.groupId ? !marks || marks.fallback : false,
-              sessions: sessions.map((session) => ({
+              sessions: [...sessions]
+                .sort((a, b) => a.date.getTime() - b.date.getTime())
+                .map((session) => ({
                 date: session.date.toISOString().slice(0, 10),
                 isMakeup: session.isMakeup,
               })),
@@ -1306,24 +1279,20 @@ export class SalaryService {
       unit.groupId && unit.scheduleDays.length > 0
         ? (await this.loadLessonMarks(unit.groupId, unit.scheduleDays, monthOwnerId, [month])).get(month)
         : undefined;
-    const split = marks && !marks.fallback ? marks : null;
 
-    // Кому сколько положено в этом месяце. Запасной путь — всё владельцу;
-    // раскладка — по проведённым занятиям, владелец без занятий получает
-    // строку с нулём, как и при заморозке (freezeGroupClosedMonths)
-    const targets = new Map<string, { amount: number; lessonsTaught: number | null }>();
-    if (split) {
-      for (const share of splitAccrualByTeacher(potAmount, split.lessonsPlanned, split.taughtByTeacher)) {
-        targets.set(share.teacherId, { amount: share.amount, lessonsTaught: share.lessonsTaught });
-      }
-      if (!targets.has(monthOwnerId)) targets.set(monthOwnerId, { amount: 0, lessonsTaught: 0 });
-    } else {
-      targets.set(monthOwnerId, { amount: potAmount, lessonsTaught: null });
-    }
-    const lessonsPlanned = split ? split.lessonsPlanned : null;
+    // Кому сколько положено в этом месяце — та же allocateMonth, что у живого
+    // расчёта и заморозки; владелец без занятий получает строку с нулём
+    const allocation = allocateMonth(potAmount, marks, monthOwnerId);
+    const targets = new Map(
+      allocation.rows.map((row) => [
+        row.teacherId,
+        { amount: row.amount, lessonsTaught: row.lessonsTaught, lessonsMakeup: row.lessonsMakeup },
+      ])
+    );
+    const lessonsPlanned = allocation.lessonsPlanned;
     // Строка, которой больше не положено ничего (замены не было или отметки
     // сняли), обнуляется, но остаётся — она уже могла попасть в выплату
-    const nothing = { amount: 0, lessonsTaught: split ? 0 : null };
+    const nothing = { amount: 0, lessonsTaught: allocation.lessonsPlanned !== null ? 0 : null, lessonsMakeup: 0 };
 
     const updates = monthRows
       .map((row) => {
@@ -1334,7 +1303,8 @@ export class SalaryService {
           row.studentsCount !== studentsCount ||
           row.amount !== target.amount ||
           row.lessonsPlanned !== lessonsPlanned ||
-          row.lessonsTaught !== target.lessonsTaught;
+          row.lessonsTaught !== target.lessonsTaught ||
+          (row.lessonsMakeup ?? 0) !== target.lessonsMakeup;
         return { row, target, changed };
       })
       .filter((item) => item.changed);
@@ -1367,6 +1337,7 @@ export class SalaryService {
               amount: { old: row.amount, new: target.amount },
               lessonsPlanned: { old: row.lessonsPlanned, new: lessonsPlanned },
               lessonsTaught: { old: row.lessonsTaught, new: target.lessonsTaught },
+              lessonsMakeup: { old: row.lessonsMakeup ?? 0, new: target.lessonsMakeup },
             },
             metadata: { recalculated: true, teacherId: row.teacherId, month, groupId: unit.groupId, courseId: unit.courseId },
           },
@@ -1374,7 +1345,7 @@ export class SalaryService {
         );
         await tx.teacherSalaryAccrual.update({
           where: { id: row.id },
-          data: { percentUsed, base, studentsCount, amount: target.amount, lessonsPlanned, lessonsTaught: target.lessonsTaught, lockedAt: now },
+          data: { percentUsed, base, studentsCount, amount: target.amount, lessonsPlanned, lessonsTaught: target.lessonsTaught, lessonsMakeup: target.lessonsMakeup, lockedAt: now },
         });
       }
 
@@ -1393,6 +1364,7 @@ export class SalaryService {
             isOwner: create.teacherId === monthOwnerId,
             lessonsPlanned,
             lessonsTaught: create.lessonsTaught,
+            lessonsMakeup: create.lessonsMakeup,
             lockedAt: now,
           },
         });

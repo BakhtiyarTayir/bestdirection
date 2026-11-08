@@ -64,6 +64,7 @@ export default async function TeacherSalaryPage({ params, searchParams }: Teache
               : `${group.courseTitle} (${t("withoutGroup")})`,
             lessonsPlanned: row.lessonsPlanned,
             lessonsTaught: row.lessonsTaught,
+            lessonsMakeup: row.lessonsMakeup,
             amount: row.amount,
           },
         ];

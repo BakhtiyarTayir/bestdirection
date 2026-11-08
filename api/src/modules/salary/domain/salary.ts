@@ -65,7 +65,15 @@ export interface AccrualComputationInput {
    * (splitAccrualByTeacher) как доля ИМЕННО ЭТОГО преподавателя от суммы,
    * которую формула отвела бы группе целиком.
    */
-  lessons?: { planned: number; taught: number; amountOverride: number };
+  lessons?: {
+    /** null — месяц в запасном пути (раскладки нет), но отработки всё равно есть */
+    planned: number | null;
+    taught: number | null;
+    /** Отработки этого преподавателя (оплачены сверх суммы группы) */
+    makeup: number;
+    /** Доля + оплата отработок, уже посчитано снаружи (allocateMonth) */
+    amountOverride: number;
+  };
 }
 
 export interface AccrualComputationResult {
@@ -81,6 +89,8 @@ export interface AccrualComputationResult {
   lessonsPlanned: number | null;
   /** Сколько из них провёл этот преподаватель. Больше lessonsPlanned — были отработки */
   lessonsTaught: number | null;
+  /** Отработки (явная галочка), оплаченные сверх суммы группы. 0 — не было */
+  lessonsMakeup: number;
 }
 
 /**
@@ -102,6 +112,7 @@ export function computeAccrual(input: AccrualComputationInput): AccrualComputati
     : computeFormulaAmount(input.base, percentUsed);
   const lessonsPlanned = input.lessons?.planned ?? null;
   const lessonsTaught = input.lessons?.taught ?? null;
+  const lessonsMakeup = input.lessons?.makeup ?? 0;
 
   if (input.manualAmount !== null) {
     return {
@@ -112,6 +123,7 @@ export function computeAccrual(input: AccrualComputationInput): AccrualComputati
       isFormula: false,
       lessonsPlanned,
       lessonsTaught,
+      lessonsMakeup,
     };
   }
 
@@ -123,6 +135,7 @@ export function computeAccrual(input: AccrualComputationInput): AccrualComputati
     isFormula: percentUsed !== null,
     lessonsPlanned,
     lessonsTaught,
+    lessonsMakeup,
   };
 }
 
@@ -136,6 +149,8 @@ export interface StoredAccrual {
   manualAmount: number | null;
   lessonsPlanned: number | null;
   lessonsTaught: number | null;
+  /** У строк, замороженных до появления галочки «Отработка», NULL — читается как 0 */
+  lessonsMakeup?: number | null;
 }
 
 export interface MonthAccrual {
@@ -157,6 +172,7 @@ function fromStored(stored: StoredAccrual): AccrualComputationResult {
     isFormula: stored.manualAmount === null && stored.percentUsed !== null,
     lessonsPlanned: stored.lessonsPlanned,
     lessonsTaught: stored.lessonsTaught,
+    lessonsMakeup: stored.lessonsMakeup ?? 0,
   };
 }
 
@@ -393,28 +409,39 @@ export interface AttendanceSessionForSplit {
   teacherStatus: string | null;
   /** Ведущий по лестнице «записанный → педагог группы → педагог курса» (attendance-access.ts) */
   responsibleTeacherId: string | null;
+  /** Явная галочка «Отработка»: оплачивается сверх суммы группы и не входит в обычные */
+  isMakeup: boolean;
 }
 
 /** Занятие, засчитанное кому-то из преподавателей, — для списка с датами в карточке (4.4) */
 export interface CountedSession {
   date: Date;
   teacherId: string;
+  /** Берётся из флага занятия, а не вычисляется по порядку дат */
+  isMakeup: boolean;
 }
 
 export interface MonthLessonMarks {
   /** Занятий по расписанию группы в месяце (countLessons) */
   lessonsPlanned: number;
   /**
-   * Сколько записей в журнале вообще есть за месяц по этой группе —
-   * независимо от статуса. Меньше lessonsPlanned — журнал неполный, и это
-   * условие запасного пути (4.5).
+   * Сколько ОБЫЧНЫХ записей в журнале есть за месяц по этой группе —
+   * независимо от статуса, но без отработок (isMakeup). Меньше lessonsPlanned
+   * — журнал неполный, и это условие запасного пути (4.5). Отработка недобор
+   * не закрывает: иначе галочка на одном занятии снимала бы fallback.
    */
   sessionsMarked: number;
-  /** Нет расписания ИЛИ в журнале отмечено меньше занятий, чем по расписанию, — раскладки нет (4.5) */
+  /** Нет расписания ИЛИ в журнале отмечено меньше обычных занятий, чем по расписанию, — раскладки нет (4.5) */
   fallback: boolean;
-  /** Сколько занятий провёл каждый преподаватель (не ABSENT, ведущий известен) */
+  /** Сколько обычных занятий провёл каждый преподаватель (не ABSENT, ведущий известен) */
   taughtByTeacher: Map<string, number>;
-  /** Те же занятия поштучно, с датами — материал для markMakeupSessions */
+  /**
+   * Сколько отработок провёл каждый преподаватель (не ABSENT, ведущий
+   * известен). Считается и в запасном пути (отработка оплачивается сверх
+   * суммы в любом месяце), но не при lessonsPlanned = 0: цены занятия нет.
+   */
+  makeupByTeacher: Map<string, number>;
+  /** Занятия поштучно, с датами и флагом — материал для списка в карточке (4.4) */
   countedSessions: CountedSession[];
 }
 
@@ -433,7 +460,8 @@ export function computeMonthLessonMarks(
   sessions: AttendanceSessionForSplit[]
 ): MonthLessonMarks {
   const lessonsPlanned = countLessons(scheduleDays, from, to);
-  const sessionsMarked = sessions.length;
+  const regular = sessions.filter((session) => !session.isMakeup);
+  const sessionsMarked = regular.length;
   // Нет расписания — считать не на чем; в журнале отмечено меньше занятий,
   // чем по расписанию, — считать не по чему. Оба случая — запасной путь (4.5).
   // Неполный журнал раньше делил сумму по тому, что успели отметить: две
@@ -444,20 +472,39 @@ export function computeMonthLessonMarks(
   const fallback = scheduleDays.length === 0 || sessionsMarked < lessonsPlanned;
 
   const taughtByTeacher = new Map<string, number>();
+  const makeupByTeacher = new Map<string, number>();
   const countedSessions: CountedSession[] = [];
 
-  if (!fallback) {
-    for (const session of sessions) {
-      if (!session.responsibleTeacherId || session.teacherStatus === "ABSENT") continue;
-      taughtByTeacher.set(
-        session.responsibleTeacherId,
-        (taughtByTeacher.get(session.responsibleTeacherId) ?? 0) + 1
-      );
-      countedSessions.push({ date: session.date, teacherId: session.responsibleTeacherId });
+  for (const session of sessions) {
+    if (!session.responsibleTeacherId || session.teacherStatus === "ABSENT") continue;
+    const teacherId = session.responsibleTeacherId;
+    if (session.isMakeup) {
+      // Нет расписания (lessonsPlanned = 0) — нет и цены занятия
+      if (lessonsPlanned <= 0) continue;
+      makeupByTeacher.set(teacherId, (makeupByTeacher.get(teacherId) ?? 0) + 1);
+      countedSessions.push({ date: session.date, teacherId, isMakeup: true });
+    } else if (!fallback) {
+      taughtByTeacher.set(teacherId, (taughtByTeacher.get(teacherId) ?? 0) + 1);
+      countedSessions.push({ date: session.date, teacherId, isMakeup: false });
     }
   }
 
-  return { lessonsPlanned, sessionsMarked, fallback, taughtByTeacher, countedSessions };
+  return { lessonsPlanned, sessionsMarked, fallback, taughtByTeacher, makeupByTeacher, countedSessions };
+}
+
+/**
+ * Занятий сверх расписания: обычных (не отработка, не ABSENT — тех же, что
+ * идут в оплату) больше, чем по плану месяца. Одна функция на всё:
+ * предупреждение при создании занятия, пункт «Требует внимания» на главной
+ * админа (а при желании — и предупреждение учителю). Группа без расписания
+ * (planned = 0) сверх плана не бывает: сравнивать не с чем.
+ */
+export function regularLessonsOverPlan(
+  lessonsPlanned: number,
+  sessions: { isMakeup: boolean; teacherStatus: string | null }[]
+): { regular: number; over: boolean } {
+  const regular = sessions.filter((s) => !s.isMakeup && s.teacherStatus !== "ABSENT").length;
+  return { regular, over: lessonsPlanned > 0 && regular > lessonsPlanned };
 }
 
 export interface TeacherLessonShare {
@@ -468,16 +515,16 @@ export interface TeacherLessonShare {
 
 /**
  * Делит сумму, которую формула отвела группе целиком (`groupMonthAmount`),
- * между преподавателями пропорционально числу проведённых занятий.
+ * между преподавателями пропорционально числу проведённых обычных занятий.
  *
- * Округление (план, 4.7): когда провели ровно столько, сколько по расписанию
- * (сумма taught по всем преподавателям == lessonsPlanned), сумма долей
- * обязана в точности равняться groupMonthAmount — остаток от деления
- * раздаётся по наибольшей дробной части, тот же приём, что и везде в
- * проекте, где целая сумма делится на части. Когда провели МЕНЬШЕ или
- * БОЛЬШЕ (пропуск без отработки, отработка), доли по определению не обязаны
- * сходиться к groupMonthAmount — это честное отличие, не ошибка, и здесь
- * достаточно независимого округления каждой доли.
+ * Знаменатель — max(lessonsPlanned, сумма taught): обычные занятия СВЕРХ
+ * расписания денег не добавляют (решение владельца 2026-11-08), настоящая
+ * отработка оплачивается отдельно по галочке (makeupAmount). Когда
+ * проведено не меньше плана, сумма долей в точности равна groupMonthAmount —
+ * остаток от деления раздаётся по наибольшей дробной части, тот же приём,
+ * что и везде в проекте, где целая сумма делится на части. Когда провели
+ * МЕНЬШЕ плана (часть занятий ABSENT), доли честно не сходятся к
+ * groupMonthAmount — достаточно независимого округления каждой.
  */
 export function splitAccrualByTeacher(
   groupMonthAmount: number,
@@ -488,12 +535,13 @@ export function splitAccrualByTeacher(
   if (lessonsPlanned <= 0 || entries.length === 0) return [];
 
   const totalTaught = entries.reduce((sum, [, taught]) => sum + taught, 0);
+  const denominator = Math.max(lessonsPlanned, totalTaught);
   const shares = entries.map(([teacherId, taught]) => {
-    const exact = (groupMonthAmount * taught) / lessonsPlanned;
+    const exact = (groupMonthAmount * taught) / denominator;
     return { teacherId, lessonsTaught: taught, exact, floor: Math.floor(exact) };
   });
 
-  if (totalTaught !== lessonsPlanned) {
+  if (totalTaught < lessonsPlanned) {
     return shares.map((share) => ({
       teacherId: share.teacherId,
       lessonsTaught: share.lessonsTaught,
@@ -517,19 +565,80 @@ export function splitAccrualByTeacher(
   }));
 }
 
-export interface MarkedSession extends CountedSession {
-  /** true — занятие вне плана месяца: отработка (план, 4.4) */
-  isMakeup: boolean;
+/**
+ * Оплата отработок: округляется цена ОДНОГО занятия (сумма группы целиком /
+ * занятий по плану), потом умножается на число отработок. Цена считается от
+ * полной суммы группы, а не от доли преподавателя. Округление — Math.round,
+ * как в billing.ts (chargeForMonth). 1 200 000 / 14 = 85 714 → две отработки
+ * дают 171 428.
+ */
+export function makeupAmountFor(groupMonthAmount: number, lessonsPlanned: number, count: number): number {
+  if (lessonsPlanned <= 0 || count <= 0) return 0;
+  return Math.round(groupMonthAmount / lessonsPlanned) * count;
+}
+
+/** Итог месяца одного преподавателя в группе: обычная доля + отработки */
+export interface TeacherMonthAllocation {
+  teacherId: string;
+  /** null — запасной путь, раскладки по обычным занятиям нет */
+  lessonsTaught: number | null;
+  lessonsMakeup: number;
+  /** Доля от суммы группы (без отработок) */
+  shareAmount: number;
+  makeupAmount: number;
+  /** shareAmount + makeupAmount — то, что пишется в строку начисления */
+  amount: number;
 }
 
 /**
- * Помечает отработки: занятия сверх lessonsPlanned, считая от самых ранних
- * дат месяца — то есть отработками оказываются самые ПОЗДНИЕ по дате
- * занятия, независимо от того, кто их провёл (отработка — понятие уровня
- * группы, план 4.4, а не конкретного преподавателя).
+ * Единое место, где сумма группы за месяц превращается в суммы
+ * преподавателей. Живой расчёт, заморозка и пересчёт закрытого месяца
+ * вызывают ТОЛЬКО её — иначе открытый месяц и тот же месяц после закрытия
+ * разошлись бы в деньгах.
+ *
+ *  - marks нет (курс без группы) или запасной путь: вся сумма владельцу;
+ *  - раскладка: доли по обычным занятиям, владелец без занятий получает
+ *    строку с нулём (видно, что месяц его и что он пропущен);
+ *  - отработки платятся тому, кто их провёл, сверх суммы — и в запасном пути
+ *    тоже; преподаватель с одной отработкой получает свою строку.
+ *
+ * lessonsPlanned в ответе null, когда раскладки нет (как в TeacherSalaryAccrual).
  */
-export function markMakeupSessions(sessions: CountedSession[], lessonsPlanned: number): MarkedSession[] {
-  return [...sessions]
-    .sort((a, b) => a.date.getTime() - b.date.getTime())
-    .map((session, index) => ({ ...session, isMakeup: index >= lessonsPlanned }));
+export function allocateMonth(
+  groupMonthAmount: number,
+  marks: MonthLessonMarks | undefined,
+  ownerTeacherId: string
+): { lessonsPlanned: number | null; rows: TeacherMonthAllocation[] } {
+  const split = marks && !marks.fallback ? marks : null;
+  const rows = new Map<string, TeacherMonthAllocation>();
+  const ensure = (teacherId: string): TeacherMonthAllocation => {
+    let row = rows.get(teacherId);
+    if (!row) {
+      row = { teacherId, lessonsTaught: split ? 0 : null, lessonsMakeup: 0, shareAmount: 0, makeupAmount: 0, amount: 0 };
+      rows.set(teacherId, row);
+    }
+    return row;
+  };
+
+  if (split) {
+    for (const share of splitAccrualByTeacher(groupMonthAmount, split.lessonsPlanned, split.taughtByTeacher)) {
+      const row = ensure(share.teacherId);
+      row.lessonsTaught = share.lessonsTaught;
+      row.shareAmount = share.amount;
+    }
+  } else {
+    ensure(ownerTeacherId).shareAmount = groupMonthAmount;
+  }
+  ensure(ownerTeacherId);
+
+  if (marks) {
+    for (const [teacherId, count] of marks.makeupByTeacher) {
+      const row = ensure(teacherId);
+      row.lessonsMakeup = count;
+      row.makeupAmount = makeupAmountFor(groupMonthAmount, marks.lessonsPlanned, count);
+    }
+  }
+  for (const row of rows.values()) row.amount = row.shareAmount + row.makeupAmount;
+
+  return { lessonsPlanned: split ? split.lessonsPlanned : null, rows: [...rows.values()] };
 }

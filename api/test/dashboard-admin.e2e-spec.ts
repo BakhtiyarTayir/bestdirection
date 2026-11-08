@@ -178,4 +178,39 @@ describe("модуль dashboard/admin", () => {
     const gap = (await get(`/dashboard/admin?branchId=${ids.branch}`, "ADMIN")).body.attention;
     expect(gap.groupsWithIncompleteJournal).toBe(before.groupsWithIncompleteJournal + 1);
   });
+
+  it("«требует внимания»: занятий сверх расписания — пункт по группе, гаснет после галочки «Отработка»", async () => {
+    const lastDay = new Date(Date.UTC(Number(current.slice(0, 4)), Number(current.slice(5, 7)), 0)).getUTCDate();
+    const group = await testDb().group.create({
+      data: {
+        name: `Сверх-${run}`,
+        courseId: ids.course,
+        branchId: ids.branch,
+        scheduleDays: [1],
+        teacherId: ids.TEACHER,
+        salaryPercentBp: 4000,
+        startDate: new Date(`${current}-01T12:00:00.000Z`),
+      },
+    });
+    let planned = 0;
+    for (let day = 1; day <= lastDay; day++) {
+      if ((new Date(Date.UTC(Number(current.slice(0, 4)), Number(current.slice(5, 7)) - 1, day)).getUTCDay() || 7) === 1) planned++;
+    }
+    const sessionIds: string[] = [];
+    for (let day = 1; day <= planned + 1; day++) {
+      const created = await testDb().attendanceSession.create({
+        data: { courseId: ids.course, groupId: group.id, date: toNoonUtc(`${current}-${String(day).padStart(2, "0")}`) },
+      });
+      sessionIds.push(created.id);
+    }
+    const find = async () => {
+      const attention = (await get(`/dashboard/admin?branchId=${ids.branch}`, "ADMIN")).body.attention;
+      return attention.groupsOverPlan.find((item: { groupId: string }) => item.groupId === group.id);
+    };
+
+    expect(await find()).toMatchObject({ planned, marked: planned + 1, courseSlug: `dash-admin-${run}` });
+
+    await testDb().attendanceSession.update({ where: { id: sessionIds[0] }, data: { isMakeup: true } });
+    expect(await find()).toBeUndefined();
+  });
 });

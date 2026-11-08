@@ -68,7 +68,7 @@ describe("панель преподавателя", () => {
 
     // Отработка: группа без расписания (scheduleDays пуст) — любая отметка
     // в её журнале приходится на день вне расписания, независимо от того,
-    // какой сегодня день недели.
+    // какой сегодня день недели. Отработкой её делает галочка isMakeup.
     const makeupGroup = await testDb().group.create({
       data: {
         name: `M3-${run}`,
@@ -80,7 +80,7 @@ describe("панель преподавателя", () => {
     });
     ids.makeupGroup = makeupGroup.id;
     await testDb().attendanceSession.create({
-      data: { courseId: myCourse.id, groupId: makeupGroup.id, date: today },
+      data: { courseId: myCourse.id, groupId: makeupGroup.id, date: today, isMakeup: true },
     });
 
     // Неактивная группа — не должна появляться, даже если формально моя и

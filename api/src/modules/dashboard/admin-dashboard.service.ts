@@ -9,20 +9,23 @@ import {
   currentDateKey,
   currentMonthKey,
   isoWeekday,
+  monthEnd,
   monthStart,
 } from "../billing/domain/billing";
 import { FinanceService } from "../finance/finance.service";
+import { regularLessonsOverPlan } from "../salary/domain/salary";
 import { SalaryService } from "../salary/salary.service";
 import { HostingService } from "./hosting.service";
 
 /** Группа, отобранная для проверок 1.2/1.3 — общий набор полей на оба расчёта. */
 interface AttentionGroup {
   id: string;
+  name: string;
   salaryPercentBp: number | null;
   teacherId: string | null;
   scheduleDays: number[];
   startDate: Date | null;
-  course: { teacherId: string };
+  course: { teacherId: string; slug: string };
 }
 
 /**
@@ -186,18 +189,20 @@ export class AdminDashboardService {
         },
         select: {
           id: true,
+          name: true,
           salaryPercentBp: true,
           teacherId: true,
           scheduleDays: true,
           startDate: true,
-          course: { select: { teacherId: true } },
+          course: { select: { teacherId: true, slug: true } },
         },
       }),
     ]);
 
-    const [groupsWithoutRate, groupsWithIncompleteJournal] = await Promise.all([
+    const [groupsWithoutRate, groupsWithIncompleteJournal, groupsOverPlan] = await Promise.all([
       this.countGroupsWithoutRate(groups),
       this.countGroupsWithIncompleteJournal(groups),
+      this.groupsOverPlan(groups),
     ]);
 
     return {
@@ -206,7 +211,77 @@ export class AdminDashboardService {
       studentsWithoutGroup,
       groupsWithoutRate,
       groupsWithIncompleteJournal,
+      groupsOverPlan,
     };
+  }
+
+  /**
+   * Группы, где в текущем месяце обычных занятий отмечено больше, чем по
+   * расписанию: лишнее занятие не оплачивается, пока на нём не стоит галочка
+   * «Отработка». Пункт гаснет сам, когда обычных снова не больше плана.
+   * Порог — regularLessonsOverPlan, та же функция, что предупреждает при
+   * создании занятия. Филиалы сужены тем же списком groups, что и у соседних
+   * пунктов.
+   */
+  private async groupsOverPlan(groups: AttentionGroup[]) {
+    const withSchedule = groups.filter((group) => group.scheduleDays.length > 0);
+    if (withSchedule.length === 0) return [];
+
+    const month = currentMonthKey();
+    const sessions = await this.prisma.attendanceSession.findMany({
+      where: {
+        groupId: { in: withSchedule.map((group) => group.id) },
+        // Полночь 1-го числа: date — @db.Date, полдень monthStart отрезал бы 1-е число
+        date: { gte: new Date(`${month}-01T00:00:00.000Z`), lte: monthEnd(month) },
+      },
+      select: { groupId: true, teacherId: true, teacherStatus: true, isMakeup: true },
+    });
+    const byGroup = new Map<string, typeof sessions>();
+    for (const session of sessions) {
+      if (!session.groupId) continue;
+      byGroup.set(session.groupId, [...(byGroup.get(session.groupId) ?? []), session]);
+    }
+
+    const found: {
+      group: AttentionGroup;
+      planned: number;
+      marked: number;
+      leadId: string;
+    }[] = [];
+    for (const group of withSchedule) {
+      const list = byGroup.get(group.id) ?? [];
+      const planned = countLessons(group.scheduleDays, monthStart(month), monthEnd(month));
+      const { regular, over } = regularLessonsOverPlan(planned, list);
+      if (!over) continue;
+
+      // Кто отметил больше всего обычных занятий; ведущий не записан — педагог группы
+      const ownerId = group.teacherId ?? group.course.teacherId;
+      const counts = new Map<string, number>();
+      for (const session of list) {
+        if (session.isMakeup || session.teacherStatus === "ABSENT") continue;
+        const id = session.teacherId ?? ownerId;
+        counts.set(id, (counts.get(id) ?? 0) + 1);
+      }
+      const leadId = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? ownerId;
+      found.push({ group, planned, marked: regular, leadId });
+    }
+    if (found.length === 0) return [];
+
+    // prismaUnscoped: удалённый педагог не должен остаться без имени
+    const teachers = await this.prismaService.prismaUnscoped.user.findMany({
+      where: { id: { in: [...new Set(found.map((item) => item.leadId))] } },
+      select: { id: true, firstName: true, lastName: true },
+    });
+    const nameById = new Map(teachers.map((t) => [t.id, `${t.lastName} ${t.firstName}`]));
+
+    return found.map((item) => ({
+      groupId: item.group.id,
+      groupName: item.group.name,
+      courseSlug: item.group.course.slug,
+      teacherName: nameById.get(item.leadId) ?? "",
+      marked: item.marked,
+      planned: item.planned,
+    }));
   }
 
   /**
@@ -251,6 +326,8 @@ export class AdminDashboardService {
       // monthFrom отрезал бы занятия самого 1-го числа ещё в запросе
       where: {
         groupId: { in: groupIds },
+        // Отработка недобор не закрывает — как и в расчёте зарплаты
+        isMakeup: false,
         date: { gte: new Date(`${currentMonthKey()}-01T00:00:00.000Z`), lte: today },
       },
       select: { groupId: true, date: true },

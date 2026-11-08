@@ -146,6 +146,7 @@ export class TeacherAttendanceService {
         teacherId: true,
         teacherStatus: true,
         teacherNote: true,
+        isMakeup: true,
         group: { select: { name: true, teacherId: true } },
         course: { select: { title: true, slug: true, teacherId: true } },
       },
@@ -174,6 +175,7 @@ export class TeacherAttendanceService {
       teacherName: nameById.get(responsible as string) ?? "",
       status: item.teacherStatus,
       note: item.teacherNote,
+      isMakeup: item.isMakeup,
       // Ведущий ещё не записан: отметка проставит его явно
       teacherImplicit: item.teacherId === null,
     }));
@@ -205,6 +207,7 @@ export class TeacherAttendanceService {
       data: {
         ...(data.status !== undefined ? { teacherStatus: data.status } : {}),
         ...(data.note !== undefined ? { teacherNote: data.note } : {}),
+        ...(data.isMakeup !== undefined ? { isMakeup: data.isMakeup } : {}),
         ...(session.teacherId === null && responsible ? { teacherId: responsible } : {}),
       },
     });
@@ -214,7 +217,11 @@ export class TeacherAttendanceService {
       entityType: "AttendanceSession",
       entityId: sessionId,
       action: "UPDATE",
-      metadata: { teacherAttendance: true, teacherId: responsible, status: data.status ?? null },
+      metadata: { teacherAttendance: true, teacherId: responsible, status: data.status ?? null,
+        ...(data.isMakeup !== undefined && data.isMakeup !== session.isMakeup
+          ? { isMakeup: { old: session.isMakeup, new: data.isMakeup } }
+          : {}),
+      },
     });
   }
 }
