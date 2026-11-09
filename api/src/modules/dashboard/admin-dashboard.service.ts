@@ -231,7 +231,7 @@ export class AdminDashboardService {
     const sessions = await this.prisma.attendanceSession.findMany({
       where: {
         groupId: { in: withSchedule.map((group) => group.id) },
-        // Полночь 1-го числа: date — @db.Date, полдень monthStart отрезал бы 1-е число
+        // Полночь 1-го числа (date — @db.Date); граница с полуднем тоже находит 1-е число, см. e2e salary-makeup
         date: { gte: new Date(`${month}-01T00:00:00.000Z`), lte: monthEnd(month) },
       },
       select: { groupId: true, teacherId: true, teacherStatus: true, isMakeup: true },
@@ -322,8 +322,9 @@ export class AdminDashboardService {
     const groupIds = withSchedule.map((group) => group.id);
 
     const sessions = await this.prisma.attendanceSession.findMany({
-      // Нижняя граница — полночь 1-го числа: date у занятия @db.Date, полдень
-      // monthFrom отрезал бы занятия самого 1-го числа ещё в запросе
+      // Нижняя граница — полночь 1-го числа (date у занятия @db.Date). Граница с
+      // полуднем в самом запросе тоже находит 1-е число (Postgres сравнивает по
+      // дню), потеря была в JS-сравнении мгновений ниже
       where: {
         groupId: { in: groupIds },
         // Отработка недобор не закрывает — как и в расчёте зарплаты

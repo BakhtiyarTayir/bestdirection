@@ -244,4 +244,55 @@ describe("salary: отработки (isMakeup)", () => {
       expect(res.status).toBe(404);
     });
   });
+
+  // Регресс по границе месяца: date у занятия — @db.Date (полночь UTC), а
+  // monthStart() даёт полдень 1-го числа. Занятие ровно 1-го числа не должно
+  // выпадать из выборки журнала: иначе полный журнал считается неполным
+  describe("занятие 1-го числа месяца", () => {
+    it("журнал полный, 1-е провела замена: fallback нет, доли делятся, замена получает строку", async () => {
+      const course = await testDb().course.create({
+        data: { slug: `mk-first-${run}`, title: "Отработки 1-е", teacherId: ids.TEACHER, price: 300_000 },
+      });
+      const group = await testDb().group.create({
+        data: {
+          price: 300_000,
+          name: `MKfirst-${run}`,
+          courseId: course.id,
+          branchId: ids.branch,
+          scheduleDays: [1, 2, 3, 4, 5, 6, 7], // каждый день: 1-е число точно плановое
+          teacherId: ids.TEACHER,
+          salaryPercentBp: 4000,
+          startDate: new Date(`${startMonth}-01T12:00:00.000Z`),
+        },
+      });
+      await testDb().enrollment.create({
+        data: { studentId: ids.STUDENT, courseId: course.id, groupId: group.id, startsAt: new Date(`${startMonth}-01T12:00:00.000Z`) },
+      });
+      const days = datesOn(prevMonth, [1, 2, 3, 4, 5, 6, 7]);
+      for (const date of days) {
+        await testDb().attendanceSession.create({
+          data: {
+            courseId: course.id,
+            groupId: group.id,
+            date: at(date),
+            teacherStatus: "PRESENT",
+            ...(date === `${prevMonth}-01` ? { teacherId: ids.other } : {}),
+          },
+        });
+      }
+      expect((await get(`/salary?month=${prevMonth}`, "ADMIN")).status).toBe(200);
+
+      const rows = await testDb().teacherSalaryAccrual.findMany({ where: { groupId: group.id, month: prevMonth } });
+      const main = rows.find((r) => r.teacherId === ids.TEACHER)!;
+      const sub = rows.find((r) => r.teacherId === ids.other);
+      expect(main.lessonsPlanned).toBe(days.length);
+      expect(main.lessonsTaught).toBe(days.length - 1);
+      expect(sub?.lessonsTaught).toBe(1);
+
+      const detail = await get(`/salary/${ids.TEACHER}?month=${prevMonth}`, "ADMIN");
+      const month = detail.body.groups.find((g: { groupId: string }) => g.groupId === group.id).months.find((m: { month: string }) => m.month === prevMonth);
+      expect(month.sessionsMarked).toBe(days.length);
+      expect(month.fallback).toBe(false);
+    });
+  });
 });
