@@ -12,11 +12,12 @@ import { SessionsService } from "../../common/auth/sessions.service";
 import { SessionUserCache } from "../../common/auth/session-user.cache";
 import type { SessionUser } from "../../common/auth/session-user";
 import { toNoonUtc } from "../../common/date-only";
-import { accessibleWhere, type AppAbility } from "../../common/policies/abilities";
+import { accessibleWhere, defineAbilityFor, type AppAbility } from "../../common/policies/abilities";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { generatePassword, openPassword, sealPassword } from "../../common/security/password-vault";
 import { withHasTelegram } from "../../common/telegram/with-has-telegram";
 import { BillingLedgerService, studentListWhere, type StudentListFilters } from "../billing/billing-ledger.service";
+import { GroupsService } from "../groups/groups.service";
 import { SalaryService } from "../salary/salary.service";
 import type { CreateUserDto, UpdateProfileDto, UpdateUserDto } from "./dto/user.dto";
 
@@ -73,7 +74,8 @@ export class UsersService {
     private readonly sessionUsers: SessionUserCache,
     private readonly sessions: SessionsService,
     private readonly salary: SalaryService,
-    private readonly ledger: BillingLedgerService
+    private readonly ledger: BillingLedgerService,
+    private readonly groups: GroupsService
   ) {}
 
   private get prisma() {
@@ -109,7 +111,15 @@ export class UsersService {
     // Недоступный объект — 404, а не 403: иначе ответ подтверждает, что такой
     // пользователь существует.
     if (!user) throw new NotFoundException("userNotFound");
-    return withHasTelegram(user);
+    const activeGroups = user.role === "STUDENT" ? await this.prisma.enrollment.findMany({
+      where: { studentId: id, unenrolledAt: null, groupId: { not: null } },
+      select: { groupId: true, group: { select: { name: true, branch: { select: { name: true } } } },
+        course: { select: { title: true } } },
+    }) : [];
+    return { ...withHasTelegram(user), activeGroups: activeGroups.map((entry) => ({
+      groupId: entry.groupId!, groupName: entry.group!.name,
+      courseTitle: entry.course.title, branchName: entry.group!.branch.name,
+    })) };
   }
 
   async create(data: CreateUserDto, actor: SessionUser) {
@@ -303,6 +313,18 @@ export class UsersService {
     });
     if (!existing) throw new NotFoundException("userNotFound");
 
+    const requestedGroups = data.unenrollGroupIds;
+    if (requestedGroups !== undefined || data.unenrollDate !== undefined) {
+      if (existing.role !== "STUDENT" || data.role && data.role !== "STUDENT" ||
+          !existing.isActive || data.isActive !== false ||
+          requestedGroups === undefined || data.unenrollDate === undefined ||
+          new Set(requestedGroups).size !== requestedGroups.length ||
+          (!Number.isFinite(Date.parse(`${data.unenrollDate}T12:00:00.000Z`)) ||
+            new Date(`${data.unenrollDate}T12:00:00.000Z`).toISOString().slice(0, 10) !== data.unenrollDate)) {
+        throw new BadRequestException("invalidUnenrollment");
+      }
+    }
+
     if (data.login) {
       const holderId = await this.loginTakenBy(data.login);
       if (holderId && holderId !== id) throw new ConflictException("loginExists");
@@ -344,38 +366,48 @@ export class UsersService {
       await this.salary.freezeClosedMonths({ teacherId: id });
     }
 
-    const user = await this.prisma.user.update({
-      where: { id },
-      data: {
-        ...(data.login && { login: data.login }),
-        ...(passwordHash && { passwordHash }),
-        ...passwordEncChange,
-        ...(data.firstName !== undefined && { firstName: data.firstName }),
-        ...(data.lastName !== undefined && { lastName: data.lastName }),
-        ...(data.phone !== undefined && { phone: data.phone }),
-        ...(data.role !== undefined && { role: data.role }),
-        ...(data.isActive !== undefined && { isActive: data.isActive }),
-        ...(branchId !== undefined && { branchId }),
-        ...(data.salaryPercentBp !== undefined && { salaryPercentBp: data.salaryPercentBp }),
-      },
-      select: USER_SELECT,
+    const prepared: { groupId: string; courseId: string; enrollmentId: string }[] = [];
+    if (requestedGroups?.length) {
+      const ability = defineAbilityFor(actor);
+      for (const groupId of requestedGroups) {
+        prepared.push(await this.groups.validateUnenrollment(groupId, id, ability));
+      }
+      for (const entry of prepared) await this.groups.freezeUnenrollment(entry);
+    }
+
+    const changes = computeChanges(existing, { ...data, password: data.password ? "***" : undefined });
+    const user = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id },
+        data: {
+          ...(data.login && { login: data.login }),
+          ...(passwordHash && { passwordHash }),
+          ...passwordEncChange,
+          ...(data.firstName !== undefined && { firstName: data.firstName }),
+          ...(data.lastName !== undefined && { lastName: data.lastName }),
+          ...(data.phone !== undefined && { phone: data.phone }),
+          ...(data.role !== undefined && { role: data.role }),
+          ...(data.isActive !== undefined && { isActive: data.isActive }),
+          ...(branchId !== undefined && { branchId }),
+          ...(data.salaryPercentBp !== undefined && { salaryPercentBp: data.salaryPercentBp }),
+        },
+        select: USER_SELECT,
+      });
+      for (const entry of prepared) {
+        await this.groups.finishUnenrollment(tx, entry, id, actor, data.unenrollDate!, true);
+      }
+      if (changes) {
+        await this.audit.record({ userId: actor.id, entityType: "User", entityId: id,
+          action: "UPDATE", changes,
+          ...(requestedGroups !== undefined ? { metadata: { unenrollGroupIds: requestedGroups, unenrollDate: data.unenrollDate } } : {}),
+        }, tx);
+      }
+      return updated;
     });
 
-    // Роль и активность guard берёт из БД, но у него кэш на 30 секунд —
-    // сбрасываем, чтобы изменение подействовало сразу (аудит 2.1)
     this.sessionUsers.forget(id);
     if (data.isActive === false || passwordHash) await this.sessions.destroyAllFor(id);
 
-    const changes = computeChanges(existing, { ...data, password: data.password ? "***" : undefined });
-    if (changes) {
-      await this.audit.record({
-        userId: actor.id,
-        entityType: "User",
-        entityId: id,
-        action: "UPDATE",
-        changes,
-      });
-    }
     return withHasTelegram(user);
   }
 

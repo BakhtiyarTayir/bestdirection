@@ -32,6 +32,7 @@ export interface ApiUser {
   hasTelegram: boolean;
   // Ставка зарплаты преподавателя в базисных пунктах — см. updateUser
   salaryPercentBp: number | null;
+  activeGroups: { groupId: string; groupName: string; courseTitle: string; branchName: string }[];
 }
 
 export interface ApiDeactivatedUser {
@@ -163,6 +164,8 @@ export const updateUser = (
     branchId?: string;
     // Ставка зарплаты преподавателя в базисных пунктах; null — снять ставку
     salaryPercentBp?: number | null;
+    unenrollGroupIds?: string[];
+    unenrollDate?: string;
   }
 ): Promise<ApiResult<ApiUser>> => apiFetch(`/users/${id}`, { method: "PATCH", body });
 

@@ -3,7 +3,7 @@ import { AuditService, computeChanges } from "../../common/audit/audit.service";
 import type { SessionUser } from "../../common/auth/session-user";
 import { dateInputToDb, toNoonUtc } from "../../common/date-only";
 import { accessibleWhere, type AppAbility } from "../../common/policies/abilities";
-import { PrismaService } from "../../common/prisma/prisma.service";
+import { PrismaService, type ScopedPrismaClient } from "../../common/prisma/prisma.service";
 import type { Prisma } from "../../../generated/prisma";
 import { BillingLedgerService } from "../billing/billing-ledger.service";
 import { SalaryService } from "../salary/salary.service";
@@ -398,56 +398,12 @@ export class GroupsService {
    * расписания, и неполный месяц ему считается по календарным дням. Поэтому
    * администратор выбирает: снять только группу или отчислить совсем.
    */
-  async removeStudent(groupId: string, studentId: string, alsoUnenroll: boolean, ability: AppAbility, actor: SessionUser) {
+  async removeStudent(groupId: string, studentId: string, alsoUnenroll: boolean, ability: AppAbility, actor: SessionUser, unenrollDate?: string) {
     const group = await this.manageableGroup(ability, groupId);
     // Удалили ли строку физически — решает, что писать в журнал ниже
-    let deleted = false;
-
     if (alsoUnenroll) {
-      const enrollment = await this.prisma.enrollment.findUnique({
-        where: { studentId_courseId: { studentId, courseId: group.courseId } },
-        select: { id: true },
-      });
-      if (!enrollment) throw new NotFoundException("enrollmentNotFound");
-
-      // Собственные закрытые месяцы записи фиксируем ДО отчисления: ленивая
-      // заморозка иначе посчитала бы ещё не зафиксированный месяц уже с
-      // billingEndsAt ниже — ровно то, от чего реестр защищает всегда
-      await this.ledger.freezeClosedMonths({ enrollmentId: enrollment.id });
-      // Зарплата группы — строго после биллинговой заморозки (план зарплат,
-      // 5.4) и до изменения записи: иначе её база за закрытые месяцы задним
-      // числом уменьшится на этого студента — ровно то, от чего
-      // TeacherSalaryAccrual хранит собственный снимок.
-      await this.salary.freezeClosedMonths({ groupId });
-
-      // Заводили по ошибке (ни начислений, ни оплат) — можно стереть, как
-      // раньше. Иначе запись хранит платёжную историю (аудит билинга:
-      // отчисление стирало её вместе с MonthlyCharge через Cascade) —
-      // трогать её физически нельзя.
-      const [chargesCount, paymentsCount] = await Promise.all([
-        this.prisma.monthlyCharge.count({ where: { enrollmentId: enrollment.id } }),
-        this.prisma.payment.count({ where: { studentId, courseId: group.courseId, deletedAt: null } }),
-      ]);
-
-      if (chargesCount === 0 && paymentsCount === 0) {
-        await this.prisma.enrollment.delete({ where: { id: enrollment.id } });
-        deleted = true;
-      } else {
-        // История есть — запись остаётся: снимаем группу, ставим дату
-        // отчисления (начисления дальше не идут — chargeForMonth сама
-        // учитывает billingEndsAt) и unenrolledAt (доступ к курсу закрывает
-        // им, а не связкой groupId+billingEndsAt — см. комментарий у поля в
-        // schema.prisma). Принятые оплаты никуда не денутся — они привязаны
-        // к паре студент+курс, а не к записи.
-        const now = toNoonUtc(new Date().toISOString().slice(0, 10));
-        await this.prisma.enrollment.update({
-          where: { id: enrollment.id },
-          // unenrolledFromGroupId — чтобы начисление отчисленного за текущий
-          // (открытый) месяц осталось в базе зарплаты этой группы, а не
-          // выпало из всех единиц: groupId теперь пуст
-          data: { groupId: null, unenrolledFromGroupId: groupId, billingEndsAt: now, unenrolledAt: now },
-        });
-      }
+      const prepared = await this.prepareUnenrollment(groupId, studentId, ability);
+      await this.prisma.$transaction((tx) => this.finishUnenrollment(tx, prepared, studentId, actor, unenrollDate));
     } else {
       // Запись остаётся без группы — теряет её цену и расписание, поэтому
       // закрытые месяцы фиксируем по нынешней группе
@@ -459,16 +415,64 @@ export class GroupsService {
       });
     }
 
-    await this.audit.record({
-      userId: actor.id,
-      entityType: "Enrollment",
-      entityId: `${studentId}:${group.courseId}`,
-      // Физическое удаление — только когда истории не было; иначе это
-      // отчисление с сохранением записи (unenrolledAt), в журнале — UPDATE
-      action: deleted ? "DELETE" : "UPDATE",
-      metadata: { groupId, alsoUnenroll },
-    });
+    if (!alsoUnenroll) {
+      await this.audit.record({ userId: actor.id, entityType: "Enrollment",
+        entityId: `${studentId}:${group.courseId}`, action: "UPDATE", metadata: { groupId, alsoUnenroll } });
+    }
     return { studentId, alsoUnenroll };
+  }
+
+  /** Проверяет группу и действующую запись до побочных эффектов заморозки. */
+  async validateUnenrollment(groupId: string, studentId: string, ability: AppAbility) {
+    const group = await this.manageableGroup(ability, groupId);
+    const enrollment = await this.prisma.enrollment.findFirst({
+      where: { studentId, courseId: group.courseId, groupId, unenrolledAt: null },
+      select: { id: true },
+    });
+    if (!enrollment) throw new NotFoundException("enrollmentNotFound");
+    return { groupId, courseId: group.courseId, enrollmentId: enrollment.id };
+  }
+
+  /** Замораживает закрытые месяцы перед изменением записи в транзакции. */
+  async freezeUnenrollment(prepared: { groupId: string; enrollmentId: string }) {
+    await this.ledger.freezeClosedMonths({ enrollmentId: prepared.enrollmentId });
+    await this.salary.freezeClosedMonths({ groupId: prepared.groupId });
+  }
+
+  async prepareUnenrollment(groupId: string, studentId: string, ability: AppAbility) {
+    const prepared = await this.validateUnenrollment(groupId, studentId, ability);
+    await this.freezeUnenrollment(prepared);
+    return prepared;
+  }
+
+  /** Общая запись об отчислении: используется и удалением из группы, и отключением ученика. */
+  async finishUnenrollment(
+    tx: Pick<ScopedPrismaClient, "monthlyCharge" | "payment" | "enrollment" | "auditLog">,
+    prepared: { groupId: string; courseId: string; enrollmentId: string },
+    studentId: string,
+    actor: SessionUser,
+    date = new Date().toISOString().slice(0, 10),
+    preserveEnrollment = false
+  ) {
+    const { groupId, courseId, enrollmentId } = prepared;
+    const [chargesCount, paymentsCount] = await Promise.all([
+      tx.monthlyCharge.count({ where: { enrollmentId } }),
+      tx.payment.count({ where: { studentId, courseId, deletedAt: null } }),
+    ]);
+    const deleted = !preserveEnrollment && chargesCount === 0 && paymentsCount === 0;
+    if (deleted) {
+      await tx.enrollment.delete({ where: { id: enrollmentId } });
+    } else {
+      const at = toNoonUtc(date);
+      await tx.enrollment.update({
+        where: { id: enrollmentId, studentId, groupId, unenrolledAt: null },
+        data: { groupId: null, unenrolledFromGroupId: groupId, billingEndsAt: at, unenrolledAt: at },
+      });
+    }
+    await this.audit.record({ userId: actor.id, entityType: "Enrollment",
+      entityId: `${studentId}:${courseId}`, action: deleted ? "DELETE" : "UPDATE",
+      metadata: { groupId, alsoUnenroll: true, unenrollDate: date } }, tx);
+    return { deleted };
   }
 
   async moveStudent(toGroupId: string, studentId: string, courseId: string, ability: AppAbility) {

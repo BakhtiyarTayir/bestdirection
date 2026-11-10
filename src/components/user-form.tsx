@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -51,6 +52,7 @@ interface UserData {
   isActive: boolean;
   branchId?: string | null;
   salaryPercentBp?: number | null;
+  activeGroups?: { groupId: string; groupName: string; courseTitle: string; branchName: string }[];
 }
 
 interface UserFormProps {
@@ -80,6 +82,11 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
   const tErrors = useTranslations("errors");
   const tValidation = useTranslations("validation");
   const [isLoading, setIsLoading] = useState(false);
+  const [deactivationPayload, setDeactivationPayload] = useState<UpdateUserInput | null>(null);
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
+  const [unenrollDate, setUnenrollDate] = useState(() =>
+    new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tashkent", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date())
+  );
   const isEditing = !!user;
 
   // Схема валидации общая с серверными действиями, поэтому в сообщениях лежат
@@ -273,14 +280,23 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
       setConfirmPayload(data);
       return;
     }
+    if (isEditing && user?.role === "STUDENT" && user.isActive && !isActive && user.activeGroups?.length) {
+      setSelectedGroupIds(user.activeGroups.map((group) => group.groupId));
+      setDeactivationPayload(data as UpdateUserInput);
+      return;
+    }
     await handleSubmit(data);
   };
 
-  const handleSubmit = async (data: CreateUserInput | UpdateUserInput) => {
+  const handleSubmit = async (data: CreateUserInput | UpdateUserInput, unenroll?: { ids: string[]; date: string }) => {
     setIsLoading(true);
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const payload: any = isEditing ? { ...data, id: user!.id, isActive } : { ...data };
+      if (unenroll) {
+        payload.unenrollGroupIds = unenroll.ids;
+        payload.unenrollDate = unenroll.date;
+      }
       if (!isEditing && (!enrollmentEnabled || role !== "STUDENT")) {
         delete payload.enrollment;
       }
@@ -789,6 +805,46 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
             </Button>
           </div>
         </form>
+
+        <AlertDialog open={deactivationPayload !== null} onOpenChange={(open) => !open && setDeactivationPayload(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("deactivateGroupsTitle")}</AlertDialogTitle>
+              <AlertDialogDescription>{t("deactivateGroupsDescription")}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="space-y-3">
+              {user?.activeGroups?.map((group) => (
+                <label key={group.groupId} className="flex items-center gap-3 text-sm">
+                  <Checkbox checked={selectedGroupIds.includes(group.groupId)} onCheckedChange={(checked) =>
+                    setSelectedGroupIds((current) => checked === true
+                      ? [...current, group.groupId] : current.filter((id) => id !== group.groupId))
+                  } />
+                  <span>{group.courseTitle} · {group.groupName} · {group.branchName}</span>
+                </label>
+              ))}
+              <div className="space-y-2">
+                <Label htmlFor="unenrollDate">{t("unenrollDate")}</Label>
+                <Input id="unenrollDate" type="date" value={unenrollDate} onChange={(event) => setUnenrollDate(event.target.value)} />
+              </div>
+            </div>
+            <AlertDialogFooter className="flex-wrap gap-2">
+              <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
+              <div className="flex flex-col items-end gap-1">
+                <Button type="button" variant="outline" disabled={isLoading} onClick={() => {
+                  const payload = deactivationPayload;
+                  setDeactivationPayload(null);
+                  if (payload) void handleSubmit(payload);
+                }}>{t("deactivateOnly")}</Button>
+                <span className="text-xs text-destructive">{t("deactivateOnlyWarning")}</span>
+              </div>
+              <Button type="button" disabled={isLoading || !unenrollDate || selectedGroupIds.length === 0} onClick={() => {
+                const payload = deactivationPayload;
+                setDeactivationPayload(null);
+                if (payload) void handleSubmit(payload, { ids: selectedGroupIds, date: unenrollDate });
+              }}>{t("deactivateAndUnenroll")}</Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <AlertDialog open={confirmPayload !== null} onOpenChange={(open) => !open && setConfirmPayload(null)}>
           <AlertDialogContent>

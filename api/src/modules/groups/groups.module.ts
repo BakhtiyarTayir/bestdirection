@@ -13,5 +13,6 @@ import { GroupsService } from "./groups.service";
   imports: [BillingModule, SalaryModule],
   controllers: [GroupsController],
   providers: [GroupsService, GroupStatisticsService],
+  exports: [GroupsService],
 })
 export class GroupsModule {}

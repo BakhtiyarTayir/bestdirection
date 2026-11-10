@@ -87,6 +87,8 @@ export const updateUserSchema = z.object({
   isActive: z.boolean().optional(),
   branchId: branchIdSchema,
   salaryPercentBp: salaryPercentBpSchema,
+  unenrollGroupIds: z.array(z.string().min(1).max(40)).max(100).optional(),
+  unenrollDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "invalidDate").optional(),
 });
 
 export const usersQuerySchema = z.object({ branchId: z.string().max(40).optional() });

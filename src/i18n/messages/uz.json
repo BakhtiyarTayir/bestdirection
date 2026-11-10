@@ -646,6 +646,7 @@
     "submitted": "Yechim o'qituvchiga tekshirish uchun yuborildi"
   },
   "attendance": {
+    "inactiveStudent": "guruhda emas",
     "title": "Davomat",
     "present": "Keldi",
     "absent": "Kelmadi",
@@ -726,6 +727,12 @@
     "selectGroupError": "Guruhni tanlang."
   },
   "users": {
+    "deactivateGroupsTitle": "O‘quvchini o‘chirish",
+    "deactivateGroupsDescription": "O‘qishdan chiqariladigan guruhlarni tanlang.",
+    "unenrollDate": "O‘qishdan chiqarish sanasi",
+    "deactivateOnly": "Faqat o‘chirish",
+    "deactivateOnlyWarning": "Guruhlar bo‘yicha to‘lovlar hisoblanishda davom etadi.",
+    "deactivateAndUnenroll": "O‘chirish va o‘qishdan chiqarish",
     "title": "Foydalanuvchilar",
     "createUser": "Foydalanuvchi qo'shish",
     "editUser": "Foydalanuvchini tahrirlash",
@@ -1178,6 +1185,8 @@
     "selectDate": "Sanani tanlang"
   },
   "errors": {
+    "studentInactive": "O‘quvchi o‘chirilgan",
+    "invalidUnenrollment": "O‘qishdan chiqarish ma’lumotlari noto‘g‘ri",
     "generic": "Xatolik yuz berdi",
     "unexpected": "Kutilmagan xatolik yuz berdi.",
     "somethingWentWrong": "Nimadir noto'g'ri ketdi",

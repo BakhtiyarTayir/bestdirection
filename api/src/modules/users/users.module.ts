@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { BillingModule } from "../billing/billing.module";
 import { NotificationsModule } from "../notifications/notifications.module";
+import { GroupsModule } from "../groups/groups.module";
 import { SalaryModule } from "../salary/salary.module";
 import { HomeworkStatisticsService } from "./homework-statistics.service";
 import { ProfileController } from "./profile.controller";
@@ -16,7 +17,7 @@ import { UsersService } from "./users.service";
 // NotificationsModule: приглашение в Telegram можно отправить по SMS —
 // экспортирует SmsService.
 @Module({
-  imports: [SalaryModule, BillingModule, NotificationsModule],
+  imports: [SalaryModule, BillingModule, GroupsModule, NotificationsModule],
   controllers: [UsersController, ProfileController],
   providers: [UsersService, HomeworkStatisticsService, TelegramLinkService, TelegramInviteService],
 })

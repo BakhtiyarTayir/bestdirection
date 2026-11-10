@@ -98,6 +98,8 @@ export const updateUserSchema = z.object({
   // зарплат, 5.2). Сервер принимает только число или null (dto/user.dto.ts),
   // поэтому в отличие от price/salaryPercentBp группы пустая строка здесь не
   // проходит — форма конвертирует её в null сама (см. UserForm).
+  unenrollGroupIds: z.array(z.string()).optional(),
+  unenrollDate: z.string().optional(),
   salaryPercentBp: z
     .number()
     .int("percentPositive")

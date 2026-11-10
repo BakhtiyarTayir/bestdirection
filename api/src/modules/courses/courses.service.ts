@@ -228,7 +228,7 @@ export class CoursesService {
    */
   async enrolledStudents(courseId: string, groupId?: string) {
     const enrollments = await this.prisma.enrollment.findMany({
-      where: { courseId, ...(groupId ? { groupId } : {}), ...activeEnrollmentFilter() },
+      where: { courseId, ...(groupId ? { groupId } : {}), ...activeEnrollmentFilter(), student: { isActive: true } },
       include: {
         student: {
           select: { id: true, firstName: true, lastName: true, login: true, phone: true, isActive: true },

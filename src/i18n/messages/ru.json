@@ -646,6 +646,7 @@
     "submitted": "Решение отправлено преподавателю на проверку"
   },
   "attendance": {
+    "inactiveStudent": "не в группе",
     "title": "Посещаемость",
     "present": "Присутствует",
     "absent": "Отсутствует",
@@ -726,6 +727,12 @@
     "selectGroupError": "Выберите группу."
   },
   "users": {
+    "deactivateGroupsTitle": "Отключить ученика",
+    "deactivateGroupsDescription": "Выберите группы для отчисления.",
+    "unenrollDate": "Дата отчисления",
+    "deactivateOnly": "Только отключить",
+    "deactivateOnlyWarning": "Начисления по группам продолжатся.",
+    "deactivateAndUnenroll": "Отключить и отчислить",
     "title": "Пользователи",
     "createUser": "Добавить пользователя",
     "editUser": "Редактирование пользователя",
@@ -1178,6 +1185,8 @@
     "selectDate": "Выберите дату"
   },
   "errors": {
+    "studentInactive": "Ученик отключён",
+    "invalidUnenrollment": "Некорректные данные отчисления",
     "generic": "Произошла ошибка",
     "unexpected": "Произошла непредвиденная ошибка.",
     "somethingWentWrong": "Что-то пошло не так",

@@ -41,6 +41,7 @@ interface ExistingRecord {
   studentId: string;
   status: AttendanceStatus;
   note?: string | null;
+  student: { id: string; firstName: string; lastName: string };
 }
 
 interface AttendanceMarkingProps {
@@ -111,6 +112,8 @@ export function AttendanceMarking({
     existingRecords.map((r) => [r.studentId, r])
   );
 
+  const archivedRecords = existingRecords.filter((record) => !students.some((student) => student.id === record.studentId));
+
   const initialRecords = students.map((student) => {
     const existing = existingMap.get(student.id);
     return {
@@ -172,6 +175,7 @@ export function AttendanceMarking({
   const errorText = (code?: string) => {
     if (code === "onlyAdminCanChangeTeacher") return t("onlyAdminCanChangeTeacher");
     if (code === "teacherNotFound") return t("teacherNotFound");
+    if (code && tErrors.has(code)) return tErrors(code);
     return code ?? t("saveFailed");
   };
 
@@ -236,7 +240,7 @@ export function AttendanceMarking({
     });
   };
 
-  if (students.length === 0) {
+  if (students.length === 0 && archivedRecords.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
         {t("noStudentsEnrolled")}
@@ -396,6 +400,17 @@ export function AttendanceMarking({
                 </TableRow>
               );
             })}
+            {archivedRecords.map((record, index) => (
+              <TableRow key={record.id}>
+                <TableCell className="text-muted-foreground">{students.length + index + 1}</TableCell>
+                <TableCell className="font-medium">
+                  {record.student.lastName} {record.student.firstName}{" "}
+                  <Badge variant="secondary">{t("inactiveStudent")}</Badge>
+                </TableCell>
+                <TableCell>{STATUS_OPTIONS.find((option) => option.value === record.status)?.label}</TableCell>
+                <TableCell>{record.note || "—"}</TableCell>
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
       </div>

@@ -215,6 +215,13 @@ export class AttendanceService {
       select: { studentId: true, status: true },
     });
     const previousStatusByStudent = new Map(previousRecords.map((r) => [r.studentId, r.status]));
+    const newStudentIds = [...finalStatusByStudent.keys()].filter((studentId) => !previousStatusByStudent.has(studentId));
+    if (newStudentIds.length > 0) {
+      const inactive = await this.prisma.user.findFirst({
+        where: { id: { in: newStudentIds }, isActive: false }, select: { id: true },
+      });
+      if (inactive) throw new BadRequestException("studentInactive");
+    }
     const newlyAbsentStudentIds = [...finalStatusByStudent.entries()]
       .filter(([studentId, status]) => status === "ABSENT" && previousStatusByStudent.get(studentId) !== "ABSENT")
       .map(([studentId]) => studentId);
@@ -354,12 +361,21 @@ export class AttendanceService {
     });
 
     const enrollments = await this.prisma.enrollment.findMany({
-      where: { courseId, ...(groupId ? { groupId } : {}) },
+      where: { courseId, ...(groupId ? { groupId } : {}), ...activeEnrollmentFilter(), student: { isActive: true } },
       include: { student: { select: { id: true, firstName: true, lastName: true } } },
       orderBy: { student: { firstName: "asc" } },
     });
 
-    const students = enrollments.map((enrollment) => enrollment.student);
+    const studentsById = new Map<string, (typeof enrollments)[number]["student"]>();
+    for (const enrollment of enrollments) {
+      if (enrollment.unenrolledAt === null) {
+        studentsById.set(enrollment.student.id, enrollment.student);
+      }
+    }
+    for (const session of sessions) {
+      for (const record of session.records) studentsById.set(record.studentId, record.student);
+    }
+    const students = [...studentsById.values()].sort((a, b) => a.firstName.localeCompare(b.firstName));
     const matrix = students.map((student) => {
       const attendance: Record<string, { status: AttendanceStatus; note?: string | null }> = {};
       for (const session of sessions) {
