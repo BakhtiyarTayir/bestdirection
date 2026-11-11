@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import type { SessionUser } from "../../common/auth/session-user";
 import { toNoonUtc } from "../../common/date-only";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { BillingLedgerService } from "../billing/billing-ledger.service";
 import { BillingService } from "../billing/billing.service";
 import {
   addMonths,
@@ -42,6 +43,7 @@ export class AdminDashboardService {
     private readonly prismaService: PrismaService,
     private readonly finance: FinanceService,
     private readonly billing: BillingService,
+    private readonly ledger: BillingLedgerService,
     private readonly salary: SalaryService,
     private readonly hosting: HostingService
   ) {}
@@ -165,7 +167,7 @@ export class AdminDashboardService {
 
   /** 1.3 «Требует внимания»: пять счётчиков, нулевые прячет уже web. */
   private async attentionCounts(branchId?: string) {
-    const [pendingRequests, uncontactedLeads, studentsWithoutGroup, groups] = await Promise.all([
+    const [pendingRequests, uncontactedLeads, studentsWithoutGroup, groups, attendingWithoutBilling] = await Promise.all([
       // У заявки на курс нет филиала (как и у CourseLead ниже) — при фильтре
       // по филиалу этот пункт не фильтруется (план, 1.3)
       this.prisma.enrollmentRequest.count({ where: { status: "PENDING" } }),
@@ -197,6 +199,7 @@ export class AdminDashboardService {
           course: { select: { teacherId: true, slug: true } },
         },
       }),
+      this.ledger.attendingAfterBillingEnd(branchId),
     ]);
 
     const [groupsWithoutRate, groupsWithIncompleteJournal, groupsOverPlan] = await Promise.all([
@@ -207,6 +210,7 @@ export class AdminDashboardService {
 
     return {
       pendingRequests,
+      attendingWithoutBilling,
       uncontactedLeads,
       studentsWithoutGroup,
       groupsWithoutRate,

@@ -50,6 +50,7 @@ export interface ApiEnrolledStudent {
   phone: string | null;
   isActive: boolean;
   enrolledAt: string;
+  billingEndsAt: string | null;
 }
 
 export interface ApiCatalogCourse {

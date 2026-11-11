@@ -236,7 +236,7 @@ export class CoursesService {
       },
       orderBy: { createdAt: "asc" },
     });
-    return enrollments.map((enrollment) => ({ ...enrollment.student, enrolledAt: enrollment.createdAt }));
+    return enrollments.map((enrollment) => ({ ...enrollment.student, enrolledAt: enrollment.createdAt, billingEndsAt: enrollment.billingEndsAt }));
   }
 
   // enrollStudent/unenrollStudent/availableStudents отсюда убраны (план

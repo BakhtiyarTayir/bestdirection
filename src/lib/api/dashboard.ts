@@ -43,6 +43,7 @@ export interface ApiAdminDashboardToday {
 
 export interface ApiAdminDashboardAttention {
   pendingRequests: number;
+  attendingWithoutBilling: { enrollmentId: string; studentId: string; studentName: string; courseTitle: string; groupName: string; billingEndsAt: string; lastAttendanceAt: string }[];
   uncontactedLeads: number;
   studentsWithoutGroup: number;
   groupsWithoutRate: number;

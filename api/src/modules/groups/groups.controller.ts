@@ -12,6 +12,7 @@ import {
   RemoveStudentQueryDto,
   UpdateGroupDto,
 } from "./dto/group.dto";
+import { UpdateEnrollmentBillingDto } from "../billing/dto/billing.dto";
 import { GroupStatisticsService } from "./group-statistics.service";
 import { GroupsService } from "./groups.service";
 
@@ -123,6 +124,13 @@ export class GroupsController {
     @CurrentUser() actor: SessionUser
   ) {
     return this.groups.removeStudent(id, studentId, query.alsoUnenroll, ability, actor);
+  }
+
+  @CheckPolicies((ability) => ability.can("manage", "Billing") && ability.can("update", "Group"))
+  @Post(":id/students/:studentId/billing-unenrollment")
+  updateBillingAndUnenroll(@Param("id") id: string, @Param("studentId") studentId: string,
+    @Body() body: UpdateEnrollmentBillingDto, @CurrentAbility() ability: AppAbility, @CurrentUser() actor: SessionUser) {
+    return this.groups.updateBillingAndUnenroll(id, studentId, body, ability, actor);
   }
 
   /** Перевод ученика в эту группу из другой (или из «без группы»). */

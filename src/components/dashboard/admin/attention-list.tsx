@@ -18,7 +18,7 @@ export async function AttentionList({ attention, branchFiltered }: AttentionList
   // филиалу (Enrollment и EnrollmentRequest своего branchId не хранят) —
   // фильтр по филиалу их не сужает, поэтому при выбранном филиале это стоит
   // явно пометить, чтобы число не выглядело ошибкой фильтра
-  const items: { key: Exclude<keyof ApiAdminDashboardAttention, "groupsOverPlan">; href: string; branchless: boolean }[] = [
+  const items: { key: Exclude<keyof ApiAdminDashboardAttention, "groupsOverPlan" | "attendingWithoutBilling">; href: string; branchless: boolean }[] = [
     { key: "pendingRequests", href: "/courses/requests", branchless: true },
     { key: "uncontactedLeads", href: "/admin/leads", branchless: true },
     { key: "studentsWithoutGroup", href: "/students", branchless: true },
@@ -26,7 +26,7 @@ export async function AttentionList({ attention, branchFiltered }: AttentionList
     { key: "groupsWithIncompleteJournal", href: "/groups", branchless: false },
   ];
 
-  const messageKey: Record<Exclude<keyof ApiAdminDashboardAttention, "groupsOverPlan">, string> = {
+  const messageKey: Record<Exclude<keyof ApiAdminDashboardAttention, "groupsOverPlan" | "attendingWithoutBilling">, string> = {
     pendingRequests: "attentionPendingRequests",
     uncontactedLeads: "attentionUncontactedLeads",
     studentsWithoutGroup: "attentionStudentsWithoutGroup",
@@ -43,7 +43,7 @@ export async function AttentionList({ attention, branchFiltered }: AttentionList
         <CardTitle className="text-base font-semibold">{t("attentionTitle")}</CardTitle>
       </CardHeader>
       <CardContent>
-        {visible.length === 0 && overPlan.length === 0 ? (
+        {visible.length === 0 && overPlan.length === 0 && attention.attendingWithoutBilling.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("attentionEmpty")}</p>
         ) : (
           <ul className="space-y-2">
@@ -58,6 +58,13 @@ export async function AttentionList({ attention, branchFiltered }: AttentionList
                 </Link>
               </li>
             ))}
+            {attention.attendingWithoutBilling.length > 0 && <li>
+              <details><summary className="cursor-pointer text-sm">{t("attentionAttendingWithoutBilling", { count: attention.attendingWithoutBilling.length })}</summary>
+                <ul className="ml-6 mt-2 space-y-1 text-sm">{attention.attendingWithoutBilling.map((entry) =>
+                  <li key={entry.enrollmentId}><Link className="underline" href={`/payments/students/${entry.studentId}`}>{entry.studentName}</Link>
+                    {` · ${entry.courseTitle} · ${entry.groupName} · ${t("attentionBillingEndDate")}: ${entry.billingEndsAt.split("-").reverse().join(".")} · ${t("attentionLastAttendance")}: ${entry.lastAttendanceAt.split("-").reverse().join(".")}`}</li>)}</ul>
+              </details>
+            </li>}
             {/* По строке на группу: лишнее занятие не оплачивается, пока на нём не стоит «Отработка» */}
             {overPlan.map((item) => (
               <li key={item.groupId}>

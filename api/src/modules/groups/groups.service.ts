@@ -5,6 +5,8 @@ import { dateInputToDb, toNoonUtc } from "../../common/date-only";
 import { accessibleWhere, type AppAbility } from "../../common/policies/abilities";
 import { PrismaService, type ScopedPrismaClient } from "../../common/prisma/prisma.service";
 import type { Prisma } from "../../../generated/prisma";
+import { BadRequestException } from "@nestjs/common";
+import type { UpdateEnrollmentBillingDto } from "../billing/dto/billing.dto";
 import { BillingLedgerService } from "../billing/billing-ledger.service";
 import { SalaryService } from "../salary/salary.service";
 import type { CreateGroupDto, UpdateGroupDto } from "./dto/group.dto";
@@ -420,6 +422,30 @@ export class GroupsService {
         entityId: `${studentId}:${group.courseId}`, action: "UPDATE", metadata: { groupId, alsoUnenroll } });
     }
     return { studentId, alsoUnenroll };
+  }
+
+  /** Save billing and leave the group in one transaction; freeze snapshots beforehand. */
+  async updateBillingAndUnenroll(groupId: string, studentId: string, data: UpdateEnrollmentBillingDto, ability: AppAbility, actor: SessionUser) {
+    if (!data.billingEndsAt) throw new BadRequestException("billingEndsAtRequired");
+    if (data.startsAt && data.billingEndsAt < data.startsAt) throw new BadRequestException("endBeforeStart");
+    const prepared = await this.validateUnenrollment(groupId, studentId, ability);
+    const existing = await this.prisma.enrollment.findUniqueOrThrow({ where: { id: prepared.enrollmentId },
+      select: { startsAt: true, billingEndsAt: true, priceOverride: true, firstMonthCharge: true } });
+    await this.freezeUnenrollment(prepared);
+    await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.enrollment.update({ where: { id: prepared.enrollmentId, groupId, unenrolledAt: null },
+        data: { startsAt: data.startsAt ? toNoonUtc(data.startsAt) : null,
+          priceOverride: data.priceOverride ?? null, firstMonthCharge: data.firstMonthCharge ?? null } });
+      await this.audit.record({ userId: actor.id, entityType: "Enrollment", entityId: prepared.enrollmentId,
+        action: "UPDATE", changes: {
+          startsAt: { old: existing.startsAt, new: updated.startsAt },
+          billingEndsAt: { old: existing.billingEndsAt, new: toNoonUtc(data.billingEndsAt!) },
+          priceOverride: { old: existing.priceOverride, new: updated.priceOverride },
+          firstMonthCharge: { old: existing.firstMonthCharge, new: updated.firstMonthCharge },
+        } }, tx);
+      await this.finishUnenrollment(tx, prepared, studentId, actor, data.billingEndsAt!, true);
+    });
+    return { ok: true };
   }
 
   /** Проверяет группу и действующую запись до побочных эффектов заморозки. */

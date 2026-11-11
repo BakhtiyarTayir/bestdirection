@@ -119,6 +119,7 @@ export default async function SessionPage({ params, searchParams }: SessionPageP
         <CardContent>
           <AttendanceMarking
             sessionId={sessionId}
+            sessionDate={currentSession.date}
             students={students}
             existingRecords={existingRecords}
             teacher={currentSession.teacher}

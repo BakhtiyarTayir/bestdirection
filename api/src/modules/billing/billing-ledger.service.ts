@@ -142,6 +142,43 @@ export interface LedgerFilters {
 export class BillingLedgerService {
   constructor(private readonly prismaService: PrismaService) {}
 
+  /** Active group members who attended after their final billable day. */
+  async attendingAfterBillingEnd(branchId?: string) {
+    const enrollments = await this.prisma.enrollment.findMany({
+      where: {
+        unenrolledAt: null, groupId: { not: null }, billingEndsAt: { not: null },
+        student: { isActive: true, deletedAt: null }, course: { deletedAt: null },
+        group: branchId ? { branchId } : { isNot: null },
+      },
+      select: {
+        id: true, studentId: true, courseId: true, billingEndsAt: true,
+        student: { select: { firstName: true, lastName: true } },
+        course: { select: { title: true } },
+        group: { select: { id: true, name: true } },
+      },
+    });
+    if (!enrollments.length) return [];
+    const records = await this.prisma.attendanceRecord.findMany({
+      where: {
+        studentId: { in: enrollments.map((entry) => entry.studentId) },
+        status: { in: ["PRESENT", "LATE"] },
+      },
+      select: { studentId: true, session: { select: { date: true, courseId: true, groupId: true } } },
+      orderBy: { session: { date: "desc" } },
+    });
+    return enrollments.flatMap((entry) => {
+      const latest = records.find((record) => record.studentId === entry.studentId
+        && record.session.courseId === entry.courseId
+        && record.session.groupId === entry.group?.id
+        && record.session.date.toISOString().slice(0, 10) > entry.billingEndsAt!.toISOString().slice(0, 10));
+      return latest ? [{ enrollmentId: entry.id, studentId: entry.studentId,
+        studentName: `${entry.student.lastName} ${entry.student.firstName}`,
+        courseTitle: entry.course.title, groupName: entry.group!.name,
+        billingEndsAt: entry.billingEndsAt!.toISOString().slice(0, 10),
+        lastAttendanceAt: latest.session.date.toISOString().slice(0, 10) }] : [];
+    });
+  }
+
   private get prisma() {
     return this.prismaService.prisma;
   }

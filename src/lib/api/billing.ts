@@ -51,6 +51,7 @@ export interface ApiDebtors {
 
 export interface ApiEnrollmentBilling {
   id: string;
+  studentId: string; groupId: string | null; unenrolledAt: string | null;
   studentName: string;
   courseTitle: string;
   groupName: string | null;
@@ -188,6 +189,10 @@ export const updateEnrollmentBilling = (
   enrollmentId: string,
   body: { startsAt?: string; billingEndsAt?: string; priceOverride?: number; firstMonthCharge?: number }
 ) => apiFetch<{ ok: true }>(`/billing/enrollments/${enrollmentId}`, { method: "PATCH", body });
+
+export const updateBillingAndUnenroll = (groupId: string, studentId: string,
+  body: { startsAt?: string; billingEndsAt?: string; priceOverride?: number; firstMonthCharge?: number }) =>
+  apiFetch<{ ok: true }>(`/groups/${groupId}/students/${studentId}/billing-unenrollment`, { method: "POST", body });
 
 export const previewMonthRecalc = (enrollmentId: string, month: string) =>
   apiFetch<ApiRecalcPreview>(`/billing/enrollments/${enrollmentId}/recalc`, { query: { month } });

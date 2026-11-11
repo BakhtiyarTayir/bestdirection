@@ -232,6 +232,7 @@ export class BillingService {
       where: { id: enrollmentId },
       select: {
         id: true,
+        studentId: true, groupId: true, unenrolledAt: true,
         createdAt: true,
         startsAt: true,
         billingEndsAt: true,
@@ -265,6 +266,7 @@ export class BillingService {
 
     return {
       id: enrollment.id,
+      studentId: enrollment.studentId, groupId: enrollment.groupId, unenrolledAt: enrollment.unenrolledAt?.toISOString() ?? null,
       studentName: `${enrollment.student.lastName} ${enrollment.student.firstName}`,
       courseTitle: enrollment.course.title,
       groupName: enrollment.group?.name ?? null,

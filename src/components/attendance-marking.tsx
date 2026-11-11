@@ -34,6 +34,7 @@ interface Student {
   firstName: string;
   lastName: string;
   login: string | null;
+  billingEndsAt: string | null;
 }
 
 interface ExistingRecord {
@@ -46,6 +47,7 @@ interface ExistingRecord {
 
 interface AttendanceMarkingProps {
   sessionId: string;
+  sessionDate: string;
   students: Student[];
   existingRecords: ExistingRecord[];
   /** Кто числится ведущим занятие; null — преподаватель не определён */
@@ -72,6 +74,7 @@ interface StudentRecord {
 
 export function AttendanceMarking({
   sessionId,
+  sessionDate,
   students,
   existingRecords,
   teacher,
@@ -368,6 +371,8 @@ export function AttendanceMarking({
                   </TableCell>
                   <TableCell className="font-medium">
                     {student.lastName} {student.firstName}
+                    {student.billingEndsAt && student.billingEndsAt.slice(0, 10) < sessionDate.slice(0, 10) &&
+                      <Badge variant="outline" className="ml-2">{t("billingStopped", { date: student.billingEndsAt.slice(0, 10).split("-").reverse().join(".") })}</Badge>}
                   </TableCell>
                   <TableCell>
                     <Select

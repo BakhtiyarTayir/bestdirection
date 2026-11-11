@@ -19,8 +19,9 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import {
   getEnrollmentBilling,
-  updateEnrollmentBilling,
+  updateEnrollmentBilling, updateBillingAndUnenroll,
 } from "@/lib/api/billing";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from "@/components/ui/alert-dialog";
 import { refreshBadges } from "@/lib/badge-refresh";
 
 interface BillingDialogProps {
@@ -34,6 +35,7 @@ interface BillingData {
   studentName: string;
   courseTitle: string;
   groupName: string | null;
+  studentId: string; groupId: string | null; unenrolledAt: string | null;
   groupPrice: number | null;
   startsAt: string;
   startsAtExplicit: boolean;
@@ -65,6 +67,7 @@ export function BillingDialog({
   const [data, setData] = useState<BillingData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [choiceOpen, setChoiceOpen] = useState(false);
 
   const [startsAt, setStartsAt] = useState<Date | undefined>();
   const [endsAt, setEndsAt] = useState<Date | undefined>();
@@ -120,7 +123,7 @@ export function BillingDialog({
     return null;
   };
 
-  const handleSave = async () => {
+  const handleSave = async (choice?: "left" | "pause") => {
     const priceValue = priceOverride.trim() === "" ? undefined : Number(priceOverride);
     const firstValue =
       firstMonthCharge.trim() === "" ? undefined : Number(firstMonthCharge);
@@ -133,9 +136,18 @@ export function BillingDialog({
       return;
     }
 
+    if (!choice && data?.groupId && !data.unenrolledAt && endsAt
+      && format(endsAt, "yyyy-MM-dd") !== data.billingEndsAt?.slice(0, 10)) {
+      setChoiceOpen(true);
+      return;
+    }
+    setChoiceOpen(false);
     setIsSaving(true);
     try {
-      const result = await updateEnrollmentBilling(enrollmentId, {
+      const save = choice === "left" && data?.groupId
+        ? (body: Parameters<typeof updateEnrollmentBilling>[1]) => updateBillingAndUnenroll(data.groupId!, data.studentId, body)
+        : (body: Parameters<typeof updateEnrollmentBilling>[1]) => updateEnrollmentBilling(enrollmentId, body);
+      const result = await save({
         startsAt: startsAt ? format(startsAt, "yyyy-MM-dd") : undefined,
         billingEndsAt: endsAt ? format(endsAt, "yyyy-MM-dd") : undefined,
         priceOverride: priceValue,
@@ -165,7 +177,15 @@ export function BillingDialog({
     }
   };
 
-  return (
+  return (<>
+    <AlertDialog open={choiceOpen} onOpenChange={setChoiceOpen}>
+      <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{t("billingEndChoiceTitle")}</AlertDialogTitle></AlertDialogHeader>
+        <AlertDialogFooter>
+          <Button variant="outline" onClick={() => setChoiceOpen(false)}>{tCommon("cancel")}</Button>
+          <Button variant="outline" disabled={isSaving} onClick={() => void handleSave("pause")}>{t("billingEndPause")}</Button>
+          <Button disabled={isSaving} onClick={() => void handleSave("left")}>{t("billingEndLeft")}</Button>
+        </AlertDialogFooter></AlertDialogContent>
+    </AlertDialog>
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -264,11 +284,11 @@ export function BillingDialog({
           <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
             {tCommon("cancel")}
           </Button>
-          <Button type="button" onClick={handleSave} disabled={isSaving || isLoading}>
+          <Button type="button" onClick={() => void handleSave()} disabled={isSaving || isLoading}>
             {isSaving ? tCommon("saving") : tCommon("save")}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  </>);
 }
