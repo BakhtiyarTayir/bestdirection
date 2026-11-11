@@ -1189,6 +1189,7 @@
     "selectDate": "Sanani tanlang"
   },
   "errors": {
+    "unenrollDateInFuture": "Guruhdan chiqarish sanasi hali kelmagan",
     "studentInactive": "O‘quvchi o‘chirilgan",
     "invalidUnenrollment": "O‘qishdan chiqarish ma’lumotlari noto‘g‘ri",
     "generic": "Xatolik yuz berdi",
@@ -1781,6 +1782,9 @@
     "startsAtHint": "Shu sanadan hisob boshlanadi. Bo'sh bo'lsa – guruh boshlanish sanasi, u ham bo'lmasa – kursga yozilgan sana olinadi.",
     "billingEndsAt": "Oxirgi to'lanadigan kun",
     "billingEndChoiceRequired": "Saqlashdan oldin tanlang.",
+    "billingEndLeftFuture": "Bu kun hali kelmagan – guruhdan chiqarish shu kuni mumkin bo'ladi. Hozircha pauza sifatida saqlanadi.",
+    "billingEndUndo": "Bekor qilish – sanani qaytarish",
+    "clearDate": "Sanani tozalash",
     "billingEndChoiceTitle": "Talaba ketdimi yoki pauzadami?",
     "billingEndLeft": "Ketdi – guruhdan chiqarish",
     "billingEndPause": "Pauza – guruhda qoladi",

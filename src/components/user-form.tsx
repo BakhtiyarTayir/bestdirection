@@ -84,9 +84,11 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
   const [isLoading, setIsLoading] = useState(false);
   const [deactivationPayload, setDeactivationPayload] = useState<UpdateUserInput | null>(null);
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
-  const [unenrollDate, setUnenrollDate] = useState(() =>
+  // Сегодня по Ташкенту — и дата по умолчанию, и предел: будущей датой не отчисляем
+  const [todayTashkent] = useState(() =>
     new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tashkent", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date())
   );
+  const [unenrollDate, setUnenrollDate] = useState(todayTashkent);
   const isEditing = !!user;
 
   // Схема валидации общая с серверными действиями, поэтому в сообщениях лежат
@@ -824,7 +826,7 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
               ))}
               <div className="space-y-2">
                 <Label htmlFor="unenrollDate">{t("unenrollDate")}</Label>
-                <Input id="unenrollDate" type="date" value={unenrollDate} onChange={(event) => setUnenrollDate(event.target.value)} />
+                <Input id="unenrollDate" type="date" max={todayTashkent} value={unenrollDate} onChange={(event) => setUnenrollDate(event.target.value)} />
               </div>
             </div>
             <AlertDialogFooter className="flex-wrap gap-2">
@@ -837,7 +839,7 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
                 }}>{t("deactivateOnly")}</Button>
                 <span className="text-xs text-destructive">{t("deactivateOnlyWarning")}</span>
               </div>
-              <Button type="button" disabled={isLoading || !unenrollDate || selectedGroupIds.length === 0} onClick={() => {
+              <Button type="button" disabled={isLoading || !unenrollDate || unenrollDate > todayTashkent || selectedGroupIds.length === 0} onClick={() => {
                 const payload = deactivationPayload;
                 setDeactivationPayload(null);
                 if (payload) void handleSubmit(payload, { ids: selectedGroupIds, date: unenrollDate });

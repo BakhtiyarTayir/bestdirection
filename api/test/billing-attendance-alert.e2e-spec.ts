@@ -66,6 +66,10 @@ describe("посещение после остановки начислений"
     const path = `/groups/${groupId}/students/${ids.left}/billing-unenrollment`;
     const failed = await post(path, { billingEndsAt: "2026-09-01", startsAt: "2026-10-01", priceOverride: 80000 });
     expect(failed.status).toBe(400);
+    // Будущей датой не отчисляем: группа снялась бы сразу
+    const future = await post(path, { billingEndsAt: "2099-01-01", startsAt: "2026-10-01" });
+    expect(future.status).toBe(400);
+    expect(JSON.stringify(future.body)).toContain("unenrollDateInFuture");
     const original = await testDb().enrollment.findUniqueOrThrow({ where: { studentId_courseId: { studentId: ids.left, courseId } } });
     expect(original.priceOverride).toBeNull();
     expect(original.groupId).toBe(groupId);

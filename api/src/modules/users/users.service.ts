@@ -18,6 +18,7 @@ import { generatePassword, openPassword, sealPassword } from "../../common/secur
 import { withHasTelegram } from "../../common/telegram/with-has-telegram";
 import { BillingLedgerService, studentListWhere, type StudentListFilters } from "../billing/billing-ledger.service";
 import { GroupsService } from "../groups/groups.service";
+import { currentDateKey } from "../billing/domain/billing";
 import { SalaryService } from "../salary/salary.service";
 import type { CreateUserDto, UpdateProfileDto, UpdateUserDto } from "./dto/user.dto";
 
@@ -320,7 +321,9 @@ export class UsersService {
           requestedGroups === undefined || data.unenrollDate === undefined ||
           new Set(requestedGroups).size !== requestedGroups.length ||
           (!Number.isFinite(Date.parse(`${data.unenrollDate}T12:00:00.000Z`)) ||
-            new Date(`${data.unenrollDate}T12:00:00.000Z`).toISOString().slice(0, 10) !== data.unenrollDate)) {
+            new Date(`${data.unenrollDate}T12:00:00.000Z`).toISOString().slice(0, 10) !== data.unenrollDate) ||
+          // Будущей датой отчислять нельзя: отчисление снимает группу сразу
+          data.unenrollDate > currentDateKey()) {
         throw new BadRequestException("invalidUnenrollment");
       }
     }

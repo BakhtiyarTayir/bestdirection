@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/ui/date-picker";
+import { X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -128,6 +129,15 @@ export function BillingDialog({
     setEndChoice(null);
   };
 
+  // Отменить правку даты — вернуть то, что было сохранено
+  const resetEndsAt = () => changeEndsAt(data?.billingEndsAt ? new Date(data.billingEndsAt) : undefined);
+
+  // Отчисление срабатывает сразу, поэтому «Ушёл» — только для наступившего дня
+  const todayTashkent = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Asia/Tashkent", year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(new Date());
+  const endsInFuture = Boolean(endsAt && format(endsAt, "yyyy-MM-dd") > todayTashkent);
+
   // Выбор нужен, только когда у ученика в группе меняют дату окончания на новую
   const needsEndChoice = Boolean(
     data?.groupId && !data.unenrolledAt && endsAt &&
@@ -135,7 +145,7 @@ export function BillingDialog({
   );
 
   const handleSave = async () => {
-    const choice = needsEndChoice ? endChoice : null;
+    const choice = needsEndChoice ? (endsInFuture ? "pause" : endChoice) : null;
     const priceValue = priceOverride.trim() === "" ? undefined : Number(priceOverride);
     const firstValue =
       firstMonthCharge.trim() === "" ? undefined : Number(firstMonthCharge);
@@ -169,7 +179,11 @@ export function BillingDialog({
         toast({
           title: tErrors("error"),
           description:
-            result.error === "endBeforeStart" ? t("endBeforeStart") : t("billingSaveFailed"),
+            result.error === "endBeforeStart"
+                ? t("endBeforeStart")
+                : result.error && tErrors.has(result.error)
+                  ? tErrors(result.error)
+                  : t("billingSaveFailed"),
           variant: "destructive",
         });
       }
@@ -222,7 +236,24 @@ export function BillingDialog({
               </div>
               <div className="space-y-2">
                 <Label>{t("billingEndsAt")}</Label>
-                <DatePicker value={endsAt} onChange={changeEndsAt} />
+                <div className="flex gap-2">
+                  <div className="min-w-0 flex-1">
+                    <DatePicker value={endsAt} onChange={changeEndsAt} />
+                  </div>
+                  {endsAt && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="shrink-0"
+                      aria-label={t("clearDate")}
+                      title={t("clearDate")}
+                      onClick={() => changeEndsAt(undefined)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground">{t("billingEndsAtHint")}</p>
               </div>
             </div>
@@ -245,14 +276,20 @@ export function BillingDialog({
                     variant={endChoice === "left" ? "default" : "outline"}
                     className="h-auto whitespace-normal py-2"
                     aria-pressed={endChoice === "left"}
+                    disabled={endsInFuture}
                     onClick={() => setEndChoice("left")}
                   >
                     {t("billingEndLeft")}
                   </Button>
                 </div>
-                {!endChoice && (
-                  <p className="text-xs text-muted-foreground">{t("billingEndChoiceRequired")}</p>
+                {endsInFuture ? (
+                  <p className="text-xs text-muted-foreground">{t("billingEndLeftFuture")}</p>
+                ) : (
+                  !endChoice && <p className="text-xs text-muted-foreground">{t("billingEndChoiceRequired")}</p>
                 )}
+                <Button type="button" variant="link" size="sm" className="h-auto px-0" onClick={resetEndsAt}>
+                  {t("billingEndUndo")}
+                </Button>
               </div>
             )}
 
@@ -312,7 +349,7 @@ export function BillingDialog({
           <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
             {tCommon("cancel")}
           </Button>
-          <Button type="button" onClick={() => void handleSave()} disabled={isSaving || isLoading || (needsEndChoice && !endChoice)}>
+          <Button type="button" onClick={() => void handleSave()} disabled={isSaving || isLoading || (needsEndChoice && !endsInFuture && !endChoice)}>
             {isSaving ? tCommon("saving") : tCommon("save")}
           </Button>
         </DialogFooter>

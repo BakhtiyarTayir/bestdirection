@@ -89,6 +89,14 @@ describe("отключённые ученики и посещаемость", ()
     expect(enrollment?.unenrolledAt).toBeNull();
   });
 
+  it("будущей датой не отчисляет и не отключает", async () => {
+    const res = await patch(`/users/${students.rollback}`, { isActive: false, unenrollGroupIds: [groupId], unenrollDate: "2099-01-01" });
+    expect(res.status).toBe(400);
+    expect((await testDb().user.findUnique({ where: { id: students.rollback } }))?.isActive).toBe(true);
+    const enrollment = await testDb().enrollment.findUnique({ where: { studentId_courseId: { studentId: students.rollback, courseId } } });
+    expect(enrollment?.groupId).toBe(groupId);
+  });
+
   it("без выбранных групп только отключает", async () => {
     const res = await patch(`/users/${students.onlyInactive}`, { isActive: false });
     expect(res.status).toBe(200);

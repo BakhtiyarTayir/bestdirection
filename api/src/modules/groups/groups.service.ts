@@ -8,6 +8,7 @@ import type { Prisma } from "../../../generated/prisma";
 import { BadRequestException } from "@nestjs/common";
 import type { UpdateEnrollmentBillingDto } from "../billing/dto/billing.dto";
 import { BillingLedgerService } from "../billing/billing-ledger.service";
+import { currentDateKey } from "../billing/domain/billing";
 import { SalaryService } from "../salary/salary.service";
 import type { CreateGroupDto, UpdateGroupDto } from "./dto/group.dto";
 
@@ -427,6 +428,9 @@ export class GroupsService {
   /** Save billing and leave the group in one transaction; freeze snapshots beforehand. */
   async updateBillingAndUnenroll(groupId: string, studentId: string, data: UpdateEnrollmentBillingDto, ability: AppAbility, actor: SessionUser) {
     if (!data.billingEndsAt) throw new BadRequestException("billingEndsAtRequired");
+    // Отчисление срабатывает сразу (groupId снимается сейчас) — будущей датой
+    // ученик пропал бы из группы и посещаемости раньше времени
+    if (data.billingEndsAt > currentDateKey()) throw new BadRequestException("unenrollDateInFuture");
     if (data.startsAt && data.billingEndsAt < data.startsAt) throw new BadRequestException("endBeforeStart");
     const prepared = await this.validateUnenrollment(groupId, studentId, ability);
     const existing = await this.prisma.enrollment.findUniqueOrThrow({ where: { id: prepared.enrollmentId },
