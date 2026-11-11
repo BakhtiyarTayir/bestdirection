@@ -269,7 +269,7 @@ export function BillingDialog({
                     aria-pressed={endChoice === "pause"}
                     onClick={() => setEndChoice("pause")}
                   >
-                    {t("billingEndPause")}
+                    {t("billingEndPause", { date: endsAt ? format(endsAt, "dd.MM.yyyy") : "" })}
                   </Button>
                   <Button
                     type="button"
