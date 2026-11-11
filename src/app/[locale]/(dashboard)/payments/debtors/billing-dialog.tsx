@@ -21,7 +21,6 @@ import {
   getEnrollmentBilling,
   updateEnrollmentBilling, updateBillingAndUnenroll,
 } from "@/lib/api/billing";
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogFooter } from "@/components/ui/alert-dialog";
 import { refreshBadges } from "@/lib/badge-refresh";
 
 interface BillingDialogProps {
@@ -67,7 +66,8 @@ export function BillingDialog({
   const [data, setData] = useState<BillingData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [choiceOpen, setChoiceOpen] = useState(false);
+  // «Ушёл или пауза» — спрашиваем сразу при смене даты окончания, прямо в форме
+  const [endChoice, setEndChoice] = useState<"left" | "pause" | null>(null);
 
   const [startsAt, setStartsAt] = useState<Date | undefined>();
   const [endsAt, setEndsAt] = useState<Date | undefined>();
@@ -123,7 +123,19 @@ export function BillingDialog({
     return null;
   };
 
-  const handleSave = async (choice?: "left" | "pause") => {
+  const changeEndsAt = (value: Date | undefined) => {
+    setEndsAt(value);
+    setEndChoice(null);
+  };
+
+  // Выбор нужен, только когда у ученика в группе меняют дату окончания на новую
+  const needsEndChoice = Boolean(
+    data?.groupId && !data.unenrolledAt && endsAt &&
+      format(endsAt, "yyyy-MM-dd") !== data.billingEndsAt?.slice(0, 10)
+  );
+
+  const handleSave = async () => {
+    const choice = needsEndChoice ? endChoice : null;
     const priceValue = priceOverride.trim() === "" ? undefined : Number(priceOverride);
     const firstValue =
       firstMonthCharge.trim() === "" ? undefined : Number(firstMonthCharge);
@@ -136,12 +148,7 @@ export function BillingDialog({
       return;
     }
 
-    if (!choice && data?.groupId && !data.unenrolledAt && endsAt
-      && format(endsAt, "yyyy-MM-dd") !== data.billingEndsAt?.slice(0, 10)) {
-      setChoiceOpen(true);
-      return;
-    }
-    setChoiceOpen(false);
+    if (needsEndChoice && !choice) return;
     setIsSaving(true);
     try {
       const save = choice === "left" && data?.groupId
@@ -177,15 +184,7 @@ export function BillingDialog({
     }
   };
 
-  return (<>
-    <AlertDialog open={choiceOpen} onOpenChange={setChoiceOpen}>
-      <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{t("billingEndChoiceTitle")}</AlertDialogTitle></AlertDialogHeader>
-        <AlertDialogFooter>
-          <Button variant="outline" onClick={() => setChoiceOpen(false)}>{tCommon("cancel")}</Button>
-          <Button variant="outline" disabled={isSaving} onClick={() => void handleSave("pause")}>{t("billingEndPause")}</Button>
-          <Button disabled={isSaving} onClick={() => void handleSave("left")}>{t("billingEndLeft")}</Button>
-        </AlertDialogFooter></AlertDialogContent>
-    </AlertDialog>
+  return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -223,10 +222,39 @@ export function BillingDialog({
               </div>
               <div className="space-y-2">
                 <Label>{t("billingEndsAt")}</Label>
-                <DatePicker value={endsAt} onChange={setEndsAt} />
+                <DatePicker value={endsAt} onChange={changeEndsAt} />
                 <p className="text-xs text-muted-foreground">{t("billingEndsAtHint")}</p>
               </div>
             </div>
+
+            {needsEndChoice && (
+              <div className="space-y-2 rounded-md border border-warning/60 bg-warning/10 px-3 py-3">
+                <p className="text-sm font-medium">{t("billingEndChoiceTitle")}</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Button
+                    type="button"
+                    variant={endChoice === "pause" ? "default" : "outline"}
+                    className="h-auto whitespace-normal py-2"
+                    aria-pressed={endChoice === "pause"}
+                    onClick={() => setEndChoice("pause")}
+                  >
+                    {t("billingEndPause")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={endChoice === "left" ? "default" : "outline"}
+                    className="h-auto whitespace-normal py-2"
+                    aria-pressed={endChoice === "left"}
+                    onClick={() => setEndChoice("left")}
+                  >
+                    {t("billingEndLeft")}
+                  </Button>
+                </div>
+                {!endChoice && (
+                  <p className="text-xs text-muted-foreground">{t("billingEndChoiceRequired")}</p>
+                )}
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="price-override">{t("priceOverride")}</Label>
@@ -284,11 +312,11 @@ export function BillingDialog({
           <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
             {tCommon("cancel")}
           </Button>
-          <Button type="button" onClick={() => void handleSave()} disabled={isSaving || isLoading}>
+          <Button type="button" onClick={() => void handleSave()} disabled={isSaving || isLoading || (needsEndChoice && !endChoice)}>
             {isSaving ? tCommon("saving") : tCommon("save")}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  </>);
+  );
 }

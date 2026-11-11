@@ -1780,6 +1780,7 @@
     "startsAt": "Birinchi o'quv kuni",
     "startsAtHint": "Shu sanadan hisob boshlanadi. Bo'sh bo'lsa — guruh boshlanish sanasi, u ham bo'lmasa — kursga yozilgan sana olinadi.",
     "billingEndsAt": "Oxirgi to'lanadigan kun",
+    "billingEndChoiceRequired": "Saqlashdan oldin tanlang.",
     "billingEndChoiceTitle": "Talaba ketdimi yoki pauzadami?",
     "billingEndLeft": "Ketdi — guruhdan chiqarish",
     "billingEndPause": "Pauza — guruhda qoladi",
