@@ -58,16 +58,18 @@ export class DashboardService {
       : undefined;
 
     const [users, courses, students, teachers] = await Promise.all([
+      // Отключённых не считаем ни в одном счётчике: иначе «пользователей»
+      // выходило больше, чем учеников и преподавателей вместе
       this.prisma.user.count({
         where: branchId
-          ? { OR: [{ branchId }, studentInBranch!, { role: "TEACHER", ...teacherInBranch! }] }
-          : {},
+          ? { isActive: true, OR: [{ branchId }, studentInBranch!, { role: "TEACHER", ...teacherInBranch! }] }
+          : { isActive: true },
       }),
       this.prisma.course.count({
         where: branchId ? { groups: { some: { branchId, isActive: true } } } : {},
       }),
-      this.prisma.user.count({ where: { role: "STUDENT", ...studentInBranch } }),
-      this.prisma.user.count({ where: { role: "TEACHER", ...teacherInBranch } }),
+      this.prisma.user.count({ where: { role: "STUDENT", isActive: true, ...studentInBranch } }),
+      this.prisma.user.count({ where: { role: "TEACHER", isActive: true, ...teacherInBranch } }),
     ]);
     return { role: "ADMIN" as const, users, courses, students, teachers };
   }

@@ -89,6 +89,16 @@ describe("сводка и адреса", () => {
       expect(res.body.students).toBeGreaterThan(0);
     });
 
+    it("отключённые пользователи не попадают в счётчики", async () => {
+      const before = (await get("/dashboard/summary", "ADMIN")).body;
+      await createUser({ role: "STUDENT", isActive: false });
+      await createUser({ role: "TEACHER", isActive: false });
+      const after = (await get("/dashboard/summary", "ADMIN")).body;
+      expect(after.users).toBe(before.users);
+      expect(after.students).toBe(before.students);
+      expect(after.teachers).toBe(before.teachers);
+    });
+
     it("преподаватель видит свои курсы и учеников по головам", async () => {
       const res = await get("/dashboard/summary", "TEACHER");
       expect(res.status).toBe(200);
