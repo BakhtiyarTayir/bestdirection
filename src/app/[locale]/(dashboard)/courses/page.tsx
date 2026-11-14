@@ -36,7 +36,7 @@ async function CoursesPageAsync({
   const result = await getCourses();
   const courses = result.success && result.data ? result.data : [];
 
-  const canCreate = role === "ADMIN" || role === "TEACHER";
+  const canCreate = role === "ADMIN" || role === "MANAGER" || role === "TEACHER";
 
   return (
     <div>
@@ -122,7 +122,7 @@ async function CoursesPageAsync({
               </CardHeader>
               <CardContent className="flex-1">
                 <div className="space-y-2 text-sm text-muted-foreground">
-                  {(role === "ADMIN" || role === "STUDENT") && (
+                  {(role === "ADMIN" || role === "MANAGER" || role === "STUDENT") && (
                     <p>
                       {t("teacherLabel")}: {course.teacher.firstName}{" "}
                       {course.teacher.lastName}
@@ -133,7 +133,7 @@ async function CoursesPageAsync({
                       <BookOpen className="h-3.5 w-3.5" />
                       {course._count.lessons} {t("lessons")}
                     </span>
-                    {(role === "ADMIN" || role === "TEACHER") && (
+                    {(role === "ADMIN" || role === "MANAGER" || role === "TEACHER") && (
                       <span className="flex items-center gap-1">
                         <Users className="h-3.5 w-3.5" />
                         {course._count.enrollments} {t("studentsCount")}

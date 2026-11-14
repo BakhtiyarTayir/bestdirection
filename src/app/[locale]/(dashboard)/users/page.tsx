@@ -37,8 +37,8 @@ interface UsersPageProps {
 }
 
 export default async function UsersPage({ searchParams }: UsersPageProps) {
-  const session = await requireRole(["ADMIN", "TEACHER"]);
-  const canManageUsers = session.user.role === "ADMIN";
+  const session = await requireRole(["ADMIN", "MANAGER", "TEACHER"]);
+  const canManageUsers = session.user.role === "ADMIN" || session.user.role === "MANAGER";
 
   const params = await searchParams;
   const branchId = typeof params.branchId === "string" && params.branchId ? params.branchId : undefined;
@@ -64,6 +64,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
       canManageUsers={canManageUsers}
       branchId={branchId}
       branches={branches}
+      actorRole={session.user.role}
     />
   );
 }
@@ -74,12 +75,14 @@ async function UsersPageContent({
   canManageUsers,
   branchId,
   branches,
+  actorRole,
 }: {
   users: ActiveUser[];
   deactivatedUsers: DeactivatedUser[];
   canManageUsers: boolean;
   branchId?: string;
   branches: { id: string; name: string }[];
+  actorRole: string;
 }) {
   const t = await getTranslations("users");
 
@@ -120,6 +123,7 @@ async function UsersPageContent({
             <UserList
               initialUsers={users}
               canManageUsers
+              actorRole={actorRole}
               filterPrefix={<BranchFilter branchId={branchId} branches={branches} namespace="users" />}
             />
           </TabsContent>
@@ -127,7 +131,7 @@ async function UsersPageContent({
             <p className="mb-4 text-sm text-muted-foreground">
               {t("deactivatedHint")}
             </p>
-            <DeactivatedUserList users={deactivatedUsers} />
+            <DeactivatedUserList users={deactivatedUsers} actorRole={actorRole} />
           </TabsContent>
         </Tabs>
       ) : (

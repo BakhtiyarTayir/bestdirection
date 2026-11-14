@@ -16,7 +16,7 @@ interface GroupRosterPageProps {
  * там две колонки и поиск, для просмотра состава это лишнее.
  */
 export default async function GroupRosterPage({ params }: GroupRosterPageProps) {
-  await requireRole(["ADMIN", "TEACHER"]);
+  await requireRole(["ADMIN", "MANAGER", "TEACHER"]);
   const t = await getTranslations("groups");
   const { groupId } = await params;
 

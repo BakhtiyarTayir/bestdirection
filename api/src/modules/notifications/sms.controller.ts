@@ -13,7 +13,7 @@ import { SmsService } from "./sms.service";
 export class SmsController {
   constructor(private readonly sms: SmsService) {}
 
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "Sms"))
   @Get("account")
   account() {
     return this.sms.account();
@@ -26,31 +26,31 @@ export class SmsController {
     return this.sms.templates();
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "Sms"))
   @Post("templates")
   createTemplate(@Body() body: CreateTemplateDto, @CurrentUser() actor: SessionUser) {
     return this.sms.createTemplate(body, actor);
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "Sms"))
   @Post("templates/sync")
   syncTemplates(@CurrentUser() actor: SessionUser) {
     return this.sms.syncTemplates(actor);
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "Sms"))
   @Post("broadcast/preview")
   preview(@Body() body: BroadcastDto) {
     return this.sms.previewBroadcast(body);
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "Sms"))
   @Post("broadcast")
   send(@Body() body: BroadcastDto, @CurrentUser() actor: SessionUser) {
     return this.sms.sendBroadcast(body, actor);
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "Sms"))
   @Get("log")
   log(@Query() query: LogQueryDto) {
     return this.sms.log(query.limit);

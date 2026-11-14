@@ -83,7 +83,7 @@ async function CourseDetailPageAsync({
   }
 
   const course = result.data;
-  const isOwnerOrAdmin = role === "ADMIN" || (role === "TEACHER" && course.teacherId === session.user.id);
+  const isOwnerOrAdmin = (role === "ADMIN" || role === "MANAGER") || (role === "TEACHER" && course.teacherId === session.user.id);
 
   // Уроки, экзамены и прогресс — из api; черновики он прячет сам
   const [navResult, examsResult, progressResult] = await Promise.all([

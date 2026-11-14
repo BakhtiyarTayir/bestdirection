@@ -10,7 +10,7 @@ interface Props {
 
 export default async function ReviewSubmissionPage({ params }: Props) {
   const t = await getTranslations("homeworkHub");
-  await requireRole(["TEACHER", "ADMIN"]);
+  await requireRole(["TEACHER", "ADMIN", "MANAGER"]);
 
   const { submissionId } = await params;
   const result = await getSubmissionForReview(submissionId);

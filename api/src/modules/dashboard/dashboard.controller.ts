@@ -8,7 +8,7 @@ import { AdminDashboardQueryDto } from "./dto/admin-dashboard.dto";
 export class DashboardController {
   constructor(private readonly dashboard: DashboardService) {}
 
-  /** Сводка «для меня»: состав зависит от роли вызывающего. branchId — только для администратора. */
+  /** Сводка «для меня»: состав зависит от роли вызывающего. branchId — для администратора и менеджера. */
   @Authenticated()
   @Get("summary")
   summary(@Query() query: AdminDashboardQueryDto, @CurrentUser() user: SessionUser) {

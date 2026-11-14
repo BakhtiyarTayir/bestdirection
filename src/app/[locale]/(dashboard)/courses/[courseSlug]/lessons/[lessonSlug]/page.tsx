@@ -70,7 +70,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
 
   const lesson = result.data;
   const isTeacherOrAdmin =
-    session.user.role === "ADMIN" || session.user.role === "TEACHER";
+    session.user.role === "ADMIN" || session.user.role === "MANAGER" || session.user.role === "TEACHER";
   const isStudent = session.user.role === "STUDENT";
   const homeworks = (lesson.homeworks ?? []) as LessonHomework[];
 

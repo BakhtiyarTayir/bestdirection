@@ -92,7 +92,7 @@ export function CourseForm({
     code && tErrors.has(code) ? tErrors(code) : code || tErrors("somethingWentWrong");
 
   const isEditing = !!course;
-  const isAdmin = currentUserRole === "ADMIN";
+  const isAdmin = currentUserRole === "ADMIN" || currentUserRole === "MANAGER";
 
   const [coverImage, setCoverImage] = useState<string | null>(course?.coverImage || null);
   const [uploading, setUploading] = useState(false);

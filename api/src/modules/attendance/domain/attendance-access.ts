@@ -33,7 +33,7 @@ export function responsibleTeacherId(session: SessionAccess): string | null {
 
 /** Ведущий занятия, педагог его группы или педагог курса */
 export function canManageSession(actor: AttendanceActor, session: SessionAccess): boolean {
-  if (actor.role === "ADMIN") return true;
+  if (actor.role === "ADMIN" || actor.role === "MANAGER") return true;
   if (actor.role !== "TEACHER") return false;
   return (
     session.teacherId === actor.id ||
@@ -52,7 +52,7 @@ export function canManageCourseAttendance(
   course: { teacherId: string; groups: { id: string; teacherId: string | null }[] },
   groupId?: string | null
 ): boolean {
-  if (actor.role === "ADMIN") return true;
+  if (actor.role === "ADMIN" || actor.role === "MANAGER") return true;
   if (actor.role !== "TEACHER") return false;
   if (course.teacherId === actor.id) return true;
   const groups = groupId

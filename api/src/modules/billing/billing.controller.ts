@@ -18,7 +18,7 @@ import {
 import { PaymentsService } from "./payments.service";
 import { RefundsService } from "./refunds.service";
 
-// Деньги видит и правит только администратор: правило одно на весь модуль.
+// Касса открыта администратору и менеджеру; возвраты и удаление оплат отдельно.
 const adminOnly = (ability: { can: (action: "manage", subject: "Billing") => boolean }) =>
   ability.can("manage", "Billing");
 
@@ -64,8 +64,8 @@ export class BillingController {
 
   @CheckPolicies(adminOnly)
   @Get("students/:studentId")
-  studentBilling(@Param("studentId") studentId: string) {
-    return this.billing.studentBilling(studentId);
+  studentBilling(@Param("studentId") studentId: string, @CurrentUser() actor: SessionUser) {
+    return this.billing.studentBilling(studentId, actor);
   }
 
   @CheckPolicies(adminOnly)
@@ -119,21 +119,21 @@ export class BillingController {
     return this.payments.create(body, actor);
   }
 
-  @CheckPolicies(adminOnly)
+  @CheckPolicies((ability) => ability.can("manage", "PaymentDelete"))
   @Delete("payments/:id")
   async deletePayment(@Param("id") id: string, @CurrentUser() actor: SessionUser) {
     await this.payments.remove(id, actor);
     return { ok: true };
   }
-  @CheckPolicies(adminOnly)
+  @CheckPolicies((ability) => ability.can("manage", "Refund"))
   @Get("refunds")
   listRefunds(@Query() query: RefundFiltersDto) { return this.refunds.list(query); }
 
-  @CheckPolicies(adminOnly)
+  @CheckPolicies((ability) => ability.can("manage", "Refund"))
   @Post("refunds")
   createRefund(@Body() body: CreateRefundDto, @CurrentUser() actor: SessionUser) { return this.refunds.create(body, actor); }
 
-  @CheckPolicies(adminOnly)
+  @CheckPolicies((ability) => ability.can("manage", "Refund"))
   @Delete("refunds/:id")
   async deleteRefund(@Param("id") id: string, @CurrentUser() actor: SessionUser) {
     await this.refunds.remove(id, actor);

@@ -38,7 +38,7 @@ export class HostingService {
       paidUntil,
       daysLeft,
       warn: daysLeft !== null && daysLeft <= HOSTING_WARN_DAYS,
-      canEdit: this.isOwner(actor),
+      canEdit: actor.role === "ADMIN" && this.isOwner(actor),
     };
   }
 

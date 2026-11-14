@@ -7,7 +7,7 @@ import { LOGIN_REGEX } from "../../../common/auth/login-generator";
 // глобальный ZodValidationPipe. Ограничения длины добавлены: у строк их не было
 // вовсе (аудит 4.7).
 
-export const roleSchema = z.enum(["ADMIN", "TEACHER", "STUDENT", "PARENT"]);
+export const roleSchema = z.enum(["ADMIN", "MANAGER", "TEACHER", "STUDENT", "PARENT"]);
 
 const nameSchema = z.string().trim().min(1).max(100);
 const phoneSchema = z.string().trim().max(30).optional();

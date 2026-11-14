@@ -30,8 +30,17 @@ export type AppSubjects =
   // конкретного человека (свой профиль есть у всех).
   | "HomeworkStatistics"
   | "UserDirectory"
-  // Деньги: начисления, долги, оплаты — только администратор
+  // Касса открыта менеджеру; финансы, возвраты и удаление оплат — отдельно.
   | "Billing"
+  | "Finance"
+  | "PaymentDelete"
+  | "Refund"
+  | "Settings"
+  | "Lead"
+  | "Marketing"
+  | "Sms"
+  | "CourseComparison"
+  | "StaffOperations"
   // Зарплата преподавателей: администратор — всё, преподаватель — только
   // свою (сужение по teacherId делает сервис, как TeacherAttendanceService)
   | "Salary"
@@ -71,6 +80,33 @@ export function defineAbilityFor(user: Pick<SessionUser, "id" | "role">): AppAbi
   switch (user.role) {
     case "ADMIN":
       can("manage", "all");
+      break;
+
+    case "MANAGER":
+      // Перечень закрыт: новый административный субъект требует отдельного решения.
+      can("read", "User");
+      can("create", "User", { role: { in: ["TEACHER", "STUDENT", "PARENT"] } });
+      can("update", "User", { role: { in: ["TEACHER", "STUDENT", "PARENT"] } });
+      can("delete", "User", { role: { in: ["TEACHER", "STUDENT", "PARENT"] } });
+      can("read", "UserDirectory");
+      can("manage", "StaffOperations");
+      can("read", "HomeworkStatistics");
+      can("manage", "ParentLink");
+      can("manage", "Course");
+      can("manage", "Group");
+      can("manage", "EnrollmentRequest");
+      can("read", "Catalog");
+      can("manage", "Attendance");
+      can("manage", "TeacherAttendance");
+      can("read", "UnpublishedContent");
+      can("read", "AssessmentAnswers");
+      can("read", "Branch");
+      can("manage", "Trash");
+      can("manage", "Billing");
+      can("manage", "Lead");
+      can("manage", "Marketing");
+      can("manage", "Sms");
+      can("manage", "CourseComparison");
       break;
 
     case "TEACHER":

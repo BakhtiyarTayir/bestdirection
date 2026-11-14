@@ -36,7 +36,7 @@ export class FilesService {
 
     const isOwner = file.submission.studentId === user.id;
     const isTeacher = file.submission.homework.lesson.course.teacherId === user.id;
-    const isAdmin = user.role === "ADMIN";
+    const isAdmin = (user.role === "ADMIN" || user.role === "MANAGER");
     if (!isOwner && !isTeacher && !isAdmin) throw new ForbiddenException("forbidden");
 
     // Размер берём с диска: в базе он мог разойтись с файлом

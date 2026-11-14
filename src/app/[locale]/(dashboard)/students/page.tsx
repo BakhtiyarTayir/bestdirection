@@ -25,7 +25,7 @@ interface StudentsPageProps {
 }
 
 export default async function StudentsPage({ searchParams }: StudentsPageProps) {
-  await requireRole(["ADMIN"]);
+  await requireRole(["ADMIN", "MANAGER"]);
   const t = await getTranslations("students");
   const tCommon = await getTranslations("common");
   const tBilling = await getTranslations("studentBilling");

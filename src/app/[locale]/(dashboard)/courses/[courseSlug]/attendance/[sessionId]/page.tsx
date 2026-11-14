@@ -36,7 +36,7 @@ export default async function SessionPage({ params, searchParams }: SessionPageP
   const courseId = await resolveCourseSlug(courseSlug);
 
   const role = authSession.user.role;
-  if (role !== "ADMIN" && role !== "TEACHER") {
+  if (role !== "ADMIN" && role !== "MANAGER" && role !== "TEACHER") {
     redirect("/dashboard");
   }
 
@@ -71,7 +71,7 @@ export default async function SessionPage({ params, searchParams }: SessionPageP
   const students = studentsResult.success ? studentsResult.data ?? [] : [];
 
   // Ведущего занятия меняет только администратор — например, при замене
-  const canChangeTeacher = role === "ADMIN";
+  const canChangeTeacher = (role === "ADMIN" || role === "MANAGER");
   const teachersResult = canChangeTeacher ? await getTeacherOptions() : null;
   const teacherOptions = teachersResult?.success ? teachersResult.data : [];
 

@@ -34,13 +34,13 @@ export class UsersController {
     return this.users.list(ability, query.branchId);
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "User"))
+  @CheckPolicies((ability) => ability.can("manage", "StaffOperations"))
   @Get("teachers")
   teachers() {
     return this.users.teachers();
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "User"))
+  @CheckPolicies((ability) => ability.can("manage", "StaffOperations"))
   @Get("deactivated")
   deactivated() {
     return this.users.deactivated();
@@ -48,14 +48,14 @@ export class UsersController {
 
   // Цифра «новые пользователи» в меню. До @Get(":id") — иначе Nest примет
   // "new" за id пользователя
-  @CheckPolicies((ability) => ability.can("manage", "User"))
+  @CheckPolicies((ability) => ability.can("manage", "StaffOperations"))
   @Get("new/count")
   newUsersCount(@CurrentUser() actor: SessionUser) {
     return this.users.newUsersCount(actor);
   }
 
   /** Администратор открыл список — цифра обнуляется. */
-  @CheckPolicies((ability) => ability.can("manage", "User"))
+  @CheckPolicies((ability) => ability.can("manage", "StaffOperations"))
   @Post("new/seen")
   async markUsersSeen(@CurrentUser() actor: SessionUser) {
     await this.users.markUsersSeen(actor);
@@ -65,13 +65,13 @@ export class UsersController {
   // Следующие маршруты обслуживают форму создания пользователя (тот же
   // доступ, что у самого создания) и ДОЛЖНЫ стоять до @Get(":id") — иначе
   // Nest примет "login-available"/"namesakes"/"form-options" за значение :id
-  @CheckPolicies((ability) => ability.can("create", "User"))
+  @CheckPolicies((ability) => ability.can("manage", "StaffOperations"))
   @Post("login-suggestion")
   loginSuggestion(@Body() body: LoginSuggestionDto) {
     return this.users.suggestLogin(body.firstName, body.lastName);
   }
 
-  @CheckPolicies((ability) => ability.can("create", "User"))
+  @CheckPolicies((ability) => ability.can("manage", "StaffOperations"))
   @Get("login-available")
   loginAvailable(@Query() query: LoginAvailableQueryDto) {
     return this.users.loginAvailable(query.login);
@@ -79,13 +79,13 @@ export class UsersController {
 
   // Предупреждение «такой ученик уже есть»: без него один и тот же ученик
   // заводился повторно — логин молча получал суффикс 2, 3
-  @CheckPolicies((ability) => ability.can("create", "User"))
+  @CheckPolicies((ability) => ability.can("manage", "StaffOperations"))
   @Get("namesakes")
   namesakes(@Query() query: NamesakesQueryDto, @CurrentAbility() ability: AppAbility) {
     return this.users.namesakes(ability, query.firstName, query.lastName);
   }
 
-  @CheckPolicies((ability) => ability.can("create", "User"))
+  @CheckPolicies((ability) => ability.can("manage", "StaffOperations"))
   @Get("form-options")
   formOptions() {
     return this.users.formOptionsForCreate();
@@ -99,31 +99,31 @@ export class UsersController {
 
   // Выдача доступов ученикам (PLAN-STUDENT-PASSWORDS-2026-10-09.md): только
   // администратор. Статические пути «students/...» — до :id-маршрутов.
-  @CheckPolicies((ability) => ability.can("manage", "User"))
+  @CheckPolicies((ability) => ability.can("manage", "StaffOperations"))
   @Get("students/never-logged-in")
   neverLoggedIn(@Query() query: NeverLoggedInQueryDto) {
     return this.users.neverLoggedInStudents(query.branchId);
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "User"))
+  @CheckPolicies((ability) => ability.can("manage", "StaffOperations"))
   @Get("students/credentials-export")
   credentialsExport(@Query() query: CredentialsExportQueryDto, @CurrentUser() actor: SessionUser) {
     return this.users.credentialsExport(query, actor);
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "User"))
+  @CheckPolicies((ability) => ability.can("manage", "StaffOperations"))
   @Post("students/issue-passwords")
   issuePasswords(@Body() body: IssuePasswordsDto, @CurrentUser() actor: SessionUser) {
     return this.users.issuePasswords(body.studentIds, actor);
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "User"))
+  @CheckPolicies((ability) => ability.can("manage", "StaffOperations"))
   @Get(":id/credentials")
   credentials(@Param("id") id: string, @CurrentUser() actor: SessionUser) {
     return this.users.credentials(id, actor);
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "User"))
+  @CheckPolicies((ability) => ability.can("manage", "StaffOperations"))
   @Post(":id/password")
   setStudentPassword(@Param("id") id: string, @Body() body: SetStudentPasswordDto, @CurrentUser() actor: SessionUser) {
     return this.users.setStudentPassword(id, body.password, actor);
@@ -135,26 +135,26 @@ export class UsersController {
     return this.users.byId(ability, id);
   }
 
-  @CheckPolicies((ability) => ability.can("create", "User"))
+  @CheckPolicies((ability) => ability.can("manage", "StaffOperations"))
   @Post()
   create(@Body() body: CreateUserDto, @CurrentUser() actor: SessionUser) {
     return this.users.create(body, actor);
   }
 
-  @CheckPolicies((ability) => ability.can("update", "User"))
+  @CheckPolicies((ability) => ability.can("manage", "StaffOperations"))
   @Patch(":id")
   update(@Param("id") id: string, @Body() body: UpdateUserDto, @CurrentUser() actor: SessionUser) {
     return this.users.update(id, body, actor);
   }
 
-  @CheckPolicies((ability) => ability.can("update", "User"))
+  @CheckPolicies((ability) => ability.can("manage", "StaffOperations"))
   @Post(":id/deactivate")
   async deactivate(@Param("id") id: string, @CurrentUser() actor: SessionUser) {
     await this.users.deactivate(id, actor);
     return { ok: true };
   }
 
-  @CheckPolicies((ability) => ability.can("update", "User"))
+  @CheckPolicies((ability) => ability.can("manage", "StaffOperations"))
   @Post(":id/restore")
   async restore(@Param("id") id: string, @CurrentUser() actor: SessionUser) {
     await this.users.restore(id, actor);
@@ -162,21 +162,21 @@ export class UsersController {
   }
 
   /** Ссылка-приглашение в Telegram: копировать или показать QR-кодом. */
-  @CheckPolicies((ability) => ability.can("manage", "User"))
+  @CheckPolicies((ability) => ability.can("manage", "StaffOperations"))
   @Post(":id/telegram-invite")
   telegramInvite(@Param("id") id: string, @CurrentUser() actor: SessionUser) {
     return this.telegramInvites.createInvite(id, actor);
   }
 
   /** Та же ссылка + отправка по SMS на телефон из карточки. */
-  @CheckPolicies((ability) => ability.can("manage", "User"))
+  @CheckPolicies((ability) => ability.can("manage", "StaffOperations"))
   @Post(":id/telegram-invite/sms")
   telegramInviteSms(@Param("id") id: string, @CurrentUser() actor: SessionUser) {
     return this.telegramInvites.sendInviteSms(id, actor);
   }
 
   /** Окончательное удаление строки — только с вкладки деактивированных. */
-  @CheckPolicies((ability) => ability.can("delete", "User"))
+  @CheckPolicies((ability) => ability.can("manage", "StaffOperations"))
   @Delete(":id")
   async purge(@Param("id") id: string, @CurrentUser() actor: SessionUser) {
     await this.users.purge(id, actor);

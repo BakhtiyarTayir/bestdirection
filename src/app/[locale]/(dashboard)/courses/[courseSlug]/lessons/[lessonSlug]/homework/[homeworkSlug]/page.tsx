@@ -40,7 +40,7 @@ export default async function HomeworkPage({ params }: HomeworkPageProps) {
   }
 
   const { homeworkId } = await resolveFullPath({ courseSlug, lessonSlug, homeworkSlug });
-  const isTeacherOrAdmin = session.user.role === "ADMIN" || session.user.role === "TEACHER";
+  const isTeacherOrAdmin = session.user.role === "ADMIN" || session.user.role === "MANAGER" || session.user.role === "TEACHER";
 
   if (isTeacherOrAdmin) {
     const [hwResult, subResult] = await Promise.all([

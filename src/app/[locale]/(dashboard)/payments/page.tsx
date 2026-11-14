@@ -13,7 +13,7 @@ export default async function PaymentsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireRole(["ADMIN"]);
+  const session = await requireRole(["ADMIN", "MANAGER"]);
   const t = await getTranslations("payments");
 
   const params = await searchParams;
@@ -58,6 +58,7 @@ export default async function PaymentsPage({
         <p className="mt-1 text-muted-foreground">{t("subtitle")}</p>
       </div>
       <PaymentsList
+        canDelete={session.user.role === "ADMIN"}
         payments={rows.map((payment) => ({
           id: payment.id,
           amount: payment.amount,

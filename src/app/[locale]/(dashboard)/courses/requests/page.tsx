@@ -6,7 +6,7 @@ import { RequestsList } from "./requests-list";
 export const dynamic = "force-dynamic";
 
 export default async function EnrollmentRequestsPage() {
-  await requireRole(["ADMIN", "TEACHER"]);
+  await requireRole(["ADMIN", "MANAGER", "TEACHER"]);
   const t = await getTranslations("enrollmentRequests");
 
   const result = await getEnrollmentRequests();

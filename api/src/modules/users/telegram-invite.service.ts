@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { AuditService } from "../../common/audit/audit.service";
 import type { SessionUser } from "../../common/auth/session-user";
 import { PrismaService } from "../../common/prisma/prisma.service";
@@ -44,12 +44,15 @@ export class TelegramInviteService {
     return process.env.TELEGRAM_BOT_USERNAME || process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || null;
   }
 
-  private async fetchUser(userId: string) {
+  private async fetchUser(userId: string, actor: SessionUser) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, firstName: true, lastName: true, phone: true, telegramChatId: true },
+      select: { id: true, firstName: true, lastName: true, phone: true, telegramChatId: true, role: true },
     });
     if (!user) throw new NotFoundException("userNotFound");
+    if (actor.role === "MANAGER" && (user.role === "ADMIN" || user.role === "MANAGER")) {
+      throw new ForbiddenException("staffRoleAdminOnly");
+    }
     return user;
   }
 
@@ -75,7 +78,7 @@ export class TelegramInviteService {
    * но сообщаем isLinked: true — интерфейс это покажет.
    */
   async createInvite(userId: string, actor: SessionUser) {
-    const user = await this.fetchUser(userId);
+    const user = await this.fetchUser(userId, actor);
     const { url, expiresAt } = await this.issueLink(userId);
     const isLinked = Boolean(user.telegramChatId);
 
@@ -97,7 +100,7 @@ export class TelegramInviteService {
    * неудачная попытка отправки уже погасила бы прежнее приглашение.
    */
   async sendInviteSms(userId: string, actor: SessionUser) {
-    const user = await this.fetchUser(userId);
+    const user = await this.fetchUser(userId, actor);
     if (!user.phone) throw new BadRequestException("noPhone");
 
     const { url, expiresAt } = await this.issueLink(userId);

@@ -32,7 +32,7 @@ export default async function GroupAttendancePage({ params }: GroupAttendancePag
   const courseId = await resolveCourseSlug(courseSlug);
 
   const role = session.user.role;
-  if (role !== "ADMIN" && role !== "TEACHER") {
+  if (role !== "ADMIN" && role !== "MANAGER" && role !== "TEACHER") {
     redirect("/dashboard");
   }
 

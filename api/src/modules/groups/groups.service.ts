@@ -39,7 +39,7 @@ export class GroupsService {
   }
 
   /** Группы курса: порядок задаёт sortOrder. */
-  async byCourse(courseId: string) {
+  async byCourse(courseId: string, actor?: SessionUser) {
     const groups = await this.prisma.group.findMany({
       where: { courseId },
       include: {
@@ -61,6 +61,7 @@ export class GroupsService {
     // гадала, в каком из двух маршрутов какая форма ответа
     return groups.map(({ course, ...group }) => ({
       ...group,
+      salaryPercentBp: actor?.role === "MANAGER" ? null : group.salaryPercentBp,
       courseTeacher: course.teacher,
     }));
   }
@@ -92,12 +93,13 @@ export class GroupsService {
     });
     return groups.map(({ course, ...group }) => ({
       ...group,
+      salaryPercentBp: user.role === "MANAGER" ? null : group.salaryPercentBp,
       course: { id: course.id, slug: course.slug, title: course.title },
       courseTeacher: course.teacher,
     }));
   }
 
-  async details(groupId: string) {
+  async details(groupId: string, actor?: SessionUser) {
     const group = await this.prisma.group.findUnique({
       where: { id: groupId },
       include: {
@@ -125,7 +127,7 @@ export class GroupsService {
       },
     });
     if (!group) throw new NotFoundException("groupNotFound");
-    return group;
+    return actor?.role === "MANAGER" ? { ...group, salaryPercentBp: null } : group;
   }
 
   async create(data: CreateGroupDto, ability: AppAbility, actor: SessionUser) {
@@ -135,6 +137,9 @@ export class GroupsService {
     // canManageGroupMoney), дату окончания — и преподаватель тоже; у новой группы ставки нет — берётся ставка
     // преподавателя, которую тоже ставит администратор
     if (!canManageGroupMoney(ability)) {
+      if (actor.role === "MANAGER" && data.salaryPercentBp !== undefined) {
+        throw new ForbiddenException("salaryPercentAdminOnly");
+      }
       if (data.salaryPercentBp !== undefined && data.salaryPercentBp !== "") {
         throw new ForbiddenException("salaryPercentAdminOnly");
       }
@@ -186,7 +191,7 @@ export class GroupsService {
       action: "CREATE",
       metadata: { groupName: group.name, courseId: course.id },
     });
-    return group;
+    return actor.role === "MANAGER" ? { ...group, salaryPercentBp: null } : group;
   }
 
   async update(groupId: string, data: UpdateGroupDto, ability: AppAbility, actor: SessionUser) {
@@ -195,6 +200,9 @@ export class GroupsService {
     // Форма присылает поля целиком, поэтому запрещено не само поле ставки, а её
     // ИЗМЕНЕНИЕ: преподаватель, сохранивший группу как есть, ошибки не видит
     if (!canManageGroupMoney(ability)) {
+      if (actor.role === "MANAGER" && data.salaryPercentBp !== undefined) {
+        throw new ForbiddenException("salaryPercentAdminOnly");
+      }
       const nextPercent =
         data.salaryPercentBp === undefined ? undefined : data.salaryPercentBp === "" ? null : data.salaryPercentBp;
       if (nextPercent !== undefined && nextPercent !== group.salaryPercentBp) {
@@ -257,7 +265,7 @@ export class GroupsService {
       action: "UPDATE",
       changes: computeChanges({ ...group }, { ...updated }),
     });
-    return updated;
+    return actor.role === "MANAGER" ? { ...updated, salaryPercentBp: null } : updated;
   }
 
   /**
@@ -289,7 +297,7 @@ export class GroupsService {
     if (enrollments + charges + payments + refunds + accruals > 0) {
       // Закрытие ставит дату окончания и останавливает начисления ученикам —
       // это решение администратора; пустую группу преподаватель удаляет сам
-      if (!canManageGroupMoney(ability)) throw new ForbiddenException("groupCloseAdminOnly");
+      if (!ability.can("manage", "Billing")) throw new ForbiddenException("groupCloseAdminOnly");
       const today = toNoonUtc(new Date().toISOString().slice(0, 10));
       // Уже заданная более ранняя дата окончания остаётся — закрытие не
       // должно продлевать начисления
@@ -322,12 +330,13 @@ export class GroupsService {
     return { id: groupId, closed: false };
   }
 
-  async toggleActive(groupId: string, ability: AppAbility) {
+  async toggleActive(groupId: string, ability: AppAbility, actor?: SessionUser) {
     const group = await this.manageableGroup(ability, groupId);
-    return this.prisma.group.update({
+    const updated = await this.prisma.group.update({
       where: { id: groupId },
       data: { isActive: !group.isActive },
     });
+    return actor?.role === "MANAGER" ? { ...updated, salaryPercentBp: null } : updated;
   }
 
   /**

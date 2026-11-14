@@ -6,7 +6,7 @@ import { PagesList } from "./pages-list";
 export const dynamic = "force-dynamic";
 
 export default async function AdminLandingPagesPage() {
-  await requireRole(["ADMIN"]);
+  await requireRole(["ADMIN", "MANAGER"]);
   const t = await getTranslations("landingAdmin");
 
   const result = await getMarketingAdminContent();

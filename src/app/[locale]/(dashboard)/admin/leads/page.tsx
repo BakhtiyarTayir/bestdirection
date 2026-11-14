@@ -6,7 +6,7 @@ import { LeadList } from "./lead-list";
 export const dynamic = "force-dynamic";
 
 export default async function AdminLeadsPage() {
-  await requireRole(["ADMIN"]);
+  await requireRole(["ADMIN", "MANAGER"]);
   const t = await getTranslations("leads");
 
   const result = await getLeads();

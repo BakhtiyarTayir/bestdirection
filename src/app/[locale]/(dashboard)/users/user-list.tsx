@@ -33,6 +33,7 @@ import { Pencil, UserX, Loader2 } from "lucide-react";
 
 const roleBadgeVariant: Record<string, "destructive" | "default" | "secondary"> = {
   ADMIN: "destructive",
+  MANAGER: "default",
   TEACHER: "default",
   STUDENT: "secondary",
 };
@@ -50,12 +51,13 @@ interface User {
 }
 
 interface UserListProps {
+  actorRole?: string;
   initialUsers: User[];
   canManageUsers?: boolean;
   filterPrefix?: ReactNode;
 }
 
-export function UserList({ initialUsers, canManageUsers = true, filterPrefix }: UserListProps) {
+export function UserList({ initialUsers, canManageUsers = true, filterPrefix, actorRole }: UserListProps) {
   const t = useTranslations("users");
   const tRoles = useTranslations("roles");
   const tCommon = useTranslations("common");
@@ -136,7 +138,7 @@ export function UserList({ initialUsers, canManageUsers = true, filterPrefix }: 
           <SelectTrigger className="sm:w-48"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">{t("allRoles")}</SelectItem>
-            {(["ADMIN", "TEACHER", "STUDENT"] as const).map((role) => (
+            {(["ADMIN", "MANAGER", "TEACHER", "STUDENT", "PARENT"] as const).map((role) => (
               <SelectItem key={role} value={role}>{tRoles(role)}</SelectItem>
             ))}
           </SelectContent>
@@ -175,7 +177,7 @@ export function UserList({ initialUsers, canManageUsers = true, filterPrefix }: 
                   <TableCell className="text-muted-foreground">{user.branch?.name ?? "—"}</TableCell>
                   <TableCell>
                     <Badge variant={roleBadgeVariant[user.role] ?? "secondary"}>
-                      {tRoles(user.role as "ADMIN" | "TEACHER" | "STUDENT")}
+                      {tRoles(user.role as "ADMIN" | "MANAGER" | "TEACHER" | "STUDENT" | "PARENT")}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -186,26 +188,30 @@ export function UserList({ initialUsers, canManageUsers = true, filterPrefix }: 
                   {canManageUsers && (
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Link href={`/users/${user.id}/edit`}>
-                          <Button variant="outline" size="sm">
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </Link>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={deactivatingId === user.id}
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setDialogOpen(true);
-                          }}
-                        >
-                          {deactivatingId === user.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <UserX className="h-4 w-4 text-destructive" />
-                          )}
-                        </Button>
+                        {(actorRole === "ADMIN" || (user.role !== "ADMIN" && user.role !== "MANAGER")) && (
+                          <>
+                            <Link href={`/users/${user.id}/edit`}>
+                              <Button variant="outline" size="sm">
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={deactivatingId === user.id}
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setDialogOpen(true);
+                              }}
+                            >
+                              {deactivatingId === user.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <UserX className="h-4 w-4 text-destructive" />
+                              )}
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   )}

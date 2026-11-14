@@ -6,6 +6,7 @@ import { apiFetch } from "./client";
 
 export type ApiDashboardSummary =
   | { role: "ADMIN"; users: number; courses: number; students: number; teachers: number }
+  | { role: "MANAGER"; users: number; courses: number; students: number; teachers: number }
   | { role: "TEACHER"; courses: number; students: number }
   | { role: "STUDENT"; courses: number; tests: number };
 
@@ -74,7 +75,7 @@ export interface ApiHostingStatus {
 export interface ApiAdminDashboard {
   month: string;
   date: string;
-  money: ApiAdminDashboardMoney;
+  money: ApiAdminDashboardMoney | Pick<ApiAdminDashboardMoney, "debtTotal" | "debtorsCount">;
   today: ApiAdminDashboardToday;
   attention: ApiAdminDashboardAttention;
   hosting: ApiHostingStatus;

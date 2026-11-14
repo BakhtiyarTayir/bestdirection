@@ -22,7 +22,7 @@ export default async function LessonsPage({ params }: LessonsPageProps) {
   const result = await getLessons(courseId);
 
   const isTeacherOrAdmin =
-    session.user.role === "ADMIN" || session.user.role === "TEACHER";
+    session.user.role === "ADMIN" || session.user.role === "MANAGER" || session.user.role === "TEACHER";
 
   const lessons = result.success ? result.data ?? [] : [];
 

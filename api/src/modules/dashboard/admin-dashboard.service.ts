@@ -53,6 +53,26 @@ export class AdminDashboardService {
   }
 
   async overview(branchId: string | undefined, actor: SessionUser) {
+    if (actor.role === "MANAGER") {
+      const [debtors, today, attention] = await Promise.all([
+        this.billing.debtors({ branchId }),
+        this.todaySchedule(branchId),
+        this.attentionCounts(branchId),
+      ]);
+      return {
+        month: currentMonthKey(),
+        date: currentDateKey(),
+        money: { debtTotal: debtors.totalDebt, debtorsCount: debtors.debtors.length },
+        today,
+        attention: {
+          ...attention,
+          groupsWithoutRate: 0,
+          groupsOverPlan: [],
+          attendingWithoutBilling: [],
+        },
+        hosting: { paidUntil: null, daysLeft: null, warn: false, canEdit: false },
+      };
+    }
     const [finance, debtors, salaryOverview] = await Promise.all([
       this.finance.overview({ branchId }),
       this.billing.debtors({ branchId }),

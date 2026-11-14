@@ -15,7 +15,7 @@ import { TeacherList } from "./teacher-list";
 export const dynamic = "force-dynamic";
 
 export default async function TeachersPage() {
-  await requireRole(["ADMIN"]);
+  await requireRole(["ADMIN", "MANAGER"]);
   const t = await getTranslations("teachers");
   const tCommon = await getTranslations("common");
 

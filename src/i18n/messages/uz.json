@@ -149,6 +149,7 @@
   },
   "roles": {
     "ADMIN": "Administrator",
+    "MANAGER": "Menejer",
     "TEACHER": "O'qituvchi",
     "STUDENT": "Talaba",
     "PARENT": "Ota-ona"

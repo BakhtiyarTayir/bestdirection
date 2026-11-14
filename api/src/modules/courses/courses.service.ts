@@ -86,7 +86,9 @@ export class CoursesService {
 
   async create(data: CreateCourseDto, ability: AppAbility, actor: SessionUser) {
     // Преподаватель заводит курсы только на себя
-    if (!ability.can("manage", "all") && data.teacherId !== actor.id) {
+    // У преподавателя право на Course условное (свои курсы), поэтому проверяем роль
+    const anyOwner = ability.can("manage", "all") || actor.role === "MANAGER";
+    if (!anyOwner && data.teacherId !== actor.id) {
       throw new BadRequestException("onlyOwnCourses");
     }
 

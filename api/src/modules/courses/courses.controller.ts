@@ -55,13 +55,13 @@ export class CoursesController {
   }
 
   /** Сравнение двух курсов — администратору. */
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "CourseComparison"))
   @Get("compare")
   compare(@Query() query: CompareQueryDto) {
     return this.compareService.compare(query.courseAId, query.courseBId);
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "CourseComparison"))
   @Get("for-comparison")
   coursesForComparison() {
     return this.compareService.coursesForComparison();

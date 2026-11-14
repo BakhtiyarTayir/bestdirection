@@ -66,7 +66,7 @@ function buildSeedPayload() {
 }
 
 export default async function AdminLandingPage({ searchParams }: AdminLandingPageProps) {
-  await requireRole(["ADMIN"]);
+  await requireRole(["ADMIN", "MANAGER"]);
   const t = await getTranslations("landingAdmin");
   const { tab } = await searchParams;
 

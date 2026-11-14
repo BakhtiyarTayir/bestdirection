@@ -7,7 +7,7 @@ import { PrismaService } from "../../common/prisma/prisma.service";
  * Сводка на главной кабинета. Перенесено из
  * src/app/[locale]/(dashboard)/dashboard/page.tsx в web.
  *
- * Считает по роли вызывающего: администратор видит школу целиком,
+   * Считает по роли вызывающего: администратор и менеджер видят школу целиком,
  * преподаватель — свои курсы, остальные — себя.
  */
 @Injectable()
@@ -18,9 +18,9 @@ export class DashboardService {
     return this.prismaService.prisma;
   }
 
-  /** branchId учитывается только у администратора — у других ролей фильтра нет. */
+  /** branchId учитывается у администратора и менеджера. */
   async summary(user: SessionUser, branchId?: string) {
-    if (user.role === "ADMIN") return this.forAdmin(branchId);
+    if (user.role === "ADMIN" || user.role === "MANAGER") return this.forAdmin(user.role, branchId);
     if (user.role === "TEACHER") return this.forTeacher(user.id);
     return this.forStudent(user.id);
   }
@@ -34,7 +34,7 @@ export class DashboardService {
    * - курсы — есть открытая группа в филиале;
    * - пользователи — любое из этого или «домашний» филиал.
    */
-  private async forAdmin(branchId?: string) {
+  private async forAdmin(role: "ADMIN" | "MANAGER", branchId?: string) {
     const studentInBranch: Prisma.UserWhereInput | undefined = branchId
       ? { enrollments: { some: { group: { is: { branchId } }, course: { deletedAt: null } } } }
       : undefined;
@@ -71,7 +71,7 @@ export class DashboardService {
       this.prisma.user.count({ where: { role: "STUDENT", isActive: true, ...studentInBranch } }),
       this.prisma.user.count({ where: { role: "TEACHER", isActive: true, ...teacherInBranch } }),
     ]);
-    return { role: "ADMIN" as const, users, courses, students, teachers };
+    return { role, users, courses, students, teachers };
   }
 
   private async forTeacher(teacherId: string) {

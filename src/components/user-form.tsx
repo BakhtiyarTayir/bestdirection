@@ -27,6 +27,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { createUserSchema, updateUserSchema } from "@/validators/user";
 import type { CreateUserInput, UpdateUserInput } from "@/validators/user";
 import type { Role } from "@/validators/user";
+import { assignableRoles, can } from "@/lib/permissions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,6 +57,7 @@ interface UserData {
 }
 
 interface UserFormProps {
+  actorRole: string;
   user?: UserData;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onSubmit: (data: CreateUserInput | UpdateUserInput) => Promise<{ success: boolean; error?: string; [key: string]: any }>;
@@ -73,7 +75,7 @@ function generateRandomPassword(): string {
   return Array.from(bytes, (n) => alphabet[n % alphabet.length]).join("");
 }
 
-export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFormProps) {
+export function UserForm({ user, onSubmit, branches = [], formOptions, actorRole }: UserFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const t = useTranslations("users");
@@ -295,6 +297,7 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const payload: any = isEditing ? { ...data, id: user!.id, isActive } : { ...data };
+      if (!can(actorRole, "payroll")) delete payload.salaryPercentBp;
       if (unenroll) {
         payload.unenrollGroupIds = unenroll.ids;
         payload.unenrollDate = unenroll.date;
@@ -597,7 +600,7 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
             <Select
               defaultValue={form.getValues("role") ?? "STUDENT"}
               onValueChange={(value) => {
-                form.setValue("role", value as "ADMIN" | "TEACHER" | "STUDENT");
+                form.setValue("role", value as Role);
                 if (value !== "STUDENT") setEnrollmentEnabled(false);
               }}
             >
@@ -605,7 +608,12 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
                 <SelectValue placeholder={t("selectRole")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ADMIN">{tRoles("ADMIN")}</SelectItem>
+                {assignableRoles(actorRole).includes("ADMIN") && (
+                  <SelectItem value="ADMIN">{tRoles("ADMIN")}</SelectItem>
+                )}
+                {assignableRoles(actorRole).includes("MANAGER") && (
+                  <SelectItem value="MANAGER">{tRoles("MANAGER")}</SelectItem>
+                )}
                 <SelectItem value="TEACHER">{tRoles("TEACHER")}</SelectItem>
                 <SelectItem value="STUDENT">{tRoles("STUDENT")}</SelectItem>
               </SelectContent>
@@ -620,7 +628,7 @@ export function UserForm({ user, onSubmit, branches = [], formOptions }: UserFor
           {/* Ставка зарплаты — только при правке преподавателя. На создании
               роль ещё можно передумать, и заводить ставку раньше, чем
               появится карточка преподавателя, незачем. */}
-          {isEditing && role === "TEACHER" && (
+          {can(actorRole, "payroll") && isEditing && role === "TEACHER" && (
             <div className="space-y-2">
               <Label htmlFor="salaryPercentBp">{t("salaryPercent")}</Label>
               {/* Поле хранит базисные пункты (validators/user.ts), вводится

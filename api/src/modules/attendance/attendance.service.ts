@@ -53,7 +53,7 @@ export class AttendanceService {
    * или педагог курса (та же лестница, что и на управление занятиями).
    */
   async sessions(courseId: string, user: SessionUser, groupId?: string) {
-    const isStaff = user.role === "ADMIN" || user.role === "TEACHER";
+    const isStaff = user.role === "ADMIN" || user.role === "MANAGER" || user.role === "TEACHER";
 
     if (!isStaff) {
       if (user.role !== "STUDENT") throw new ForbiddenException("forbidden");
@@ -189,7 +189,7 @@ export class AttendanceService {
       // Ведущего занятия меняет только администратор: иначе преподаватель
       // прямым вызовом перевесил бы свой пропуск на коллегу.
       if (data.teacher.teacherId !== undefined) {
-        if (actor.role !== "ADMIN") throw new ForbiddenException("onlyAdminCanChangeTeacher");
+        if (actor.role !== "ADMIN" && actor.role !== "MANAGER") throw new ForbiddenException("onlyAdminCanChangeTeacher");
         if (data.teacher.teacherId === null) {
           teacherData.teacher = { disconnect: true };
         } else {
@@ -455,7 +455,7 @@ export class AttendanceService {
    * чтобы не держать этот расчёт в двух местах.
    */
   async groupsOverview(query: AttendanceGroupsQueryDto, user: SessionUser) {
-    if (user.role !== "ADMIN" && user.role !== "TEACHER") throw new ForbiddenException("forbidden");
+    if (user.role !== "ADMIN" && user.role !== "MANAGER" && user.role !== "TEACHER") throw new ForbiddenException("forbidden");
 
     const month = query.month ?? currentMonthKey();
     const monthFrom = monthStart(month);

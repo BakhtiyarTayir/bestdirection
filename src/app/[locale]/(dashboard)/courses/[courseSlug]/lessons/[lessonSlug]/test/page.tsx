@@ -67,7 +67,7 @@ async function TestPageAsync({
     role === "STUDENT" && assessment ? await getMyAssessmentAttempts(assessment.id) : null;
   const studentAttempts = attemptsResult?.success ? attemptsResult.data : [];
 
-  const isTeacherOrAdmin = role === "ADMIN" || role === "TEACHER";
+  const isTeacherOrAdmin = role === "ADMIN" || role === "MANAGER" || role === "TEACHER";
 
   return (
     <div className="space-y-6">

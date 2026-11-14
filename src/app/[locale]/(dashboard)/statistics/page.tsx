@@ -22,7 +22,7 @@ interface UsersStatisticsPageProps {
 export default async function UsersStatisticsPage({
   searchParams,
 }: UsersStatisticsPageProps) {
-  await requireRole(["ADMIN", "TEACHER"]);
+  await requireRole(["ADMIN", "MANAGER", "TEACHER"]);
   const t = await getTranslations("users");
   const tCommon = await getTranslations("common");
   const params = await searchParams;

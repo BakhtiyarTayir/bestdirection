@@ -240,7 +240,7 @@ export class SubmissionsService {
     return this.prisma.submission.findMany({
       where: {
         manualStatus: { in: ["APPROVED", "REJECTED", "REVISION"] },
-        ...(user.role === "ADMIN" ? {} : { reviewedById: user.id }),
+        ...((user.role === "ADMIN" || user.role === "MANAGER") ? {} : { reviewedById: user.id }),
       },
       include: {
         student: { select: { id: true, firstName: true, lastName: true } },
@@ -451,7 +451,7 @@ export class SubmissionsService {
 
   /** Работы своих курсов; администратору — все. */
   private ownCoursesWhere(user: SessionUser): Prisma.SubmissionWhereInput {
-    if (user.role === "ADMIN") return {};
+    if ((user.role === "ADMIN" || user.role === "MANAGER")) return {};
     return { homework: { lesson: { course: { teacherId: user.id } } } };
   }
 

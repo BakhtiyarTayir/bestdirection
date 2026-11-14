@@ -21,20 +21,20 @@ export class LeadsController {
     return this.leads.submit(body);
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "Lead"))
   @Get()
   list() {
     return this.leads.list();
   }
 
   /** Бейдж «Заявки» в сайдбаре: сколько заявок ещё без отметки «связались». */
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "Lead"))
   @Get("count")
   count() {
     return this.leads.uncontactedCount();
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "Lead"))
   @Patch(":id")
   markContacted(@Param("id") id: string, @Body() body: LeadContactedDto) {
     return this.leads.markContacted(id, body.contacted);

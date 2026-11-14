@@ -46,92 +46,92 @@ export class MarketingController {
 
   // ─── Администрирование ──────────────────────────────────────────────────
 
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "Marketing"))
   @Get("admin")
   adminContent() {
     return this.marketing.adminContent();
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "Marketing"))
   @Get("admin/pages/:id")
   pageById(@Param("id") id: string) {
     return this.marketing.pageById(id);
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "Marketing"))
   @Post("courses")
   saveCourse(@Body() body: MarketingCourseDto) {
     return this.marketing.saveCourse(body);
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "Marketing"))
   @Post("reels")
   saveReel(@Body() body: MarketingReelDto) {
     return this.marketing.saveReel(body);
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "Marketing"))
   @Post("gallery")
   saveGalleryItem(@Body() body: MarketingGalleryItemDto) {
     return this.marketing.saveGalleryItem(body);
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "Marketing"))
   @Post("testimonials")
   saveTestimonial(@Body() body: MarketingTestimonialDto) {
     return this.marketing.saveTestimonial(body);
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "Marketing"))
   @Post("pages")
   savePage(@Body() body: MarketingPageDto) {
     return this.marketing.savePage(body);
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "Marketing"))
   @Post("texts")
   saveTexts(@Body() body: MarketingTextsDto) {
     return this.marketing.saveTexts(body);
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "Marketing"))
   @Put("logo")
   saveLogo(@Body() body: SiteLogoDto, @CurrentUser() actor: SessionUser) {
     return this.marketing.saveLogo(body.url, actor);
   }
 
   /** Первичное наполнение: значения присылает web, пишет их api. */
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "Marketing"))
   @Post("seed")
   seed(@Body() body: MarketingSeedDto) {
     return this.marketing.seed(body);
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "Marketing"))
   @Delete("courses/:id")
   removeCourse(@Param("id") id: string, @CurrentUser() actor: SessionUser) {
     return this.marketing.remove("course", id, actor);
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "Marketing"))
   @Delete("reels/:id")
   removeReel(@Param("id") id: string, @CurrentUser() actor: SessionUser) {
     return this.marketing.remove("reel", id, actor);
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "Marketing"))
   @Delete("gallery/:id")
   removeGalleryItem(@Param("id") id: string, @CurrentUser() actor: SessionUser) {
     return this.marketing.remove("gallery", id, actor);
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "Marketing"))
   @Delete("testimonials/:id")
   removeTestimonial(@Param("id") id: string, @CurrentUser() actor: SessionUser) {
     return this.marketing.remove("testimonial", id, actor);
   }
 
-  @CheckPolicies((ability) => ability.can("manage", "all"))
+  @CheckPolicies((ability) => ability.can("manage", "Marketing"))
   @Delete("pages/:id")
   removePage(@Param("id") id: string, @CurrentUser() actor: SessionUser) {
     return this.marketing.remove("page", id, actor);

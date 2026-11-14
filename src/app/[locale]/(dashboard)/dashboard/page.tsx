@@ -25,13 +25,15 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const params = await searchParams;
   const branchId = typeof params.branchId === "string" && params.branchId ? params.branchId : undefined;
   // Не-администраторам api фильтр филиала не применяет
-  const result = await getDashboardSummary(session.user.role === "ADMIN" ? branchId : undefined);
+  const result = await getDashboardSummary(
+    session.user.role === "ADMIN" || session.user.role === "MANAGER" ? branchId : undefined
+  );
   if (!result.success) return <DashboardError title={t("studentTitle")} />;
 
   const summary = result.data;
 
-  if (summary.role === "ADMIN") {
-    return <AdminDashboard summary={summary} branchId={branchId} />;
+  if (summary.role === "ADMIN" || summary.role === "MANAGER") {
+    return <AdminDashboard summary={summary} branchId={branchId} actorRole={session.user.role} />;
   }
 
   if (summary.role === "TEACHER") {

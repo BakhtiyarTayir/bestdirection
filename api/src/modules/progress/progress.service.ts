@@ -117,7 +117,7 @@ export class ProgressService {
         select: { id: true },
       });
       if (!link) throw new NotFoundException("studentNotFound");
-    } else if (user.role !== "ADMIN" && user.role !== "TEACHER") {
+    } else if (user.role !== "ADMIN" && user.role !== "MANAGER" && user.role !== "TEACHER") {
       throw new NotFoundException("studentNotFound");
     }
 

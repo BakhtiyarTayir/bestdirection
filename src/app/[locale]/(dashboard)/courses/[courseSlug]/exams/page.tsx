@@ -55,7 +55,7 @@ async function ExamsPageAsync({
   const course = courseResult.data;
 
   const isTeacherOrAdmin =
-    role === "ADMIN" || (role === "TEACHER" && course.teacherId === userId);
+    (role === "ADMIN" || role === "MANAGER") || (role === "TEACHER" && course.teacherId === userId);
 
   // Черновики экзаменов api отдаёт только тем, кто вправе их видеть
   const examsResult = await getAssessmentsByCourse(courseId, "EXAM");

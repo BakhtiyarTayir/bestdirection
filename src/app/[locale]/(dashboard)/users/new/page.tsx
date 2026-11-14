@@ -8,7 +8,7 @@ import { CreateUserForm } from "./create-user-form";
 export const dynamic = "force-dynamic";
 
 export default async function NewUserPage() {
-  await requireRole(["ADMIN"]);
+  const session = await requireRole(["ADMIN", "MANAGER"]);
 
   const [branchesResult, formOptionsResult] = await Promise.all([getBranches(), getUsersFormOptions()]);
   const branches = (branchesResult.success && branchesResult.data ? branchesResult.data : []).filter(
@@ -17,22 +17,24 @@ export default async function NewUserPage() {
   const formOptions: ApiUsersFormOptions =
     formOptionsResult.success && formOptionsResult.data ? formOptionsResult.data : { courses: [], groups: [] };
 
-  return <NewUserPageContent branches={branches} formOptions={formOptions} />;
+  return <NewUserPageContent branches={branches} formOptions={formOptions} actorRole={session.user.role} />;
 }
 
 async function NewUserPageContent({
   branches,
   formOptions,
+  actorRole,
 }: {
   branches: { id: string; name: string }[];
   formOptions: ApiUsersFormOptions;
+  actorRole: string;
 }) {
   const t = await getTranslations("users");
 
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">{t("createUser")}</h1>
-      <CreateUserForm branches={branches} formOptions={formOptions} />
+      <CreateUserForm branches={branches} formOptions={formOptions} actorRole={actorRole} />
     </div>
   );
 }

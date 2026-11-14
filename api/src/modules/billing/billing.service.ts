@@ -353,7 +353,7 @@ export class BillingService {
    * Карточка студента: по каждому курсу — помесячная история начислений и
    * оплат с балансом на конец месяца.
    */
-  async studentBilling(studentId: string) {
+  async studentBilling(studentId: string, actor?: SessionUser) {
     const student = await this.prisma.user.findUnique({
       where: { id: studentId },
       select: { id: true, firstName: true, lastName: true, phone: true, login: true, telegramUsername: true },
@@ -471,7 +471,7 @@ export class BillingService {
         totalCharged,
         totalPaid,
         totalRefunded,
-        refundAvailable: advance(paidAll, totalRefunded, totalCharged),
+        refundAvailable: actor?.role === "MANAGER" ? 0 : advance(paidAll, totalRefunded, totalCharged),
         balance: totalPaid - totalCharged - (totalRefunded - refundedFuture),
         // Аванс за месяцы позже текущего — отдельно от баланса (тот же приём,
         // что prepaidTotal в debtors(), только на уровне одного курса)
@@ -495,7 +495,7 @@ export class BillingService {
         groupName: payment.group?.name ?? null,
         createdBy: `${payment.createdBy.lastName} ${payment.createdBy.firstName}`,
       })),
-      refunds: refunds.map((refund) => ({ id: refund.id, amount: refund.amount, method: refund.method,
+      refunds: actor?.role === "MANAGER" ? [] : refunds.map((refund) => ({ id: refund.id, amount: refund.amount, method: refund.method,
         refundedAt: refund.refundedAt.toISOString(), comment: refund.comment, courseId: refund.courseId,
         courseTitle: refund.course.title, groupName: refund.group?.name ?? null,
         createdBy: `${refund.createdBy.lastName} ${refund.createdBy.firstName}` })),

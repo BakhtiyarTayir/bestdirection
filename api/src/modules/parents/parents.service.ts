@@ -59,7 +59,7 @@ export class ParentsService {
    */
   async children(requestedParentId: string | undefined, user: SessionUser) {
     const targetId = requestedParentId ?? user.id;
-    if (targetId !== user.id && user.role !== "ADMIN" && user.role !== "TEACHER") {
+    if (targetId !== user.id && user.role !== "ADMIN" && user.role !== "MANAGER" && user.role !== "TEACHER") {
       throw new NotFoundException("parentNotFound");
     }
 

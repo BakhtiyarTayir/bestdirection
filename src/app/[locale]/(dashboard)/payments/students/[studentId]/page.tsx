@@ -77,7 +77,7 @@ interface PaymentRow {
 }
 
 export default async function StudentBillingPage({ params }: StudentBillingPageProps) {
-  await requireRole(["ADMIN"]);
+  const session = await requireRole(["ADMIN", "MANAGER"]);
   const { studentId } = await params;
   const t = await getTranslations("studentBilling");
   const tDebtors = await getTranslations("debtors");
@@ -246,7 +246,7 @@ export default async function StudentBillingPage({ params }: StudentBillingPageP
                   )}
                   {/* Правка начислений доступна независимо от того, есть ли долг */}
                   <div className="flex items-center gap-2">
-                    {course.refundAvailable > 0 && <RefundButton studentId={studentId} courseId={course.course.id}
+                    {session.user.role === "ADMIN" && course.refundAvailable > 0 && <RefundButton studentId={studentId} courseId={course.course.id}
                       courseTitle={course.course.title} groupId={course.group?.id} available={course.refundAvailable} />}
                     <BillingSettingsButton enrollmentId={course.enrollmentId} />
                   </div>
@@ -381,7 +381,7 @@ export default async function StudentBillingPage({ params }: StudentBillingPageP
           )}
         </CardContent>
       </Card>
-      {refunds.length > 0 && (
+      {session.user.role === "ADMIN" && refunds.length > 0 && (
         <Card>
           <CardHeader><CardTitle className="text-lg">{t("refundsTitle")}</CardTitle></CardHeader>
           <CardContent><div className="overflow-x-auto rounded-md border"><Table>

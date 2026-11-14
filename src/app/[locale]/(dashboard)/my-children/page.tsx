@@ -29,7 +29,7 @@ export const dynamic = "force-dynamic";
 // Кабинет родителя: ученики, привязанные к его аккаунту. Администратору
 // сюда не нужно — у него есть карточка ученика со всеми связями.
 export default async function MyChildrenPage() {
-  await requireRole(["PARENT", "ADMIN"]);
+  await requireRole(["PARENT", "ADMIN", "MANAGER"]);
 
   const t = await getTranslations("parents");
   const tProgress = await getTranslations("progress");

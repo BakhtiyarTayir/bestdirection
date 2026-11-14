@@ -15,7 +15,7 @@ async function CourseCatalogPageAsync({
 }: {
   t: ReturnType<typeof useTranslations<"catalog">>;
 }) {
-  await requireRole(["ADMIN", "TEACHER"]);
+  await requireRole(["ADMIN", "MANAGER", "TEACHER"]);
 
   const result = await getCoursesForCopy();
 

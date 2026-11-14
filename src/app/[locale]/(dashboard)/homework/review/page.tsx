@@ -5,7 +5,7 @@ import { TeacherReviewList } from "@/components/homework/teacher-review-list";
 
 export default async function ReviewPage() {
   const t = await getTranslations("homeworkHub");
-  await requireRole(["TEACHER", "ADMIN"]);
+  await requireRole(["TEACHER", "ADMIN", "MANAGER"]);
 
   const [pendingResult, historyResult] = await Promise.all([
     getPendingReviewSubmissions(),

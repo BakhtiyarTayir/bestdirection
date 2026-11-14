@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -85,6 +86,12 @@ export class UsersService {
     return this.prismaService.prisma;
   }
 
+  private assertManagerTarget(actor: SessionUser, role: string): void {
+    if (actor.role === "MANAGER" && (role === "ADMIN" || role === "MANAGER")) {
+      throw new ForbiddenException("staffRoleAdminOnly");
+    }
+  }
+
   /** Без фильтра мягкого удаления: логин удалённого пользователя остаётся занятым. */
   private get prismaUnscoped() {
     return this.prismaService.prismaUnscoped;
@@ -103,7 +110,10 @@ export class UsersService {
       orderBy: { createdAt: "desc" },
       select: USER_SELECT,
     });
-    return users.map(withHasTelegram);
+    return users.map((user) => ({
+      ...withHasTelegram(user),
+      salaryPercentBp: ability.can("read", "Salary") ? user.salaryPercentBp : null,
+    }));
   }
 
   async byId(ability: AppAbility, id: string) {
@@ -119,13 +129,14 @@ export class UsersService {
       select: { groupId: true, group: { select: { name: true, branch: { select: { name: true } } } },
         course: { select: { title: true } } },
     }) : [];
-    return { ...withHasTelegram(user), activeGroups: activeGroups.map((entry) => ({
+    return { ...withHasTelegram(user), salaryPercentBp: ability.can("read", "Salary") ? user.salaryPercentBp : null, activeGroups: activeGroups.map((entry) => ({
       groupId: entry.groupId!, groupName: entry.group!.name,
       courseTitle: entry.course.title, branchName: entry.group!.branch.name,
     })) };
   }
 
   async create(data: CreateUserDto, actor: SessionUser) {
+    this.assertManagerTarget(actor, data.role);
     if (await this.loginTakenBy(data.login)) throw new ConflictException("loginExists");
 
     const branchId = data.branchId.trim();
@@ -315,6 +326,11 @@ export class UsersService {
       },
     });
     if (!existing) throw new NotFoundException("userNotFound");
+    this.assertManagerTarget(actor, existing.role);
+    if (data.role) this.assertManagerTarget(actor, data.role);
+    if (actor.role === "MANAGER" && data.salaryPercentBp !== undefined) {
+      throw new ForbiddenException("salaryPercentAdminOnly");
+    }
 
     const requestedGroups = data.unenrollGroupIds;
     if (requestedGroups !== undefined || data.unenrollDate !== undefined) {
@@ -413,7 +429,7 @@ export class UsersService {
     this.sessionUsers.forget(id);
     if (data.isActive === false || passwordHash) await this.sessions.destroyAllFor(id);
 
-    return withHasTelegram(user);
+    return { ...withHasTelegram(user), salaryPercentBp: actor.role === "MANAGER" ? null : user.salaryPercentBp };
   }
 
   /**
@@ -471,6 +487,7 @@ export class UsersService {
     if (actor.id === id) throw new BadRequestException("cannotDeactivateSelf");
     const target = await this.prisma.user.findUnique({ where: { id }, select: { role: true } });
     if (!target) throw new NotFoundException("userNotFound");
+    this.assertManagerTarget(actor, target.role);
     if (target.role === "ADMIN") await this.assertNotLastAdmin(id);
 
     await this.prisma.user.update({ where: { id }, data: { isActive: false } });
@@ -542,8 +559,9 @@ export class UsersService {
 
   /** deletedAt снимаем заодно: у записей, удалённых старой логикой, он остался. */
   async restore(id: string, actor: SessionUser) {
-    const existing = await this.prismaUnscoped.user.findUnique({ where: { id }, select: { id: true } });
+    const existing = await this.prismaUnscoped.user.findUnique({ where: { id }, select: { id: true, role: true } });
     if (!existing) throw new NotFoundException("userNotFound");
+    this.assertManagerTarget(actor, existing.role);
 
     await this.prisma.user.update({ where: { id }, data: { isActive: true, deletedAt: null } });
     this.sessionUsers.forget(id);
@@ -571,6 +589,7 @@ export class UsersService {
       select: { id: true, isActive: true, deletedAt: true, login: true, role: true, firstName: true, lastName: true },
     });
     if (!target) throw new NotFoundException("userNotFound");
+    this.assertManagerTarget(actor, target.role);
     // Стирать можно только с вкладки деактивированных
     if (target.isActive && !target.deletedAt) throw new BadRequestException("userIsActive");
     if (target.role === "ADMIN") await this.assertNotLastAdmin(id);

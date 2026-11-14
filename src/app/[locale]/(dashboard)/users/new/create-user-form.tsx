@@ -8,12 +8,13 @@ import type { CreateUserInput, UpdateUserInput } from "@/validators/user";
 interface CreateUserFormProps {
   branches: { id: string; name: string }[];
   formOptions: ApiUsersFormOptions;
+  actorRole: string;
 }
 
-export function CreateUserForm({ branches, formOptions }: CreateUserFormProps) {
+export function CreateUserForm({ branches, formOptions, actorRole }: CreateUserFormProps) {
   const handleSubmit = async (data: CreateUserInput | UpdateUserInput) => {
     return await createUser(data as CreateUserInput);
   };
 
-  return <UserForm onSubmit={handleSubmit} branches={branches} formOptions={formOptions} />;
+  return <UserForm onSubmit={handleSubmit} branches={branches} formOptions={formOptions} actorRole={actorRole} />;
 }

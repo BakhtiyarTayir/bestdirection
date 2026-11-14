@@ -9,6 +9,22 @@ describe("права (CASL)", () => {
     expect(ability.can("delete", "User")).toBe(true);
   });
 
+  it("MANAGER получает только перечисленные рабочие права", () => {
+    const ability = defineAbilityFor({ id: "m1", role: "MANAGER" });
+    for (const area of ["Course", "Group", "Billing", "Attendance", "Lead", "Marketing", "Sms", "Trash"] as const) {
+      expect(ability.can("manage", area)).toBe(true);
+    }
+    for (const area of ["Finance", "PaymentDelete", "Refund", "Salary", "Settings", "AuditLog", "Branch", "all"] as const) {
+      expect(ability.can("manage", area)).toBe(false);
+    }
+    expect(ability.can("read", "Branch")).toBe(true);
+    expect(ability.can("read", subject("User", { id: "a1", role: "ADMIN" } as never))).toBe(true);
+    expect(ability.can("update", subject("User", { id: "a1", role: "ADMIN" } as never))).toBe(false);
+    expect(ability.can("create", subject("User", { role: "MANAGER" } as never))).toBe(false);
+    expect(ability.can("create", subject("User", { role: "STUDENT" } as never))).toBe(true);
+    expect(ability.can("update", subject("User", { id: "t1", role: "TEACHER" } as never))).toBe(true);
+  });
+
   it.each(["TEACHER", "STUDENT", "PARENT"] as const)("%s читает только свой профиль", (role) => {
     const ability = defineAbilityFor({ id: "u1", role });
     expect(ability.can("read", subject("User", { id: "u1" } as never))).toBe(true);

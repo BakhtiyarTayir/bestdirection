@@ -23,7 +23,7 @@ interface EditUserPageProps {
 }
 
 export default async function EditUserPage({ params }: EditUserPageProps) {
-  await requireRole(["ADMIN"]);
+  const session = await requireRole(["ADMIN", "MANAGER"]);
 
   const { userId } = await params;
   const result = await getUserById(userId);
@@ -33,17 +33,20 @@ export default async function EditUserPage({ params }: EditUserPageProps) {
   }
 
   const user = result.data;
+  if (session.user.role === "MANAGER" && (user.role === "ADMIN" || user.role === "MANAGER")) {
+    notFound();
+  }
 
   const branchesResult = await getBranches();
   const branches = (branchesResult.success && branchesResult.data ? branchesResult.data : []).filter(
     (branch) => branch.isActive || branch.id === user.branchId
   );
 
-  return <EditUserPageContent user={user} branches={branches} />;
+  return <EditUserPageContent user={user} branches={branches} actorRole={session.user.role} />;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function EditUserPageContent({ user, branches }: { user: any; branches: { id: string; name: string }[] }) {
+async function EditUserPageContent({ user, branches, actorRole }: { user: any; branches: { id: string; name: string }[]; actorRole: string }) {
   const t = await getTranslations("users");
 
   // Курс/группа/цена уже полностью показаны на карточке биллинга — здесь
@@ -76,8 +79,8 @@ async function EditUserPageContent({ user, branches }: { user: any; branches: { 
           )}
         </div>
       </div>
-      <EditUserForm user={user} branches={branches} />
-      {/* Логин и пароль ученика видит только администратор (страница под requireRole ADMIN) */}
+      <EditUserForm user={user} branches={branches} actorRole={actorRole} />
+      {/* Доступы ученика видит персонал; права проверяет api. */}
       {user.role === "STUDENT" && <StudentAccessCard userId={user.id} login={user.login} />}
       {user.role === "STUDENT" && enrollments.length > 0 && (
         <Card>

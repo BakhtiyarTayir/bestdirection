@@ -62,6 +62,7 @@ export function testDb() {
 }
 
 export async function createUser(data: {
+  // Role из Prisma включает MANAGER; сессии и HTTP-хелперы используют ту же роль.
   role: Role;
   isActive?: boolean;
   deletedAt?: Date | null;

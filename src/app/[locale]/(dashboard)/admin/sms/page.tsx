@@ -29,7 +29,7 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
 };
 
 export default async function SmsPage() {
-  await requireRole(["ADMIN"]);
+  await requireRole(["ADMIN", "MANAGER"]);
 
   const t = await getTranslations("sms");
   const numberLocale = intlLocale(await getLocale());

@@ -7,9 +7,8 @@ import { AdminDashboardQueryDto, HostingPaidUntilDto } from "./dto/admin-dashboa
 import { HostingService } from "./hosting.service";
 
 /**
- * Главная панель администратора: деньги за месяц, занятия «сегодня» и
- * список «требует внимания». Деньги видит только администратор — то же
- * правило, что у /finance, /billing, /salary.
+ * Главная центра: менеджер видит занятия и долг учеников, администратор —
+ * полную денежную сводку и список «требует внимания».
  */
 @Controller("dashboard/admin")
 export class AdminDashboardController {
@@ -25,7 +24,7 @@ export class AdminDashboardController {
   }
 
   /** Срок оплаты хостинга. Менять может только владелец (HOSTING_OWNER_ID) — проверяет сервис. */
-  @CheckPolicies((ability) => ability.can("manage", "Billing"))
+  @CheckPolicies((ability) => ability.can("manage", "Finance"))
   @Put("hosting")
   setHosting(@Body() body: HostingPaidUntilDto, @CurrentUser() actor: SessionUser) {
     return this.hosting.setPaidUntil(body.paidUntil, actor);

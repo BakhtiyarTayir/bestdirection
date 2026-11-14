@@ -12,8 +12,9 @@ import { HostingNotice } from "@/components/dashboard/admin/hosting-notice";
 import type { ApiDashboardSummary } from "@/lib/api/dashboard";
 
 interface AdminDashboardProps {
-  summary: Extract<ApiDashboardSummary, { role: "ADMIN" }>;
+  summary: Extract<ApiDashboardSummary, { role: "ADMIN" | "MANAGER" }>;
   branchId?: string;
+  actorRole: string;
 }
 
 /**
@@ -21,7 +22,7 @@ interface AdminDashboardProps {
  * «сегодня» и «требует внимания» считает api (admin-dashboard.service.ts) —
  * страница только раскладывает их по карточкам.
  */
-export async function AdminDashboard({ summary, branchId }: AdminDashboardProps) {
+export async function AdminDashboard({ summary, branchId, actorRole }: AdminDashboardProps) {
   const t = await getTranslations("dashboardAdmin");
   const locale = await getLocale();
 
@@ -46,7 +47,26 @@ export async function AdminDashboard({ summary, branchId }: AdminDashboardProps)
       {data ? (
         <>
           <HostingNotice hosting={data.hosting} today={data.date} />
-          <MoneySummary money={data.money} month={data.month} locale={locale} />
+          {actorRole === "ADMIN" && "received" in data.money && (
+            <MoneySummary money={data.money as import("@/lib/api/dashboard").ApiAdminDashboardMoney} month={data.month} locale={locale} />
+          )}
+          {actorRole === "MANAGER" && (
+            <Link href="/payments/debtors">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t("moneyDebtStudents")}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xl font-bold tabular-nums">
+                    {new Intl.NumberFormat(locale).format(data.money.debtTotal)} UZS
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {t("debtorsCount", { count: data.money.debtorsCount })}
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
           <div className="grid gap-4 lg:grid-cols-2">
             <TodaySchedule today={data.today} />
             <AttentionList attention={data.attention} branchFiltered={Boolean(branchId)} />

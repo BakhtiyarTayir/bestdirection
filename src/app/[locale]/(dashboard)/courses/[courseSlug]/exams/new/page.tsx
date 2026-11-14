@@ -28,7 +28,7 @@ async function NewExamPageAsync({
   const { courseSlug } = await params;
   const courseId = await resolveCourseSlug(courseSlug);
 
-  const session = await requireRole(["ADMIN", "TEACHER"]);
+  const session = await requireRole(["ADMIN", "MANAGER", "TEACHER"]);
 
   const courseResult = await getCourseById(courseId);
   if (!courseResult.success) redirect("/courses");

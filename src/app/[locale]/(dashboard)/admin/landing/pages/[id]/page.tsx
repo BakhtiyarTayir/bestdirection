@@ -11,7 +11,7 @@ interface AdminPageEditorProps {
 }
 
 export default async function AdminPageEditorPage({ params }: AdminPageEditorProps) {
-  await requireRole(["ADMIN"]);
+  await requireRole(["ADMIN", "MANAGER"]);
   const { id } = await params;
 
   if (id === "new") {

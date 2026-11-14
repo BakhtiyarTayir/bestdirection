@@ -48,6 +48,7 @@ import {
 import { LanguageSwitcher } from "./language-switcher";
 import { LessonSidebarNav } from "./lesson-sidebar-nav";
 import { BADGE_REFRESH_EVENT } from "@/lib/badge-refresh";
+import { can } from "@/lib/permissions";
 
 /** На странице урока сайдбар показывает уроки курса вместо общего меню. */
 function matchLessonRoute(pathname: string): { courseSlug: string; lessonSlug: string } | null {
@@ -81,11 +82,11 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard, roles: ["ADMIN", "TEACHER", "STUDENT"] },
-  { href: "/courses", labelKey: "courses", icon: BookOpen, roles: ["ADMIN", "TEACHER", "STUDENT"] },
-  { href: "/users", labelKey: "users", icon: Users, roles: ["ADMIN", "TEACHER"], badge: "newUsers" },
-  { href: "/teachers", labelKey: "teachers", icon: GraduationCap, roles: ["ADMIN"] },
-  { href: "/students", labelKey: "students", icon: UserRound, roles: ["ADMIN"] },
+  { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard, roles: ["ADMIN", "MANAGER", "TEACHER", "STUDENT"] },
+  { href: "/courses", labelKey: "courses", icon: BookOpen, roles: ["ADMIN", "MANAGER", "TEACHER", "STUDENT"] },
+  { href: "/users", labelKey: "users", icon: Users, roles: ["ADMIN", "MANAGER", "TEACHER"], badge: "newUsers" },
+  { href: "/teachers", labelKey: "teachers", icon: GraduationCap, roles: ["ADMIN", "MANAGER"] },
+  { href: "/students", labelKey: "students", icon: UserRound, roles: ["ADMIN", "MANAGER"] },
   {
     // Раздел стал журналом по группам (план «Журнал посещаемости по
     // группам», 2026-09-24) — отмечать посещаемость может только персонал,
@@ -93,44 +94,44 @@ const navItems: NavItem[] = [
     href: "/attendance",
     labelKey: "attendance",
     icon: CalendarCheck,
-    roles: ["ADMIN", "TEACHER"],
+    roles: ["ADMIN", "MANAGER", "TEACHER"],
     children: [
       { href: "/attendance", labelKey: "attendanceByCourse" },
-      { href: "/attendance/teachers", labelKey: "teacherAttendance", roles: ["ADMIN", "TEACHER"] },
+      { href: "/attendance/teachers", labelKey: "teacherAttendance", roles: ["ADMIN", "MANAGER", "TEACHER"] },
     ],
   },
-  { href: "/statistics", labelKey: "homeworkStats", icon: BarChart3, roles: ["ADMIN", "TEACHER"] },
-  { href: "/groups", labelKey: "groups", icon: UsersRound, roles: ["ADMIN", "TEACHER"] },
-  { href: "/courses/catalog", labelKey: "catalog", icon: Copy, roles: ["ADMIN", "TEACHER"] },
+  { href: "/statistics", labelKey: "homeworkStats", icon: BarChart3, roles: ["ADMIN", "MANAGER", "TEACHER"] },
+  { href: "/groups", labelKey: "groups", icon: UsersRound, roles: ["ADMIN", "MANAGER", "TEACHER"] },
+  { href: "/courses/catalog", labelKey: "catalog", icon: Copy, roles: ["ADMIN", "MANAGER", "TEACHER"] },
   { href: "/courses/browse", labelKey: "browseCatalog", icon: BookOpen, roles: ["STUDENT"] },
-  { href: "/courses/requests", labelKey: "enrollmentRequests", icon: Inbox, roles: ["ADMIN", "TEACHER"], badge: "enrollmentRequests" },
-  { href: "/payments", labelKey: "payments", icon: Wallet, roles: ["ADMIN"], exact: true },
+  { href: "/courses/requests", labelKey: "enrollmentRequests", icon: Inbox, roles: ["ADMIN", "MANAGER", "TEACHER"], badge: "enrollmentRequests" },
+  { href: "/payments", labelKey: "payments", icon: Wallet, roles: ["ADMIN", "MANAGER"], exact: true },
   { href: "/payments/refunds", labelKey: "refunds", icon: Wallet, roles: ["ADMIN"] },
-  { href: "/payments/debtors", labelKey: "debtors", icon: TriangleAlert, roles: ["ADMIN"], badge: "debtors" },
+  { href: "/payments/debtors", labelKey: "debtors", icon: TriangleAlert, roles: ["ADMIN", "MANAGER"], badge: "debtors" },
   { href: "/salaries", labelKey: "salaries", icon: Wallet, roles: ["ADMIN"] },
   { href: "/finance", labelKey: "finance", icon: TrendingUp, roles: ["ADMIN"] },
-  { href: "/admin/compare", labelKey: "compare", icon: GitCompare, roles: ["ADMIN"] },
+  { href: "/admin/compare", labelKey: "compare", icon: GitCompare, roles: ["ADMIN", "MANAGER"] },
   { href: "/admin/branches", labelKey: "branches", icon: Building2, roles: ["ADMIN"] },
-  { href: "/admin/leads", labelKey: "leads", icon: Inbox, roles: ["ADMIN"], badge: "leads" },
-  { href: "/admin/sms", labelKey: "sms", icon: MessageSquare, roles: ["ADMIN"] },
+  { href: "/admin/leads", labelKey: "leads", icon: Inbox, roles: ["ADMIN", "MANAGER"], badge: "leads" },
+  { href: "/admin/sms", labelKey: "sms", icon: MessageSquare, roles: ["ADMIN", "MANAGER"] },
   {
     href: "/admin/landing",
     labelKey: "site",
     icon: Megaphone,
-    roles: ["ADMIN"],
+    roles: ["ADMIN", "MANAGER"],
     children: [
       { href: "/admin/landing", labelKey: "siteLanding" },
       { href: "/admin/landing/pages", labelKey: "sitePages" },
     ],
   },
-  { href: "/trash", labelKey: "trash", icon: Trash2, roles: ["ADMIN"] },
+  { href: "/trash", labelKey: "trash", icon: Trash2, roles: ["ADMIN", "MANAGER"] },
   { href: "/audit", labelKey: "audit", icon: ScrollText, roles: ["ADMIN"] },
-  { href: "/homework", labelKey: "homework", icon: ClipboardList, roles: ["ADMIN", "TEACHER", "STUDENT"], badge: "homework" },
+  { href: "/homework", labelKey: "homework", icon: ClipboardList, roles: ["ADMIN", "MANAGER", "TEACHER", "STUDENT"], badge: "homework" },
   { href: "/my-results", labelKey: "myResults", icon: FileText, roles: ["STUDENT"] },
   { href: "/progress", labelKey: "progress", icon: LineChart, roles: ["STUDENT"] },
   { href: "/my-children", labelKey: "myChildren", icon: UsersRound, roles: ["PARENT"] },
   { href: "/salaries/me", labelKey: "mySalary", icon: Wallet, roles: ["TEACHER"] },
-  { href: "/profile", labelKey: "profile", icon: User, roles: ["ADMIN", "TEACHER", "STUDENT", "PARENT"] },
+  { href: "/profile", labelKey: "profile", icon: User, roles: ["ADMIN", "MANAGER", "TEACHER", "STUDENT", "PARENT"] },
 ];
 
 function useBadgeCount(endpoint: string, enabled: boolean) {
@@ -173,13 +174,13 @@ export function Sidebar({ role, userName, logoUrl }: SidebarProps) {
   const homeworkCount = useBadgeCount("/api/homework/count", true);
   const requestsCount = useBadgeCount(
     "/api/enrollment-requests/count",
-    role === "ADMIN" || role === "TEACHER"
+    can(role, "operate") || role === "TEACHER"
   );
-  const debtorsCount = useBadgeCount("/api/debtors/count", role === "ADMIN");
+  const debtorsCount = useBadgeCount("/api/debtors/count", can(role, "cashier"));
   // Сколько пользователей завели другие сотрудники с последнего открытия списка
-  const newUsersCount = useBadgeCount("/api/users/new-count", role === "ADMIN");
+  const newUsersCount = useBadgeCount("/api/users/new-count", can(role, "operate"));
   // Заявки с сайта, по которым ещё не связались
-  const leadsCount = useBadgeCount("/api/leads/count", role === "ADMIN");
+  const leadsCount = useBadgeCount("/api/leads/count", can(role, "operate"));
   const badgeCounts = {
     homework: homeworkCount,
     enrollmentRequests: requestsCount,

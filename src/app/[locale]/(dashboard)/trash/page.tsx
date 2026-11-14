@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function TrashPage() {
   const t = await getTranslations("trash");
-  await requireRole(["ADMIN"]);
+  await requireRole(["ADMIN", "MANAGER"]);
 
   // Пользователей здесь нет намеренно: их не удаляют мягко, а деактивируют,
   // и живут они на вкладке «Деактивированные» в разделе пользователей.

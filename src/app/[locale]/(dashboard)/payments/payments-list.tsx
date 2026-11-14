@@ -71,6 +71,7 @@ interface PaymentRow {
 }
 
 interface PaymentsListProps {
+  canDelete: boolean;
   payments: PaymentRow[];
   total: number;
   count: number;
@@ -93,6 +94,7 @@ interface PaymentsListProps {
 const ALL = "all";
 
 export function PaymentsList({
+  canDelete,
   payments,
   total,
   count,
@@ -310,7 +312,7 @@ export function PaymentsList({
                 <TableHead>{t("colMethod")}</TableHead>
                 <TableHead className="text-right">{t("colAmount")}</TableHead>
                 <TableHead>{t("colRecordedBy")}</TableHead>
-                <TableHead className="text-right">{t("colActions")}</TableHead>
+                {canDelete && <TableHead className="text-right">{t("colActions")}</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -356,7 +358,7 @@ export function PaymentsList({
                       <div className="text-xs italic">{payment.comment}</div>
                     )}
                   </TableCell>
-                  <TableCell className="text-right">
+                  {canDelete && <TableCell className="text-right">
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button
@@ -390,7 +392,7 @@ export function PaymentsList({
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
-                  </TableCell>
+                  </TableCell>}
                 </TableRow>
               ))}
             </TableBody>

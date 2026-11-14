@@ -7,8 +7,8 @@ import { CreateHandoverDto, FinanceQueryDto, HandoverFiltersDto } from "./dto/fi
 import { FinanceService } from "./finance.service";
 import { HandoversService } from "./handovers.service";
 
-// Деньги центра видит только администратор — то же правило, что у оплат
-const adminOnly = (ability: AppAbility) => ability.can("manage", "Billing");
+// Общие финансы центра видит только администратор.
+const adminOnly = (ability: AppAbility) => ability.can("manage", "Finance");
 
 @Controller("finance")
 export class FinanceController {

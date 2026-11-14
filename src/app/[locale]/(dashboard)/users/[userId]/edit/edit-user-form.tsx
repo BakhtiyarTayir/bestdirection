@@ -21,12 +21,13 @@ interface EditUserFormProps {
     activeGroups: { groupId: string; groupName: string; courseTitle: string; branchName: string }[];
   };
   branches: { id: string; name: string }[];
+  actorRole: string;
 }
 
-export function EditUserForm({ user, branches }: EditUserFormProps) {
+export function EditUserForm({ user, branches, actorRole }: EditUserFormProps) {
   const handleSubmit = async (data: CreateUserInput | UpdateUserInput) => {
     return await updateUser(user.id, data as UpdateUserInput);
   };
 
-  return <UserForm user={user} onSubmit={handleSubmit} branches={branches} />;
+  return <UserForm user={user} onSubmit={handleSubmit} branches={branches} actorRole={actorRole} />;
 }

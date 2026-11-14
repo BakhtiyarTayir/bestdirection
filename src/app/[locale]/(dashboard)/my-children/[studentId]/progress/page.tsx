@@ -18,7 +18,7 @@ export default async function ChildProgressPage({
   params: Promise<{ studentId: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireRole(["PARENT", "ADMIN", "TEACHER"]);
+  await requireRole(["PARENT", "ADMIN", "MANAGER", "TEACHER"]);
   const { studentId } = await params;
   const query = await searchParams;
   const month = typeof query.month === "string" && query.month ? query.month : undefined;

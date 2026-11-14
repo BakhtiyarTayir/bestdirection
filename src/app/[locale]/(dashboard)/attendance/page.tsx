@@ -22,7 +22,7 @@ interface AttendancePageProps {
  * некого, а смотреть свою посещаемость эта страница пока не умеет).
  */
 export default async function AttendancePage({ searchParams }: AttendancePageProps) {
-  const session = await requireRole(["ADMIN", "TEACHER"]);
+  const session = await requireRole(["ADMIN", "MANAGER", "TEACHER"]);
   const t = await getTranslations("attendance");
   const { branchId, teacherId, month } = await searchParams;
 
@@ -31,7 +31,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
     getBranches(),
     // Фильтр по преподавателю — только администратору: преподаватель и так
     // видит только свои группы
-    session.user.role === "ADMIN" ? getTeacherOptions() : Promise.resolve(null),
+    (session.user.role === "ADMIN" || session.user.role === "MANAGER") ? getTeacherOptions() : Promise.resolve(null),
   ]);
 
   const groups = groupsResult.success ? groupsResult.data : [];

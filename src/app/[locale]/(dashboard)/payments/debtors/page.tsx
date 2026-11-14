@@ -12,7 +12,7 @@ export default async function DebtorsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireRole(["ADMIN"]);
+  await requireRole(["ADMIN", "MANAGER"]);
   const t = await getTranslations("debtors");
 
   const params = await searchParams;

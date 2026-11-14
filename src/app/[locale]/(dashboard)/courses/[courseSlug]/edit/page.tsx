@@ -12,7 +12,7 @@ interface EditCoursePageProps {
 export default async function EditCoursePage({ params }: EditCoursePageProps) {
   const { courseSlug } = await params;
   const courseId = await resolveCourseSlug(courseSlug);
-  const session = await requireRole(["ADMIN", "TEACHER"]);
+  const session = await requireRole(["ADMIN", "MANAGER", "TEACHER"]);
   const role = session.user.role;
   const userId = session.user.id;
 
@@ -30,7 +30,7 @@ export default async function EditCoursePage({ params }: EditCoursePageProps) {
 
   let teachers: { id: string; firstName: string; lastName: string; login: string | null }[] = [];
 
-  if (role === "ADMIN") {
+  if (role === "ADMIN" || role === "MANAGER") {
     const usersResult = await getUsers();
     if (usersResult.success && usersResult.data) {
       teachers = usersResult.data

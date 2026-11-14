@@ -43,7 +43,7 @@ async function ExamAttemptsPageAsync({
   if (!session?.user) redirect("/login");
 
   const role = session.user.role;
-  if (role !== "ADMIN" && role !== "TEACHER") {
+  if (role !== "ADMIN" && role !== "MANAGER" && role !== "TEACHER") {
     redirect(`/courses/${courseSlug}/exams/${examId}`);
   }
 

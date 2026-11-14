@@ -14,13 +14,13 @@ export default function NewCoursePage() {
 }
 
 async function NewCoursePageAsync({ t }: { t: ReturnType<typeof useTranslations<"courses">> }) {
-  const session = await requireRole(["ADMIN", "TEACHER"]);
+  const session = await requireRole(["ADMIN", "MANAGER", "TEACHER"]);
   const role = session.user.role;
   const userId = session.user.id;
 
   let teachers: { id: string; firstName: string; lastName: string; login: string | null }[] = [];
 
-  if (role === "ADMIN") {
+  if (role === "ADMIN" || role === "MANAGER") {
     const result = await getUsers();
     if (result.success && result.data) {
       teachers = result.data

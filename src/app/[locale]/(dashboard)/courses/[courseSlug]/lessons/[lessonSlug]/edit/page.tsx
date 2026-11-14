@@ -17,7 +17,7 @@ export default async function EditLessonPage({ params }: EditLessonPageProps) {
   const session = await getSession();
   if (!session?.user) redirect("/login");
 
-  if (session.user.role !== "ADMIN" && session.user.role !== "TEACHER") {
+  if (session.user.role !== "ADMIN" && session.user.role !== "MANAGER" && session.user.role !== "TEACHER") {
     redirect("/dashboard");
   }
 

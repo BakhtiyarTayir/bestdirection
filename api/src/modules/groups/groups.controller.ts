@@ -33,8 +33,8 @@ export class GroupsController {
 
   @CheckPolicies((ability) => ability.can("read", "UserDirectory"))
   @Get("by-course")
-  byCourse(@Query() query: CourseIdQueryDto) {
-    return this.groups.byCourse(query.courseId);
+  byCourse(@Query() query: CourseIdQueryDto, @CurrentUser() actor: SessionUser) {
+    return this.groups.byCourse(query.courseId, actor);
   }
 
   @CheckPolicies((ability) => ability.can("read", "UserDirectory"))
@@ -51,8 +51,8 @@ export class GroupsController {
 
   @CheckPolicies((ability) => ability.can("read", "UserDirectory"))
   @Get(":id")
-  details(@Param("id") id: string) {
-    return this.groups.details(id);
+  details(@Param("id") id: string, @CurrentUser() actor: SessionUser) {
+    return this.groups.details(id, actor);
   }
 
   @CheckPolicies((ability) => ability.can("read", "UserDirectory"))
@@ -100,8 +100,8 @@ export class GroupsController {
 
   @CheckPolicies((ability) => ability.can("update", "Group"))
   @Post(":id/toggle-active")
-  toggleActive(@Param("id") id: string, @CurrentAbility() ability: AppAbility) {
-    return this.groups.toggleActive(id, ability);
+  toggleActive(@Param("id") id: string, @CurrentAbility() ability: AppAbility, @CurrentUser() actor: SessionUser) {
+    return this.groups.toggleActive(id, ability, actor);
   }
 
   @CheckPolicies((ability) => ability.can("update", "Group"))

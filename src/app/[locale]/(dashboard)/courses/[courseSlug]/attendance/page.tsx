@@ -35,7 +35,7 @@ export default async function AttendancePage({ params, searchParams }: Attendanc
   const courseId = await resolveCourseSlug(courseSlug);
 
   const role = session.user.role;
-  if (role !== "ADMIN" && role !== "TEACHER") {
+  if (role !== "ADMIN" && role !== "MANAGER" && role !== "TEACHER") {
     redirect("/dashboard");
   }
 
@@ -51,7 +51,7 @@ export default async function AttendancePage({ params, searchParams }: Attendanc
   // иначе вкладка звала бы к чужому журналу, который всё равно отдаст 404
   const allGroups = groupsResult.success ? groupsResult.data : [];
   const visibleGroups =
-    role === "ADMIN" || course.teacherId === session.user.id
+    (role === "ADMIN" || role === "MANAGER") || course.teacherId === session.user.id
       ? allGroups
       : allGroups.filter((group) => group.teacherId === session.user.id);
 

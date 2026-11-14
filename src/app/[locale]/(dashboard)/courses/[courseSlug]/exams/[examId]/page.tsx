@@ -69,7 +69,7 @@ async function ExamPageAsync({
   if (assessment.type !== "EXAM") redirect(`/courses/${courseSlug}/exams`);
 
   const isTeacherOrAdmin =
-    role === "ADMIN" || (role === "TEACHER" && course.teacherId === userId);
+    (role === "ADMIN" || role === "MANAGER") || (role === "TEACHER" && course.teacherId === userId);
 
   const attemptsResult = role === "STUDENT" ? await getMyAssessmentAttempts(examId) : null;
   const studentAttempts = attemptsResult?.success ? attemptsResult.data : [];

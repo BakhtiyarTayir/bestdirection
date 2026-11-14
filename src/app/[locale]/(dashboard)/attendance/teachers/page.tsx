@@ -40,7 +40,7 @@ export default async function TeacherAttendancePage({
   searchParams,
 }: TeacherAttendancePageProps) {
   // Преподаватель тоже допущен: действие само сузит выборку до его занятий
-  await requireRole(["ADMIN", "TEACHER"]);
+  await requireRole(["ADMIN", "MANAGER", "TEACHER"]);
 
   const t = await getTranslations("attendance");
   const { from, to } = await searchParams;

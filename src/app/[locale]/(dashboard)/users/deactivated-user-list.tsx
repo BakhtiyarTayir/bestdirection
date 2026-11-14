@@ -30,6 +30,7 @@ import { RotateCcw, Trash2, Loader2 } from "lucide-react";
 
 const roleBadgeVariant: Record<string, "destructive" | "default" | "secondary"> = {
   ADMIN: "destructive",
+  MANAGER: "default",
   TEACHER: "default",
   STUDENT: "secondary",
 };
@@ -45,9 +46,10 @@ interface DeactivatedUser {
 
 interface DeactivatedUserListProps {
   users: DeactivatedUser[];
+  actorRole: string;
 }
 
-export function DeactivatedUserList({ users }: DeactivatedUserListProps) {
+export function DeactivatedUserList({ users, actorRole }: DeactivatedUserListProps) {
   const t = useTranslations("users");
   const tRoles = useTranslations("roles");
   const tCommon = useTranslations("common");
@@ -186,33 +188,37 @@ export function DeactivatedUserList({ users }: DeactivatedUserListProps) {
                   </TableCell>
                   <TableCell>
                     <Badge variant={roleBadgeVariant[user.role] ?? "secondary"}>
-                      {tRoles(user.role as "ADMIN" | "TEACHER" | "STUDENT")}
+                      {tRoles(user.role as "ADMIN" | "MANAGER" | "TEACHER" | "STUDENT" | "PARENT")}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={pendingId === user.id}
-                        onClick={() => handleRestore(user)}
-                      >
-                        {pendingId === user.id ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <RotateCcw className="mr-2 h-4 w-4" />
-                        )}
-                        {tCommon("restore")}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={pendingId === user.id}
-                        onClick={() => setPurgeTarget(user)}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4 text-destructive" />
-                        {t("purgeUser")}
-                      </Button>
+                      {(actorRole === "ADMIN" || (user.role !== "ADMIN" && user.role !== "MANAGER")) && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={pendingId === user.id}
+                            onClick={() => handleRestore(user)}
+                          >
+                            {pendingId === user.id ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <RotateCcw className="mr-2 h-4 w-4" />
+                            )}
+                            {tCommon("restore")}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={pendingId === user.id}
+                            onClick={() => setPurgeTarget(user)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+                            {t("purgeUser")}
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
