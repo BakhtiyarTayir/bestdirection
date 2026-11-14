@@ -6,6 +6,8 @@ import { CheckPolicies } from "../../common/policies/check-policies.decorator";
 import { BillingService } from "./billing.service";
 import {
   CreatePaymentDto,
+  CreateRefundDto,
+  RefundFiltersDto,
   DebtorsExportQueryDto,
   DebtorsQueryDto,
   MonthQueryDto,
@@ -14,6 +16,7 @@ import {
   UpdateEnrollmentBillingDto,
 } from "./dto/billing.dto";
 import { PaymentsService } from "./payments.service";
+import { RefundsService } from "./refunds.service";
 
 // Деньги видит и правит только администратор: правило одно на весь модуль.
 const adminOnly = (ability: { can: (action: "manage", subject: "Billing") => boolean }) =>
@@ -23,7 +26,8 @@ const adminOnly = (ability: { can: (action: "manage", subject: "Billing") => boo
 export class BillingController {
   constructor(
     private readonly billing: BillingService,
-    private readonly payments: PaymentsService
+    private readonly payments: PaymentsService,
+    private readonly refunds: RefundsService
   ) {}
 
   @CheckPolicies(adminOnly)
@@ -121,4 +125,19 @@ export class BillingController {
     await this.payments.remove(id, actor);
     return { ok: true };
   }
+  @CheckPolicies(adminOnly)
+  @Get("refunds")
+  listRefunds(@Query() query: RefundFiltersDto) { return this.refunds.list(query); }
+
+  @CheckPolicies(adminOnly)
+  @Post("refunds")
+  createRefund(@Body() body: CreateRefundDto, @CurrentUser() actor: SessionUser) { return this.refunds.create(body, actor); }
+
+  @CheckPolicies(adminOnly)
+  @Delete("refunds/:id")
+  async deleteRefund(@Param("id") id: string, @CurrentUser() actor: SessionUser) {
+    await this.refunds.remove(id, actor);
+    return { ok: true };
+  }
+
 }

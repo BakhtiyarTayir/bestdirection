@@ -57,6 +57,7 @@ export interface DebtorRow {
   hasSchedule: boolean;
   charged: number;
   paid: number;
+  refunded: number;
   debt: number;
   billedMonths: number;
   breakdown: DebtorBreakdown[];
@@ -459,6 +460,7 @@ export function DebtorsList({
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-right">
                         {money.format(row.paid)}
+                        {row.refunded > 0 && <div className="text-xs text-muted-foreground">{t("colRefunded")}: {money.format(row.refunded)}</div>}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-right">
                         {showPrepaid ? (

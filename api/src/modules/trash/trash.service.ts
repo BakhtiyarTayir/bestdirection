@@ -44,6 +44,7 @@ export class TrashService {
             enrollments: true,
             enrollmentRequests: true,
             payments: true,
+            refunds: true,
             assessments: true,
             attendanceSessions: true,
           },
@@ -61,7 +62,7 @@ export class TrashService {
     // Payment/TeacherSalaryAccrual теперь на ON DELETE RESTRICT — сырой DELETE
     // ниже упал бы ошибкой БД. Проверяем заранее и отвечаем понятным кодом,
     // а не 500-й от Postgres.
-    if (course._count.payments > 0) {
+    if (course._count.payments > 0 || course._count.refunds > 0) {
       return { ok: false as const, error: "courseHasMoneyHistory" };
     }
     const salaryAccrualsCount = await this.prismaUnscoped.teacherSalaryAccrual.count({ where: { courseId } });

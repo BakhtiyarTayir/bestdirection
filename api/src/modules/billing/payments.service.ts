@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { AuditService } from "../../common/audit/audit.service";
 import type { SessionUser } from "../../common/auth/session-user";
 import { toNoonUtc } from "../../common/date-only";
@@ -195,22 +195,23 @@ export class PaymentsService {
     return { id: payment.id };
   }
 
-  /** Мягкое удаление: журнал кассы не переписываем, ошибочную запись скрываем. */
+  /** Serialized with refund creation on the same enrollment row. */
   async remove(id: string, actor: SessionUser) {
-    const payment = await this.prisma.payment.findUnique({
-      where: { id },
-      select: { id: true, deletedAt: true, amount: true, studentId: true, courseId: true },
-    });
-    if (!payment || payment.deletedAt) throw new NotFoundException("paymentNotFound");
-
-    await this.prisma.payment.update({ where: { id }, data: { deletedAt: new Date() } });
-
-    await this.audit.record({
-      userId: actor.id,
-      entityType: "Payment",
-      entityId: id,
-      action: "DELETE",
-      metadata: { studentId: payment.studentId, courseId: payment.courseId, amount: payment.amount },
+    return this.prismaService.prismaUnscoped.$transaction(async (tx) => {
+      const payment = await tx.payment.findUnique({ where: { id }, select: { id: true, deletedAt: true, amount: true, studentId: true, courseId: true } });
+      if (!payment || payment.deletedAt) throw new NotFoundException("paymentNotFound");
+      const enrollment = await tx.enrollment.findUnique({ where: { studentId_courseId: { studentId: payment.studentId, courseId: payment.courseId } }, select: { id: true } });
+      if (enrollment) await tx.$queryRaw`SELECT "id" FROM "Enrollment" WHERE "id" = ${enrollment.id} FOR UPDATE`;
+      const active = await tx.payment.findUnique({ where: { id }, select: { deletedAt: true } });
+      if (active?.deletedAt) throw new NotFoundException("paymentNotFound");
+      const [paid, refunded] = await Promise.all([
+        tx.payment.aggregate({ where: { studentId: payment.studentId, courseId: payment.courseId, deletedAt: null }, _sum: { amount: true } }),
+        tx.refund.aggregate({ where: { studentId: payment.studentId, courseId: payment.courseId, deletedAt: null }, _sum: { amount: true } }),
+      ]);
+      if ((paid._sum.amount ?? 0) - payment.amount < (refunded._sum.amount ?? 0)) throw new ConflictException("paymentCoversRefund");
+      await tx.payment.update({ where: { id }, data: { deletedAt: new Date() } });
+      await this.audit.record({ userId: actor.id, entityType: "Payment", entityId: id, action: "DELETE",
+        metadata: { studentId: payment.studentId, courseId: payment.courseId, amount: payment.amount } }, tx);
     });
   }
 }

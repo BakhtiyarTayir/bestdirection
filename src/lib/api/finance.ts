@@ -7,6 +7,7 @@ export interface ApiFinanceMonth {
   /** Касса: оплаты учеников, принятые в этом месяце */
   received: number;
   /** Касса: выплаты преподавателям, выданные в этом месяце */
+  refunded: number;
   paidOut: number;
   cashProfit: number;
   /** Сдано владельцу из прибыли этого месяца */

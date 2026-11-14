@@ -83,3 +83,16 @@ export class DebtorsQueryDto extends createZodDto(debtorsQuerySchema) {}
 export class DebtorsExportQueryDto extends createZodDto(debtorsExportQuerySchema) {}
 export class MonthQueryDto extends createZodDto(monthQuerySchema) {}
 export class StudentsQueryDto extends createZodDto(studentsQuerySchema) {}
+
+export const createRefundSchema = z.object({
+  studentId: z.string().min(1).max(40),
+  courseId: z.string().min(1).max(40),
+  groupId: z.string().max(40).optional(),
+  amount: money.positive("amountPositive"),
+  method: z.enum(paymentMethods),
+  refundedAt: dateString,
+  comment: z.string().max(500, "maxChars500").optional(),
+});
+export const refundFiltersSchema = paymentFiltersSchema.omit({ monthBy: true, teacherId: true });
+export class CreateRefundDto extends createZodDto(createRefundSchema) {}
+export class RefundFiltersDto extends createZodDto(refundFiltersSchema) {}

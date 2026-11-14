@@ -105,6 +105,7 @@ const navItems: NavItem[] = [
   { href: "/courses/browse", labelKey: "browseCatalog", icon: BookOpen, roles: ["STUDENT"] },
   { href: "/courses/requests", labelKey: "enrollmentRequests", icon: Inbox, roles: ["ADMIN", "TEACHER"], badge: "enrollmentRequests" },
   { href: "/payments", labelKey: "payments", icon: Wallet, roles: ["ADMIN"], exact: true },
+  { href: "/payments/refunds", labelKey: "refunds", icon: Wallet, roles: ["ADMIN"] },
   { href: "/payments/debtors", labelKey: "debtors", icon: TriangleAlert, roles: ["ADMIN"], badge: "debtors" },
   { href: "/salaries", labelKey: "salaries", icon: Wallet, roles: ["ADMIN"] },
   { href: "/finance", labelKey: "finance", icon: TrendingUp, roles: ["ADMIN"] },

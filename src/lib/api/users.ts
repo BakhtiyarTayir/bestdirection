@@ -195,6 +195,8 @@ export const purgeUser = (id: string) => apiFetch<{ ok: true }>(`/users/${id}`, 
 export interface ApiPurgeBlocker {
   reason:
     | "courses"
+    | "studentRefunds"
+    | "recordedRefunds"
     | "studentPayments"
     | "billedMonths"
     | "acceptedPayments"

@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/table";
 import { BillingSettingsButton } from "./billing-settings-button";
 import { RecalcMonthButton } from "./recalc-month-button";
+import { RefundButton } from "./refund-button";
+import { DeleteRefundButton } from "./delete-refund-button";
 import { TelegramWriteButton } from "@/components/telegram-write-button";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +35,7 @@ interface MonthRow {
   month: string;
   charged: number;
   paid: number;
+  refunded: number;
   basis: string;
   unitsTotal: number;
   unitsBilled: number;
@@ -53,6 +56,8 @@ interface CourseBilling {
   unenrolledAt: string | null;
   totalCharged: number;
   totalPaid: number;
+  totalRefunded: number;
+  refundAvailable: number;
   balance: number;
   /** Оплата за месяц позже upToMonth — не входит в balance */
   prepaidFuture: number;
@@ -86,6 +91,7 @@ export default async function StudentBillingPage({ params }: StudentBillingPageP
   const { student, totals } = result.data;
   const courses = result.data.courses as CourseBilling[];
   const payments = result.data.payments as PaymentRow[];
+  const refunds = result.data.refunds;
 
   /** Плюс — аванс, минус — долг. Знак важнее цвета, поэтому пишем оба. */
   const balanceText = (value: number) =>
@@ -170,6 +176,7 @@ export default async function StudentBillingPage({ params }: StudentBillingPageP
             <div className="text-2xl font-bold">
               {money.format(totals.paid)} UZS
             </div>
+            {totals.refunded > 0 && <div className="mt-1 text-sm text-muted-foreground">{t("refundedTotal", { amount: money.format(totals.refunded) })}</div>}
           </CardContent>
         </Card>
         <Card>
@@ -238,7 +245,11 @@ export default async function StudentBillingPage({ params }: StudentBillingPageP
                     </div>
                   )}
                   {/* Правка начислений доступна независимо от того, есть ли долг */}
-                  <BillingSettingsButton enrollmentId={course.enrollmentId} />
+                  <div className="flex items-center gap-2">
+                    {course.refundAvailable > 0 && <RefundButton studentId={studentId} courseId={course.course.id}
+                      courseTitle={course.course.title} groupId={course.group?.id} available={course.refundAvailable} />}
+                    <BillingSettingsButton enrollmentId={course.enrollmentId} />
+                  </div>
                 </div>
               </div>
             </CardHeader>
@@ -285,6 +296,7 @@ export default async function StudentBillingPage({ params }: StudentBillingPageP
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
                           {row.paid ? money.format(row.paid) : "—"}
+                          {row.refunded > 0 && <div className="text-xs text-muted-foreground">{t("refundedInMonth", { amount: money.format(row.refunded) })}</div>}
                         </TableCell>
                         <TableCell
                           className={`text-right tabular-nums ${balanceClass(row.balance)}`}
@@ -369,6 +381,26 @@ export default async function StudentBillingPage({ params }: StudentBillingPageP
           )}
         </CardContent>
       </Card>
+      {refunds.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle className="text-lg">{t("refundsTitle")}</CardTitle></CardHeader>
+          <CardContent><div className="overflow-x-auto rounded-md border"><Table>
+            <TableHeader><TableRow>
+              <TableHead>{t("colRefundedAt")}</TableHead><TableHead>{tPayments("colCourse")}</TableHead>
+              <TableHead>{tPayments("colMethod")}</TableHead><TableHead className="text-right">{tPayments("colAmount")}</TableHead>
+              <TableHead>{tPayments("colRecordedBy")}</TableHead><TableHead className="w-12" />
+            </TableRow></TableHeader>
+            <TableBody>{refunds.map((refund) => <TableRow key={refund.id}>
+              <TableCell>{formatDate(new Date(refund.refundedAt))}</TableCell>
+              <TableCell>{refund.courseTitle}{refund.groupName && <div className="text-xs text-muted-foreground">{refund.groupName}</div>}</TableCell>
+              <TableCell><Badge variant="secondary">{tPayments(`method.${refund.method}`)}</Badge></TableCell>
+              <TableCell className="text-right tabular-nums">{money.format(refund.amount)}</TableCell>
+              <TableCell>{refund.createdBy}{refund.comment && <div className="text-xs italic">{refund.comment}</div>}</TableCell>
+              <TableCell><DeleteRefundButton refundId={refund.id} amount={refund.amount} /></TableCell>
+            </TableRow>)}</TableBody>
+          </Table></div></CardContent>
+        </Card>
+      )}
     </div>
   );
 }

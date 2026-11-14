@@ -137,7 +137,7 @@ export function PaymentsList({
       } else {
         toast({
           title: tErrors("error"),
-          description: t("deleteFailed"),
+          description: result.error === "paymentCoversRefund" ? t("paymentCoversRefund") : t("deleteFailed"),
           variant: "destructive",
         });
       }

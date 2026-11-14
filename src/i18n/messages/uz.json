@@ -135,7 +135,8 @@
     "salaries": "Ish haqi",
     "mySalary": "Mening ish haqim",
     "finance": "Moliya",
-    "progress": "O'zlashtirish"
+    "progress": "O'zlashtirish",
+    "refunds": "Qaytarishlar"
   },
   "weekdays": {
     "mon": "Du",
@@ -802,7 +803,9 @@
       "issuedPayouts": "U ish haqi to'lovlarini o'tkazgan: {count}.",
       "receivedAdjustments": "Unga mukofot yoki jarimalar yozilgan: {count}.",
       "issuedAdjustments": "U mukofot yoki jarimalar kiritgan: {count}.",
-      "smsBroadcasts": "U SMS-tarqatmalar yuborgan: {count}."
+      "smsBroadcasts": "U SMS-tarqatmalar yuborgan: {count}.",
+      "studentRefunds": "O‘quvchining qaytarishlari bor: {count}. Qaytarishlar tarixi o‘chirilmaydi.",
+      "recordedRefunds": "U qaytarishlarni rasmiylashtirgan: {count}. Ular kassada qoladi."
     },
     "purgeBlockedActive": "Avval foydalanuvchini faolsizlantiring.",
     "purgeBlockedSelf": "O'z hisobingizni o'chira olmaysiz.",
@@ -1741,7 +1744,8 @@
     "filterBranch": "Filial",
     "allBranches": "Barcha filiallar",
     "filterTeacher": "O'qituvchi",
-    "allTeachers": "Barcha o'qituvchilar"
+    "allTeachers": "Barcha o'qituvchilar",
+    "paymentCoversRefund": "Bu to‘lovdan qaytarish qilingan. Avval o‘quvchi kartasida qaytarishni o‘chiring."
   },
   "debtors": {
     "title": "Qarzdorlar",
@@ -1818,7 +1822,8 @@
     "prepaidForMonth": "{month} uchun",
     "prepaidAcceptedBy": "Qabul qildi: {name}",
     "prepaidNoPayments": "To'lovlar yo'q",
-    "prepaidOpenList": "Avansli talabalar ro'yxatini ko'rsatish"
+    "prepaidOpenList": "Avansli talabalar ro'yxatini ko'rsatish",
+    "colRefunded": "Qaytarilgan"
   },
   "parents": {
     "title": "Ota-onalar",
@@ -1957,7 +1962,34 @@
     "recalcConfirm": "Qayta hisoblash",
     "recalcCancel": "Bekor qilish",
     "recalcDone": "{month} qayta hisoblandi",
-    "recalcFailed": "Oyni qayta hisoblab bo'lmadi"
+    "recalcFailed": "Oyni qayta hisoblab bo'lmadi",
+    "refund": "Qaytarish",
+    "refundTitle": "Pulni qaytarish: {course}",
+    "refundDescription": "Avansdan ko‘p qaytarib bo‘lmaydi — bu barcha oylar (oldindan to‘langanlar ham) bo‘yicha to‘lovlardan oldingi qaytarishlar va hisoblangan summa ayirilgan qoldiq.",
+    "refundAvailable": "Qaytarish mumkin: {amount} UZS",
+    "refundAmount": "Qaytarish summasi (UZS)",
+    "refundMethod": "Usul",
+    "refundDate": "Qaytarish sanasi",
+    "refundComment": "Izoh (ixtiyoriy)",
+    "refundCommentPlaceholder": "Masalan: o‘quvchi guruhdan ketdi",
+    "refundSave": "Pulni qaytarish",
+    "refundCancel": "Bekor qilish",
+    "refundDone": "Qaytarish rasmiylashtirildi",
+    "refundFailed": "Qaytarishni rasmiylashtirib bo‘lmadi",
+    "refundInvalidAmount": "1 dan {max} gacha butun summa kiriting",
+    "refundExceedsAdvance": "Summa mavjud avansdan katta. Sahifani yangilab, to‘lovlarni tekshiring.",
+    "refundDateInFuture": "Qaytarish sanasi kelgusi oyda bo‘lishi mumkin emas",
+    "refundDateBeforePayment": "Qaytarish sanasi birinchi to‘lov sanasidan oldin bo‘lishi mumkin emas",
+    "refundsTitle": "Qaytarishlar tarixi",
+    "colRefundedAt": "Qaytarish sanasi",
+    "refundedTotal": "Qaytarilgan: {amount}",
+    "refundedInMonth": "qaytarildi {amount}",
+    "refundDelete": "Qaytarishni o‘chirish",
+    "refundDeleteConfirm": "{amount} UZS qaytarish o‘chirilsinmi? Bu pul yana o‘quvchining avansiga aylanadi.",
+    "refundDeleteAction": "O‘chirish",
+    "refundDeleteCancel": "Bekor qilish",
+    "refundDeleted": "Qaytarish o‘chirildi",
+    "refundDeleteFailed": "Qaytarishni o‘chirib bo‘lmadi"
   },
   "students": {
     "title": "Talabalar",
@@ -2173,7 +2205,8 @@
     "handoverDeleteFailed": "Yozuvni o'chirib bo'lmadi",
     "cancelDelete": "Bekor qilish",
     "confirmDelete": "O'chirish",
-    "colForMonth": "Oy"
+    "colForMonth": "Oy",
+    "refunded": "O‘quvchilarga qaytarildi"
   },
   "dashboardTeacher": {
     "scheduleTitle": "Dars jadvali",
@@ -2316,5 +2349,36 @@
     "exportButton": "Login va parollarni yuklab olish",
     "exportEmpty": "Tanlangan filtrlar bo'yicha yuklab olish uchun o'quvchilar yo'q.",
     "exportUnknown": "noma'lum – kartochkada o'rnating"
+  },
+  "refunds": {
+    "title": "Qaytarishlar",
+    "subtitle": "O‘quvchilarga qaytarilgan pullar jurnali",
+    "filterSearch": "Qidiruv",
+    "searchPlaceholder": "Ism, familiya yoki telefon",
+    "filterMonth": "Oy",
+    "filterCourse": "Kurs",
+    "filterMethod": "Usul",
+    "filterBranch": "Filial",
+    "allCourses": "Barcha kurslar",
+    "allMethods": "Barcha usullar",
+    "allBranches": "Barcha filiallar",
+    "totalLabel": "Davr uchun qaytarilgan",
+    "refundsCount": "{count, plural, one {# qaytarish} other {# qaytarish}}",
+    "showingFirst": "{total} tadan dastlabki {shown} tasi",
+    "empty": "Hozircha qaytarishlar yo‘q",
+    "colRefundedAt": "Sana",
+    "colStudent": "Talaba",
+    "colCourse": "Kurs",
+    "colMethod": "Usul",
+    "colAmount": "Summa",
+    "colRecordedBy": "Rasmiylashtirgan",
+    "colActions": "Amallar",
+    "method": {
+      "CASH": "Naqd",
+      "CARD": "Karta",
+      "PAYME": "Payme",
+      "CLICK": "Click",
+      "TRANSFER": "O‘tkazma"
+    }
   }
 }

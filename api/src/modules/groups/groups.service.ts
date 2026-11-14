@@ -278,14 +278,15 @@ export class GroupsService {
     await this.ledger.freezeClosedMonths({ groupId });
     await this.salary.freezeClosedMonths({ groupId });
 
-    const [enrollments, charges, payments, accruals] = await Promise.all([
+    const [enrollments, charges, payments, refunds, accruals] = await Promise.all([
       this.prisma.enrollment.count({ where: { groupId } }),
       this.prisma.monthlyCharge.count({ where: { groupId, amount: { gt: 0 } } }),
       this.prisma.payment.count({ where: { groupId } }),
+      this.prisma.refund.count({ where: { groupId } }),
       this.prisma.teacherSalaryAccrual.count({ where: { groupId } }),
     ]);
 
-    if (enrollments + charges + payments + accruals > 0) {
+    if (enrollments + charges + payments + refunds + accruals > 0) {
       // Закрытие ставит дату окончания и останавливает начисления ученикам —
       // это решение администратора; пустую группу преподаватель удаляет сам
       if (!canManageGroupMoney(ability)) throw new ForbiddenException("groupCloseAdminOnly");
@@ -477,7 +478,7 @@ export class GroupsService {
 
   /** Общая запись об отчислении: используется и удалением из группы, и отключением ученика. */
   async finishUnenrollment(
-    tx: Pick<ScopedPrismaClient, "monthlyCharge" | "payment" | "enrollment" | "auditLog">,
+    tx: Pick<ScopedPrismaClient, "monthlyCharge" | "payment" | "refund" | "enrollment" | "auditLog">,
     prepared: { groupId: string; courseId: string; enrollmentId: string },
     studentId: string,
     actor: SessionUser,
@@ -485,11 +486,12 @@ export class GroupsService {
     preserveEnrollment = false
   ) {
     const { groupId, courseId, enrollmentId } = prepared;
-    const [chargesCount, paymentsCount] = await Promise.all([
+    const [chargesCount, paymentsCount, refundsCount] = await Promise.all([
       tx.monthlyCharge.count({ where: { enrollmentId } }),
       tx.payment.count({ where: { studentId, courseId, deletedAt: null } }),
+      tx.refund.count({ where: { studentId, courseId, deletedAt: null } }),
     ]);
-    const deleted = !preserveEnrollment && chargesCount === 0 && paymentsCount === 0;
+    const deleted = !preserveEnrollment && chargesCount === 0 && paymentsCount === 0 && refundsCount === 0;
     if (deleted) {
       await tx.enrollment.delete({ where: { id: enrollmentId } });
     } else {

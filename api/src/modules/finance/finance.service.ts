@@ -20,6 +20,7 @@ export interface FinanceMonth {
   /** Касса: оплаты учеников, принятые в этом месяце (по дате приёма денег) */
   received: number;
   /** Касса: выплаты преподавателям, выданные в этом месяце (по дате выдачи) */
+  refunded: number;
   paidOut: number;
   cashProfit: number;
   /** Сдано владельцу из прибыли этого месяца (по forMonth сдачи) */
@@ -76,12 +77,14 @@ export class FinanceService {
       lt: new Date(`${addMonths(month, 1)}-01T00:00:00.000Z`),
     };
 
-    const [payments, payouts, handovers, enrollments, accruals] = await Promise.all([
+    const [payments, refunds, payouts, handovers, enrollments, accruals] = await Promise.all([
       this.prisma.payment.findMany({
         // Филиал — снимок на оплате, как в журнале оплат
         where: { deletedAt: null, paidAt, ...(branchId ? { branchId } : {}) },
         select: { amount: true, paidAt: true },
       }),
+      this.prisma.refund.findMany({ where: { deletedAt: null, refundedAt: paidAt, ...(branchId ? { branchId } : {}) },
+        select: { amount: true, refundedAt: true } }),
       this.prisma.teacherPayout.findMany({
         // Филиал выплаты — филиал преподавателя на момент выдачи: разбивка
         // по филиалам приблизительная, как и в сводке зарплат
@@ -101,13 +104,17 @@ export class FinanceService {
     const byMonth = new Map<string, FinanceMonth>(
       months.map((m) => [
         m,
-        { month: m, received: 0, paidOut: 0, cashProfit: 0, handedOver: 0, onHand: 0, charged: 0, salaryAccrued: 0, accrualProfit: 0 },
+        { month: m, received: 0, refunded: 0, paidOut: 0, cashProfit: 0, handedOver: 0, onHand: 0, charged: 0, salaryAccrued: 0, accrualProfit: 0 },
       ])
     );
 
     for (const payment of payments) {
       const entry = byMonth.get(monthKey(payment.paidAt));
       if (entry) entry.received += payment.amount;
+    }
+    for (const refund of refunds) {
+      const entry = byMonth.get(monthKey(refund.refundedAt));
+      if (entry) entry.refunded += refund.amount;
     }
     for (const payout of payouts) {
       const entry = byMonth.get(monthKey(payout.paidAt));
@@ -128,7 +135,7 @@ export class FinanceService {
       if (entry) entry.salaryAccrued += accrual.amount;
     }
     for (const entry of byMonth.values()) {
-      entry.cashProfit = entry.received - entry.paidOut;
+      entry.cashProfit = entry.received - entry.refunded - entry.paidOut;
       entry.onHand = entry.cashProfit - entry.handedOver;
       entry.accrualProfit = entry.charged - entry.salaryAccrued;
     }

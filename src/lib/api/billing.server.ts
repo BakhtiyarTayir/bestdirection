@@ -3,6 +3,7 @@ import type {
   ApiDebtors,
   ApiPaymentFormOptions,
   ApiPaymentsPage,
+  ApiRefundsPage,
   ApiStudentBilling,
   ApiStudentsOverview,
   PaymentMethodValue,
@@ -50,3 +51,8 @@ export const getPayments = (
 
 export const getPaymentFormOptions = () =>
   apiServerFetch<ApiPaymentFormOptions>("/billing/payments/form-options");
+
+export const getRefunds = (query: {
+  month?: string; q?: string; courseId?: string; groupId?: string; studentId?: string;
+  method?: PaymentMethodValue; branchId?: string;
+} = {}) => apiServerFetch<ApiRefundsPage>("/billing/refunds", { query });

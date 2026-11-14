@@ -49,6 +49,8 @@ const USER_SELECT = {
 export interface PurgeBlocker {
   reason:
     | "courses"
+    | "studentRefunds"
+    | "recordedRefunds"
     | "studentPayments"
     | "billedMonths"
     | "acceptedPayments"
@@ -619,6 +621,8 @@ export class UsersService {
       courses,
       studentPayments,
       acceptedPayments,
+      studentRefunds,
+      recordedRefunds,
       smsBroadcasts,
       salaryAccruals,
       receivedPayouts,
@@ -635,6 +639,8 @@ export class UsersService {
       }),
       db.payment.count({ where: { studentId: id } }),
       db.payment.count({ where: { createdById: id } }),
+      db.refund.count({ where: { studentId: id } }),
+      db.refund.count({ where: { createdById: id } }),
       db.smsBroadcast.count({ where: { createdById: id } }),
       db.teacherSalaryAccrual.count({ where: { teacherId: id } }),
       db.teacherPayout.count({ where: { teacherId: id } }),
@@ -656,6 +662,8 @@ export class UsersService {
       });
     }
     const counted: [PurgeBlocker["reason"], number][] = [
+      ["studentRefunds", studentRefunds],
+      ["recordedRefunds", recordedRefunds],
       ["studentPayments", studentPayments],
       ["billedMonths", billedMonths],
       ["acceptedPayments", acceptedPayments],

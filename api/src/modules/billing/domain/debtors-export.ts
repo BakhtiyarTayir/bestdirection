@@ -9,6 +9,7 @@ export interface DebtorExportRow {
   monthlyPrice: number;
   charged: number;
   paid: number;
+  refunded: number;
   debt: number;
 }
 
@@ -31,6 +32,7 @@ const TEXTS = {
     price: "Цена в месяц",
     charged: "Начислено",
     paid: "Оплачено",
+    refunded: "Возвращено",
     debt: "Долг",
     teacher: "Учитель",
     group: "Группа",
@@ -56,7 +58,8 @@ const TEXTS = {
     phone: "Telefon",
     price: "Oylik narx",
     charged: "Hisoblangan",
-    paid: "To'langan",
+    paid: "To‘langan",
+    refunded: "Qaytarilgan",
     debt: "Qarz",
     teacher: "O'qituvchi",
     group: "Guruh",
@@ -79,7 +82,7 @@ function monthTitle(month: string, t: Texts) {
   return name ? `${name} ${match![1]}` : month;
 }
 
-const sum = (rows: DebtorExportRow[], key: "charged" | "paid" | "debt") =>
+const sum = (rows: DebtorExportRow[], key: "charged" | "paid" | "refunded" | "debt") =>
   rows.reduce((total, row) => total + row[key], 0);
 const studentName = (row: DebtorExportRow) => `${row.student.lastName} ${row.student.firstName}`.trim();
 const telegram = (row: DebtorExportRow) => (row.student.telegramUsername ? `@${row.student.telegramUsername}` : "");
@@ -114,8 +117,8 @@ function finishSheet(rows: Cell[][], cols: number[], extra: Partial<XLSX.WorkShe
 
 function groupsSheet(rows: DebtorExportRow[], title: string, { t, byText, teacherName, compareTeachers }: Context) {
   const out: Cell[][] = [[title], []];
-  const merges: XLSX.Range[] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } }];
-  const header = ["№", t.student, t.phone, "Telegram", t.price, t.charged, t.paid, t.debt];
+  const merges: XLSX.Range[] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 8 } }];
+  const header = ["№", t.student, t.phone, "Telegram", t.price, t.charged, t.paid, t.refunded, t.debt];
 
   const withGroup = new Map<string, DebtorExportRow[]>();
   const withoutGroup: DebtorExportRow[] = [];
@@ -135,7 +138,7 @@ function groupsSheet(rows: DebtorExportRow[], title: string, { t, byText, teache
   );
 
   const pushBlock = (label: string, list: DebtorExportRow[], withOwner: boolean) => {
-    merges.push({ s: { r: out.length, c: 0 }, e: { r: out.length, c: 7 } });
+    merges.push({ s: { r: out.length, c: 0 }, e: { r: out.length, c: 8 } });
     out.push([label]);
     out.push(header);
     [...list]
@@ -153,6 +156,7 @@ function groupsSheet(rows: DebtorExportRow[], title: string, { t, byText, teache
           row.monthlyPrice,
           row.charged,
           row.paid,
+          row.refunded,
           row.debt,
         ]);
       });
@@ -164,6 +168,7 @@ function groupsSheet(rows: DebtorExportRow[], title: string, { t, byText, teache
       "",
       sum(list, "charged"),
       sum(list, "paid"),
+      sum(list, "refunded"),
       sum(list, "debt"),
     ]);
     out.push([]);
@@ -179,8 +184,8 @@ function groupsSheet(rows: DebtorExportRow[], title: string, { t, byText, teache
   }
   if (withoutGroup.length > 0) pushBlock(t.noGroup, withoutGroup, true);
 
-  out.push(["", `${t.total} (${t.count(rows.length)})`, "", "", "", sum(rows, "charged"), sum(rows, "paid"), sum(rows, "debt")]);
-  return finishSheet(out, [5, 42, 18, 18, 14, 14, 14, 14], { "!merges": merges });
+  out.push(["", `${t.total} (${t.count(rows.length)})`, "", "", "", sum(rows, "charged"), sum(rows, "paid"), sum(rows, "refunded"), sum(rows, "debt")]);
+  return finishSheet(out, [5, 42, 18, 18, 14, 14, 14, 14, 14], { "!merges": merges });
 }
 
 function teachersSheet(rows: DebtorExportRow[], title: string, { t, byText, teacherName }: Context) {
@@ -198,6 +203,7 @@ function teachersSheet(rows: DebtorExportRow[], title: string, { t, byText, teac
       count: list.length,
       charged: sum(list, "charged"),
       paid: sum(list, "paid"),
+      refunded: sum(list, "refunded"),
       debt: sum(list, "debt"),
     }))
     .sort((a, b) => b.debt - a.debt || byText(a.name, b.name));
@@ -205,26 +211,27 @@ function teachersSheet(rows: DebtorExportRow[], title: string, { t, byText, teac
   const out: Cell[][] = [
     [title],
     [],
-    [t.teacher, t.groupsWithDebtors, t.debtors, t.charged, t.paid, t.debt],
-    ...lines.map((l) => [l.name, l.groups, l.count, l.charged, l.paid, l.debt]),
+    [t.teacher, t.groupsWithDebtors, t.debtors, t.charged, t.paid, t.refunded, t.debt],
+    ...lines.map((l) => [l.name, l.groups, l.count, l.charged, l.paid, l.refunded, l.debt]),
     [
       t.total,
       lines.reduce((t, l) => t + l.groups, 0),
       rows.length,
       sum(rows, "charged"),
       sum(rows, "paid"),
+      sum(rows, "refunded"),
       sum(rows, "debt"),
     ],
   ];
-  return finishSheet(out, [32, 20, 12, 14, 14, 14], {
-    "!merges": [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }],
+  return finishSheet(out, [32, 20, 12, 14, 14, 14, 14], {
+    "!merges": [{ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }],
   });
 }
 
 function flatSheet(rows: DebtorExportRow[], title: string, { t, teacherName }: Context) {
   const out: Cell[][] = [
     [title],
-    [t.teacher, t.group, t.course, t.student, t.phone, "Telegram", t.price, t.charged, t.paid, t.debt],
+    [t.teacher, t.group, t.course, t.student, t.phone, "Telegram", t.price, t.charged, t.paid, t.refunded, t.debt],
     ...[...rows]
       .sort((a, b) => b.debt - a.debt)
       .map((row) => [
@@ -237,12 +244,13 @@ function flatSheet(rows: DebtorExportRow[], title: string, { t, teacherName }: C
         row.monthlyPrice,
         row.charged,
         row.paid,
+        row.refunded,
         row.debt,
       ]),
   ];
-  return finishSheet(out, [28, 22, 24, 30, 18, 18, 14, 14, 14, 14], {
+  return finishSheet(out, [28, 22, 24, 30, 18, 18, 14, 14, 14, 14, 14], {
     // Фильтр на шапке таблицы (вторая строка), а не на заголовке с месяцем
-    "!autofilter": { ref: `A2:J${out.length}` },
+    "!autofilter": { ref: `A2:K${out.length}` },
   });
 }
 

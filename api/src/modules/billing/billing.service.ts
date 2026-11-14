@@ -21,6 +21,7 @@ import {
   priceFor,
   type BillingEnrollment,
 } from "./domain/billing";
+import { allocateRefunds, advance, refundedForMonth } from "./domain/refund";
 import { matchesStudentSearch } from "./domain/student-search";
 import { buildDebtorsWorkbook, type ExportLocale } from "./domain/debtors-export";
 import type { UpdateEnrollmentBillingDto } from "./dto/billing.dto";
@@ -48,21 +49,31 @@ export class BillingService {
    * пропустивший июнь и заплативший июль, остаётся должником.
    */
   private async computeBillingRows(month: string, filters: LedgerFilters = {}) {
-    const [enrollments, payments] = await Promise.all([
+    const [enrollments, payments, refunds] = await Promise.all([
       this.ledger.loadBillableEnrollments(filters),
       this.prisma.payment.findMany({
         where: { deletedAt: null },
         select: { studentId: true, courseId: true, amount: true, forMonth: true, paidAt: true },
       }),
+      this.prisma.refund.findMany({ where: { deletedAt: null }, select: { studentId: true, courseId: true, amount: true, refundedAt: true } }),
     ]);
 
     // Оплаты за месяцы ПОЗЖЕ выбранного не гасят текущий долг — иначе аванс
     // за сентябрь скрыл бы неоплаченный июль
-    const paidByEnrollment = new Map<string, number>();
+    const paidByEnrollment = new Map<string, { paidUpTo: number; paidAfter: number; refundedUpTo: number }>();
     for (const payment of payments) {
-      if (paymentMonth(payment) > month) continue;
       const key = `${payment.studentId}:${payment.courseId}`;
-      paidByEnrollment.set(key, (paidByEnrollment.get(key) ?? 0) + payment.amount);
+      const money = paidByEnrollment.get(key) ?? { paidUpTo: 0, paidAfter: 0, refundedUpTo: 0 };
+      if (paymentMonth(payment) > month) money.paidAfter += payment.amount;
+      else money.paidUpTo += payment.amount;
+      paidByEnrollment.set(key, money);
+    }
+    for (const refund of refunds) {
+      if (monthKey(refund.refundedAt) > month) continue;
+      const key = `${refund.studentId}:${refund.courseId}`;
+      const money = paidByEnrollment.get(key) ?? { paidUpTo: 0, paidAfter: 0, refundedUpTo: 0 };
+      money.refundedUpTo += refund.amount;
+      paidByEnrollment.set(key, money);
     }
 
     const schedules = await this.ledger.resolveSchedules(enrollments, month);
@@ -70,7 +81,9 @@ export class BillingService {
     return enrollments.map((enrollment) => {
       const schedule = schedules.get(enrollment.id) ?? [];
       const charged = schedule.reduce((sum, item) => sum + item.charge.amount, 0);
-      const paid = paidByEnrollment.get(`${enrollment.studentId}:${enrollment.courseId}`) ?? 0;
+      const money = paidByEnrollment.get(`${enrollment.studentId}:${enrollment.courseId}`) ?? { paidUpTo: 0, paidAfter: 0, refundedUpTo: 0 };
+      const paid = money.paidUpTo;
+      const refunded = refundedForMonth(money);
 
       return {
         enrollmentId: enrollment.id,
@@ -90,7 +103,8 @@ export class BillingService {
         unenrolled: enrollment.unenrolledAt !== null,
         charged,
         paid,
-        debt: charged - paid,
+        refunded,
+        debt: charged - paid + refunded,
         billedMonths: schedule.filter((item) => item.charge.amount > 0).length,
         breakdown: schedule.map((item) => ({
           month: item.month,
@@ -346,7 +360,7 @@ export class BillingService {
     });
     if (!student) throw new NotFoundException("userNotFound");
 
-    const [enrollments, payments] = await Promise.all([
+    const [enrollments, payments, refunds] = await Promise.all([
       this.ledger.loadBillableEnrollments({ studentId }),
       this.prisma.payment.findMany({
         where: { studentId, deletedAt: null },
@@ -364,6 +378,10 @@ export class BillingService {
           createdBy: { select: { firstName: true, lastName: true } },
         },
       }),
+      this.prisma.refund.findMany({ where: { studentId, deletedAt: null }, orderBy: { refundedAt: "desc" },
+        select: { id: true, amount: true, method: true, refundedAt: true, comment: true, courseId: true,
+          course: { select: { title: true } }, group: { select: { name: true } },
+          createdBy: { select: { firstName: true, lastName: true } } } }),
     ]);
 
     // Начисления считаем СТРОГО по текущий месяц — как в studentsOverview
@@ -387,6 +405,9 @@ export class BillingService {
         paidByMonth.set(month, (paidByMonth.get(month) ?? 0) + payment.amount);
       }
 
+      const courseRefunds = refunds.filter((refund) => refund.courseId === enrollment.courseId);
+      const refundedAll = courseRefunds.reduce((sum, refund) => sum + refund.amount, 0);
+      const { allocated: refundedByMonth } = allocateRefunds(paidByMonth, refundedAll);
       // Месяцы обеих сторон: начисления могут кончиться раньше оплат
       const months = Array.from(
         new Set([...schedule.map((item) => item.month), ...paidByMonth.keys()])
@@ -397,11 +418,13 @@ export class BillingService {
         const charge = schedule.find((item) => item.month === month)?.charge;
         const charged = charge?.amount ?? 0;
         const paid = paidByMonth.get(month) ?? 0;
-        running += paid - charged;
+        const refunded = refundedByMonth.get(month) ?? 0;
+        running += paid - refunded - charged;
         return {
           month,
           charged,
           paid,
+          refunded,
           basis: charge?.basis ?? "none",
           unitsTotal: charge?.unitsTotal ?? 0,
           unitsBilled: charge?.unitsBilled ?? 0,
@@ -425,7 +448,12 @@ export class BillingService {
         .reduce((sum, row) => sum + row.paid, 0);
       const prepaidFuture = rows
         .filter((row) => row.month > currentMonth)
-        .reduce((sum, row) => sum + row.paid, 0);
+        .reduce((sum, row) => sum + row.paid - row.refunded, 0);
+      const totalRefunded = courseRefunds.reduce((sum, refund) => sum + refund.amount, 0);
+      const paidAll = [...paidByMonth.values()].reduce((sum, amount) => sum + amount, 0);
+      const refundedFuture = [...refundedByMonth.entries()].reduce(
+        (sum, [month, amount]) => sum + (month > currentMonth ? amount : 0), 0
+      );
       const billing = this.ledger.toBillingEnrollment(enrollment);
 
       return {
@@ -442,7 +470,9 @@ export class BillingService {
         unenrolledAt: enrollment.unenrolledAt?.toISOString() ?? null,
         totalCharged,
         totalPaid,
-        balance: totalPaid - totalCharged,
+        totalRefunded,
+        refundAvailable: advance(paidAll, totalRefunded, totalCharged),
+        balance: totalPaid - totalCharged - (totalRefunded - refundedFuture),
         // Аванс за месяцы позже текущего — отдельно от баланса (тот же приём,
         // что prepaidTotal в debtors(), только на уровне одного курса)
         prepaidFuture,
@@ -465,7 +495,12 @@ export class BillingService {
         groupName: payment.group?.name ?? null,
         createdBy: `${payment.createdBy.lastName} ${payment.createdBy.firstName}`,
       })),
+      refunds: refunds.map((refund) => ({ id: refund.id, amount: refund.amount, method: refund.method,
+        refundedAt: refund.refundedAt.toISOString(), comment: refund.comment, courseId: refund.courseId,
+        courseTitle: refund.course.title, groupName: refund.group?.name ?? null,
+        createdBy: `${refund.createdBy.lastName} ${refund.createdBy.firstName}` })),
       totals: {
+        refunded: courses.reduce((sum, c) => sum + c.totalRefunded, 0),
         charged: courses.reduce((sum, c) => sum + c.totalCharged, 0),
         paid: courses.reduce((sum, c) => sum + c.totalPaid, 0),
         balance: courses.reduce((sum, c) => sum + c.balance, 0),

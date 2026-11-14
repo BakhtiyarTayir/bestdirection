@@ -135,7 +135,8 @@
     "salaries": "Зарплаты",
     "mySalary": "Моя зарплата",
     "finance": "Финансы",
-    "progress": "Успеваемость"
+    "progress": "Успеваемость",
+    "refunds": "Возвраты"
   },
   "weekdays": {
     "mon": "Пн",
@@ -802,7 +803,9 @@
       "issuedPayouts": "Он проводил выплаты зарплаты: {count}.",
       "receivedAdjustments": "Ему начислялись премии или штрафы: {count}.",
       "issuedAdjustments": "Он вносил премии или штрафы: {count}.",
-      "smsBroadcasts": "Он отправлял СМС-рассылки: {count}."
+      "smsBroadcasts": "Он отправлял СМС-рассылки: {count}.",
+      "studentRefunds": "У ученика есть возвраты: {count}. История возвратов не удаляется.",
+      "recordedRefunds": "Он оформлял возвраты: {count}. Они остаются в кассе."
     },
     "purgeBlockedActive": "Сначала деактивируйте пользователя.",
     "purgeBlockedSelf": "Нельзя удалить собственную учётную запись.",
@@ -1741,7 +1744,8 @@
     "filterBranch": "Филиал",
     "allBranches": "Все филиалы",
     "filterTeacher": "Преподаватель",
-    "allTeachers": "Все преподаватели"
+    "allTeachers": "Все преподаватели",
+    "paymentCoversRefund": "Из этой оплаты уже сделан возврат. Сначала удалите возврат в карточке ученика."
   },
   "debtors": {
     "title": "Должники",
@@ -1818,7 +1822,8 @@
     "prepaidForMonth": "за {month}",
     "prepaidAcceptedBy": "Принял(а): {name}",
     "prepaidNoPayments": "Оплат нет",
-    "prepaidOpenList": "Показать список учеников с авансом"
+    "prepaidOpenList": "Показать список учеников с авансом",
+    "colRefunded": "Возвращено"
   },
   "parents": {
     "title": "Родители",
@@ -1957,7 +1962,34 @@
     "recalcConfirm": "Пересчитать",
     "recalcCancel": "Отмена",
     "recalcDone": "{month} пересчитан",
-    "recalcFailed": "Не удалось пересчитать месяц"
+    "recalcFailed": "Не удалось пересчитать месяц",
+    "refund": "Возврат",
+    "refundTitle": "Возврат денег: {course}",
+    "refundDescription": "Вернуть можно не больше аванса — это оплаты за все месяцы (в том числе вперёд) минус прошлые возвраты минус начисления.",
+    "refundAvailable": "Доступно к возврату: {amount} UZS",
+    "refundAmount": "Сумма возврата (UZS)",
+    "refundMethod": "Способ",
+    "refundDate": "Дата возврата",
+    "refundComment": "Комментарий (необязательно)",
+    "refundCommentPlaceholder": "Например: ученик ушёл из группы",
+    "refundSave": "Вернуть деньги",
+    "refundCancel": "Отмена",
+    "refundDone": "Возврат оформлен",
+    "refundFailed": "Не удалось оформить возврат",
+    "refundInvalidAmount": "Введите целую сумму от 1 до {max}",
+    "refundExceedsAdvance": "Сумма больше доступного аванса. Обновите страницу и проверьте оплаты.",
+    "refundDateInFuture": "Дата возврата не может быть в будущем месяце",
+    "refundDateBeforePayment": "Дата возврата не может быть раньше первой оплаты",
+    "refundsTitle": "История возвратов",
+    "colRefundedAt": "Дата возврата",
+    "refundedTotal": "Возвращено: {amount}",
+    "refundedInMonth": "возврат {amount}",
+    "refundDelete": "Удалить возврат",
+    "refundDeleteConfirm": "Удалить возврат {amount} UZS? Эти деньги снова станут авансом ученика.",
+    "refundDeleteAction": "Удалить",
+    "refundDeleteCancel": "Отмена",
+    "refundDeleted": "Возврат удалён",
+    "refundDeleteFailed": "Не удалось удалить возврат"
   },
   "students": {
     "title": "Студенты",
@@ -2173,7 +2205,8 @@
     "handoverDeleteFailed": "Не удалось удалить запись",
     "cancelDelete": "Отмена",
     "confirmDelete": "Удалить",
-    "colForMonth": "Месяц"
+    "colForMonth": "Месяц",
+    "refunded": "Возврат ученикам"
   },
   "dashboardTeacher": {
     "scheduleTitle": "Расписание",
@@ -2316,5 +2349,36 @@
     "exportButton": "Скачать логины и пароли",
     "exportEmpty": "Нет учеников для выгрузки по выбранным фильтрам.",
     "exportUnknown": "неизвестен – задайте в карточке"
+  },
+  "refunds": {
+    "title": "Возвраты",
+    "subtitle": "Журнал возвратов денег ученикам",
+    "filterSearch": "Поиск",
+    "searchPlaceholder": "Имя, фамилия или телефон",
+    "filterMonth": "Месяц",
+    "filterCourse": "Курс",
+    "filterMethod": "Способ",
+    "filterBranch": "Филиал",
+    "allCourses": "Все курсы",
+    "allMethods": "Все способы",
+    "allBranches": "Все филиалы",
+    "totalLabel": "Возвращено за период",
+    "refundsCount": "{count, plural, one {# возврат} few {# возврата} other {# возвратов}}",
+    "showingFirst": "Первые {shown} из {total}",
+    "empty": "Возвратов пока нет",
+    "colRefundedAt": "Дата",
+    "colStudent": "Студент",
+    "colCourse": "Курс",
+    "colMethod": "Способ",
+    "colAmount": "Сумма",
+    "colRecordedBy": "Оформил",
+    "colActions": "Действия",
+    "method": {
+      "CASH": "Наличные",
+      "CARD": "Карта",
+      "PAYME": "Payme",
+      "CLICK": "Click",
+      "TRANSFER": "Перечисление"
+    }
   }
 }

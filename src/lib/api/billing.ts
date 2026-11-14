@@ -16,6 +16,7 @@ export interface ApiBillingRow {
   hasGroup: boolean;
   charged: number;
   paid: number;
+  refunded: number;
   debt: number;
   billedMonths: number;
   breakdown: { month: string; amount: number; basis: string; unitsTotal: number; unitsBilled: number }[];
@@ -92,6 +93,8 @@ export interface ApiStudentBilling {
     unenrolledAt: string | null;
     totalCharged: number;
     totalPaid: number;
+    totalRefunded: number;
+    refundAvailable: number;
     balance: number;
     // Оплата за месяц позже upToMonth — аванс, в balance курса не входит
     // (правка «карточка ученика показывает будущие месяцы как долг»)
@@ -100,6 +103,7 @@ export interface ApiStudentBilling {
       month: string;
       charged: number;
       paid: number;
+      refunded: number;
       basis: string;
       unitsTotal: number;
       unitsBilled: number;
@@ -118,7 +122,11 @@ export interface ApiStudentBilling {
     groupName: string | null;
     createdBy: string;
   }[];
-  totals: { charged: number; paid: number; balance: number; prepaidFuture: number };
+  refunds: {
+    id: string; amount: number; method: PaymentMethodValue; refundedAt: string; comment: string | null;
+    courseId: string; courseTitle: string; groupName: string | null; createdBy: string;
+  }[];
+  totals: { charged: number; paid: number; refunded: number; balance: number; prepaidFuture: number };
 }
 
 export interface ApiStudentsOverview {
@@ -216,3 +224,19 @@ export const createPayment = (body: {
 
 export const deletePayment = (id: string) =>
   apiFetch<{ ok: true }>(`/billing/payments/${id}`, { method: "DELETE" });
+
+export interface ApiRefundsPage {
+  refunds: {
+    id: string; amount: number; method: PaymentMethodValue; refundedAt: string; comment: string | null;
+    student: { id: string; firstName: string; lastName: string; phone: string | null };
+    course: { id: string; title: string }; group: { id: string; name: string } | null;
+    createdBy: { firstName: string; lastName: string };
+  }[];
+  total: number; count: number; limit: number;
+}
+export const createRefund = (body: {
+  studentId: string; courseId: string; groupId?: string; amount: number; method: PaymentMethodValue;
+  refundedAt: string; comment?: string;
+}) => apiFetch<{ id: string }>("/billing/refunds", { method: "POST", body });
+export const deleteRefund = (id: string) =>
+  apiFetch<{ ok: true }>(`/billing/refunds/${id}`, { method: "DELETE" });

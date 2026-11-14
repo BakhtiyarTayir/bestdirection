@@ -63,6 +63,7 @@ describe("модуль billing", () => {
       "/billing/students",
       "/billing/payments",
       "/billing/payments/form-options",
+      "/billing/refunds",
     ];
 
     it.each(paths)("%s: администратор — 200", async (path) => {
@@ -102,7 +103,7 @@ describe("модуль billing", () => {
       const flat = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets["Все должники"], { header: 1 });
       // заголовок, шапка и минимум одна строка должника с числовым долгом
       expect(flat.length).toBeGreaterThanOrEqual(3);
-      expect(typeof flat[2][9]).toBe("number");
+      expect(typeof flat[2][10]).toBe("number");
     });
 
     it("ученик не может завести оплату себе", async () => {
@@ -114,6 +115,46 @@ describe("модуль billing", () => {
         paidAt: `${current}-05`,
       });
       expect(res.status).toBe(403);
+    });
+  });
+
+  describe("возвраты", () => {
+    it("проверяет аванс, дату и удаление оплаты под блокировкой", async () => {
+      const student = await createUser({ role: "STUDENT" });
+      await testDb().enrollment.create({ data: {
+        studentId: student.id, courseId: ids.course, groupId: ids.group,
+        startsAt: new Date(`${addMonths(current, 1)}-01T12:00:00.000Z`),
+      } });
+      const noEnrollment = await send("post", "/billing/refunds", "ADMIN", {
+        studentId: ids.PARENT, courseId: ids.course, amount: 1, method: "CASH", refundedAt: `${current}-01`,
+      });
+      expect(noEnrollment.body.message).toBe("notEnrolled");
+      const payment = await send("post", "/billing/payments", "ADMIN", {
+        studentId: student.id, courseId: ids.course, amount: 300000, method: "CASH", paidAt: `${current}-01`,
+        forMonth: addMonths(current, 1),
+      });
+      expect(payment.status).toBe(201);
+      const body = { studentId: student.id, courseId: ids.course, amount: 200000, method: "CASH", refundedAt: `${current}-01` };
+      expect((await send("post", "/billing/refunds", "STUDENT", body)).status).toBe(403);
+      expect((await send("post", "/billing/refunds", "ADMIN", { ...body, groupId: "wrong" })).body.message).toBe("groupMismatch");
+      expect((await send("post", "/billing/refunds", "ADMIN", { ...body, refundedAt: `${addMonths(current, 1)}-01` })).body.message).toBe("refundDateInFuture");
+      expect((await send("post", "/billing/refunds", "ADMIN", { ...body, refundedAt: `${addMonths(current, -1)}-28` })).body.message).toBe("refundDateBeforePayment");
+      const refund = await send("post", "/billing/refunds", "ADMIN", body);
+      expect(refund.status).toBe(201);
+      expect((await send("post", "/billing/refunds", "ADMIN", body)).body.message).toBe("refundExceedsAdvance");
+      const journal = await get(`/billing/refunds?studentId=${student.id}`, "ADMIN");
+      expect(journal.body.total).toBe(200000);
+      expect(journal.body.count).toBe(1);
+      const card = await get(`/billing/students/${student.id}`, "ADMIN");
+      expect(card.body.courses[0].refundAvailable).toBe(100000);
+      expect(card.body.courses[0].prepaidFuture).toBe(100000);
+      expect(card.body.courses[0].months.at(-1).refunded).toBe(200000);
+      const debtors = await get(`/billing/debtors?courseId=${ids.course}`, "ADMIN");
+      expect(debtors.body.debtors.some((row: { student: { id: string } }) => row.student.id === student.id)).toBe(false);
+      expect((await send("delete", `/billing/payments/${payment.body.id}`, "ADMIN")).body.message).toBe("paymentCoversRefund");
+      expect((await send("delete", `/billing/refunds/${refund.body.id}`, "ADMIN")).status).toBe(200);
+      expect((await send("delete", `/billing/refunds/${refund.body.id}`, "ADMIN")).body.message).toBe("refundNotFound");
+      expect((await send("delete", `/billing/payments/${payment.body.id}`, "ADMIN")).status).toBe(200);
     });
   });
 

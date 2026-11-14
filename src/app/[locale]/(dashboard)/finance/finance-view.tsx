@@ -133,6 +133,10 @@ export function FinanceView({ data, branchId, branches, handovers }: FinanceView
               <dd className="tabular-nums">{money.format(current.received)} UZS</dd>
             </div>
             <div className="flex justify-between gap-4">
+              <dt>{t("refunded")}</dt>
+              <dd className="tabular-nums">− {money.format(current.refunded)} UZS</dd>
+            </div>
+            <div className="flex justify-between gap-4">
               <dt>{t("paidOut")}</dt>
               <dd className="tabular-nums">− {money.format(current.paidOut)} UZS</dd>
             </div>
@@ -310,6 +314,7 @@ export function FinanceView({ data, branchId, branches, handovers }: FinanceView
               <TableRow>
                 <TableHead>{t("colMonth")}</TableHead>
                 <TableHead className="text-right">{t("received")}</TableHead>
+                <TableHead className="text-right">{t("refunded")}</TableHead>
                 <TableHead className="text-right">{t("paidOut")}</TableHead>
                 <TableHead className="text-right">{t("colCashProfit")}</TableHead>
                 <TableHead className="text-right">{t("handedOver")}</TableHead>
@@ -324,6 +329,7 @@ export function FinanceView({ data, branchId, branches, handovers }: FinanceView
                 <TableRow key={row.month}>
                   <TableCell className="whitespace-nowrap">{formatMonth(row.month)}</TableCell>
                   <TableCell className="whitespace-nowrap text-right tabular-nums">{money.format(row.received)}</TableCell>
+                  <TableCell className="whitespace-nowrap text-right tabular-nums">{money.format(row.refunded)}</TableCell>
                   <TableCell className="whitespace-nowrap text-right tabular-nums">{money.format(row.paidOut)}</TableCell>
                   <TableCell className={cn("whitespace-nowrap text-right font-medium tabular-nums", profitClass(row.cashProfit))}>
                     {money.format(row.cashProfit)}

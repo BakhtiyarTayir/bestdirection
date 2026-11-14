@@ -143,6 +143,7 @@ model Branch {
   groups                   Group[]
   users                    User[]
   payments                 Payment[]
+  refunds                  Refund[]
   teacherSalaryAccruals    TeacherSalaryAccrual[]
   teacherPayouts           TeacherPayout[]
   teacherSalaryAdjustments TeacherSalaryAdjustment[]
@@ -202,6 +203,8 @@ model User {
   reviewedEnrollmentRequests  EnrollmentRequest[] @relation("ReviewedEnrollmentRequests")
   payments                    Payment[]           @relation("StudentPayments")
   recordedPayments            Payment[]           @relation("RecordedPayments")
+  refunds                     Refund[]            @relation("StudentRefunds")
+  recordedRefunds             Refund[]            @relation("RecordedRefunds")
   telegramChatId              String?             @unique
   telegramUsername            String?
   // Родитель мог отключить уведомления об успеваемости ребёнка (пропуск,
@@ -314,6 +317,7 @@ model Course {
   groups             Group[]
   enrollmentRequests EnrollmentRequest[]
   payments           Payment[]
+  refunds            Refund[]
   salaryAccruals     TeacherSalaryAccrual[]
 
   @@index([teacherId])
@@ -394,6 +398,34 @@ model Payment {
   @@index([deletedAt])
   @@index([createdById])
   @@index([branchId])
+}
+
+model Refund {
+  id          String        @id @default(cuid())
+  amount      Int
+  method      PaymentMethod @default(CASH)
+  refundedAt  DateTime
+  comment     String?
+  deletedAt   DateTime?
+  createdAt   DateTime      @default(now())
+  studentId   String
+  student     User          @relation("StudentRefunds", fields: [studentId], references: [id], onDelete: Restrict)
+  courseId    String
+  course      Course        @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  groupId     String?
+  group       Group?        @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  branchId    String?
+  branch      Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  createdById String
+  createdBy   User          @relation("RecordedRefunds", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([studentId])
+  @@index([courseId])
+  @@index([groupId])
+  @@index([branchId])
+  @@index([refundedAt])
+  @@index([deletedAt])
+  @@index([createdById])
 }
 
 model CourseLead {
@@ -566,6 +598,7 @@ model Group {
   unenrolledEnrollments Enrollment[]           @relation("EnrollmentUnenrolledFromGroup")
   attendanceSessions    AttendanceSession[]
   payments              Payment[]
+  refunds               Refund[]
   smsBroadcasts         SmsBroadcast[]
   salaryAccruals        TeacherSalaryAccrual[]
 

@@ -15,6 +15,7 @@ function row(over: Partial<DebtorExportRow> & { name: string; debt: number }): D
     monthlyPrice: 500000,
     charged: over.debt + 100000,
     paid: 100000,
+    refunded: 0,
     ...rest,
   };
 }
@@ -46,29 +47,29 @@ describe("выгрузка должников", () => {
     ]);
     const first = data.findIndex((r) => r[0] === heads[0][0]);
     expect(data[first + 2][1]).toBe("Тестов Большой");
-    expect(data[first + 2][7]).toBe(300000);
+    expect(data[first + 2][8]).toBe(300000);
     expect(data[first + 3][1]).toBe("Тестов Малый");
     expect(data[first + 4][1]).toBe("Итого по группе (2 уч.)");
-    expect(data[first + 4][7]).toBe(400000);
+    expect(data[first + 4][8]).toBe(400000);
     expect(data.some((r) => r[0] === "Без группы")).toBe(true);
     const total = data[data.length - 1];
     expect(total[1]).toBe("ИТОГО (4 уч.)");
-    expect(total[7]).toBe(650000);
+    expect(total[8]).toBe(650000);
   });
 
   it("лист по учителям: по убыванию долга, «Без учителя», итого", () => {
     const data = aoa(wb, "По учителям");
-    expect(data[3].slice(0, 6)).toEqual(["Алиев Анвар", 1, 2, 600000, 200000, 400000]);
+    expect(data[3].slice(0, 7)).toEqual(["Алиев Анвар", 1, 2, 600000, 200000, 0, 400000]);
     expect(data.map((r) => r[0]).slice(3)).toEqual(["Алиев Анвар", "Беков Бобур", "Без учителя", "ИТОГО"]);
-    expect(data[data.length - 1][5]).toBe(650000);
+    expect(data[data.length - 1][6]).toBe(650000);
   });
 
   it("плоский лист: автофильтр и сортировка по долгу", () => {
     const sheet = wb.Sheets["Все должники"];
     expect(sheet["!autofilter"]).toBeDefined();
-    expect(sheet["!cols"]?.length).toBe(10);
+    expect(sheet["!cols"]?.length).toBe(11);
     const data = aoa(wb, "Все должники");
-    expect(data.slice(2).map((r) => r[9])).toEqual([300000, 200000, 100000, 50000]);
+    expect(data.slice(2).map((r) => r[10])).toEqual([300000, 200000, 100000, 50000]);
     expect(data[2][5]).toBe("@big");
   });
 });
@@ -81,7 +82,7 @@ describe("выгрузка должников на узбекском", () => {
     const groups = aoa(wb, "Guruhlar bo'yicha");
     expect(groups[0][0]).toBe("Qarzdorlar: oktabr 2026");
     expect(groups[2][0]).toBe("Guruh: Группа А | Kurs: Python | O'qituvchi: Алиев Анвар");
-    expect(groups[3]).toEqual(["№", "Talaba", "Telefon", "Telegram", "Oylik narx", "Hisoblangan", "To'langan", "Qarz"]);
+    expect(groups[3]).toEqual(["№", "Talaba", "Telefon", "Telegram", "Oylik narx", "Hisoblangan", "To‘langan", "Qaytarilgan", "Qarz"]);
     expect(groups.some((r) => r[0] === "Guruhsiz")).toBe(true);
     expect(groups[groups.length - 1][1]).toBe("JAMI (4 ta talaba)");
 
@@ -91,6 +92,6 @@ describe("выгрузка должников на узбекском", () => {
 
     const flat = aoa(wb, "Barcha qarzdorlar");
     expect(flat[1][0]).toBe("O'qituvchi");
-    expect(flat.slice(2).map((r) => r[9])).toEqual([300000, 200000, 100000, 50000]);
+    expect(flat.slice(2).map((r) => r[10])).toEqual([300000, 200000, 100000, 50000]);
   });
 });
