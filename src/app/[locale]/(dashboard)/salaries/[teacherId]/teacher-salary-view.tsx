@@ -30,7 +30,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { formatDate } from "@/lib/format-date";
 import { Trash2 } from "lucide-react";
-import type { ApiSalaryAdjustment, ApiSalaryMonthStudent, ApiSalaryPayout } from "@/lib/api/salary";
+import type { ApiSalaryAdjustment, ApiSalaryMonthStudent, ApiSalaryPayout, ApiSalaryStudentTotals } from "@/lib/api/salary";
 import { deletePayout } from "@/lib/api/salary";
 import { CreatePayoutDialog } from "./create-payout-dialog";
 import { CreateAdjustmentDialog } from "./create-adjustment-dialog";
@@ -42,6 +42,7 @@ interface TeacherSalaryViewProps {
   teacherId: string;
   month: string;
   students: ApiSalaryMonthStudent[];
+  studentTotals: ApiSalaryStudentTotals;
   studentsIncomplete: boolean;
   adjustments: ApiSalaryAdjustment[];
   carriedOver: number;
@@ -57,6 +58,7 @@ export function TeacherSalaryView({
   teacherId,
   month,
   students,
+  studentTotals,
   studentsIncomplete,
   adjustments,
   carriedOver,
@@ -116,7 +118,7 @@ export function TeacherSalaryView({
         adjustments={adjustments}
       />
 
-      <MonthStudentsTable month={month} students={students} incomplete={studentsIncomplete} money={money} />
+      <MonthStudentsTable month={month} students={students} totals={studentTotals} incomplete={studentsIncomplete} money={money} />
 
       <AdjustmentsSection adjustments={adjustments} canDelete />
 
@@ -204,11 +206,13 @@ export function TeacherSalaryView({
 function MonthStudentsTable({
   month,
   students,
+  totals,
   incomplete,
   money,
 }: {
   month: string;
   students: ApiSalaryMonthStudent[];
+  totals: ApiSalaryStudentTotals;
   incomplete: boolean;
   money: Intl.NumberFormat;
 }) {
@@ -220,15 +224,13 @@ function MonthStudentsTable({
       collator.compare(`${a.lastName} ${a.firstName}`, `${b.lastName} ${b.firstName}`) ||
       collator.compare(a.groupLabel, b.groupLabel)
   );
-  const totals = students.reduce(
-    (sum, student) => ({ charged: sum.charged + student.charged, paid: sum.paid + student.paid }),
-    { charged: 0, paid: 0 }
-  );
-  const percent = totals.charged > 0 ? Math.round((totals.paid / totals.charged) * 100) : null;
+  // Итог считает api: засчитывается не больше начисленного по каждому ученику
+  const percent = totals.charged > 0 ? Math.round((totals.collected / totals.charged) * 100) : null;
 
   return (
     <div className="space-y-3">
       <h2 className="text-lg font-semibold">{t("monthStudentsTitle", { month })}</h2>
+      <p className="text-sm text-muted-foreground">{t("studentsSalaryHint")}</p>
       {incomplete && <p className="text-sm text-destructive">{t("monthStudentsIncomplete")}</p>}
       {sorted.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t("monthStudentsEmpty")}</p>
@@ -242,6 +244,7 @@ function MonthStudentsTable({
                   <TableHead>{t("studentsColGroup")}</TableHead>
                   <TableHead className="text-right">{t("studentsColCharged")}</TableHead>
                   <TableHead className="text-right">{t("studentsColPaid")}</TableHead>
+                  <TableHead className="text-right">{t("studentsColRefunded")}</TableHead>
                   <TableHead className="text-right">{t("studentsColRemaining")}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -261,6 +264,7 @@ function MonthStudentsTable({
                     <TableCell className="min-w-[160px] text-sm text-muted-foreground">{student.groupLabel}</TableCell>
                     <TableCell className="whitespace-nowrap text-right">{money.format(student.charged)}</TableCell>
                     <TableCell className="whitespace-nowrap text-right">{money.format(student.paid)}</TableCell>
+                    <TableCell className="whitespace-nowrap text-right">{money.format(student.refunded)}</TableCell>
                     <TableCell
                       className={`whitespace-nowrap text-right ${
                         student.remaining > 0 ? "text-red-600" : student.remaining < 0 ? "text-green-600" : ""
@@ -277,12 +281,18 @@ function MonthStudentsTable({
           </div>
           <p className="text-sm font-medium">
             {percent === null
-              ? t("studentsPaidOf", { paid: money.format(totals.paid), charged: money.format(totals.charged) })
+              ? t("studentsPaidOf", { paid: money.format(totals.collected), charged: money.format(totals.charged) })
               : t("studentsPaidOfPercent", {
-                  paid: money.format(totals.paid),
+                  paid: money.format(totals.collected),
                   charged: money.format(totals.charged),
                   percent,
                 })}
+            {totals.advance > 0 && (
+              <span className="ml-3 text-green-600">{t("studentsTotalAdvance", { amount: money.format(totals.advance) })}</span>
+            )}
+            {totals.shortfall > 0 && (
+              <span className="ml-3 text-red-600">{t("studentsTotalShortfall", { amount: money.format(totals.shortfall) })}</span>
+            )}
           </p>
         </>
       )}

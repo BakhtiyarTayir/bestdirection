@@ -2,7 +2,7 @@ import { requireRole } from "@/lib/auth-guard";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { getSalaryGroupStudentsServer, getTeacherSalary } from "@/lib/api/salary.server";
-import type { ApiSalaryMonthStudent } from "@/lib/api/salary";
+import type { ApiSalaryMonthStudent, ApiSalaryStudentTotals } from "@/lib/api/salary";
 import { TeacherSalaryView } from "./teacher-salary-view";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +33,8 @@ export default async function TeacherSalaryPage({ params, searchParams }: Teache
     monthGroups.map((group) => getSalaryGroupStudentsServer(result.data.month, group.groupId, group.courseId))
   );
   const students: ApiSalaryMonthStudent[] = [];
+  // Итоги считает api по каждой группе; здесь они только складываются
+  const studentTotals: ApiSalaryStudentTotals = { charged: 0, paid: 0, refunded: 0, remaining: 0, collected: 0, advance: 0, shortfall: 0 };
   let studentsIncomplete = false;
   studentResults.forEach((studentsResult, index) => {
     if (!studentsResult.success || !studentsResult.data) {
@@ -43,6 +45,9 @@ export default async function TeacherSalaryPage({ params, searchParams }: Teache
     const groupLabel = group.groupName
       ? `${group.courseTitle} — ${group.groupName}`
       : `${group.courseTitle} (${t("withoutGroup")})`;
+    for (const key of Object.keys(studentTotals) as (keyof ApiSalaryStudentTotals)[]) {
+      studentTotals[key] += studentsResult.data.totals[key];
+    }
     for (const student of studentsResult.data.students) students.push({ ...student, groupLabel });
   });
 
@@ -83,6 +88,7 @@ export default async function TeacherSalaryPage({ params, searchParams }: Teache
         teacherId={teacherId}
         month={result.data.month}
         students={students}
+        studentTotals={studentTotals}
         studentsIncomplete={studentsIncomplete}
         adjustments={adjustments}
         carriedOver={carriedOver}

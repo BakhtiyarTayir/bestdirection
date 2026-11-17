@@ -664,8 +664,17 @@ export class SalaryService {
             select: { studentId: true, amount: true, forMonth: true, paidAt: true },
           })
         : [];
+    // Действующие возвраты по тем же ученикам и курсу. Зарплату они не меняют:
+    // только справочный список и итог
+    const refunds =
+      studentIds.length > 0
+        ? await this.prisma.refund.findMany({
+            where: { courseId: unit.courseId, studentId: { in: studentIds }, deletedAt: null },
+            select: { studentId: true, amount: true },
+          })
+        : [];
 
-    return { month, locked, frozenBase, ...studentPaymentRows(charges, payments, month) };
+    return { month, locked, frozenBase, ...studentPaymentRows(charges, payments, month, refunds) };
   }
 
   /**

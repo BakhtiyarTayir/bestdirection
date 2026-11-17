@@ -662,7 +662,15 @@ describe("studentPaymentRows — поступления по ученикам з
     );
     expect(result.students.map((row) => row.studentId)).toEqual(["d", "b", "a", "c"]);
     expect(result.students.map((row) => row.remaining)).toEqual([300_000, 200_000, 0, -50_000]);
-    expect(result.totals).toEqual({ charged: 1_200_000, paid: 750_000, remaining: 450_000 });
+    expect(result.totals).toEqual({
+      charged: 1_200_000,
+      paid: 750_000,
+      refunded: 0,
+      remaining: 450_000,
+      collected: 700_000,
+      advance: 50_000,
+      shortfall: 500_000,
+    });
   });
 
   it("месяц платежа: forMonth, а без него — месяц paidAt; чужой месяц не считается", () => {
@@ -688,8 +696,63 @@ describe("studentPaymentRows — поступления по ученикам з
   it("отчисленный помечается, строки одного ученика суммируются", () => {
     const result = studentPaymentRows([charge("a", "Алиев", 100, true), charge("a", "Алиев", 50)], [], "2026-09");
     expect(result.students).toEqual([
-      { studentId: "a", firstName: "Имя", lastName: "Алиев", unenrolled: true, charged: 150, paid: 0, remaining: 150 },
+      { studentId: "a", firstName: "Имя", lastName: "Алиев", unenrolled: true, charged: 150, paid: 0, refunded: 0, remaining: 150 },
     ]);
+  });
+});
+
+describe("studentPaymentRows — возвраты", () => {
+  const charge = (studentId: string, lastName: string, amount: number) => ({
+    studentId,
+    firstName: "Имя",
+    lastName,
+    unenrolled: false,
+    amount,
+  });
+  const pay = (studentId: string, amount: number, forMonth: string) => ({
+    studentId,
+    amount,
+    forMonth,
+    paidAt: new Date("2026-09-10T12:00:00.000Z"),
+  });
+
+  it("возврат уменьшает переплату: оплата 530 000, начислено 245 000, возврат 285 000 → остаток 0", () => {
+    const result = studentPaymentRows(
+      [charge("a", "Алиев", 245_000)],
+      [pay("a", 530_000, "2026-09")],
+      "2026-09",
+      [{ studentId: "a", amount: 285_000 }]
+    );
+    expect(result.students[0]).toMatchObject({ paid: 530_000, refunded: 285_000, remaining: 0 });
+    expect(result.totals).toMatchObject({ collected: 245_000, advance: 0, shortfall: 0 });
+  });
+
+  it("возврат относится к самому позднему месяцу с оплатой, а не к выбранному", () => {
+    const payments = [pay("a", 300_000, "2026-08"), pay("a", 300_000, "2026-09")];
+    const refunds = [{ studentId: "a", amount: 100_000 }];
+    const charges = [charge("a", "Алиев", 300_000)];
+    expect(studentPaymentRows(charges, payments, "2026-08", refunds).students[0]).toMatchObject({ paid: 300_000, refunded: 0, remaining: 0 });
+    expect(studentPaymentRows(charges, payments, "2026-09", refunds).students[0]).toMatchObject({ paid: 300_000, refunded: 100_000, remaining: 100_000 });
+  });
+
+  it("возврат, превышающий оплаты месяца, переходит на более ранний; возврат постороннего игнорируется", () => {
+    const payments = [pay("a", 100_000, "2026-08"), pay("a", 50_000, "2026-09")];
+    const result = studentPaymentRows([charge("a", "Алиев", 100_000)], payments, "2026-08", [
+      { studentId: "a", amount: 80_000 },
+      { studentId: "zzz", amount: 999 },
+    ]);
+    expect(result.students[0].refunded).toBe(30_000);
+    expect(result.totals.refunded).toBe(30_000);
+  });
+
+  it("итог: переплата одного не закрывает долг другого, процент меньше 100", () => {
+    const result = studentPaymentRows(
+      [charge("a", "Алиев", 300_000), charge("b", "Бобров", 480_000)],
+      [pay("a", 600_000, "2026-09")],
+      "2026-09"
+    );
+    expect(result.totals).toMatchObject({ charged: 780_000, paid: 600_000, collected: 300_000, advance: 300_000, shortfall: 480_000 });
+    expect(Math.round((result.totals.collected / result.totals.charged) * 100)).toBeLessThan(100);
   });
 });
 

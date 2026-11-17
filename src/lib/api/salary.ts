@@ -139,8 +139,22 @@ export interface ApiSalaryGroupStudent {
   unenrolled: boolean;
   charged: number;
   paid: number;
-  // charged - paid; отрицательное — переплата за месяц
+  // Возвраты, отнесённые к этому месяцу (allocateRefunds)
+  refunded: number;
+  // charged - paid + refunded; отрицательное — переплата (аванс) за месяц
   remaining: number;
+}
+
+export interface ApiSalaryStudentTotals {
+  charged: number;
+  paid: number;
+  refunded: number;
+  remaining: number;
+  // Сумма по ученикам min(paid - refunded, charged), не меньше 0
+  collected: number;
+  // Сумма превышений и недоборов по ученикам: переплата не закрывает чужой долг
+  advance: number;
+  shortfall: number;
 }
 
 /** Строка общего списка учеников преподавателя за месяц: ученик + его группа */
@@ -153,7 +167,7 @@ export interface ApiSalaryGroupStudents {
   locked: boolean;
   // База из строки зарплаты закрытого месяца; null у открытого
   frozenBase: number | null;
-  totals: { charged: number; paid: number; remaining: number };
+  totals: ApiSalaryStudentTotals;
   students: ApiSalaryGroupStudent[];
 }
 

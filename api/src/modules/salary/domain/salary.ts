@@ -24,6 +24,7 @@ import {
   monthStart,
   paymentMonth,
 } from "../../billing/domain/billing";
+import { allocateRefunds } from "../../billing/domain/refund";
 
 export { addMonths, countLessons, currentMonthKey, isClosedMonth, isValidMonth, monthEnd, monthKey, monthStart };
 
@@ -344,24 +345,47 @@ export interface StudentPaymentRow {
   unenrolled: boolean;
   charged: number;
   paid: number;
-  /** charged - paid; отрицательное — переплата за месяц */
+  /** Возвраты, отнесённые к месяцу правилом allocateRefunds (как в карточке ученика) */
+  refunded: number;
+  /** charged - paid + refunded; отрицательное — переплата (аванс) за месяц */
   remaining: number;
 }
 
+export interface StudentPaymentTotals {
+  charged: number;
+  paid: number;
+  refunded: number;
+  /** Сумма remaining по ученикам (справочно; переплата одних гасит долг других) */
+  remaining: number;
+  /** Сумма по ученикам max(0, min(paid - refunded, charged)): сколько реально покрыто начисление */
+  collected: number;
+  /** Сумма превышений max(0, paid - refunded - charged) */
+  advance: number;
+  /** Сумма недоборов max(0, charged - (paid - refunded)) */
+  shortfall: number;
+}
+
 /**
- * Сводит начисления и оплаты по ученикам за месяц. Оплата идёт в месяц по
- * paymentMonth (forMonth, иначе месяц paidAt) — то же правило, что в долгах.
- * Оплаты учеников вне списка начислений игнорируются (вызывающий уже
- * отобрал состав). В список попадают ученики с charged > 0 или paid > 0;
- * сначала с остатком (по убыванию), потом остальные по фамилии.
+ * Сводит начисления, оплаты и возвраты по ученикам за месяц. Оплата идёт в
+ * месяц по paymentMonth (forMonth, иначе месяц paidAt) — то же правило, что
+ * в долгах. Возвраты ученика раскладываются allocateRefunds по ВСЕМ месяцам
+ * его оплат (сначала на самые поздние), в строку берётся доля выбранного
+ * месяца — правило одно с карточкой ученика. Оплаты и возвраты учеников вне
+ * списка начислений игнорируются (вызывающий уже отобрал состав). В список
+ * попадают ученики с charged > 0 или paid > 0; сначала с остатком (по
+ * убыванию), потом остальные по фамилии. На зарплату возвраты не влияют.
+ *
+ * Итог «collected» считается по каждому ученику отдельно и не даёт
+ * переплате одного закрыть долг другого.
  */
 export function studentPaymentRows(
   charges: StudentCharge[],
   payments: { studentId: string; amount: number; forMonth: string | null; paidAt: Date }[],
-  month: string
+  month: string,
+  refunds: { studentId: string; amount: number }[] = []
 ): {
   students: StudentPaymentRow[];
-  totals: { charged: number; paid: number; remaining: number };
+  totals: StudentPaymentTotals;
 } {
   const byStudent = new Map<string, StudentPaymentRow>();
   for (const charge of charges) {
@@ -372,21 +396,37 @@ export function studentPaymentRows(
       unenrolled: false,
       charged: 0,
       paid: 0,
+      refunded: 0,
       remaining: 0,
     };
     row.charged += charge.amount;
     row.unenrolled = row.unenrolled || charge.unenrolled;
     byStudent.set(charge.studentId, row);
   }
+
+  const paidByStudentMonth = new Map<string, Map<string, number>>();
   for (const payment of payments) {
-    if (paymentMonth(payment) !== month) continue;
     const row = byStudent.get(payment.studentId);
-    if (row) row.paid += payment.amount;
+    if (!row) continue;
+    const key = paymentMonth(payment);
+    const months = paidByStudentMonth.get(payment.studentId) ?? new Map<string, number>();
+    months.set(key, (months.get(key) ?? 0) + payment.amount);
+    paidByStudentMonth.set(payment.studentId, months);
+    if (key === month) row.paid += payment.amount;
+  }
+  const refundedByStudent = new Map<string, number>();
+  for (const refund of refunds) {
+    if (!byStudent.has(refund.studentId)) continue;
+    refundedByStudent.set(refund.studentId, (refundedByStudent.get(refund.studentId) ?? 0) + refund.amount);
+  }
+  for (const [studentId, refunded] of refundedByStudent) {
+    const { allocated } = allocateRefunds(paidByStudentMonth.get(studentId) ?? new Map(), refunded);
+    byStudent.get(studentId)!.refunded = allocated.get(month) ?? 0;
   }
 
   const students = [...byStudent.values()]
     .filter((row) => row.charged > 0 || row.paid > 0)
-    .map((row) => ({ ...row, remaining: row.charged - row.paid }))
+    .map((row) => ({ ...row, remaining: row.charged - row.paid + row.refunded }))
     .sort(
       (a, b) =>
         Number(b.remaining > 0) - Number(a.remaining > 0) ||
@@ -395,9 +435,18 @@ export function studentPaymentRows(
         a.firstName.localeCompare(b.firstName, "ru")
     );
 
-  const charged = students.reduce((sum, row) => sum + row.charged, 0);
-  const paid = students.reduce((sum, row) => sum + row.paid, 0);
-  return { students, totals: { charged, paid, remaining: charged - paid } };
+  const totals: StudentPaymentTotals = { charged: 0, paid: 0, refunded: 0, remaining: 0, collected: 0, advance: 0, shortfall: 0 };
+  for (const row of students) {
+    const net = row.paid - row.refunded;
+    totals.charged += row.charged;
+    totals.paid += row.paid;
+    totals.refunded += row.refunded;
+    totals.remaining += row.remaining;
+    totals.collected += Math.max(0, Math.min(net, row.charged));
+    totals.advance += Math.max(0, net - row.charged);
+    totals.shortfall += Math.max(0, row.charged - net);
+  }
+  return { students, totals };
 }
 
 // ─── Зарплата по проведённым занятиям (план «Уроки и карточка группы», этап 3) ───

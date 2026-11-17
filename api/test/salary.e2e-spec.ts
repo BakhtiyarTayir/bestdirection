@@ -1260,6 +1260,46 @@ describe("модуль salary", () => {
       expect(rowOf(res.body, "solo")).toMatchObject({ charged: 200_000, paid: 0 });
     });
 
+    it("возврат: поступило и возвращено видны, остаток 0, зарплата учителя не меняется", async () => {
+      const course = await testDb().course.create({
+        data: { slug: `salary-gs-rf-${run}`, title: "Курс возврата", teacherId: ids.TEACHER, price: 245_000 },
+      });
+      const branch = await createBranch("Возврат");
+      const group = await testDb().group.create({
+        data: { price: 245_000, name: `Rf-${run}`, courseId: course.id, branchId: branch.id, scheduleDays: [1, 3, 5], teacherId: ids.TEACHER, salaryPercentBp: 4000, startDate: start },
+      });
+      const student = (await createUser({ role: "STUDENT" })).id;
+      await testDb().enrollment.create({ data: { studentId: student, courseId: course.id, groupId: group.id, startsAt: start, priceOverride: 245_000 } });
+      await testDb().payment.create({
+        data: { amount: 530_000, studentId: student, courseId: course.id, groupId: group.id, forMonth: prevMonth, paidAt: new Date(`${prevMonth}-15T12:00:00.000Z`), createdById: ids.ADMIN },
+      });
+      const accrual = async () => {
+        const detail = await get(`/salary/${ids.TEACHER}?month=${prevMonth}`, "ADMIN");
+        const g = detail.body.groups.find((x: { groupId: string }) => x.groupId === group.id);
+        return g.months.find((m: { month: string }) => m.month === prevMonth).amount;
+      };
+      const before = await accrual();
+      const noRefund = await students$(prevMonth, `groupId=${group.id}`);
+      expect(noRefund.body.students.find((r: { studentId: string }) => r.studentId === student)).toMatchObject({ paid: 530_000, refunded: 0, remaining: -285_000 });
+
+      await testDb().refund.create({
+        data: { amount: 285_000, studentId: student, courseId: course.id, groupId: group.id, refundedAt: new Date(`${prevMonth}-20T12:00:00.000Z`), createdById: ids.ADMIN },
+      });
+      // Удалённый возврат не учитывается
+      await testDb().refund.create({
+        data: { amount: 1_000, studentId: student, courseId: course.id, groupId: group.id, refundedAt: new Date(`${prevMonth}-21T12:00:00.000Z`), createdById: ids.ADMIN, deletedAt: new Date() },
+      });
+      const res = await students$(prevMonth, `groupId=${group.id}`);
+      expect(res.body.students.find((r: { studentId: string }) => r.studentId === student)).toMatchObject({
+        charged: 245_000,
+        paid: 530_000,
+        refunded: 285_000,
+        remaining: 0,
+      });
+      expect(res.body.totals).toMatchObject({ collected: 245_000, advance: 0, shortfall: 0, refunded: 285_000 });
+      expect(await accrual()).toBe(before);
+    });
+
     it("переведённый ученик: закрытый месяц — в прежней группе, текущий — в новой", async () => {
       const course = await testDb().course.create({
         data: { slug: `salary-gs-mv-${run}`, title: "Курс перевода", teacherId: ids.TEACHER, price: 300_000 },
