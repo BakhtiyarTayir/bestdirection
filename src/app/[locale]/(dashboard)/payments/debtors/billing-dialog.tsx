@@ -136,11 +136,14 @@ export function BillingDialog({
   const todayTashkent = new Intl.DateTimeFormat("sv-SE", {
     timeZone: "Asia/Tashkent", year: "numeric", month: "2-digit", day: "2-digit",
   }).format(new Date());
+  // Отчисленному дата — «дата ухода»: не позже сегодня и не очищается, а
+  // начисления возобновляются только возвратом в группу
+  const isUnenrolled = Boolean(data?.unenrolledAt);
   const endsInFuture = Boolean(endsAt && format(endsAt, "yyyy-MM-dd") > todayTashkent);
 
   // Выбор нужен, только когда у ученика в группе меняют дату окончания на новую
   const needsEndChoice = Boolean(
-    data?.groupId && !data.unenrolledAt && endsAt &&
+    data?.groupId && !isUnenrolled && endsAt &&
       format(endsAt, "yyyy-MM-dd") !== data.billingEndsAt?.slice(0, 10)
   );
 
@@ -159,6 +162,10 @@ export function BillingDialog({
     }
 
     if (needsEndChoice && !choice) return;
+    if (isUnenrolled && !endsAt) {
+      toast({ title: tErrors("error"), description: tErrors("unenrolledBillingEnd"), variant: "destructive" });
+      return;
+    }
     setIsSaving(true);
     try {
       const save = choice === "left" && data?.groupId
@@ -235,12 +242,16 @@ export function BillingDialog({
                 )}
               </div>
               <div className="space-y-2">
-                <Label>{t("billingEndsAt")}</Label>
+                <Label>{isUnenrolled ? t("unenrolledEndsAt") : t("billingEndsAt")}</Label>
                 <div className="flex gap-2">
                   <div className="min-w-0 flex-1">
-                    <DatePicker value={endsAt} onChange={changeEndsAt} />
+                    <DatePicker
+                      value={endsAt}
+                      onChange={changeEndsAt}
+                      maxDate={isUnenrolled ? new Date(`${todayTashkent}T12:00:00`) : undefined}
+                    />
                   </div>
-                  {endsAt && (
+                  {endsAt && !isUnenrolled && (
                     <Button
                       type="button"
                       variant="outline"
@@ -254,7 +265,9 @@ export function BillingDialog({
                     </Button>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">{t("billingEndsAtHint")}</p>
+                <p className="text-xs text-muted-foreground">
+                  {isUnenrolled ? t("unenrolledEndsAtHint") : t("billingEndsAtHint")}
+                </p>
               </div>
             </div>
 

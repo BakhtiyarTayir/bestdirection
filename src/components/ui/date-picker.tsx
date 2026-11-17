@@ -18,6 +18,8 @@ interface DatePickerProps {
   onChange: (date: Date | undefined) => void;
   placeholder?: string;
   id?: string;
+  /** Последний доступный день: более поздние даты в календаре недоступны */
+  maxDate?: Date;
 }
 
 export function DatePicker({
@@ -25,6 +27,7 @@ export function DatePicker({
   onChange,
   placeholder,
   id,
+  maxDate,
 }: DatePickerProps) {
   const t = useTranslations("datePicker");
   const resolvedPlaceholder = placeholder || t("selectDate");
@@ -48,6 +51,7 @@ export function DatePicker({
           mode="single"
           selected={value}
           onSelect={onChange}
+          disabled={maxDate ? { after: maxDate } : undefined}
           initialFocus
         />
       </PopoverContent>

@@ -1,9 +1,10 @@
 import * as XLSX from "@e965/xlsx";
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, forwardRef, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { AuditService } from "../../common/audit/audit.service";
 import type { SessionUser } from "../../common/auth/session-user";
 import { toNoonUtc } from "../../common/date-only";
 import { PrismaService } from "../../common/prisma/prisma.service";
+import { SalaryService } from "../salary/salary.service";
 import {
   BillingLedgerService,
   studentListWhere,
@@ -13,6 +14,7 @@ import {
 import {
   billingStart,
   chargeForMonth,
+  currentDateKey,
   currentMonthKey,
   isClosedMonth,
   isValidMonth,
@@ -35,7 +37,10 @@ export class BillingService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly ledger: BillingLedgerService,
-    private readonly audit: AuditService
+    private readonly audit: AuditService,
+    // Модули billing и salary ссылаются друг на друга — см. BillingModule
+    @Inject(forwardRef(() => SalaryService))
+    private readonly salary: SalaryService
   ) {}
 
   private get prisma() {
@@ -263,7 +268,10 @@ export class BillingService {
     const billing: BillingEnrollment = {
       startsAt: enrollment.startsAt,
       createdAt: enrollment.createdAt,
-      billingEndsAt: enrollment.billingEndsAt,
+      // Отчисленный не начисляет позже даты отчисления — как в toBillingEnrollment
+      billingEndsAt: enrollment.unenrolledAt && (!enrollment.billingEndsAt || enrollment.unenrolledAt < enrollment.billingEndsAt)
+        ? enrollment.unenrolledAt
+        : enrollment.billingEndsAt,
       priceOverride: enrollment.priceOverride,
       firstMonthCharge: null,
       groupPrice: enrollment.group?.price ?? null,
@@ -311,7 +319,10 @@ export class BillingService {
   ) {
     const existing = await this.prisma.enrollment.findUnique({
       where: { id: enrollmentId },
-      select: { id: true, startsAt: true, billingEndsAt: true, priceOverride: true, firstMonthCharge: true },
+      select: {
+        id: true, courseId: true, createdAt: true, startsAt: true, billingEndsAt: true, unenrolledAt: true,
+        unenrolledFromGroupId: true, priceOverride: true, firstMonthCharge: true,
+      },
     });
     if (!existing) throw new NotFoundException("enrollmentNotFound");
 
@@ -320,9 +331,29 @@ export class BillingService {
       throw new BadRequestException("endBeforeStart");
     }
 
+    // Отчисленному дата из формы — «дата ухода»: пишется и в billingEndsAt, и в
+    // unenrolledAt. Очистить её нельзя (начисления пошли бы снова), а будущей
+    // датой отчисление не назначается — как в groups.service.ts.
+    const unenrolled = existing.unenrolledAt !== null;
+    if (unenrolled) {
+      if (!billingEndsAt) throw new BadRequestException("unenrolledBillingEnd");
+      if (billingEndsAt > currentDateKey()) throw new BadRequestException("unenrollDateInFuture");
+      // Начало берётся из формы, а если его там нет — фактическое начало записи
+      const effectiveStart = startsAt ?? (existing.startsAt ?? existing.createdAt).toISOString().slice(0, 10);
+      if (billingEndsAt < effectiveStart) throw new BadRequestException("endBeforeStart");
+    }
+
     // Закрытые месяцы окончательны, а заморозка ленивая: фиксируем их ДО
     // записи, иначе ещё не открытый месяц посчитался бы по новым настройкам
     await this.ledger.freezeClosedMonths({ enrollmentId });
+    // Сдвиг даты ухода меняет базу зарплаты группы, из которой отчислили, —
+    // строго после биллинговой заморозки (план зарплат, 5.4)
+    if (unenrolled) {
+      await this.salary.freezeClosedMonths({
+        groupId: existing.unenrolledFromGroupId ?? null,
+        courseId: existing.courseId,
+      });
+    }
 
     const updated = await this.prisma.enrollment.update({
       where: { id: enrollmentId },
@@ -330,6 +361,7 @@ export class BillingService {
         // Пустая строка от формы = «очистить поле», отсюда явный null
         startsAt: startsAt ? toNoonUtc(startsAt) : null,
         billingEndsAt: billingEndsAt ? toNoonUtc(billingEndsAt) : null,
+        ...(unenrolled ? { unenrolledAt: toNoonUtc(billingEndsAt!) } : {}),
         priceOverride: priceOverride ?? null,
         firstMonthCharge: firstMonthCharge ?? null,
       },
@@ -343,6 +375,7 @@ export class BillingService {
       changes: {
         startsAt: { old: existing.startsAt, new: updated.startsAt },
         billingEndsAt: { old: existing.billingEndsAt, new: updated.billingEndsAt },
+        ...(unenrolled ? { unenrolledAt: { old: existing.unenrolledAt, new: updated.unenrolledAt } } : {}),
         priceOverride: { old: existing.priceOverride, new: updated.priceOverride },
         firstMonthCharge: { old: existing.firstMonthCharge, new: updated.firstMonthCharge },
       },

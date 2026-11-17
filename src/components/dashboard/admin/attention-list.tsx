@@ -62,7 +62,7 @@ export async function AttentionList({ attention, branchFiltered }: AttentionList
               <details><summary className="cursor-pointer text-sm">{t("attentionAttendingWithoutBilling", { count: attention.attendingWithoutBilling.length })}</summary>
                 <ul className="ml-6 mt-2 space-y-1 text-sm">{attention.attendingWithoutBilling.map((entry) =>
                   <li key={entry.enrollmentId}><Link className="underline" href={`/payments/students/${entry.studentId}`}>{entry.studentName}</Link>
-                    {` · ${entry.courseTitle} · ${entry.groupName} · ${t("attentionBillingEndDate")}: ${entry.billingEndsAt.split("-").reverse().join(".")} · ${t("attentionLastAttendance")}: ${entry.lastAttendanceAt.split("-").reverse().join(".")}`}</li>)}</ul>
+                    {` · ${entry.courseTitle} · ${entry.groupName}${entry.unenrolled ? ` · ${t("attentionUnenrolled")}` : ""} · ${t("attentionBillingEndDate")}: ${entry.billingEndsAt.split("-").reverse().join(".")} · ${t("attentionLastAttendance")}: ${entry.lastAttendanceAt.split("-").reverse().join(".")}`}</li>)}</ul>
               </details>
             </li>}
             {/* По строке на группу: лишнее занятие не оплачивается, пока на нём не стоит «Отработка» */}

@@ -41,7 +41,11 @@ describe("посещение после остановки начислений"
   it("counts only active attendees after the final day and filters by group branch", async () => {
     const response = await get(`/dashboard/admin?branchId=${branchId}`);
     expect(response.status).toBe(200);
-    expect(response.body.attention.attendingWithoutBilling.map((row: { studentId: string }) => row.studentId)).toEqual([ids.present]);
+    // Отчисленный (retired) ходил после даты отчисления — теперь тоже в списке, с пометкой
+    const rows = response.body.attention.attendingWithoutBilling as { studentId: string; unenrolled: boolean }[];
+    expect(rows.map((row) => row.studentId).sort()).toEqual([ids.present, ids.retired].sort());
+    expect(rows.find((row) => row.studentId === ids.retired)?.unenrolled).toBe(true);
+    expect(rows.find((row) => row.studentId === ids.present)?.unenrolled).toBe(false);
     expect((await get("/dashboard/admin?branchId=other-branch")).body.attention.attendingWithoutBilling).toEqual([]);
   });
 

@@ -142,19 +142,32 @@ export interface LedgerFilters {
 export class BillingLedgerService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  /** Active group members who attended after their final billable day. */
+  /**
+   * Ходят после последнего оплачиваемого дня: ученики в группе (billingEndsAt)
+   * и отчисленные задним числом (отметка в группе, из которой отчислили, позже
+   * unenrolledAt). Второе ловит тех, кого отчислили, а они продолжали ходить.
+   */
   async attendingAfterBillingEnd(branchId?: string) {
     const enrollments = await this.prisma.enrollment.findMany({
       where: {
-        unenrolledAt: null, groupId: { not: null }, billingEndsAt: { not: null },
         student: { isActive: true, deletedAt: null }, course: { deletedAt: null },
-        group: branchId ? { branchId } : { isNot: null },
+        OR: [
+          {
+            unenrolledAt: null, groupId: { not: null }, billingEndsAt: { not: null },
+            group: branchId ? { branchId } : { isNot: null },
+          },
+          {
+            unenrolledAt: { not: null }, groupId: null, unenrolledFromGroupId: { not: null },
+            unenrolledFromGroup: branchId ? { branchId } : { isNot: null },
+          },
+        ],
       },
       select: {
-        id: true, studentId: true, courseId: true, billingEndsAt: true,
+        id: true, studentId: true, courseId: true, billingEndsAt: true, unenrolledAt: true,
         student: { select: { firstName: true, lastName: true } },
         course: { select: { title: true } },
         group: { select: { id: true, name: true } },
+        unenrolledFromGroup: { select: { id: true, name: true } },
       },
     });
     if (!enrollments.length) return [];
@@ -167,14 +180,20 @@ export class BillingLedgerService {
       orderBy: { session: { date: "desc" } },
     });
     return enrollments.flatMap((entry) => {
+      const unenrolled = entry.unenrolledAt !== null;
+      const group = unenrolled ? entry.unenrolledFromGroup : entry.group;
+      // У отчисленного граница — дата отчисления (она же не позже billingEndsAt)
+      const end = unenrolled ? entry.unenrolledAt : entry.billingEndsAt;
+      if (!group || !end) return [];
+      const endKey = end.toISOString().slice(0, 10);
       const latest = records.find((record) => record.studentId === entry.studentId
         && record.session.courseId === entry.courseId
-        && record.session.groupId === entry.group?.id
-        && record.session.date.toISOString().slice(0, 10) > entry.billingEndsAt!.toISOString().slice(0, 10));
+        && record.session.groupId === group.id
+        && record.session.date.toISOString().slice(0, 10) > endKey);
       return latest ? [{ enrollmentId: entry.id, studentId: entry.studentId,
         studentName: `${entry.student.lastName} ${entry.student.firstName}`,
-        courseTitle: entry.course.title, groupName: entry.group!.name,
-        billingEndsAt: entry.billingEndsAt!.toISOString().slice(0, 10),
+        courseTitle: entry.course.title, groupName: group.name,
+        billingEndsAt: endKey, unenrolled,
         lastAttendanceAt: latest.session.date.toISOString().slice(0, 10) }] : [];
     });
   }
@@ -295,8 +314,15 @@ export class BillingLedgerService {
     return {
       startsAt: enrollment.startsAt,
       createdAt: enrollment.createdAt,
-      // Курс в Корзине начисляет не дольше дня переноса туда
-      billingEndsAt: earliestDate(enrollment.billingEndsAt, enrollment.course.deletedAt),
+      // Курс в Корзине начисляет не дольше дня переноса туда. Отчисление
+      // окончательно останавливает начисления: дата окончания не может быть
+      // позже unenrolledAt (её очистили или сдвинули вперёд — запись иначе
+      // осталась бы платной из-за priceOverride). Возобновить можно только
+      // возвратом в группу — он снимает unenrolledAt.
+      billingEndsAt: earliestDate(
+        earliestDate(enrollment.billingEndsAt, enrollment.unenrolledAt),
+        enrollment.course.deletedAt
+      ),
       priceOverride: enrollment.priceOverride,
       firstMonthCharge: enrollment.firstMonthCharge,
       ...groupTerms(enrollment.group ?? enrollment.unenrolledFromGroup),

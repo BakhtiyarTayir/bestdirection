@@ -1,4 +1,5 @@
-import { Module } from "@nestjs/common";
+import { forwardRef, Module } from "@nestjs/common";
+import { SalaryModule } from "../salary/salary.module";
 import { BillingController } from "./billing.controller";
 import { BillingLedgerService } from "./billing-ledger.service";
 import { BillingService } from "./billing.service";
@@ -10,7 +11,11 @@ import { RefundsService } from "./refunds.service";
 // BillingService экспортируется отдельно: главной панели нужны debtors()
 // (карточка долга учеников у администратора) и studentBilling() (баланс
 // ученика и родителя) — пересчитывать деньги своим кодом дашборду нельзя.
+// SalaryModule: при правке даты ухода отчисленного BillingService
+// замораживает зарплату группы (SalaryService.freezeClosedMonths). Модули
+// ссылаются друг на друга, отсюда forwardRef с обеих сторон.
 @Module({
+  imports: [forwardRef(() => SalaryModule)],
   controllers: [BillingController],
   providers: [BillingLedgerService, BillingService, PaymentsService, RefundsService],
   exports: [BillingLedgerService, BillingService],
