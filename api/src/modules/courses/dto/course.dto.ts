@@ -33,7 +33,11 @@ export const updateCourseSchema = z.object({
   ...courseFields,
 });
 
-export const enrolledStudentsQuerySchema = z.object({ groupId: z.string().max(40).optional() });
+export const enrolledStudentsQuerySchema = z.object({
+  groupId: z.string().max(40).optional(),
+  // Бывшие ученики группы (с отметками, но не в составе) — только вместе с groupId
+  withFormer: z.enum(["true", "false"]).optional().transform((value) => value === "true"),
+});
 
 export class CreateCourseDto extends createZodDto(createCourseSchema) {}
 export class UpdateCourseDto extends createZodDto(updateCourseSchema) {}

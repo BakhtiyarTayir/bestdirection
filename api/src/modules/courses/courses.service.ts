@@ -228,7 +228,7 @@ export class CoursesService {
    * (billingEndsAt есть, unenrolledAt нет) — не отчисление, остаётся видимым:
    * activeEnrollmentFilter().
    */
-  async enrolledStudents(courseId: string, groupId?: string) {
+  async enrolledStudents(courseId: string, groupId?: string, withFormer = false) {
     const enrollments = await this.prisma.enrollment.findMany({
       where: { courseId, ...(groupId ? { groupId } : {}), ...activeEnrollmentFilter(), student: { isActive: true } },
       include: {
@@ -238,7 +238,53 @@ export class CoursesService {
       },
       orderBy: { createdAt: "asc" },
     });
-    return enrollments.map((enrollment) => ({ ...enrollment.student, enrolledAt: enrollment.createdAt, billingEndsAt: enrollment.billingEndsAt }));
+    const current = enrollments.map((enrollment) => ({
+      ...enrollment.student,
+      enrolledAt: enrollment.createdAt,
+      billingEndsAt: enrollment.billingEndsAt,
+      ...(withFormer && groupId ? { former: false, currentGroupName: null as string | null } : {}),
+    }));
+    if (!withFormer || !groupId) return current;
+
+    // Бывшие: отметки в занятиях этой группы остались, а в составе ученика
+    // уже нет (перевели в другую группу курса, отчислили, сняли с группы).
+    // Без них журнал выглядит так, будто посещаемость пропала. Удалённых в
+    // корзину пользователей prisma скрывает — для истории это допустимо;
+    // деактивированных (isActive=false) показываем.
+    const currentIds = current.map((student) => student.id);
+    const former = await this.prisma.user.findMany({
+      where: {
+        id: { notIn: currentIds },
+        attendanceRecords: { some: { session: { groupId } } },
+      },
+      select: {
+        id: true, firstName: true, lastName: true, login: true, phone: true, isActive: true,
+        enrollments: {
+          where: { courseId },
+          select: { createdAt: true, billingEndsAt: true, unenrolledAt: true, groupId: true, group: { select: { name: true } } },
+        },
+      },
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+    });
+    return [
+      ...current,
+      ...former.map(({ enrollments: own, ...student }) => {
+        const enrollment = own[0];
+        return {
+          ...student,
+          enrolledAt: enrollment?.createdAt ?? null,
+          billingEndsAt: enrollment?.billingEndsAt ?? null,
+          former: true,
+          // Отчисленному groupId снят, но на всякий случай учитываем unenrolledAt.
+          // Деактивированный, оставшийся в этой же группе, — «выбыл», а не
+          // «переведён в эту же группу»
+          currentGroupName:
+            enrollment && !enrollment.unenrolledAt && enrollment.groupId !== groupId
+              ? enrollment.group?.name ?? null
+              : null,
+        };
+      }),
+    ];
   }
 
   // enrollStudent/unenrollStudent/availableStudents отсюда убраны (план

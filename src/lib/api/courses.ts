@@ -51,6 +51,9 @@ export interface ApiEnrolledStudent {
   isActive: boolean;
   enrolledAt: string;
   billingEndsAt: string | null;
+  /** Только при withFormer: true — бывший ученик группы (есть отметки, в составе нет) */
+  former?: boolean;
+  currentGroupName?: string | null;
 }
 
 export interface ApiCatalogCourse {

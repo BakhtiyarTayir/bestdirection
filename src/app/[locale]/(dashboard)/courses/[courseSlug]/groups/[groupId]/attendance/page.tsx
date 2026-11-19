@@ -45,7 +45,7 @@ export default async function GroupAttendancePage({ params }: GroupAttendancePag
 
   const [sessionsResult, studentsResult, overviewResult] = await Promise.all([
     getAttendanceSessions(courseId, groupId),
-    getEnrolledStudents(courseId, groupId),
+    getEnrolledStudents(courseId, groupId, true),
     getAttendanceGroups({ groupId }),
   ]);
 

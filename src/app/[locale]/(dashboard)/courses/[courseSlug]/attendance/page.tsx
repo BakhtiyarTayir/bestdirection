@@ -94,7 +94,7 @@ export default async function AttendancePage({ params, searchParams }: Attendanc
     visibleGroups.map(async (group) => {
       const [sessionsResult, studentsResult] = await Promise.all([
         getAttendanceSessions(courseId, group.id),
-        getEnrolledStudents(courseId, group.id),
+        getEnrolledStudents(courseId, group.id, true),
       ]);
       return {
         id: group.id,

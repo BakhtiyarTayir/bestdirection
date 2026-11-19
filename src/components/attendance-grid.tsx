@@ -48,6 +48,8 @@ interface Student {
   firstName: string;
   lastName: string;
   login: string | null;
+  former?: boolean;
+  currentGroupName?: string | null;
 }
 
 interface AttendanceGridProps {
@@ -107,17 +109,22 @@ export function AttendanceGrid({
     recordMap.set(session.id, studentMap);
   }
 
+  // Процент считаем только по текущим ученикам: бывшие показаны ради истории
+  // и в знаменатель занятия не входят (отметки бывших в числитель тоже)
+  const currentIds = new Set(students.filter((student) => !student.former).map((student) => student.id));
+
   // Calculate statistics per session
   const sessionStats = sortedSessions.map((session) => {
     const studentMap = recordMap.get(session.id);
-    if (!studentMap || studentMap.size === 0) return 0;
+    if (!studentMap || studentMap.size === 0 || currentIds.size === 0) return 0;
     let presentCount = 0;
     studentMap.forEach((record) => {
+      if (!currentIds.has(record.studentId)) return;
       if (record.status === "PRESENT" || record.status === "LATE") {
         presentCount++;
       }
     });
-    return Math.round((presentCount / students.length) * 100);
+    return Math.round((presentCount / currentIds.size) * 100);
   });
 
   return (
@@ -145,9 +152,16 @@ export function AttendanceGrid({
         </TableHeader>
         <TableBody>
           {students.map((student) => (
-            <TableRow key={student.id}>
+            <TableRow key={student.id} className={student.former ? "opacity-60" : undefined}>
               <TableCell className="sticky left-0 bg-background z-10 font-medium">
                 {student.lastName} {student.firstName}
+                {student.former && (
+                  <span className="block text-xs font-normal text-muted-foreground">
+                    {student.currentGroupName
+                      ? t("movedToGroup", { group: student.currentGroupName })
+                      : t("leftGroup")}
+                  </span>
+                )}
               </TableCell>
               {sortedSessions.map((session) => {
                 const record = recordMap.get(session.id)?.get(student.id);

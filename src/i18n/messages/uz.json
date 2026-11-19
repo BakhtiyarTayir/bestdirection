@@ -653,6 +653,8 @@
   },
   "attendance": {
     "billingStopped": "to'lov to'xtatilgan ({date})",
+    "movedToGroup": "O'tkazilgan: {group}",
+    "leftGroup": "Guruhdan chiqqan",
     "inactiveStudent": "guruhda emas",
     "title": "Davomat",
     "present": "Keldi",

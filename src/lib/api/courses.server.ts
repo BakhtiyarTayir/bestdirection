@@ -23,8 +23,10 @@ export const getCourseIdBySlug = (slug: string) =>
 // getAvailableStudents (кого добавить на курс) отсюда убран: добавление
 // учеников теперь идёт только через группу (план «Учеников добавляют только
 // в группу», этап 5-бис) — см. getAvailableStudentsForGroup в groups.server.
-export const getEnrolledStudents = (courseId: string, groupId?: string) =>
-  apiServerFetch<ApiEnrolledStudent[]>(`/courses/${courseId}/students`, { query: { groupId } });
+export const getEnrolledStudents = (courseId: string, groupId?: string, withFormer = false) =>
+  apiServerFetch<ApiEnrolledStudent[]>(`/courses/${courseId}/students`, {
+    query: { groupId, withFormer: withFormer && groupId ? "true" : undefined },
+  });
 
 export const getCoursesForCopy = () => apiServerFetch<ApiCourseForCopy[]>("/courses/for-copy");
 

@@ -653,6 +653,8 @@
   },
   "attendance": {
     "billingStopped": "начисления остановлены ({date})",
+    "movedToGroup": "Переведён в {group}",
+    "leftGroup": "Выбыл из группы",
     "inactiveStudent": "не в группе",
     "title": "Посещаемость",
     "present": "Присутствует",

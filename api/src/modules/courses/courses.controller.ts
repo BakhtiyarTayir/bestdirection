@@ -115,6 +115,6 @@ export class CoursesController {
   @CheckPolicies((ability) => ability.can("read", "UserDirectory"))
   @Get(":id/students")
   enrolledStudents(@Param("id") id: string, @Query() query: EnrolledStudentsQueryDto) {
-    return this.courses.enrolledStudents(id, query.groupId);
+    return this.courses.enrolledStudents(id, query.groupId, query.withFormer);
   }
 }
