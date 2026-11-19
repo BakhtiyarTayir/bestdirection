@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/auth-guard";
 import { getUserById } from "@/lib/api/users.server";
 import { getBranches } from "@/lib/api/branches.server";
+import { getStudentAttendance } from "@/lib/api/attendance.server";
 import { getStudentBilling } from "@/lib/api/billing.server";
 import { getCourseGroups } from "@/lib/api/groups.server";
 import { notFound } from "next/navigation";
@@ -54,6 +55,9 @@ async function EditUserPageContent({ user, branches, actorRole }: { user: any; b
   // обучения в двух формах — верный способ развести две правды). Исключение —
   // группа: её меняют тем же вызовом, что и на странице группы
   const billing = user.role === "STUDENT" ? await getStudentBilling(user.id) : null;
+  const tAttendance = await getTranslations("attendance");
+  const attendanceResult = user.role === "STUDENT" ? await getStudentAttendance(user.id) : null;
+  const attendanceByCourse = attendanceResult?.success && attendanceResult.data ? attendanceResult.data : [];
   const enrollments = billing?.success && billing.data ? billing.data.courses : [];
   // Группы курса для выбора: открытые и та, где ученик уже сейчас
   const courseGroups = new Map(
@@ -117,6 +121,44 @@ async function EditUserPageContent({ user, branches, actorRole }: { user: any; b
                 </Link>
               </div>
             ))}
+          </CardContent>
+        </Card>
+      )}
+      {/* Посещаемость по всем группам курса: после перевода старые отметки остаются здесь */}
+      {user.role === "STUDENT" && attendanceByCourse.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{tAttendance("studentAttendanceTitle")}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {attendanceByCourse.map((entry) => {
+              const present = entry.records.filter((r) => r.status === "PRESENT" || r.status === "LATE").length;
+              const statusLabels = {
+                PRESENT: tAttendance("present"),
+                ABSENT: tAttendance("absent"),
+                LATE: tAttendance("late"),
+                EXCUSED: tAttendance("excused"),
+              };
+              return (
+                <div key={entry.course.id} className="space-y-1 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-medium">{entry.course.title}</span>
+                    <span className="text-muted-foreground">
+                      {tAttendance("studentAttendanceSummary", { present, total: entry.records.length })}
+                    </span>
+                  </div>
+                  <ul className="max-h-60 space-y-0.5 overflow-y-auto text-muted-foreground">
+                    {entry.records.map((record) => (
+                      <li key={record.sessionId} className="flex gap-3">
+                        <span className="w-24">{formatDate(new Date(record.date))}</span>
+                        <span className="flex-1">{record.groupName ?? tAttendance("noGroup")}</span>
+                        <span>{statusLabels[record.status]}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
           </CardContent>
         </Card>
       )}

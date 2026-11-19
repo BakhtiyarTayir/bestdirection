@@ -416,7 +416,7 @@ export class AttendanceService {
 
     const records = await this.prisma.attendanceRecord.findMany({
       where: { studentId },
-      include: { session: { include: { course: { select: { id: true, title: true } } } } },
+      include: { session: { include: { course: { select: { id: true, title: true } }, group: { select: { name: true } } } } },
       orderBy: { session: { date: "desc" } },
     });
 
@@ -424,7 +424,7 @@ export class AttendanceService {
       string,
       {
         course: { id: string; title: string };
-        records: { sessionId: string; date: Date; status: AttendanceStatus; note: string | null }[];
+        records: { sessionId: string; date: Date; status: AttendanceStatus; note: string | null; groupName: string | null }[];
       }
     >();
 
@@ -438,6 +438,7 @@ export class AttendanceService {
         date: record.session.date,
         status: record.status,
         note: record.note,
+        groupName: record.session.group?.name ?? null,
       });
     }
 

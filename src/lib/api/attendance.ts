@@ -43,7 +43,7 @@ export interface ApiAttendanceReport {
 
 export interface ApiStudentAttendance {
   course: { id: string; title: string };
-  records: { sessionId: string; date: string; status: AttendanceStatus; note: string | null }[];
+  records: { sessionId: string; date: string; status: AttendanceStatus; note: string | null; groupName: string | null }[];
 }
 
 /** Строка списка групп раздела «Посещаемость» — GET /attendance/groups. */
