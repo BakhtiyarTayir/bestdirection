@@ -109,9 +109,10 @@ export class GroupsController {
   addStudents(
     @Param("id") id: string,
     @Body() body: AddStudentsDto,
-    @CurrentAbility() ability: AppAbility
+    @CurrentAbility() ability: AppAbility,
+    @CurrentUser() actor: SessionUser
   ) {
-    return this.groups.addStudents(id, body.studentIds, ability);
+    return this.groups.addStudents(id, body.studentIds, ability, actor);
   }
 
   @CheckPolicies((ability) => ability.can("update", "Group"))
@@ -139,8 +140,9 @@ export class GroupsController {
   moveStudent(
     @Param("id") id: string,
     @Body() body: MoveStudentDto,
-    @CurrentAbility() ability: AppAbility
+    @CurrentAbility() ability: AppAbility,
+    @CurrentUser() actor: SessionUser
   ) {
-    return this.groups.moveStudent(id, body.studentId, body.courseId, ability);
+    return this.groups.moveStudent(id, body.studentId, body.courseId, ability, actor);
   }
 }

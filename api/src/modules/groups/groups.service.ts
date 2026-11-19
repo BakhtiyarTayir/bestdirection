@@ -330,7 +330,7 @@ export class GroupsService {
     return { id: groupId, closed: false };
   }
 
-  async toggleActive(groupId: string, ability: AppAbility, actor?: SessionUser) {
+  async toggleActive(groupId: string, ability: AppAbility, actor: SessionUser) {
     const group = await this.manageableGroup(ability, groupId);
     const updated = await this.prisma.group.update({
       where: { id: groupId },
@@ -344,7 +344,7 @@ export class GroupsService {
    * поэтому роль и активность проверяем здесь: иначе в группу можно было бы
    * затащить преподавателя или отключённого пользователя.
    */
-  async addStudents(groupId: string, studentIds: string[], ability: AppAbility) {
+  async addStudents(groupId: string, studentIds: string[], ability: AppAbility, actor: SessionUser) {
     const group = await this.manageableGroup(ability, groupId);
 
     const eligible = await this.prisma.user.findMany({
@@ -359,6 +359,7 @@ export class GroupsService {
       });
 
       if (existing) {
+        const previousGroupId = existing.groupId;
         // Перевод из другой группы меняет цену и расписание — закрытые
         // месяцы фиксируем по прежней группе. Тот же вызов фиксирует и
         // разрыв отчисленного — по СТАРЫМ (ещё с billingEndsAt) данным, до
@@ -396,6 +397,11 @@ export class GroupsService {
             }),
           },
         });
+        // Перевод из одной группы в другую — след в журнале: иначе потом не
+        // понять, почему отметки старой группы «пропали» у ученика
+        if (previousGroupId && previousGroupId !== groupId) {
+          await this.recordGroupChange(existing.id, previousGroupId, groupId, group.courseId, studentId, actor);
+        }
       } else {
         await this.prisma.enrollment.create({
           data: { studentId, courseId: group.courseId, groupId },
@@ -516,14 +522,19 @@ export class GroupsService {
     return { deleted };
   }
 
-  async moveStudent(toGroupId: string, studentId: string, courseId: string, ability: AppAbility) {
+  private async recordGroupChange(enrollmentId: string, from: string, to: string, courseId: string, studentId: string, actor: SessionUser) {
+    await this.audit.record({ userId: actor.id, entityType: "Enrollment", entityId: enrollmentId,
+      action: "UPDATE", changes: { groupId: { old: from, new: to } }, metadata: { courseId, studentId } });
+  }
+
+  async moveStudent(toGroupId: string, studentId: string, courseId: string, ability: AppAbility, actor: SessionUser) {
     await this.manageableGroup(ability, toGroupId);
 
     // Прежняя группа нужна, чтобы заморозить именно её зарплату — Enrollment
     // хранит только текущий groupId, после update() старую уже не узнать
     const current = await this.prisma.enrollment.findUnique({
       where: { studentId_courseId: { studentId, courseId } },
-      select: { groupId: true, unenrolledFromGroupId: true },
+      select: { id: true, groupId: true, unenrolledFromGroupId: true },
     });
 
     // Новая группа — новая цена и расписание: сначала фиксируем закрытые
@@ -537,6 +548,9 @@ export class GroupsService {
       where: { studentId_courseId: { studentId, courseId } },
       data: { groupId: toGroupId, unenrolledFromGroupId: null },
     });
+    if (current?.groupId && current.groupId !== toGroupId) {
+      await this.recordGroupChange(current.id, current.groupId, toGroupId, courseId, studentId, actor);
+    }
     return { studentId, toGroupId };
   }
 
